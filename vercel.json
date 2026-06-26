@@ -4,3 +4,4 @@
   "installCommand": "cd apps/web && npm install",
   "framework": "nextjs"
 }
+
