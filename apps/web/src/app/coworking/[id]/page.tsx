@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,8 @@ const WORKSPACE_TYPES = [
   { id: "meeting-room", name: "Meeting Room", price: 1500, unit: "hour", desc: "Professional boardroom", capacity: "8-12" },
 ];
 
-export default function CoworkingDetailPage({ params }: { params: { id: string } }) {
+export default function CoworkingDetailPage() {
+  const params = useParams();
   const [selectedType, setSelectedType] = useState("hot-desk");
   const [selectedDay, setSelectedDay] = useState("Mon");
   const [guests, setGuests] = useState(1);

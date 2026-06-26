@@ -180,7 +180,7 @@ export function FeaturedWorkspaces() {
                       {space.amenities.slice(0, 4).map((amenity) => {
                         const Icon = amenityIcons[amenity] ?? Wifi;
                         return (
-                          <Icon key={amenity} className="w-4 h-4 text-muted-foreground" title={amenity} />
+                          <Icon key={amenity} className="w-4 h-4 text-muted-foreground" />
                         );
                       })}
                       <span className="text-xs text-muted-foreground ml-auto">

@@ -7,13 +7,15 @@ import { motion } from "framer-motion";
 import { Star, BadgeCheck, MapPin, Clock, Users, MessageCircle, Share2, Heart, ExternalLink, Briefcase, Award, ChevronRight, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useParams } from "next/navigation";
 
 const PROFILES: Record<string, any> = {
   "1": { name: "Sarah Chen", title: "Full-Stack Developer & AI Specialist", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300", cover: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800", location: "San Francisco, USA", rating: 4.9, reviews: 248, hourlyRate: 120, skills: ["React", "Node.js", "Python", "AWS", "TypeScript", "PostgreSQL", "Redis", "Docker"], verified: true, availability: "Available", badge: "Top Rated", totalEarned: "$250K+", successRate: 98, bio: "Senior full-stack engineer with 8+ years building scalable web applications. Specialized in React/Next.js frontends and Node.js/Python backends. Expert in cloud architecture (AWS, GCP) and AI integrations. I've led teams at startups and Fortune 500 companies.", portfolio: [{ title: "AI-powered CRM Platform", img: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400", tags: ["React", "Python", "GPT-4"] }, { title: "Real-time Analytics Dashboard", img: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400", tags: ["Next.js", "D3.js", "WebSocket"] }, { title: "E-commerce Mobile App", img: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400", tags: ["React Native", "Stripe", "Firebase"] }], testimonials: [{ name: "Mike Torres", role: "CTO at TechVenture", text: "Sarah delivered an exceptional AI-powered dashboard. Her technical depth and communication were outstanding.", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80", rating: 5 }, { name: "Lisa Park", role: "Product Manager at Airbnb", text: "One of the best developers I've worked with. She transformed our MVP into a production-ready platform in 3 weeks.", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80", rating: 5 }], languages: ["English (Native)", "Mandarin (Fluent)"], education: "MS Computer Science, Stanford University", experience: "8 years" },
 };
 
-export default function FreelancerProfilePage({ params }: { params: { id: string } }) {
-  const f = PROFILES[params.id] ?? PROFILES["1"];
+export default function FreelancerProfilePage() {
+  const params = useParams();
+  const f = PROFILES[params.id as string] ?? PROFILES["1"];
   const [activeTab, setActiveTab] = useState<"overview" | "portfolio" | "reviews">("overview");
 
   return (

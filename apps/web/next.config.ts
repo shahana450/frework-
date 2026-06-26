@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: {
-    reactCompiler: false,
-  },
+  experimental: {},
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.amazonaws.com" },
