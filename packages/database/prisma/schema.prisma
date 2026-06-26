@@ -1,0 +1,1431 @@
+// WorkSphere Global — Prisma Schema
+// Database: PostgreSQL
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector"), pg_trgm, unaccent]
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  FREELANCER
+  CLIENT
+  COWORKING_OWNER
+  STARTUP
+  INVESTOR
+  AGENCY
+  CONSULTANT
+  RECRUITER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+  BANNED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ProjectStatus {
+  DRAFT
+  OPEN
+  IN_PROGRESS
+  IN_REVIEW
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum ProjectType {
+  FIXED
+  HOURLY
+  MILESTONE
+  RETAINER
+}
+
+enum ApplicationStatus {
+  PENDING
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  DISPUTED
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+enum WorkspaceType {
+  HOT_DESK
+  DEDICATED_DESK
+  PRIVATE_CABIN
+  MEETING_ROOM
+  EVENT_SPACE
+  VIRTUAL_OFFICE
+  ENTIRE_FLOOR
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  VOICE
+  VIDEO
+  SYSTEM
+}
+
+enum NotificationType {
+  PROJECT_INVITE
+  APPLICATION_UPDATE
+  MESSAGE_RECEIVED
+  PAYMENT_RECEIVED
+  PAYMENT_SENT
+  REVIEW_RECEIVED
+  BOOKING_CONFIRMED
+  CONTRACT_SIGNED
+  MILESTONE_APPROVED
+  SYSTEM
+}
+
+enum SubscriptionPlan {
+  FREE
+  PROFESSIONAL
+  BUSINESS
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PAST_DUE
+  TRIALING
+}
+
+enum StartupStage {
+  IDEA
+  PRE_SEED
+  SEED
+  SERIES_A
+  SERIES_B
+  SERIES_C
+  GROWTH
+  IPO
+}
+
+enum InvestmentType {
+  EQUITY
+  DEBT
+  CONVERTIBLE_NOTE
+  SAFE
+  REVENUE_SHARE
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  ESCALATED
+  CLOSED
+}
+
+enum KYCStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+// ============================================================
+// USER & AUTH
+// ============================================================
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  emailVerified     DateTime?
+  phone             String?            @unique
+  phoneVerified     DateTime?
+  passwordHash      String?
+  name              String
+  username          String?            @unique
+  avatar            String?
+  coverImage        String?
+  bio               String?
+  role              UserRole           @default(CLIENT)
+  roles             UserRole[]
+  status            UserStatus         @default(ACTIVE)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  kycStatus         KYCStatus          @default(NOT_STARTED)
+  twoFactorEnabled  Boolean            @default(false)
+  twoFactorSecret   String?
+  timezone          String             @default("UTC")
+  locale            String             @default("en")
+  currency          String             @default("USD")
+  referralCode      String?            @unique @default(cuid())
+  referredById      String?
+  isOnline          Boolean            @default(false)
+  lastSeenAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  deletedAt         DateTime?
+
+  // Relations
+  referredBy        User?              @relation("Referrals", fields: [referredById], references: [id])
+  referrals         User[]             @relation("Referrals")
+  oauthAccounts     OAuthAccount[]
+  sessions          Session[]
+  freelancerProfile FreelancerProfile?
+  clientProfile     ClientProfile?
+  agencyProfile     AgencyProfile?
+  startupProfile    StartupProfile?
+  investorProfile   InvestorProfile?
+  coworkingSpaces   CoworkingSpace[]
+  projects          Project[]          @relation("ClientProjects")
+  applications      Application[]
+  contracts         Contract[]         @relation("ClientContracts")
+  freelancerContracts Contract[]       @relation("FreelancerContracts")
+  sentMessages      Message[]          @relation("SentMessages")
+  conversations     ConversationParticipant[]
+  reviewsGiven      Review[]           @relation("ReviewsGiven")
+  reviewsReceived   Review[]           @relation("ReviewsReceived")
+  notifications     Notification[]
+  wallet            Wallet?
+  transactions      Transaction[]
+  bookings          Booking[]
+  subscription      Subscription?
+  savedFreelancers  SavedFreelancer[]
+  savedJobs         SavedJob[]
+  blogPosts         BlogPost[]
+  forumPosts        ForumPost[]
+  forumReplies      ForumReply[]
+  eventAttendees    EventAttendee[]
+  skills            UserSkill[]
+  addresses         Address[]
+  documents         Document[]
+  invitesSent       ProjectInvite[]
+  adminLogs         AdminLog[]
+  disputes          Dispute[]          @relation("DisputeInitiator")
+  disputeResponses  Dispute[]          @relation("DisputeRespondent")
+  kycDocuments      KYCDocument[]
+
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model OAuthAccount {
+  id            String   @id @default(cuid())
+  userId        String
+  provider      String
+  providerAccountId String
+  accessToken   String?
+  refreshToken  String?
+  expiresAt     DateTime?
+  scope         String?
+  tokenType     String?
+  idToken       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  deviceInfo   String?
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("sessions")
+}
+
+model OTP {
+  id        String   @id @default(cuid())
+  target    String
+  type      String
+  code      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([target, type])
+  @@map("otps")
+}
+
+// ============================================================
+// PROFILES
+// ============================================================
+
+model FreelancerProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  title            String
+  hourlyRate       Decimal? @db.Decimal(10, 2)
+  monthlyRate      Decimal? @db.Decimal(10, 2)
+  availability     String   @default("AVAILABLE")
+  experienceYears  Int      @default(0)
+  totalEarned      Decimal  @default(0) @db.Decimal(14, 2)
+  totalProjects    Int      @default(0)
+  successRate      Float    @default(0)
+  responseTime     String?
+  videoIntroUrl    String?
+  resumeUrl        String?
+  linkedinUrl      String?
+  portfolioUrl     String?
+  githubUrl        String?
+  behanceUrl       String?
+  isVerified       Boolean  @default(false)
+  isFeatured       Boolean  @default(false)
+  searchVector     Unsupported("tsvector")?
+  embedding        Unsupported("vector(1536)")?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills           FreelancerSkill[]
+  portfolio        PortfolioItem[]
+  education        Education[]
+  experience       WorkExperience[]
+  certifications   Certification[]
+  languages        FreelancerLanguage[]
+  categories       FreelancerCategory[]
+
+  @@index([hourlyRate])
+  @@index([availability])
+  @@index([isFeatured])
+  @@map("freelancer_profiles")
+}
+
+model ClientProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  companyName   String?
+  companySize   String?
+  industry      String?
+  websiteUrl    String?
+  totalSpent    Decimal  @default(0) @db.Decimal(14, 2)
+  totalHires    Int      @default(0)
+  isVerified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("client_profiles")
+}
+
+model AgencyProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  agencyName    String
+  description   String?
+  teamSize      Int      @default(1)
+  websiteUrl    String?
+  logoUrl       String?
+  isVerified    Boolean  @default(false)
+  isFeatured    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members       AgencyMember[]
+
+  @@map("agency_profiles")
+}
+
+model AgencyMember {
+  id        String   @id @default(cuid())
+  agencyId  String
+  userId    String
+  role      String
+  joinedAt  DateTime @default(now())
+
+  agency    AgencyProfile @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@unique([agencyId, userId])
+  @@map("agency_members")
+}
+
+model StartupProfile {
+  id               String       @id @default(cuid())
+  userId           String       @unique
+  name             String
+  tagline          String?
+  description      String?
+  websiteUrl       String?
+  logoUrl          String?
+  pitchDeckUrl     String?
+  videoUrl         String?
+  stage            StartupStage @default(IDEA)
+  industry         String?
+  founded          Int?
+  teamSize         Int          @default(1)
+  fundingTarget    Decimal?     @db.Decimal(14, 2)
+  fundingRaised    Decimal?     @db.Decimal(14, 2)
+  valuation        Decimal?     @db.Decimal(14, 2)
+  revenueMonthly   Decimal?     @db.Decimal(14, 2)
+  isVerified       Boolean      @default(false)
+  isFeatured       Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  investments      Investment[]
+  teamMembers      StartupTeamMember[]
+
+  @@map("startup_profiles")
+}
+
+model StartupTeamMember {
+  id          String   @id @default(cuid())
+  startupId   String
+  name        String
+  role        String
+  bio         String?
+  avatarUrl   String?
+  linkedinUrl String?
+
+  startup     StartupProfile @relation(fields: [startupId], references: [id], onDelete: Cascade)
+
+  @@map("startup_team_members")
+}
+
+model InvestorProfile {
+  id               String         @id @default(cuid())
+  userId           String         @unique
+  firmName         String?
+  investorType     String
+  totalInvested    Decimal?       @db.Decimal(14, 2)
+  portfolioCount   Int            @default(0)
+  preferredStages  StartupStage[]
+  preferredSectors String[]
+  minInvestment    Decimal?       @db.Decimal(14, 2)
+  maxInvestment    Decimal?       @db.Decimal(14, 2)
+  websiteUrl       String?
+  linkedinUrl      String?
+  isVerified       Boolean        @default(false)
+  isFeatured       Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  investments      Investment[]
+
+  @@map("investor_profiles")
+}
+
+// ============================================================
+// SKILLS & CATEGORIES
+// ============================================================
+
+model Skill {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  categoryId  String
+  icon        String?
+  createdAt   DateTime @default(now())
+
+  category    Category         @relation(fields: [categoryId], references: [id])
+  userSkills  UserSkill[]
+  freelancerSkills FreelancerSkill[]
+  projectSkills ProjectSkill[]
+
+  @@index([categoryId])
+  @@map("skills")
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  slug        String     @unique
+  parentId    String?
+  icon        String?
+  color       String?
+  description String?
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryTree")
+  skills      Skill[]
+  projects    Project[]
+  freelancerCategories FreelancerCategory[]
+
+  @@index([slug])
+  @@index([parentId])
+  @@map("categories")
+}
+
+model UserSkill {
+  id         String   @id @default(cuid())
+  userId     String
+  skillId    String
+  level      String   @default("INTERMEDIATE")
+  yearsExp   Float?
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill      Skill    @relation(fields: [skillId], references: [id])
+
+  @@unique([userId, skillId])
+  @@map("user_skills")
+}
+
+model FreelancerSkill {
+  id           String   @id @default(cuid())
+  profileId    String
+  skillId      String
+  level        String   @default("INTERMEDIATE")
+  yearsExp     Float?
+
+  profile      FreelancerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill        Skill             @relation(fields: [skillId], references: [id])
+
+  @@unique([profileId, skillId])
+  @@map("freelancer_skills")
+}
+
+model FreelancerCategory {
+  id         String   @id @default(cuid())
+  profileId  String
+  categoryId String
+  isPrimary  Boolean  @default(false)
+
+  profile    FreelancerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  category   Category          @relation(fields: [categoryId], references: [id])
+
+  @@unique([profileId, categoryId])
+  @@map("freelancer_categories")
+}
+
+model FreelancerLanguage {
+  id         String @id @default(cuid())
+  profileId  String
+  language   String
+  proficiency String
+
+  profile    FreelancerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, language])
+  @@map("freelancer_languages")
+}
+
+// ============================================================
+// PORTFOLIO & CREDENTIALS
+// ============================================================
+
+model PortfolioItem {
+  id          String   @id @default(cuid())
+  profileId   String
+  title       String
+  description String?
+  imageUrls   String[]
+  videoUrl    String?
+  projectUrl  String?
+  skills      String[]
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  profile     FreelancerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("portfolio_items")
+}
+
+model Education {
+  id           String    @id @default(cuid())
+  profileId    String
+  institution  String
+  degree       String
+  fieldOfStudy String?
+  startYear    Int
+  endYear      Int?
+  grade        String?
+  description  String?
+
+  profile      FreelancerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("educations")
+}
+
+model WorkExperience {
+  id          String    @id @default(cuid())
+  profileId   String
+  company     String
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  isCurrent   Boolean   @default(false)
+  location    String?
+
+  profile     FreelancerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("work_experiences")
+}
+
+model Certification {
+  id           String    @id @default(cuid())
+  profileId    String
+  name         String
+  issuer       String
+  credentialId String?
+  credentialUrl String?
+  issuedAt     DateTime
+  expiresAt    DateTime?
+  verified     Boolean   @default(false)
+
+  profile      FreelancerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("certifications")
+}
+
+// ============================================================
+// PROJECTS & APPLICATIONS
+// ============================================================
+
+model Project {
+  id               String        @id @default(cuid())
+  clientId         String
+  categoryId       String?
+  title            String
+  slug             String        @unique
+  description      String
+  requirements     String?
+  attachmentUrls   String[]
+  type             ProjectType   @default(FIXED)
+  status           ProjectStatus @default(OPEN)
+  budget           Decimal?      @db.Decimal(14, 2)
+  budgetMin        Decimal?      @db.Decimal(14, 2)
+  budgetMax        Decimal?      @db.Decimal(14, 2)
+  currency         String        @default("USD")
+  hourlyRateMin    Decimal?      @db.Decimal(10, 2)
+  hourlyRateMax    Decimal?      @db.Decimal(10, 2)
+  deadline         DateTime?
+  duration         String?
+  experienceLevel  String        @default("INTERMEDIATE")
+  locationType     String        @default("REMOTE")
+  location         String?
+  timezone         String?
+  visibility       String        @default("PUBLIC")
+  applicationCount Int           @default(0)
+  viewCount        Int           @default(0)
+  isFeatured       Boolean       @default(false)
+  isUrgent         Boolean       @default(false)
+  closedAt         DateTime?
+  searchVector     Unsupported("tsvector")?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  client           User          @relation("ClientProjects", fields: [clientId], references: [id])
+  category         Category?     @relation(fields: [categoryId], references: [id])
+  skills           ProjectSkill[]
+  applications     Application[]
+  contract         Contract?
+  invites          ProjectInvite[]
+  savedBy          SavedJob[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([isFeatured])
+  @@map("projects")
+}
+
+model ProjectSkill {
+  id        String @id @default(cuid())
+  projectId String
+  skillId   String
+  isRequired Boolean @default(true)
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill     Skill   @relation(fields: [skillId], references: [id])
+
+  @@unique([projectId, skillId])
+  @@map("project_skills")
+}
+
+model Application {
+  id             String            @id @default(cuid())
+  projectId      String
+  freelancerId   String
+  coverLetter    String
+  proposedRate   Decimal?          @db.Decimal(10, 2)
+  proposedBudget Decimal?          @db.Decimal(14, 2)
+  estimatedTime  String?
+  attachmentUrls String[]
+  status         ApplicationStatus @default(PENDING)
+  isShortlisted  Boolean           @default(false)
+  viewedAt       DateTime?
+  aiScore        Float?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  freelancer     User      @relation(fields: [freelancerId], references: [id])
+  milestones     Milestone[]
+
+  @@unique([projectId, freelancerId])
+  @@index([projectId])
+  @@index([freelancerId])
+  @@index([status])
+  @@map("applications")
+}
+
+model ProjectInvite {
+  id           String   @id @default(cuid())
+  projectId    String
+  senderId     String
+  freelancerId String
+  message      String?
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sender       User     @relation(fields: [senderId], references: [id])
+
+  @@unique([projectId, freelancerId])
+  @@map("project_invites")
+}
+
+// ============================================================
+// CONTRACTS & MILESTONES
+// ============================================================
+
+model Contract {
+  id              String         @id @default(cuid())
+  projectId       String         @unique
+  clientId        String
+  freelancerId    String
+  title           String
+  description     String
+  startDate       DateTime
+  endDate         DateTime?
+  totalValue      Decimal        @db.Decimal(14, 2)
+  currency        String         @default("USD")
+  status          ContractStatus @default(DRAFT)
+  signedByClient  Boolean        @default(false)
+  signedByFreelancer Boolean     @default(false)
+  clientSignedAt  DateTime?
+  freelancerSignedAt DateTime?
+  fileUrl         String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  project         Project        @relation(fields: [projectId], references: [id])
+  client          User           @relation("ClientContracts", fields: [clientId], references: [id])
+  freelancer      User           @relation("FreelancerContracts", fields: [freelancerId], references: [id])
+  milestones      Milestone[]
+  invoices        Invoice[]
+  disputes        Dispute[]
+
+  @@index([clientId])
+  @@index([freelancerId])
+  @@index([status])
+  @@map("contracts")
+}
+
+model Milestone {
+  id            String          @id @default(cuid())
+  contractId    String
+  applicationId String?
+  title         String
+  description   String?
+  amount        Decimal         @db.Decimal(14, 2)
+  currency      String          @default("USD")
+  dueDate       DateTime?
+  status        MilestoneStatus @default(PENDING)
+  order         Int
+  submittedAt   DateTime?
+  approvedAt    DateTime?
+  rejectionNote String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  contract      Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  application   Application?    @relation(fields: [applicationId], references: [id])
+  payment       Payment?
+
+  @@index([contractId])
+  @@map("milestones")
+}
+
+// ============================================================
+// PAYMENTS & WALLET
+// ============================================================
+
+model Wallet {
+  id            String        @id @default(cuid())
+  userId        String        @unique
+  balance       Decimal       @default(0) @db.Decimal(14, 2)
+  escrowBalance Decimal       @default(0) @db.Decimal(14, 2)
+  currency      String        @default("USD")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+
+  @@map("wallets")
+}
+
+model Transaction {
+  id            String        @id @default(cuid())
+  walletId      String
+  userId        String
+  type          String
+  amount        Decimal       @db.Decimal(14, 2)
+  currency      String        @default("USD")
+  fee           Decimal       @default(0) @db.Decimal(10, 2)
+  netAmount     Decimal       @db.Decimal(14, 2)
+  status        PaymentStatus @default(PENDING)
+  reference     String?
+  description   String?
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+
+  wallet        Wallet        @relation(fields: [walletId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+
+  @@index([walletId])
+  @@index([userId])
+  @@index([status])
+  @@map("transactions")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  milestoneId     String        @unique
+  payerId         String
+  payeeId         String
+  amount          Decimal       @db.Decimal(14, 2)
+  currency        String        @default("USD")
+  platformFee     Decimal       @db.Decimal(10, 2)
+  netAmount       Decimal       @db.Decimal(14, 2)
+  status          PaymentStatus @default(PENDING)
+  provider        String
+  providerTxId    String?
+  escrowReleased  Boolean       @default(false)
+  releasedAt      DateTime?
+  refundedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  milestone       Milestone     @relation(fields: [milestoneId], references: [id])
+
+  @@index([payerId])
+  @@index([payeeId])
+  @@map("payments")
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  contractId    String
+  number        String        @unique
+  dueDate       DateTime
+  subtotal      Decimal       @db.Decimal(14, 2)
+  taxAmount     Decimal       @default(0) @db.Decimal(10, 2)
+  taxRate       Float         @default(0)
+  total         Decimal       @db.Decimal(14, 2)
+  currency      String        @default("USD")
+  status        String        @default("DRAFT")
+  notes         String?
+  paidAt        DateTime?
+  fileUrl       String?
+  createdAt     DateTime      @default(now())
+
+  contract      Contract      @relation(fields: [contractId], references: [id])
+  lineItems     InvoiceLineItem[]
+
+  @@index([contractId])
+  @@map("invoices")
+}
+
+model InvoiceLineItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Float
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  total       Decimal  @db.Decimal(14, 2)
+
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_line_items")
+}
+
+// ============================================================
+// COWORKING SPACES
+// ============================================================
+
+model CoworkingSpace {
+  id              String   @id @default(cuid())
+  ownerId         String
+  name            String
+  slug            String   @unique
+  description     String
+  shortDescription String?
+  imageUrls       String[]
+  videoUrl        String?
+  addressLine1    String
+  addressLine2    String?
+  city            String
+  state           String?
+  country         String
+  postalCode      String?
+  latitude        Float?
+  longitude       Float?
+  googlePlaceId   String?
+  amenities       String[]
+  rules           String?
+  openingHours    Json?
+  phone           String?
+  email           String?
+  websiteUrl      String?
+  totalSeats      Int      @default(0)
+  availableSeats  Int      @default(0)
+  rating          Float    @default(0)
+  reviewCount     Int      @default(0)
+  isVerified      Boolean  @default(false)
+  isFeatured      Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner           User     @relation(fields: [ownerId], references: [id])
+  workspaces      Workspace[]
+  bookings        Booking[]
+  reviews         Review[]
+
+  @@index([ownerId])
+  @@index([city])
+  @@index([country])
+  @@index([isFeatured])
+  @@index([rating])
+  @@map("coworking_spaces")
+}
+
+model Workspace {
+  id              String        @id @default(cuid())
+  spaceId         String
+  name            String
+  type            WorkspaceType
+  description     String?
+  capacity        Int           @default(1)
+  pricePerHour    Decimal?      @db.Decimal(10, 2)
+  pricePerDay     Decimal?      @db.Decimal(10, 2)
+  pricePerWeek    Decimal?      @db.Decimal(10, 2)
+  pricePerMonth   Decimal?      @db.Decimal(10, 2)
+  currency        String        @default("USD")
+  amenities       String[]
+  imageUrls       String[]
+  isAvailable     Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  space           CoworkingSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+  availability    WorkspaceAvailability[]
+
+  @@index([spaceId])
+  @@index([type])
+  @@map("workspaces")
+}
+
+model WorkspaceAvailability {
+  id          String    @id @default(cuid())
+  workspaceId String
+  date        DateTime  @db.Date
+  startTime   String
+  endTime     String
+  isBooked    Boolean   @default(false)
+  bookingId   String?
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, date, startTime])
+  @@index([workspaceId, date])
+  @@map("workspace_availability")
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  userId      String
+  spaceId     String
+  workspaceId String
+  startDate   DateTime
+  endDate     DateTime
+  checkIn     DateTime?
+  checkOut    DateTime?
+  seats       Int           @default(1)
+  totalPrice  Decimal       @db.Decimal(14, 2)
+  currency    String        @default("USD")
+  status      BookingStatus @default(PENDING)
+  notes       String?
+  qrCode      String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user        User          @relation(fields: [userId], references: [id])
+  space       CoworkingSpace @relation(fields: [spaceId], references: [id])
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id])
+  review      Review?       @relation("BookingReview")
+
+  @@index([userId])
+  @@index([spaceId])
+  @@index([status])
+  @@index([startDate])
+  @@map("bookings")
+}
+
+// ============================================================
+// REVIEWS
+// ============================================================
+
+model Review {
+  id          String   @id @default(cuid())
+  reviewerId  String
+  revieweeId  String
+  spaceId     String?
+  bookingId   String?  @unique
+  rating      Float
+  title       String?
+  comment     String?
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reviewer    User           @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  reviewee    User           @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+  space       CoworkingSpace? @relation(fields: [spaceId], references: [id])
+  booking     Booking?       @relation("BookingReview", fields: [bookingId], references: [id])
+
+  @@index([revieweeId])
+  @@index([spaceId])
+  @@map("reviews")
+}
+
+// ============================================================
+// MESSAGING
+// ============================================================
+
+model Conversation {
+  id          String   @id @default(cuid())
+  type        String   @default("DIRECT")
+  name        String?
+  avatarUrl   String?
+  lastMessageAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  joinedAt       DateTime @default(now())
+  lastReadAt     DateTime?
+  isMuted        Boolean  @default(false)
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  senderId       String
+  type           MessageType @default(TEXT)
+  content        String?
+  fileUrl        String?
+  fileName       String?
+  fileSize        Int?
+  replyToId      String?
+  isEdited       Boolean     @default(false)
+  isDeleted      Boolean     @default(false)
+  readBy         String[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============================================================
+// INVESTMENTS
+// ============================================================
+
+model Investment {
+  id            String         @id @default(cuid())
+  startupId     String
+  investorId    String
+  amount        Decimal        @db.Decimal(14, 2)
+  currency      String         @default("USD")
+  type          InvestmentType @default(EQUITY)
+  equityPercent Float?
+  valuation     Decimal?       @db.Decimal(14, 2)
+  status        String         @default("PENDING")
+  notes         String?
+  investedAt    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  startup       StartupProfile  @relation(fields: [startupId], references: [id])
+  investor      InvestorProfile @relation(fields: [investorId], references: [id])
+
+  @@index([startupId])
+  @@index([investorId])
+  @@map("investments")
+}
+
+// ============================================================
+// SUBSCRIPTIONS
+// ============================================================
+
+model Subscription {
+  id              String             @id @default(cuid())
+  userId          String             @unique
+  plan            SubscriptionPlan   @default(FREE)
+  status          SubscriptionStatus @default(ACTIVE)
+  stripeSubId     String?
+  stripePriceId   String?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// ============================================================
+// COMMUNITY
+// ============================================================
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  authorId    String
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String
+  coverImage  String?
+  tags        String[]
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  viewCount   Int      @default(0)
+  likeCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author      User     @relation(fields: [authorId], references: [id])
+
+  @@index([authorId])
+  @@index([isPublished])
+  @@map("blog_posts")
+}
+
+model ForumPost {
+  id          String       @id @default(cuid())
+  authorId    String
+  title       String
+  content     String
+  tags        String[]
+  viewCount   Int          @default(0)
+  likeCount   Int          @default(0)
+  replyCount  Int          @default(0)
+  isPinned    Boolean      @default(false)
+  isLocked    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  author      User         @relation(fields: [authorId], references: [id])
+  replies     ForumReply[]
+
+  @@index([authorId])
+  @@map("forum_posts")
+}
+
+model ForumReply {
+  id        String   @id @default(cuid())
+  postId    String
+  authorId  String
+  content   String
+  likeCount Int      @default(0)
+  createdAt DateTime @default(now())
+
+  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id])
+
+  @@index([postId])
+  @@map("forum_replies")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  coverImage  String?
+  startDate   DateTime
+  endDate     DateTime
+  location    String?
+  isOnline    Boolean  @default(false)
+  meetingUrl  String?
+  maxSeats    Int?
+  price       Decimal? @db.Decimal(10, 2)
+  currency    String   @default("USD")
+  tags        String[]
+  createdAt   DateTime @default(now())
+
+  attendees   EventAttendee[]
+
+  @@map("events")
+}
+
+model EventAttendee {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  status    String   @default("REGISTERED")
+  joinedAt  DateTime @default(now())
+
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("event_attendees")
+}
+
+// ============================================================
+// SAVED / WISHLIST
+// ============================================================
+
+model SavedFreelancer {
+  id           String   @id @default(cuid())
+  userId       String
+  freelancerId String
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, freelancerId])
+  @@map("saved_freelancers")
+}
+
+model SavedJob {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("saved_jobs")
+}
+
+// ============================================================
+// ADMIN & AUDIT
+// ============================================================
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  admin     User     @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("admin_logs")
+}
+
+model Dispute {
+  id             String        @id @default(cuid())
+  contractId     String
+  initiatorId    String
+  respondentId   String
+  reason         String
+  description    String
+  status         DisputeStatus @default(OPEN)
+  resolution     String?
+  resolvedAt     DateTime?
+  resolvedById   String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  contract       Contract      @relation(fields: [contractId], references: [id])
+  initiator      User          @relation("DisputeInitiator", fields: [initiatorId], references: [id])
+  respondent     User          @relation("DisputeRespondent", fields: [respondentId], references: [id])
+
+  @@index([contractId])
+  @@map("disputes")
+}
+
+model KYCDocument {
+  id          String    @id @default(cuid())
+  userId      String
+  type        String
+  fileUrl     String
+  status      KYCStatus @default(IN_PROGRESS)
+  reviewedAt  DateTime?
+  rejectedReason String?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("kyc_documents")
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  fileUrl   String
+  fileType  String
+  fileSize  Int
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("documents")
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  userId     String
+  label      String?
+  line1      String
+  line2      String?
+  city       String
+  state      String?
+  country    String
+  postalCode String?
+  isDefault  Boolean @default(false)
+
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("addresses")
+}
