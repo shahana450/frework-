@@ -145,7 +145,7 @@ export default function FreelancerProfilePage() {
               </Button>
               <Button variant="outline" className="w-full" size="lg">Send Message</Button>
 
-              <p className="text-xs text-center text-muted-foreground mt-3">Protected by WorkSphere Guarantee</p>
+              <p className="text-xs text-center text-muted-foreground mt-3">Protected by FreWork Guarantee</p>
             </div>
           </div>
         </div>

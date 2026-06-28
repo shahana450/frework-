@@ -5,12 +5,12 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 const stats = [
-  { label: "Active Freelancers", value: 2000000, suffix: "M+", prefix: "", display: "2M+" },
-  { label: "Countries", value: 150, suffix: "+", prefix: "", display: "150+" },
-  { label: "Projects Completed", value: 10000000, suffix: "M+", prefix: "", display: "10M+" },
-  { label: "Coworking Spaces", value: 5000, suffix: "+", prefix: "", display: "5,000+" },
-  { label: "Total Payments", value: 500, suffix: "M+", prefix: "$", display: "$500M+" },
-  { label: "Client Satisfaction", value: 98, suffix: "%", prefix: "", display: "98%" },
+  { label: "Freelancers Joined", value: 500, suffix: "+", prefix: "", display: "500+" },
+  { label: "Workspaces Listed", value: 50, suffix: "+", prefix: "", display: "50+" },
+  { label: "Active Job Openings", value: 30, suffix: "+", prefix: "", display: "30+" },
+  { label: "Cities Covered", value: 6, suffix: "", prefix: "", display: "6" },
+  { label: "Successful Hires", value: 40, suffix: "+", prefix: "", display: "40+" },
+  { label: "Growing Every Week", value: 100, suffix: "%", prefix: "", display: "🚀" },
 ];
 
 function AnimatedNumber({ value, display }: { value: number; display: string }) {
@@ -24,8 +24,8 @@ export function Stats() {
     <section ref={ref} className="py-20 border-y border-border bg-muted/30">
       <div className="container">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-3">Trusted Worldwide</h2>
-          <p className="text-muted-foreground">Numbers that speak for themselves</p>
+          <h2 className="text-3xl font-bold mb-3">Growing Across India</h2>
+          <p className="text-muted-foreground">Real numbers, growing every week</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
           {stats.map((stat, i) => (

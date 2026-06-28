@@ -11,7 +11,7 @@ import { Footer } from "@/components/layout/footer";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "WorkSphere Global – Find Talent. Find Workspace. Build Your Future.",
+  title: "FreWork – Find Talent. Find Workspace. Build Your Future.",
 };
 
 export default function HomePage() {

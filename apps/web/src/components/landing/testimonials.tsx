@@ -11,53 +11,53 @@ const testimonials = [
     company: "Freelancer",
     avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100",
     rating: 5,
-    text: "WorkSphere completely transformed how I find clients. Within the first month, I landed 3 long-term projects worth over ₹8 lakhs. The AI matching is incredibly accurate.",
-    location: "Bangalore, India",
+    text: "I listed my profile on FreWork last month and already have two long-term clients. The platform is clean, fast, and focused — exactly what Indian freelancers need.",
+    location: "Bengaluru, India",
   },
   {
-    name: "Michael Torres",
-    role: "CTO",
-    company: "NovaTech Startup",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100",
-    rating: 5,
-    text: "We hired our entire engineering team through WorkSphere in just 2 weeks. The quality of talent is unmatched and the escrow payment system gave us complete peace of mind.",
-    location: "Austin, USA",
-  },
-  {
-    name: "Fatima Al-Hassan",
-    role: "Coworking Owner",
-    company: "Desert Hub Dubai",
-    avatar: "https://images.unsplash.com/photo-1619473273021-48c5fd38f7d8?w=100",
-    rating: 5,
-    text: "Our occupancy went from 40% to 95% within 3 months of listing on WorkSphere. The booking management and payment processing are seamless. Best decision we ever made.",
-    location: "Dubai, UAE",
-  },
-  {
-    name: "David Kim",
+    name: "Arjun Mehta",
     role: "Founder",
-    company: "HealthAI Startup",
-    avatar: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=100",
+    company: "TechPulse Startup",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100",
     rating: 5,
-    text: "Through the Startup Hub, I connected with 3 investors and closed a $1.2M seed round. The investor matching algorithm is phenomenal. Couldn't have done it without WorkSphere.",
-    location: "Seoul, South Korea",
+    text: "We posted our first job on FreWork and received 12 qualified applications in 3 days. The talent quality is far better than what we found on generic platforms.",
+    location: "Pune, India",
   },
   {
-    name: "Amara Osei",
-    role: "Marketing Consultant",
+    name: "Ritu Sharma",
+    role: "Coworking Space Owner",
+    company: "The WorkNest",
+    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100",
+    rating: 5,
+    text: "We listed our coworking space on FreWork and filled 8 seats in the first two weeks. Simple listing process, great visibility with local professionals.",
+    location: "Mumbai, India",
+  },
+  {
+    name: "Vikram Iyer",
+    role: "Full-Stack Developer",
     company: "Freelancer",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100",
+    rating: 5,
+    text: "FreWork gave me a professional profile page I'm proud to share with clients. Landed my first ₹80,000 project within 3 weeks of joining. Highly recommend it.",
+    location: "Hyderabad, India",
+  },
+  {
+    name: "Sneha Kulkarni",
+    role: "HR Manager",
+    company: "GrowthBridge Pvt Ltd",
     avatar: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=100",
     rating: 5,
-    text: "The AI proposal generator helped me win 80% more projects. My earnings tripled in 6 months. WorkSphere is the most professional freelancing platform I've ever used.",
-    location: "Accra, Ghana",
+    text: "We use FreWork to find contract professionals for project-based work. The verified profiles save us hours of screening and the platform is easy to use.",
+    location: "Chennai, India",
   },
   {
-    name: "Rachel Zhang",
-    role: "HR Director",
-    company: "GlobalCorp",
-    avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=100",
+    name: "Rohan Desai",
+    role: "Content Strategist",
+    company: "Freelancer",
+    avatar: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=100",
     rating: 5,
-    text: "We've reduced our hiring time by 70% using WorkSphere. The talent verification and skill assessments save us weeks of screening. Absolutely worth every dollar.",
-    location: "Shanghai, China",
+    text: "As a content freelancer, FreWork helped me position myself properly and reach clients who actually value good writing. My monthly income has nearly doubled.",
+    location: "Ahmedabad, India",
   },
 ];
 
@@ -68,9 +68,9 @@ export function Testimonials() {
     <section className="py-24 bg-muted/20" ref={ref}>
       <div className="container">
         <div className="text-center mb-14">
-          <h2 className="text-4xl font-bold mb-4">Loved by Professionals Worldwide</h2>
+          <h2 className="text-4xl font-bold mb-4">Loved by India's Professionals</h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Join millions of professionals who trust WorkSphere to grow their careers and businesses.
+            Join freelancers, employers, and workspace owners who are growing with FreWork.
           </p>
           <div className="flex items-center justify-center gap-6 mt-6">
             <div className="flex items-center gap-1">
@@ -78,7 +78,7 @@ export function Testimonials() {
                 <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
               ))}
             </div>
-            <span className="text-muted-foreground text-sm">4.9/5 from 50,000+ reviews</span>
+            <span className="text-muted-foreground text-sm">Rated 5/5 by our early community</span>
           </div>
         </div>
 

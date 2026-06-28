@@ -114,7 +114,7 @@ export default function PricingPage() {
               ["Can I switch plans later?", "Yes, you can upgrade or downgrade at any time. Changes take effect immediately."],
               ["Is there a free trial?", "Professional and Business plans include a 14-day free trial with no credit card required."],
               ["What payment methods do you accept?", "We accept all major credit cards, UPI, Razorpay, Stripe, and bank transfers for annual plans."],
-              ["What is the WorkSphere fee on transactions?", "We charge 8% on the first $500/₹40K earned, 5% on $500–$10K, and 3% above $10K."],
+              ["What is the FreWork fee on transactions?", "We charge 5% platform fee on transactions — covering payment processing, escrow, and dispute resolution."],
             ].map(([q, a]) => (
               <details key={q} className="bg-card border border-border rounded-xl p-5 cursor-pointer">
                 <summary className="font-semibold text-sm list-none flex justify-between items-center">

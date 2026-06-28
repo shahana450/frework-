@@ -69,7 +69,7 @@ export function Hero() {
         >
           <Badge className="mb-6 px-4 py-1.5 text-sm bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-500/20 hover:bg-brand-500/20">
             <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-            Trusted by 2M+ professionals across India & beyond
+            India's new platform for freelancers, workspaces &amp; hiring — join early
           </Badge>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold tracking-tight mb-6 leading-[1.1]">

@@ -146,7 +146,7 @@ export default function PostJobPage() {
                   <div><span className="text-muted-foreground block mb-2">Skills ({form.skills.length})</span><div className="flex flex-wrap gap-1">{form.skills.map(s => <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>)}</div></div>
                 </div>
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-sm text-blue-800 dark:text-blue-300">
-                  ✨ Your job will be visible to <strong>2M+</strong> freelancers immediately. Free to post — WorkSphere only charges a small fee when you hire.
+                  ✨ Your job will be visible to FreWork's growing community of verified freelancers. Free to post — FreWork only charges a small fee when you hire.
                 </div>
               </div>
             )}

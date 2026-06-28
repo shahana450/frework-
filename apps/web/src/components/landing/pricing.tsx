@@ -26,7 +26,7 @@ const plans = [
   },
   {
     name: "Professional",
-    price: { monthly: 29, yearly: 19 },
+    price: { monthly: 999, yearly: 649 },
     description: "For serious freelancers & clients",
     badge: "Most Popular",
     features: [
@@ -45,7 +45,7 @@ const plans = [
   },
   {
     name: "Business",
-    price: { monthly: 99, yearly: 69 },
+    price: { monthly: 3999, yearly: 2599 },
     description: "For agencies & growing teams",
     badge: null,
     features: [
@@ -140,7 +140,7 @@ export function Pricing() {
                   {plan.price.monthly !== null ? (
                     <>
                       <span className="text-4xl font-bold">
-                        ${billing === "monthly" ? plan.price.monthly : plan.price.yearly}
+                        ₹{(billing === "monthly" ? plan.price.monthly : plan.price.yearly)?.toLocaleString("en-IN")}
                       </span>
                       <span className="text-muted-foreground text-sm">/month</span>
                     </>
@@ -150,7 +150,7 @@ export function Pricing() {
                 </div>
                 {billing === "yearly" && plan.price.monthly !== null && plan.price.monthly > 0 && (
                   <p className="text-xs text-green-500 mt-1">
-                    Billed ${(plan.price.yearly! * 12).toFixed(0)}/year
+                    Billed ₹{(plan.price.yearly! * 12).toLocaleString("en-IN")}/year
                   </p>
                 )}
               </div>
