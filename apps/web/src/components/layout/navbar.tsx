@@ -23,17 +23,29 @@ import {
   Users,
   Menu,
   X,
+  FileText,
+  Calculator,
+  BookOpen,
+  ClipboardCheck,
+  BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const solutions = [
-  { title: "Find Freelancers", href: "/freelancers", icon: Users, description: "Hire verified experts across 50+ categories" },
-  { title: "Browse Jobs", href: "/jobs", icon: Briefcase, description: "Find your next project or full-time role" },
-  { title: "Post a Job", href: "/jobs/post", icon: Briefcase, description: "Reach thousands of qualified candidates" },
-  { title: "Book Workspace", href: "/coworking", icon: Building2, description: "Find coworking spaces in 150+ cities" },
-  { title: "Startup Hub", href: "/startups", icon: Rocket, description: "Build, grow, and fund your startup" },
-  { title: "Investor Portal", href: "/investors", icon: TrendingUp, description: "Discover and invest in top startups" },
-  { title: "Community", href: "/community", icon: Globe, description: "Connect with professionals worldwide" },
+  { title: "Business Registration", href: "/services/business-registration", icon: Building2, description: "Pvt Ltd, LLP, OPC, Partnership — end to end" },
+  { title: "GST Services", href: "/services/gst", icon: FileText, description: "Registration, monthly filing & annual returns" },
+  { title: "Income Tax", href: "/services/income-tax", icon: Calculator, description: "ITR filing for individuals and businesses" },
+  { title: "Accounting", href: "/services/accounting", icon: BookOpen, description: "Bookkeeping, P&L and MIS reports" },
+  { title: "Audit", href: "/services/audit", icon: ClipboardCheck, description: "Statutory, internal and tax audit" },
+  { title: "ROC Compliance", href: "/services/roc-compliance", icon: BarChart2, description: "Annual filings, KYC and MCA compliance" },
+  { title: "Virtual CFO", href: "/services/virtual-cfo", icon: TrendingUp, description: "Strategic financial planning & reporting" },
+];
+
+const comingSoon = [
+  { title: "Freelancer Marketplace", icon: Users },
+  { title: "Job Portal", icon: Briefcase },
+  { title: "Coworking Spaces", icon: Globe },
+  { title: "Investor Network", icon: Rocket },
 ];
 
 export function Navbar() {
