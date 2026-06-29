@@ -47,8 +47,8 @@ export default function ContactPage() {
                 <h2 className="font-bold text-lg mb-4">Contact Information</h2>
                 <div className="space-y-4">
                   {[
-                    [Phone, "+91 98765 43210", "Call us Mon–Sat, 9am–7pm"],
-                    [Mail, "hello@frework.online", "Email us anytime"],
+                    [Phone, "+91 08590874681", "Call us Mon–Sat, 9am–7pm"],
+                    [Mail, "contact.frework@gmail.com", "Email us anytime"],
                     [MapPin, "Mumbai, Maharashtra", "Serving businesses across India"],
                   ].map(([Icon, title, sub]) => (
                     <div key={String(title)} className="flex gap-3">
