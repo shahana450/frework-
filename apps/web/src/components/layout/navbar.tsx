@@ -48,27 +48,35 @@ const comingSoon = [
   { title: "Investor Network", icon: Rocket },
 ];
 
-/* Premium FW Monogram Logo */
+/* FreWork Official Logo Icon */
 function FreWorkLogo({ size = 38 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="38" height="38" rx="10" fill="#0B1120"/>
-      <rect x="0.5" y="0.5" width="37" height="37" rx="9.5" stroke="url(#goldBorder)" strokeOpacity="0.6"/>
-      {/* F letter */}
-      <path d="M8 10H17.5V13H11V17.5H16.5V20.5H11V28H8V10Z" fill="url(#goldFill)"/>
-      {/* W letter */}
-      <path d="M19 10H22L24.5 21.5L27 10H30L32 28H29L27.8 17L25 28H24L21.2 17L20 28H17L19 10Z" fill="url(#goldFill)"/>
       <defs>
-        <linearGradient id="goldFill" x1="8" y1="10" x2="32" y2="28" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#E8C97A"/>
-          <stop offset="50%" stopColor="#C9A84C"/>
-          <stop offset="100%" stopColor="#A07830"/>
+        <linearGradient id="fw_bg" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#7C3AED"/>
+          <stop offset="100%" stopColor="#A855F7"/>
         </linearGradient>
-        <linearGradient id="goldBorder" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#E8C97A"/>
-          <stop offset="100%" stopColor="#A07830"/>
-        </linearGradient>
+        <filter id="fw_glow">
+          <feGaussianBlur stdDeviation="1.2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
       </defs>
+      {/* Background */}
+      <rect width="38" height="38" rx="10" fill="url(#fw_bg)"/>
+      {/* Network lines */}
+      <g stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round">
+        <line x1="19" y1="19" x2="19" y2="10"/>
+        <line x1="19" y1="19" x2="27" y2="24"/>
+        <line x1="19" y1="19" x2="11" y2="24"/>
+      </g>
+      {/* Nodes */}
+      <g fill="white" filter="url(#fw_glow)">
+        <circle cx="19" cy="19" r="3.2"/>
+        <circle cx="19" cy="10" r="2.2"/>
+        <circle cx="27" cy="24" r="2.2"/>
+        <circle cx="11" cy="24" r="2.2"/>
+      </g>
     </svg>
   );
 }
@@ -96,9 +104,9 @@ export function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
           <FreWorkLogo />
-          <span className="font-bold text-[1.18rem] tracking-[-0.01em] text-white group-hover:text-[#E8C97A] transition-colors duration-300"
-            style={{ fontFamily: "var(--font-plus-jakarta), sans-serif" }}>
-            Fre<span className="text-[#C9A84C]">Work</span>
+          <span className="font-bold tracking-[-0.025em] text-[#F6F4FC] group-hover:text-white transition-colors duration-300"
+            style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "1.22rem", lineHeight: 1 }}>
+            FreWork
           </span>
         </Link>
 
