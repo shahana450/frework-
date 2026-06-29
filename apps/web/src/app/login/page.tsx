@@ -5,50 +5,62 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, ArrowRight, Phone, CheckCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 type Step = "auth" | "mobile" | "done";
 
-function saveUser(data: Record<string, string>) {
-  try {
-    const users = JSON.parse(localStorage.getItem("fw_users") || "[]");
-    const existing = users.findIndex((u: Record<string,string>) => u.email === data.email);
-    const record = { ...data, createdAt: new Date().toISOString(), id: data.id || `u_${Date.now()}` };
-    if (existing >= 0) users[existing] = record; else users.push(record);
-    localStorage.setItem("fw_users", JSON.stringify(users));
-  } catch {}
-}
-
 export default function LoginPage() {
   const [step, setStep] = useState<Step>("auth");
-  const [method, setMethod] = useState<"google" | "email" | null>(null);
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
-  const [userData, setUserData] = useState<Record<string, string>>({});
+  const [userId, setUserId] = useState("");
 
   const handleGoogle = async () => {
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    const gUser = { id: `g_${Date.now()}`, name: "Google User", email: `user_${Date.now()}@gmail.com`, method: "google" };
-    setUserData(gUser);
-    setMethod("google");
-    setLoading(false);
-    setStep("mobile");
+    setError("");
+    try {
+      const fakeEmail = `google_${Date.now()}@frework.demo`;
+      const { data, error: err } = await supabase
+        .from("fw_users")
+        .insert({ email: fakeEmail, method: "google", name: "Google User" })
+        .select()
+        .single();
+      if (err) throw err;
+      setUserId(data.id);
+      setStep("mobile");
+    } catch {
+      setError("Google sign-in unavailable. Use email instead.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setUserData({ id: `e_${Date.now()}`, email, method: "email" });
-    setMethod("email");
-    setLoading(false);
-    setStep("mobile");
+    setError("");
+    try {
+      const { data, error: err } = await supabase
+        .from("fw_users")
+        .select()
+        .eq("email", email)
+        .maybeSingle();
+      if (err) throw err;
+      if (!data) throw new Error("Account not found. Please register first.");
+      setUserId(data.id);
+      setStep("mobile");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Sign-in failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const sendOtp = async () => {
@@ -62,10 +74,17 @@ export default function LoginPage() {
   const verifyOtp = async () => {
     if (otp.length < 4) return;
     setLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    saveUser({ ...userData, mobile });
-    setLoading(false);
-    setStep("done");
+    setError("");
+    try {
+      if (userId) {
+        await supabase.from("fw_users").update({ mobile }).eq("id", userId);
+      }
+      setStep("done");
+    } catch {
+      setError("Verification failed. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -108,9 +127,11 @@ export default function LoginPage() {
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Welcome back</h1>
                 <p className="text-gray-500 dark:text-gray-400 mb-8">Sign in to your FreWork account</p>
 
+                {error && <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 text-red-600 dark:text-red-400 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>}
+
                 {/* Google */}
                 <button onClick={handleGoogle} disabled={loading} className="w-full flex items-center justify-center gap-3 py-3.5 border-2 border-gray-200 dark:border-gray-700 rounded-2xl hover:border-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-all font-medium text-gray-700 dark:text-gray-200 mb-4 group">
-                  {loading && method === null ? <Loader2 className="w-5 h-5 animate-spin text-violet-600" /> : (
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin text-violet-600" /> : (
                     <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                   )}
                   <span>Continue with Google</span>

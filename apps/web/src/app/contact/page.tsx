@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Phone, Mail, MapPin, CheckCircle, Loader2, MessageSquare } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { supabase } from "@/lib/supabase";
 
 export default function ContactPage() {
   const [sent, setSent] = useState(false);
@@ -15,11 +16,14 @@ export default function ContactPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
     try {
-      const enquiries = JSON.parse(localStorage.getItem("fw_enquiries") || "[]");
-      enquiries.push({ ...form, id: `enq_${Date.now()}`, createdAt: new Date().toISOString() });
-      localStorage.setItem("fw_enquiries", JSON.stringify(enquiries));
+      await supabase.from("fw_enquiries").insert({
+        name: form.name,
+        email: form.email || null,
+        mobile: form.mobile,
+        service: form.service || null,
+        message: form.message || null,
+      });
     } catch {}
     setLoading(false);
     setSent(true);
