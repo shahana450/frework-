@@ -5,7 +5,7 @@ import { Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const faqs = [
-  { q: "What services does FreWork offer?", a: "FreWork offers GST registration & filing, Income Tax returns, Company/LLP registration, monthly accounting, statutory audit, ROC compliance and Virtual CFO services for Indian businesses." },
+  { q: "What services does FreWork offer?", a: "FreWork offers GST registration & filing, Income Tax returns, Company/LLP registration, monthly accounting and Virtual CFO services for Indian businesses." },
   { q: "How do I get started?", a: "Book a free consultation call. Our CA team will assess your needs and recommend the right plan. No commitment required for the first call." },
   { q: "What is the 3-month promotional offer?", a: "New clients get a bundled package covering company registration, GST setup, 3 months of filing, monthly bookkeeping and ROC annual filing — all at a special introductory price. Terms apply." },
   { q: "How does the referral programme work?", a: "Refer any business to FreWork. When they sign up for a paid service, you receive ₹500 credit applied to your next invoice. There is no limit on referrals." },

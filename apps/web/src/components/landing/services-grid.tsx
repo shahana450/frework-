@@ -2,15 +2,13 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { FileText, Calculator, Building2, BookOpen, ClipboardCheck, BarChart3, Briefcase, ArrowUpRight } from "lucide-react";
+import { FileText, Calculator, Building2, BookOpen, Briefcase, ArrowUpRight } from "lucide-react";
 
 const services = [
   { icon: Building2, title: "Business Registration", desc: "Pvt Ltd, LLP, OPC, Partnership — end-to-end incorporation.", href: "/services/business-registration", tag: "Most Popular" },
   { icon: FileText, title: "GST Services", desc: "Registration, monthly filing, annual returns and audit support.", href: "/services/gst", tag: null },
   { icon: Calculator, title: "Income Tax", desc: "ITR filing for individuals, businesses and corporates. Notices handled.", href: "/services/income-tax", tag: null },
   { icon: BookOpen, title: "Accounting", desc: "Monthly bookkeeping, P&L statements, balance sheets and MIS reports.", href: "/services/accounting", tag: null },
-  { icon: ClipboardCheck, title: "Audit", desc: "Statutory, internal, tax audit and concurrent audit by qualified CAs.", href: "/services/audit", tag: null },
-  { icon: BarChart3, title: "ROC Compliance", desc: "Annual filings, director KYC, board resolutions and MCA compliance.", href: "/services/roc-compliance", tag: null },
   { icon: Briefcase, title: "Virtual CFO", desc: "Strategic financial planning, cash flow management and investor reporting.", href: "/services/virtual-cfo", tag: "Premium" },
 ];
 

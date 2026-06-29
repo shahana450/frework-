@@ -24,8 +24,6 @@ import {
   FileText,
   Calculator,
   BookOpen,
-  ClipboardCheck,
-  BarChart2,
   Globe,
   ChevronRight,
 } from "lucide-react";
@@ -36,8 +34,6 @@ const solutions = [
   { title: "GST Services", href: "/services/gst", icon: FileText, description: "Registration, monthly filing & annual returns" },
   { title: "Income Tax", href: "/services/income-tax", icon: Calculator, description: "ITR filing for individuals and businesses" },
   { title: "Accounting", href: "/services/accounting", icon: BookOpen, description: "Bookkeeping, P&L and MIS reports" },
-  { title: "Audit", href: "/services/audit", icon: ClipboardCheck, description: "Statutory, internal and tax audit" },
-  { title: "ROC Compliance", href: "/services/roc-compliance", icon: BarChart2, description: "Annual filings, KYC and MCA compliance" },
   { title: "Virtual CFO", href: "/services/virtual-cfo", icon: TrendingUp, description: "Strategic financial planning & reporting" },
 ];
 
