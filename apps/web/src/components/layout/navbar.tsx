@@ -58,11 +58,23 @@ export function Navbar() {
     >
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center">
-            <Globe className="w-5 h-5 text-white" />
-          </div>
-          <span className="gradient-text">FreWork</span>
+        <Link href="/" className="flex items-center gap-2">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="36" height="36" rx="9" fill="url(#logoGrad)"/>
+            <circle cx="18" cy="11" r="2.5" fill="white"/>
+            <circle cx="11" cy="23" r="2.5" fill="white"/>
+            <circle cx="25" cy="23" r="2.5" fill="white"/>
+            <line x1="18" y1="13.5" x2="11" y2="20.5" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+            <line x1="18" y1="13.5" x2="25" y2="20.5" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+            <line x1="11" y1="23" x2="25" y2="23" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+            <defs>
+              <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#7C3AED"/>
+                <stop offset="100%" stopColor="#5B21B6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <span style={{fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:700, fontSize:"1.25rem", color:"inherit", letterSpacing:"-0.01em"}}>FreWork</span>
         </Link>
 
         {/* Desktop Nav */}
