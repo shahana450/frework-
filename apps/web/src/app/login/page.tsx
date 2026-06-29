@@ -17,8 +17,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mobile, setMobile] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
   const [userId, setUserId] = useState("");
 
   const handleGoogle = async () => {
@@ -63,16 +61,8 @@ export default function LoginPage() {
     }
   };
 
-  const sendOtp = async () => {
+  const saveMobile = async () => {
     if (mobile.length < 10) return;
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setOtpSent(true);
-    setLoading(false);
-  };
-
-  const verifyOtp = async () => {
-    if (otp.length < 4) return;
     setLoading(true);
     setError("");
     try {
@@ -81,7 +71,7 @@ export default function LoginPage() {
       }
       setStep("done");
     } catch {
-      setError("Verification failed. Try again.");
+      setError("Failed to save. Try again.");
     } finally {
       setLoading(false);
     }
@@ -176,8 +166,13 @@ export default function LoginPage() {
                 <div className="w-14 h-14 rounded-2xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center mb-6">
                   <Phone className="w-7 h-7 text-violet-600" />
                 </div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Verify your mobile</h1>
-                <p className="text-gray-500 dark:text-gray-400 mb-8">One last step — enter your mobile number to secure your account.</p>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Add mobile number</h1>
+                <p className="text-gray-500 dark:text-gray-400 mb-2">Enter your mobile so our team can reach you.</p>
+                <div className="bg-violet-50 dark:bg-violet-900/20 rounded-2xl px-4 py-3 text-sm text-violet-700 dark:text-violet-300 mb-6 flex items-start gap-2">
+                  <span className="mt-0.5">📞</span>
+                  <span>We call every client within 24 hours for your free consultation.</span>
+                </div>
+                {error && <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>}
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Mobile number</label>
@@ -186,22 +181,9 @@ export default function LoginPage() {
                       <input type="tel" value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10-digit number" className="flex-1 border-2 border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 bg-white dark:bg-gray-900 outline-none focus:border-violet-500 text-sm dark:text-white transition-all" />
                     </div>
                   </div>
-                  {!otpSent ? (
-                    <Button onClick={sendOtp} disabled={loading || mobile.length < 10} className="w-full h-12 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl font-semibold">
-                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send OTP"}
-                    </Button>
-                  ) : (
-                    <>
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Enter OTP</label>
-                        <input type="text" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6-digit OTP" className="w-full border-2 border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 bg-white dark:bg-gray-900 outline-none focus:border-violet-500 text-sm dark:text-white transition-all tracking-widest text-center text-lg font-bold" />
-                        <p className="text-xs text-gray-400 mt-1.5 text-center">OTP sent to +91 {mobile} <button onClick={() => setOtpSent(false)} className="text-violet-600 underline ml-1">Change</button></p>
-                      </div>
-                      <Button onClick={verifyOtp} disabled={loading || otp.length < 4} className="w-full h-12 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl font-semibold">
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Sign In"}
-                      </Button>
-                    </>
-                  )}
+                  <Button onClick={saveMobile} disabled={loading || mobile.length < 10} className="w-full h-12 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl font-semibold">
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Continue"}
+                  </Button>
                 </div>
               </motion.div>
             )}
