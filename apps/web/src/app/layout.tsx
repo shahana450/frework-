@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins, Plus_Jakarta_Sans } from "next/font/google";
+import { Poppins, Plus_Jakarta_Sans, Cormorant_Garamond } from "next/font/google";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { QueryProvider } from "@/components/shared/query-provider";
 import { Toaster } from "sonner";
@@ -16,6 +16,14 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["500", "700"],
   variable: "--font-plus-jakarta",
+  display: "swap",
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
   display: "swap",
 });
 
@@ -78,7 +86,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${plusJakartaSans.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${plusJakartaSans.variable} ${cormorant.variable}`}>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <QueryProvider>

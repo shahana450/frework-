@@ -11,13 +11,13 @@ const badges = [
 
 export function TrustBadges() {
   return (
-    <section className="border-y border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 py-6">
+    <section className="border-y border-[#C9A84C]/12 bg-[#070D1A] py-5">
       <div className="container mx-auto px-4">
-        <div className="flex flex-wrap justify-center gap-8 md:gap-16">
+        <div className="flex flex-wrap justify-center gap-10 md:gap-20">
           {badges.map(({ icon: Icon, label }) => (
-            <div key={label} className="flex items-center gap-2.5 text-gray-600 dark:text-gray-300">
-              <Icon className="w-5 h-5 text-violet-600" />
-              <span className="text-sm font-medium">{label}</span>
+            <div key={label} className="flex items-center gap-2.5">
+              <Icon className="w-4 h-4 text-[#C9A84C]/70" />
+              <span className="text-xs font-medium text-white/45 tracking-wide uppercase">{label}</span>
             </div>
           ))}
         </div>
