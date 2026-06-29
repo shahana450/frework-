@@ -9,8 +9,8 @@ import { HomepageFAQ } from "@/components/landing/homepage-faq";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "FreWork – Start. Manage. Grow. | India's Business Growth Platform",
-  description: "Expert GST, Income Tax, Company Registration, Accounting, Audit and Compliance services for Indian businesses. Book a free consultation today.",
+  title: "FreWork – Find. Grow. | India's Professional Platform",
+  description: "FIND coworking spaces, freelancers and jobs — or GROW your business with expert compliance, DPR, pitch decks and restructuring services from CA & CS qualified professionals.",
 };
 
 export default function HomePage() {

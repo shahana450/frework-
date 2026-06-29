@@ -5,12 +5,12 @@ import { Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const faqs = [
-  { q: "What services does FreWork offer?", a: "FreWork offers GST registration & filing, Income Tax returns, Company/LLP registration, monthly accounting and Virtual CFO services for Indian businesses." },
-  { q: "How do I get started?", a: "Book a free consultation call. Our CA team will assess your needs and recommend the right plan. No commitment required for the first call." },
-  { q: "What is the 3-month promotional offer?", a: "New clients get a bundled package covering company registration, GST setup, 3 months of filing, monthly bookkeeping and ROC annual filing — all at a special introductory price. Terms apply." },
-  { q: "How does the referral programme work?", a: "Refer any business to FreWork. When they sign up for a paid service, you receive ₹500 credit applied to your next invoice. There is no limit on referrals." },
-  { q: "Are your professionals CA/CS qualified?", a: "Yes. All work is handled by Chartered Accountants and Company Secretaries with active ICAI/ICSI membership. You will have a named professional responsible for your account." },
-  { q: "When will the marketplace and coworking features launch?", a: "Freelancer Marketplace, Job Portal, Coworking bookings and Investor Network are on our Phase 2 roadmap. Sign up to be notified when they launch." },
+  { q: "What are the two doors on FreWork?", a: "FreWork has two distinct sides. FIND is the marketplace — search coworking spaces, browse freelancers by skill, and look for jobs. GROW is the professional services side — businesses request quotes for compliance, DPRs, pitch decks, restructuring and training, handled by CA & CS qualified experts." },
+  { q: "How does FIND work?", a: "Browse and search without creating an account. When you want to enquire, book or hire, you register and connect directly. Coworking spaces can be filtered by city, capacity and amenities. Freelancers are listed by skill category. Jobs can be searched by role and location." },
+  { q: "How does GROW work?", a: "Tell us what you need — compliance filing, a DPR for a bank loan, a pitch deck, a restructuring plan or a training workshop. Our team will contact you within 24 hours, confirm scope and pricing, and assign a named CA or CS to your account." },
+  { q: "What compliance services are covered?", a: "Income Tax (ITR filing for individuals and businesses), GST (registration, monthly/quarterly returns), Accounts & bookkeeping (P&L, balance sheet, MIS) and ROC compliance (annual filings, director KYC, board resolutions, MCA forms)." },
+  { q: "Are your professionals CA/CS qualified?", a: "Yes. All GROW work is handled by Chartered Accountants and Company Secretaries with active ICAI/ICSI membership. You will have a named professional responsible for your account." },
+  { q: "How does the referral programme work?", a: "Refer any business to FreWork. When they sign up for a paid GROW service, you receive ₹500 credit applied to your next invoice. There is no limit on referrals." },
 ];
 
 export function HomepageFAQ() {
