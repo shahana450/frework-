@@ -221,22 +221,32 @@ export function HomepageHero() {
 
           {/* Trust strip */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="flex flex-wrap items-center justify-center gap-8 mt-16 text-center"
+            className="mt-16 max-w-3xl mx-auto"
           >
-            {[
-              ["500+", "Businesses Served"],
-              ["CA & CS", "Qualified Experts"],
-              ["24 hrs", "Response Time"],
-              ["₹999", "Starting/month"],
-            ].map(([num, label]) => (
-              <div key={label} className="flex flex-col items-center">
-                <span className="text-xl font-bold text-[#C9A84C]" style={{ fontFamily: "var(--font-cormorant), serif" }}>{num}</span>
-                <span className="text-[10px] text-white/30 uppercase tracking-widest mt-0.5">{label}</span>
+            <div className="relative rounded-2xl border border-white/8 overflow-hidden"
+              style={{ background: "linear-gradient(135deg, rgba(201,168,76,0.06) 0%, rgba(255,255,255,0.02) 50%, rgba(139,92,246,0.06) 100%)" }}>
+              {/* shimmer line top */}
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#C9A84C]/40 to-transparent" />
+              <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/6">
+                {[
+                  { num: "500+", label: "Businesses Served", sub: "across India", color: "text-[#C9A84C]" },
+                  { num: "CA & CS", label: "Qualified Experts", sub: "on your team", color: "text-blue-400" },
+                  { num: "24 hrs", label: "Response Time", sub: "guaranteed", color: "text-emerald-400" },
+                  { num: "₹999", label: "Starting / month", sub: "no hidden fees", color: "text-purple-400" },
+                ].map(({ num, label, sub, color }) => (
+                  <div key={label} className="flex flex-col items-center justify-center py-6 px-4 text-center gap-1 hover:bg-white/2 transition-colors">
+                    <span className={`text-2xl font-bold ${color}`} style={{ fontFamily: "var(--font-cormorant), serif" }}>{num}</span>
+                    <span className="text-xs font-medium text-white/60 leading-tight">{label}</span>
+                    <span className="text-[10px] text-white/20 tracking-wide">{sub}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+              {/* shimmer line bottom */}
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+            </div>
           </motion.div>
 
         </div>
