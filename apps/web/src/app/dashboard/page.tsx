@@ -5,21 +5,10 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import {
-  LayoutDashboard,
-  MessageSquare,
-  CalendarClock,
-  CheckSquare,
-  Crown,
-  LogOut,
-  ArrowRight,
-  Clock,
-  FileText,
-  TrendingUp,
-  Building2,
-  Briefcase,
-  AlertCircle,
-  Plus,
-  Rocket,
+  MessageSquare, CalendarClock, CheckSquare, Crown, LogOut,
+  ArrowRight, FileText, TrendingUp, Building2, Briefcase,
+  AlertCircle, Plus, Rocket, ChevronRight, Zap, Star,
+  ExternalLink, Edit3, Globe, MapPin,
 } from "lucide-react";
 
 interface UserProfile {
@@ -29,12 +18,18 @@ interface UserProfile {
   avatar?: string;
 }
 
+interface Startup {
+  id: string;
+  slug: string;
+  name: string;
+  tagline: string;
+  sector: string;
+  stage: string;
+  status: string;
+}
+
 function EmptyState({ icon: Icon, title, desc, cta, href }: {
-  icon: React.ElementType;
-  title: string;
-  desc: string;
-  cta: string;
-  href: string;
+  icon: React.ElementType; title: string; desc: string; cta: string; href: string;
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
@@ -42,7 +37,7 @@ function EmptyState({ icon: Icon, title, desc, cta, href }: {
         <Icon className="w-5 h-5 text-white/20" />
       </div>
       <p className="text-sm font-medium text-white/40 mb-1">{title}</p>
-      <p className="text-xs text-white/25 mb-4">{desc}</p>
+      <p className="text-xs text-white/25 mb-4 max-w-[180px]">{desc}</p>
       <Link href={href}
         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[#C9A84C]/25 text-[#C9A84C] text-xs hover:bg-[#C9A84C]/8 transition-colors">
         <Plus className="w-3 h-3" /> {cta}
@@ -54,14 +49,12 @@ function EmptyState({ icon: Icon, title, desc, cta, href }: {
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [startups, setStartups] = useState<Startup[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) {
-        router.replace("/login");
-        return;
-      }
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) { router.replace("/login"); return; }
       const u = session.user;
       setUser({
         id: u.id,
@@ -69,6 +62,12 @@ export default function DashboardPage() {
         name: u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email?.split("@")[0] ?? "User",
         avatar: u.user_metadata?.avatar_url,
       });
+      const { data } = await supabase
+        .from("fw_startups")
+        .select("id, slug, name, tagline, sector, stage, status")
+        .eq("user_id", u.id)
+        .order("created_at", { ascending: false });
+      setStartups(data ?? []);
       setLoading(false);
     });
   }, [router]);
@@ -87,21 +86,36 @@ export default function DashboardPage() {
   }
 
   const firstName = user?.name?.split(" ")[0] ?? "there";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const statusColor = (s: string) =>
+    s === "live" ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" :
+    s === "pending" ? "text-amber-400 bg-amber-400/10 border-amber-400/20" :
+    "text-white/40 bg-white/5 border-white/10";
 
   return (
     <div className="min-h-screen bg-[#060C18]">
-      {/* Top nav */}
-      <header className="border-b border-white/6 bg-[#070D1A]/80 backdrop-blur-sm sticky top-0 z-40">
+
+      {/* Ambient background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600/6 rounded-full blur-3xl" />
+        <div className="absolute top-32 right-1/4 w-80 h-80 bg-[#C9A84C]/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 left-1/3 w-72 h-72 bg-blue-600/5 rounded-full blur-3xl" />
+      </div>
+
+      {/* Header */}
+      <header className="border-b border-white/6 bg-[#060C18]/80 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <svg width="28" height="28" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="28" height="28" viewBox="0 0 38 38" fill="none">
               <defs>
-                <linearGradient id="fw_dash_bg" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+                <linearGradient id="fw_d_bg" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
                   <stop offset="0%" stopColor="#7C3AED"/>
                   <stop offset="100%" stopColor="#A855F7"/>
                 </linearGradient>
               </defs>
-              <rect width="38" height="38" rx="10" fill="url(#fw_dash_bg)"/>
+              <rect width="38" height="38" rx="10" fill="url(#fw_d_bg)"/>
               <g stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round">
                 <line x1="19" y1="19" x2="19" y2="10"/>
                 <line x1="19" y1="19" x2="27" y2="24"/>
@@ -117,6 +131,19 @@ export default function DashboardPage() {
             <span className="font-bold text-white" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif" }}>FreWork</span>
           </Link>
 
+          <nav className="hidden md:flex items-center gap-1">
+            {[
+              { label: "Startups", href: "/startups", icon: Rocket },
+              { label: "Coworking", href: "/coworking", icon: Building2 },
+              { label: "Jobs", href: "/jobs", icon: Briefcase },
+            ].map(({ label, href, icon: Icon }) => (
+              <Link key={label} href={href}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-white/40 hover:text-white hover:bg-white/6 transition-colors">
+                <Icon className="w-3.5 h-3.5" />{label}
+              </Link>
+            ))}
+          </nav>
+
           <div className="flex items-center gap-3">
             {user?.avatar ? (
               <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full border border-white/20" />
@@ -125,119 +152,187 @@ export default function DashboardPage() {
                 <span className="text-[#C9A84C] text-xs font-bold">{user?.name?.[0]?.toUpperCase()}</span>
               </div>
             )}
-            <span className="text-sm text-white/60 hidden sm:block">{user?.name}</span>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white hover:bg-white/6 transition-colors"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              Sign out
+            <span className="text-sm text-white/50 hidden sm:block">{user?.name}</span>
+            <button onClick={handleSignOut}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/6 transition-colors">
+              <LogOut className="w-3.5 h-3.5" /> Sign out
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-10">
+      <main className="max-w-7xl mx-auto px-4 py-10 relative z-10">
 
-        {/* Welcome */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif" }}>
-            Good day, {firstName} 👋
-          </h1>
-          <p className="text-white/40 text-sm">{user?.email}</p>
+        {/* Welcome banner */}
+        <div className="relative rounded-3xl overflow-hidden mb-8 border border-white/6"
+          style={{ background: "linear-gradient(135deg, #0D1428 0%, #0F1635 50%, #0A1020 100%)" }}>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_80%_50%,rgba(201,168,76,0.08),transparent)]" />
+          <div className="relative px-8 py-8 flex items-center justify-between">
+            <div>
+              <p className="text-white/35 text-sm mb-1">{greeting},</p>
+              <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: "var(--font-cormorant), serif" }}>
+                {firstName} 👋
+              </h1>
+              <p className="text-white/35 text-sm">{user?.email}</p>
+            </div>
+            <div className="hidden md:flex flex-col items-end gap-2">
+              <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                ● Active account
+              </span>
+              <span className="text-xs px-3 py-1 rounded-full bg-white/6 border border-white/10 text-white/40">
+                Free Plan
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
-            { icon: MessageSquare, label: "Active Queries", value: "0", color: "text-blue-400", bg: "bg-blue-400/8 border-blue-400/15" },
-            { icon: CalendarClock, label: "Upcoming Meetings", value: "0", color: "text-[#C9A84C]", bg: "bg-[#C9A84C]/8 border-[#C9A84C]/15" },
-            { icon: CheckSquare, label: "Pending Tasks", value: "0", color: "text-orange-400", bg: "bg-orange-400/8 border-orange-400/15" },
-            { icon: TrendingUp, label: "Services Used", value: "0", color: "text-emerald-400", bg: "bg-emerald-400/8 border-emerald-400/15" },
-          ].map(({ icon: Icon, label, value, color, bg }) => (
-            <div key={label} className={`rounded-2xl border ${bg} p-5`}>
-              <div className={`${color} mb-3`}><Icon className="w-5 h-5" /></div>
+            { icon: MessageSquare, label: "Active Queries", value: "0", color: "text-blue-400", border: "border-blue-400/15", glow: "bg-blue-400/6" },
+            { icon: CalendarClock, label: "Upcoming Meetings", value: "0", color: "text-[#C9A84C]", border: "border-[#C9A84C]/15", glow: "bg-[#C9A84C]/6" },
+            { icon: CheckSquare, label: "Pending Tasks", value: "0", color: "text-orange-400", border: "border-orange-400/15", glow: "bg-orange-400/6" },
+            { icon: Rocket, label: "My Startups", value: String(startups.length), color: "text-purple-400", border: "border-purple-400/15", glow: "bg-purple-400/6" },
+          ].map(({ icon: Icon, label, value, color, border, glow }) => (
+            <div key={label} className={`rounded-2xl border ${border} ${glow} p-5 hover:scale-[1.02] transition-transform`}>
+              <div className={`${color} mb-3 opacity-80`}><Icon className="w-5 h-5" /></div>
               <div className="text-2xl font-bold text-white mb-0.5">{value}</div>
-              <div className="text-xs text-white/40">{label}</div>
+              <div className="text-xs text-white/35">{label}</div>
             </div>
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-5">
 
-          {/* Left column */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Left — main content */}
+          <div className="lg:col-span-2 space-y-5">
 
-            {/* My Queries */}
-            <div className="rounded-2xl border border-white/6 bg-[#070D1A] overflow-hidden">
+            {/* My Startups */}
+            <div className="rounded-2xl border border-white/6 bg-[#070D1A]/80 backdrop-blur-sm overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/6">
                 <div className="flex items-center gap-2.5">
-                  <MessageSquare className="w-4 h-4 text-[#C9A84C]" />
+                  <div className="w-7 h-7 rounded-lg bg-purple-500/15 border border-purple-500/20 flex items-center justify-center">
+                    <Rocket className="w-3.5 h-3.5 text-purple-400" />
+                  </div>
+                  <h2 className="font-semibold text-white text-sm">My Startups</h2>
+                  {startups.length > 0 && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">{startups.length}</span>
+                  )}
+                </div>
+                <Link href="/dashboard/startup/submit"
+                  className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors">
+                  <Plus className="w-3.5 h-3.5" /> List startup
+                </Link>
+              </div>
+
+              {startups.length === 0 ? (
+                <div className="px-6 py-10 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-purple-500/8 border border-purple-500/15 flex items-center justify-center mx-auto mb-4">
+                    <Rocket className="w-6 h-6 text-purple-400/40" />
+                  </div>
+                  <p className="text-sm font-medium text-white/40 mb-1">No startups listed yet</p>
+                  <p className="text-xs text-white/20 mb-5 max-w-[200px] mx-auto">List your startup to get discovered by investors and partners</p>
+                  <Link href="/dashboard/startup/submit"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition-colors">
+                    <Rocket className="w-3.5 h-3.5" /> List your startup — Free
+                  </Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/4">
+                  {startups.map(s => (
+                    <div key={s.id} className="flex items-center gap-4 px-6 py-4 hover:bg-white/2 transition-colors">
+                      <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/15 flex items-center justify-center text-sm font-bold text-purple-400 flex-shrink-0">
+                        {s.name[0]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{s.name}</p>
+                        <p className="text-xs text-white/35 truncate">{s.tagline}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColor(s.status)}`}>{s.status}</span>
+                        {s.status === "live" && (
+                          <Link href={`/startups/${s.slug}`} className="text-white/20 hover:text-white transition-colors">
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="px-6 py-3">
+                    <Link href="/startups" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
+                      Browse all startups <ChevronRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* My Queries */}
+            <div className="rounded-2xl border border-white/6 bg-[#070D1A]/80 backdrop-blur-sm overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/6">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-[#C9A84C]/15 border border-[#C9A84C]/20 flex items-center justify-center">
+                    <MessageSquare className="w-3.5 h-3.5 text-[#C9A84C]" />
+                  </div>
                   <h2 className="font-semibold text-white text-sm">My Queries</h2>
                 </div>
-                <Link href="/contact" className="text-xs text-[#C9A84C] hover:text-[#E8C97A] flex items-center gap-1">
+                <Link href="/contact" className="text-xs text-[#C9A84C] hover:text-[#E8C97A] flex items-center gap-1 transition-colors">
                   New query <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
-              <EmptyState
-                icon={FileText}
-                title="No queries yet"
-                desc="Submit a query and our CA & CS team will get back to you."
-                cta="Submit a query"
-                href="/contact"
-              />
+              <EmptyState icon={FileText} title="No queries yet"
+                desc="Submit a query and our CA & CS team will respond within 2 hours."
+                cta="Submit a query" href="/contact" />
             </div>
 
-            {/* Task Dashboard */}
-            <div className="rounded-2xl border border-white/6 bg-[#070D1A] overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/6">
-                <div className="flex items-center gap-2.5">
-                  <CheckSquare className="w-4 h-4 text-[#C9A84C]" />
-                  <h2 className="font-semibold text-white text-sm">Task Dashboard</h2>
+            {/* Tasks + Meetings row */}
+            <div className="grid md:grid-cols-2 gap-5">
+              <div className="rounded-2xl border border-white/6 bg-[#070D1A]/80 backdrop-blur-sm overflow-hidden">
+                <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/6">
+                  <div className="w-7 h-7 rounded-lg bg-orange-500/15 border border-orange-500/20 flex items-center justify-center">
+                    <CheckSquare className="w-3.5 h-3.5 text-orange-400" />
+                  </div>
+                  <h2 className="font-semibold text-white text-sm">Tasks</h2>
                 </div>
+                <EmptyState icon={CheckSquare} title="No tasks"
+                  desc="Tasks from your CA/CS team appear here once a service starts."
+                  cta="Start a service" href="/services/compliance" />
               </div>
-              <EmptyState
-                icon={CheckSquare}
-                title="No tasks assigned"
-                desc="Tasks from your CA/CS team will appear here once a service is initiated."
-                cta="Start a service"
-                href="/services/compliance"
-              />
+
+              <div className="rounded-2xl border border-white/6 bg-[#070D1A]/80 backdrop-blur-sm overflow-hidden">
+                <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/6">
+                  <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
+                    <CalendarClock className="w-3.5 h-3.5 text-blue-400" />
+                  </div>
+                  <h2 className="font-semibold text-white text-sm">Meetings</h2>
+                </div>
+                <EmptyState icon={CalendarClock} title="No meetings"
+                  desc="Book a free 30-min call with our CA/CS expert."
+                  cta="Schedule a call" href="/contact" />
+              </div>
             </div>
           </div>
 
-          {/* Right column */}
-          <div className="space-y-6">
-
-            {/* Meeting Schedules */}
-            <div className="rounded-2xl border border-white/6 bg-[#070D1A] overflow-hidden">
-              <div className="flex items-center gap-2.5 px-6 py-4 border-b border-white/6">
-                <CalendarClock className="w-4 h-4 text-[#C9A84C]" />
-                <h2 className="font-semibold text-white text-sm">Meeting Schedules</h2>
-              </div>
-              <EmptyState
-                icon={CalendarClock}
-                title="No meetings scheduled"
-                desc="Book a call with our team anytime."
-                cta="Schedule a meeting"
-                href="/contact"
-              />
-            </div>
+          {/* Right sidebar */}
+          <div className="space-y-5">
 
             {/* Subscription */}
-            <div className="rounded-2xl border border-[#C9A84C]/20 bg-gradient-to-br from-[#C9A84C]/8 to-transparent overflow-hidden">
-              <div className="flex items-center gap-2.5 px-6 py-4 border-b border-[#C9A84C]/10">
-                <Crown className="w-4 h-4 text-[#C9A84C]" />
+            <div className="rounded-2xl overflow-hidden border border-[#C9A84C]/20"
+              style={{ background: "linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(201,168,76,0.03) 100%)" }}>
+              <div className="flex items-center gap-2.5 px-5 py-4 border-b border-[#C9A84C]/10">
+                <div className="w-7 h-7 rounded-lg bg-[#C9A84C]/15 border border-[#C9A84C]/20 flex items-center justify-center">
+                  <Crown className="w-3.5 h-3.5 text-[#C9A84C]" />
+                </div>
                 <h2 className="font-semibold text-white text-sm">Subscription</h2>
               </div>
-              <div className="px-6 py-5">
+              <div className="px-5 py-5">
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-xs px-2.5 py-1 rounded-full bg-white/8 border border-white/10 text-white/50">Free Plan</span>
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                  <span className="text-xs text-white/40">Active</span>
+                  <span className="text-xs text-white/35">Active</span>
                 </div>
                 <ul className="space-y-2 mb-5">
-                  {["1 active query", "Basic support", "Email updates"].map(f => (
+                  {["1 active query", "Basic CA support", "Email updates", "1 startup listing"].map(f => (
                     <li key={f} className="flex items-center gap-2 text-xs text-white/45">
                       <svg className="w-3.5 h-3.5 text-[#C9A84C]/60 flex-shrink-0" viewBox="0 0 12 10" fill="none">
                         <path d="M1 5l3.5 3.5L11 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -246,7 +341,8 @@ export default function DashboardPage() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/pricing" className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs text-[#0B1120]"
+                <Link href="/pricing"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs text-[#0B1120] transition-opacity hover:opacity-90"
                   style={{ background: "linear-gradient(135deg, #E8C97A, #C9A84C)" }}>
                   Upgrade to Pro <ArrowRight className="w-3 h-3" />
                 </Link>
@@ -254,23 +350,50 @@ export default function DashboardPage() {
             </div>
 
             {/* Quick Actions */}
-            <div className="rounded-2xl border border-white/6 bg-[#070D1A] overflow-hidden">
-              <div className="flex items-center gap-2.5 px-6 py-4 border-b border-white/6">
-                <LayoutDashboard className="w-4 h-4 text-[#C9A84C]" />
+            <div className="rounded-2xl border border-white/6 bg-[#070D1A]/80 backdrop-blur-sm overflow-hidden">
+              <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/6">
+                <div className="w-7 h-7 rounded-lg bg-white/6 border border-white/10 flex items-center justify-center">
+                  <Zap className="w-3.5 h-3.5 text-white/40" />
+                </div>
                 <h2 className="font-semibold text-white text-sm">Quick Actions</h2>
               </div>
               <div className="p-4 grid grid-cols-2 gap-2">
                 {[
-                  { icon: Building2, label: "Find Workspace", href: "/coworking" },
-                  { icon: Briefcase, label: "Browse Jobs", href: "/jobs" },
-                  { icon: FileText, label: "Compliance", href: "/services/compliance" },
-                  { icon: Rocket, label: "List Startup", href: "/dashboard/startup/submit" },
-                  { icon: AlertCircle, label: "Contact Us", href: "/contact" },
-                ].map(({ icon: Icon, label, href }) => (
+                  { icon: Rocket, label: "List Startup", href: "/dashboard/startup/submit", color: "text-purple-400", bg: "hover:border-purple-500/25 hover:bg-purple-500/5" },
+                  { icon: Globe, label: "Browse Startups", href: "/startups", color: "text-blue-400", bg: "hover:border-blue-500/25 hover:bg-blue-500/5" },
+                  { icon: Building2, label: "Find Workspace", href: "/coworking", color: "text-emerald-400", bg: "hover:border-emerald-500/25 hover:bg-emerald-500/5" },
+                  { icon: Briefcase, label: "Browse Jobs", href: "/jobs", color: "text-orange-400", bg: "hover:border-orange-500/25 hover:bg-orange-500/5" },
+                  { icon: FileText, label: "Compliance", href: "/services/compliance", color: "text-[#C9A84C]", bg: "hover:border-[#C9A84C]/25 hover:bg-[#C9A84C]/5" },
+                  { icon: AlertCircle, label: "Contact Us", href: "/contact", color: "text-white/40", bg: "hover:border-white/15 hover:bg-white/4" },
+                ].map(({ icon: Icon, label, href, color, bg }) => (
                   <Link key={label} href={href}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-white/6 hover:border-[#C9A84C]/25 hover:bg-[#C9A84C]/4 transition-colors text-center">
-                    <Icon className="w-4 h-4 text-white/40" />
-                    <span className="text-xs text-white/50 leading-tight">{label}</span>
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border border-white/6 ${bg} transition-all text-center`}>
+                    <Icon className={`w-4 h-4 ${color}`} />
+                    <span className="text-xs text-white/45 leading-tight">{label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* FreWork services promo */}
+            <div className="rounded-2xl border border-white/6 bg-[#070D1A]/80 backdrop-blur-sm p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Star className="w-4 h-4 text-[#C9A84C]" />
+                <h3 className="text-sm font-semibold text-white">GROW your business</h3>
+              </div>
+              <p className="text-xs text-white/35 leading-relaxed mb-4">
+                CA/CS experts for GST, Income Tax, Company Registration, Pitch Decks and more.
+              </p>
+              <div className="space-y-2">
+                {[
+                  { label: "Compliance & Tax", href: "/services/compliance" },
+                  { label: "Pitch Deck", href: "/services/pitch-decks" },
+                  { label: "DPR / Business Plan", href: "/services/dpr" },
+                ].map(s => (
+                  <Link key={s.label} href={s.href}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg border border-white/6 hover:border-[#C9A84C]/20 hover:bg-[#C9A84C]/4 transition-colors group">
+                    <span className="text-xs text-white/45 group-hover:text-white/70 transition-colors">{s.label}</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-white/20 group-hover:text-[#C9A84C] transition-colors" />
                   </Link>
                 ))}
               </div>
