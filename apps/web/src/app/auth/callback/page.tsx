@@ -25,8 +25,8 @@ export default function AuthCallback() {
         method: "google",
       }, { onConflict: "id" });
 
-      // Go to mobile collection step
-      router.replace("/login?step=mobile&uid=" + user.id);
+      // Redirect to homepage after successful Google sign-in
+      router.replace("/");
     });
   }, [router]);
 
