@@ -1,31 +1,11 @@
-import { Navbar } from "@/components/layout/navbar";
-import { Footer } from "@/components/layout/footer";
-import { HomepageHero } from "@/components/landing/homepage-hero";
-import { ServicesGrid } from "@/components/landing/services-grid";
-import { PromoOffer } from "@/components/landing/promo-offer";
-import { ReferralSection } from "@/components/landing/referral-section";
-import { TrustBadges } from "@/components/landing/trust-badges";
-import { HomepageFAQ } from "@/components/landing/homepage-faq";
+import { HorizontalHomepage } from "@/components/landing/horizontal-homepage";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "FreWork – Find. Grow. | India's Professional Platform",
-  description: "FIND coworking spaces, freelancers and jobs — or GROW your business with expert compliance, DPR, pitch decks and restructuring services from CA & CS qualified professionals.",
+  title: "FreWork – Find. Grow. Launch. | India's Professional Platform",
+  description: "FIND coworking spaces, freelancers and jobs — GROW with expert CA & CS services — LAUNCH your startup to investors. India's all-in-one professional growth platform.",
 };
 
 export default function HomePage() {
-  return (
-    <div className="min-h-screen">
-      <Navbar />
-      <main>
-        <HomepageHero />
-        <TrustBadges />
-        <ServicesGrid />
-        <PromoOffer />
-        <ReferralSection />
-        <HomepageFAQ />
-      </main>
-      <Footer />
-    </div>
-  );
+  return <HorizontalHomepage />;
 }
