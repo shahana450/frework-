@@ -79,61 +79,108 @@ export function HorizontalHomepage() {
 
         {/* ── PANEL 0: HERO ── */}
         <Panel>
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_20%_50%,rgba(59,130,246,0.10),transparent)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_80%_50%,rgba(201,168,76,0.09),transparent)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_80%,rgba(139,92,246,0.08),transparent)]" />
-            <div className="absolute inset-0 opacity-[0.025]" style={{
-              backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.5) 1px,transparent 1px)",
-              backgroundSize: "80px 80px"
-            }} />
-          </div>
-          <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-8 pt-16">
-            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/10 bg-white/4 text-white/40 text-xs font-medium tracking-widest uppercase mb-10">
-              India&apos;s Professional Growth Platform
-            </span>
-            <h1 className="text-6xl md:text-8xl lg:text-[108px] font-bold leading-[1.02] mb-6"
-              style={{ fontFamily: "var(--font-cormorant), Georgia, serif" }}>
-              <span className="text-white">One platform.</span>
-              <br />
-              <span className="bg-gradient-to-r from-blue-400 via-[#C9A84C] to-purple-400 bg-clip-text text-transparent">
-                Three doors.
-              </span>
-            </h1>
-            <p className="text-white/40 text-lg max-w-xl mb-14 leading-relaxed">
-              Find workspaces, freelancers & jobs — grow with CA & CS services — launch your startup to investors.
-            </p>
+          {/* Left half: text */}
+          <div className="absolute inset-0 flex">
+            <div className="relative w-full lg:w-[52%] flex flex-col justify-center px-10 md:px-16 pt-20 pb-10 z-10">
+              {/* ambient glow */}
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_70%_at_0%_50%,rgba(59,130,246,0.09),transparent)] pointer-events-none" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_100%,rgba(139,92,246,0.07),transparent)] pointer-events-none" />
 
-            {/* Door pills */}
-            <div className="flex flex-wrap justify-center gap-3 mb-12">
-              {[
-                { label: "FIND", color: "border-blue-500/30 text-blue-400 hover:bg-blue-500/10", idx: 1 },
-                { label: "GROW", color: "border-[#C9A84C]/30 text-[#C9A84C] hover:bg-[#C9A84C]/10", idx: 2 },
-                { label: "LAUNCH", color: "border-purple-500/30 text-purple-400 hover:bg-purple-500/10", idx: 3 },
-              ].map(d => (
-                <button key={d.label} onClick={() => goTo(d.idx)}
-                  className={`px-7 py-3 rounded-full border text-sm font-semibold transition-all ${d.color}`}>
-                  {d.label} →
-                </button>
-              ))}
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/4 text-white/35 text-[10px] font-semibold tracking-[0.25em] uppercase mb-8 w-fit">
+                India&apos;s Professional Growth Platform
+              </span>
+
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] mb-6 relative z-10"
+                style={{ fontFamily: "var(--font-cormorant), Georgia, serif" }}>
+                <span className="text-white">One platform.</span>
+                <br />
+                <span className="bg-gradient-to-r from-blue-400 via-[#C9A84C] to-purple-400 bg-clip-text text-transparent">
+                  Three doors.
+                </span>
+              </h1>
+
+              <p className="text-white/40 text-base max-w-md mb-10 leading-relaxed relative z-10">
+                Find workspaces, freelancers & jobs.<br />
+                Grow with CA &amp; CS services.<br />
+                Launch your startup to investors.
+              </p>
+
+              {/* Door pills */}
+              <div className="flex flex-wrap gap-3 relative z-10">
+                {[
+                  { label: "FIND · Spaces & Talent", color: "border-blue-500/30 text-blue-300 hover:bg-blue-500/10", idx: 1 },
+                  { label: "GROW · Expert Services", color: "border-[#C9A84C]/30 text-[#C9A84C] hover:bg-[#C9A84C]/10", idx: 2 },
+                  { label: "LAUNCH · Startups", color: "border-purple-500/30 text-purple-300 hover:bg-purple-500/10", idx: 3 },
+                ].map(d => (
+                  <button key={d.label} onClick={() => goTo(d.idx)}
+                    className={`px-5 py-2.5 rounded-full border text-xs font-semibold transition-all flex items-center gap-2 ${d.color}`}>
+                    {d.label} <ArrowRight className="w-3 h-3" />
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Stats glass card */}
-            <div className="w-full max-w-2xl rounded-2xl border border-white/8 overflow-hidden"
-              style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.06),rgba(255,255,255,0.02),rgba(139,92,246,0.06))" }}>
-              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#C9A84C]/40 to-transparent" />
-              <div className="grid grid-cols-4 divide-x divide-white/6">
-                {[
-                  { num: "500+", label: "Businesses", color: "text-[#C9A84C]" },
-                  { num: "CA & CS", label: "Experts", color: "text-blue-400" },
-                  { num: "24 hrs", label: "Response", color: "text-emerald-400" },
-                  { num: "₹999", label: "Starting/mo", color: "text-purple-400" },
-                ].map(s => (
-                  <div key={s.label} className="py-5 text-center">
-                    <div className={`text-xl font-bold ${s.color}`} style={{ fontFamily: "var(--font-cormorant), serif" }}>{s.num}</div>
-                    <div className="text-[10px] text-white/30 uppercase tracking-widest mt-0.5">{s.label}</div>
+            {/* Right half: image mosaic */}
+            <div className="hidden lg:flex w-[48%] h-full relative">
+              {/* overlay fade on left edge */}
+              <div className="absolute left-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-r from-[#060C18] to-transparent pointer-events-none" />
+              {/* overlay fade on right edge */}
+              <div className="absolute right-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-l from-[#060C18] to-transparent pointer-events-none" />
+
+              <div className="flex gap-3 p-4 pt-20 pb-10 w-full h-full">
+                {/* Column 1 */}
+                <div className="flex flex-col gap-3 flex-1">
+                  <div className="relative rounded-2xl overflow-hidden flex-1 min-h-0 group">
+                    <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80" alt="Coworking space" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#060C18]/80 via-transparent to-transparent" />
+                    <div className="absolute bottom-3 left-3">
+                      <span className="text-[9px] px-2 py-1 rounded-full bg-blue-500/80 text-white font-bold tracking-widest uppercase">Coworking</span>
+                    </div>
                   </div>
-                ))}
+                  <div className="relative rounded-2xl overflow-hidden h-36 group">
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&q=80" alt="Freelancer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#060C18]/70 via-transparent to-transparent" />
+                    <div className="absolute bottom-3 left-3">
+                      <span className="text-[9px] px-2 py-1 rounded-full bg-blue-500/80 text-white font-bold tracking-widest uppercase">Freelancers</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 2 — offset up */}
+                <div className="flex flex-col gap-3 flex-1 -mt-8">
+                  <div className="relative rounded-2xl overflow-hidden h-40 group">
+                    <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=80" alt="CA Services" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#060C18]/70 via-transparent to-transparent" />
+                    <div className="absolute bottom-3 left-3">
+                      <span className="text-[9px] px-2 py-1 rounded-full bg-[#C9A84C]/90 text-[#0B1120] font-bold tracking-widest uppercase">CA & CS</span>
+                    </div>
+                  </div>
+                  <div className="relative rounded-2xl overflow-hidden flex-1 min-h-0 group">
+                    <img src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=600&q=80" alt="Startup" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#060C18]/80 via-transparent to-transparent" />
+                    <div className="absolute bottom-3 left-3">
+                      <span className="text-[9px] px-2 py-1 rounded-full bg-purple-600/90 text-white font-bold tracking-widest uppercase">Startups</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 3 */}
+                <div className="flex flex-col gap-3 flex-1">
+                  <div className="relative rounded-2xl overflow-hidden h-44 group">
+                    <img src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=600&q=80" alt="Jobs" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#060C18]/70 via-transparent to-transparent" />
+                    <div className="absolute bottom-3 left-3">
+                      <span className="text-[9px] px-2 py-1 rounded-full bg-blue-500/80 text-white font-bold tracking-widest uppercase">Jobs</span>
+                    </div>
+                  </div>
+                  <div className="relative rounded-2xl overflow-hidden flex-1 min-h-0 group">
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80" alt="Expert" className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#060C18]/70 via-transparent to-transparent" />
+                    <div className="absolute bottom-3 left-3">
+                      <span className="text-[9px] px-2 py-1 rounded-full bg-[#C9A84C]/90 text-[#0B1120] font-bold tracking-widest uppercase">Expert</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
