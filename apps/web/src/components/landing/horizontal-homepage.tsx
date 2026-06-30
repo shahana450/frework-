@@ -15,6 +15,7 @@ export function HorizontalHomepage() {
   const trackRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [hoveredDoor, setHoveredDoor] = useState<number | null>(null);
 
   const goTo = useCallback((idx: number) => {
     if (!trackRef.current || isScrolling) return;
@@ -79,174 +80,232 @@ export function HorizontalHomepage() {
 
         {/* ── PANEL 0: HERO ── */}
         <Panel>
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_15%_50%,rgba(59,130,246,0.09),transparent)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_60%_at_85%_40%,rgba(201,168,76,0.07),transparent)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_40%_50%_at_60%_90%,rgba(139,92,246,0.07),transparent)]" />
+          {/* ambient bg */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className={`absolute inset-0 transition-all duration-700 ${hoveredDoor === 0 ? "opacity-100" : "opacity-30"} bg-[radial-gradient(ellipse_60%_80%_at_20%_50%,rgba(59,130,246,0.15),transparent)]`} />
+            <div className={`absolute inset-0 transition-all duration-700 ${hoveredDoor === 1 ? "opacity-100" : "opacity-30"} bg-[radial-gradient(ellipse_60%_80%_at_50%_50%,rgba(201,168,76,0.12),transparent)]`} />
+            <div className={`absolute inset-0 transition-all duration-700 ${hoveredDoor === 2 ? "opacity-100" : "opacity-30"} bg-[radial-gradient(ellipse_60%_80%_at_80%_50%,rgba(139,92,246,0.15),transparent)]`} />
           </div>
 
-          <div className="relative z-10 flex h-full pt-20">
+          <div className="relative z-10 h-full flex flex-col pt-[72px]">
 
-            {/* ── LEFT: headline ── */}
-            <div className="flex flex-col justify-center px-10 md:px-16 w-full lg:w-[46%] shrink-0">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/4 text-white/35 text-[10px] font-semibold tracking-[0.25em] uppercase mb-8 w-fit">
+            {/* top headline strip */}
+            <div className="text-center pt-8 pb-4 px-4">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/8 bg-white/3 text-white/30 text-[10px] font-semibold tracking-[0.3em] uppercase mb-4">
                 India&apos;s Professional Growth Platform
               </span>
-              <h1 className="text-5xl md:text-6xl lg:text-[72px] font-bold leading-[1.04] mb-5"
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
                 style={{ fontFamily: "var(--font-cormorant), Georgia, serif" }}>
-                <span className="text-white">One platform.</span><br />
+                <span className="text-white">One platform. </span>
                 <span className="bg-gradient-to-r from-blue-400 via-[#C9A84C] to-purple-400 bg-clip-text text-transparent">Three doors.</span>
               </h1>
-              <p className="text-white/35 text-base max-w-sm mb-10 leading-relaxed">
-                Find workspaces, freelancers &amp; jobs.<br />
-                Grow with CA &amp; CS services.<br />
-                Launch your startup to investors.
+              <p className="text-white/30 text-sm mt-2 max-w-lg mx-auto">
+                Spaces &amp; Talent &nbsp;·&nbsp; CA &amp; CS Services &nbsp;·&nbsp; Startup Launchpad
               </p>
-              <div className="flex flex-wrap gap-3">
-                {([
-                  { label: "FIND", sub: "Spaces & Talent", color: "border-blue-500/30 text-blue-300 hover:bg-blue-500/10", idx: 1 },
-                  { label: "GROW", sub: "Expert Services", color: "border-[#C9A84C]/30 text-[#C9A84C] hover:bg-[#C9A84C]/10", idx: 2 },
-                  { label: "LAUNCH", sub: "Startups", color: "border-purple-500/30 text-purple-300 hover:bg-purple-500/10", idx: 3 },
-                ] as const).map(d => (
-                  <button key={d.label} onClick={() => goTo(d.idx)}
-                    className={`px-4 py-2 rounded-full border text-xs font-semibold transition-all flex items-center gap-1.5 ${d.color}`}>
-                    <span>{d.label}</span>
-                    <span className="text-white/25">·</span>
-                    <span className="text-white/40 font-normal">{d.sub}</span>
-                    <ArrowRight className="w-3 h-3 ml-0.5" />
-                  </button>
-                ))}
-              </div>
             </div>
 
-            {/* ── RIGHT: bento infographic ── */}
-            <div className="hidden lg:flex flex-1 gap-3 p-5 pt-22 pb-6 min-w-0 overflow-hidden">
+            {/* ── INTERACTIVE DOOR CARDS ── */}
+            <div className="flex-1 flex gap-3 px-5 pb-14 min-h-0">
 
-              {/* Column A — FIND tall card */}
-              <div className="flex flex-col gap-3 w-[38%]">
-                <button onClick={() => goTo(1)}
-                  className="relative flex-1 rounded-3xl overflow-hidden group border border-blue-500/20 hover:border-blue-400/50 transition-all duration-500 text-left shadow-[0_0_40px_rgba(59,130,246,0.08)]">
-                  <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&q=80"
-                    alt="Coworking" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#040810]/98 via-[#040810]/55 to-[#040810]/10" />
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,rgba(59,130,246,0.25),transparent)]" />
-                  <div className="absolute inset-0 p-6 flex flex-col justify-between">
-                    {/* top badge */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] px-3 py-1 rounded-full bg-blue-500/25 border border-blue-400/30 text-blue-300 font-bold tracking-widest uppercase backdrop-blur-sm">Door 1</span>
-                      <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-400/25 backdrop-blur-sm flex items-center justify-center">
-                        <Search className="w-4 h-4 text-blue-300" />
+              {/* DOOR 1 — FIND */}
+              {(() => {
+                const isActive = hoveredDoor === 0;
+                return (
+                  <div
+                    onMouseEnter={() => setHoveredDoor(0)}
+                    onMouseLeave={() => setHoveredDoor(null)}
+                    onClick={() => goTo(1)}
+                    className="relative rounded-3xl overflow-hidden cursor-pointer border transition-all duration-500"
+                    style={{
+                      flex: isActive ? "2.8" : "1",
+                      borderColor: isActive ? "rgba(59,130,246,0.5)" : "rgba(59,130,246,0.12)",
+                      boxShadow: isActive ? "0 0 60px rgba(59,130,246,0.2), inset 0 0 40px rgba(59,130,246,0.05)" : "none",
+                    }}>
+                    {/* bg image */}
+                    <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=85"
+                      alt="Find" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700"
+                      style={{ transform: isActive ? "scale(1.06)" : "scale(1)" }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#030810]/98 via-[#030810]/60 to-[#030810]/20" />
+                    <div className="absolute inset-0" style={{ background: isActive ? "radial-gradient(ellipse 100% 60% at 50% 100%, rgba(59,130,246,0.3), transparent)" : "none" }} />
+
+                    {/* content */}
+                    <div className="absolute inset-0 flex flex-col justify-between p-5">
+                      {/* top */}
+                      <div className="flex items-start justify-between">
+                        <span className="text-[9px] px-2.5 py-1 rounded-full border border-blue-400/30 bg-blue-500/20 text-blue-300 font-bold tracking-widest uppercase backdrop-blur-sm">Door 1</span>
+                        <div className="w-9 h-9 rounded-2xl bg-blue-500/20 border border-blue-400/25 backdrop-blur-md flex items-center justify-center"
+                          style={{ boxShadow: isActive ? "0 0 20px rgba(59,130,246,0.4)" : "none" }}>
+                          <Search className="w-4 h-4 text-blue-300" />
+                        </div>
                       </div>
-                    </div>
-                    {/* bottom content */}
-                    <div>
-                      <div className="text-4xl font-bold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif" }}>FIND</div>
-                      <p className="text-[11px] text-blue-200/50 mb-4 tracking-wide">Spaces · Talent · Jobs</p>
-                      {/* mini preview strips */}
-                      <div className="space-y-2">
-                        {[
-                          { img: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=300&q=70", label: "Teachers & Tutors", tag: "New" },
-                          { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300&q=70", label: "Skilled Workers", tag: "Electrician · Plumber" },
-                          { img: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=300&q=70", label: "Jobs & Freelancers", tag: "Verified" },
-                        ].map(r => (
-                          <div key={r.label} className="flex items-center gap-2.5 rounded-xl bg-white/5 border border-white/8 px-3 py-2 backdrop-blur-sm group-hover:bg-blue-500/10 transition-colors">
-                            <img src={r.img} alt={r.label} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[11px] font-semibold text-white/80 truncate">{r.label}</div>
-                              <div className="text-[9px] text-white/30">{r.tag}</div>
-                            </div>
-                            <ArrowRight className="w-3 h-3 text-blue-400/50 flex-shrink-0" />
+
+                      {/* collapsed label */}
+                      {!isActive && (
+                        <div className="rotate-0">
+                          <div className="text-3xl font-bold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif" }}>FIND</div>
+                          <p className="text-[10px] text-blue-300/50 tracking-wide">Spaces · Talent · Jobs</p>
+                        </div>
+                      )}
+
+                      {/* expanded content */}
+                      {isActive && (
+                        <div className="space-y-2.5">
+                          <div>
+                            <div className="text-4xl font-bold text-white mb-0.5" style={{ fontFamily: "var(--font-cormorant), serif" }}>FIND</div>
+                            <p className="text-xs text-blue-300/60 mb-4">Everything you need to work, hire &amp; grow.</p>
                           </div>
-                        ))}
+                          {[
+                            { img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=200&q=70", label: "Coworking Spaces", sub: "500+ premium offices", col: "bg-blue-500/15 border-blue-500/20" },
+                            { img: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=200&q=70", label: "Teachers & Tutors", sub: "CBSE · IELTS · JEE · Music", col: "bg-emerald-500/15 border-emerald-500/20" },
+                            { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=200&q=70", label: "Skilled Workers", sub: "Electrician · Plumber · Cook · Tailor", col: "bg-amber-500/15 border-amber-500/20" },
+                            { img: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=200&q=70", label: "Jobs & Freelancers", sub: "Verified talent, hire in minutes", col: "bg-blue-500/15 border-blue-500/20" },
+                          ].map(r => (
+                            <div key={r.label} className={`flex items-center gap-3 rounded-2xl border ${r.col} px-3 py-2.5 backdrop-blur-sm hover:brightness-125 transition-all`}>
+                              <img src={r.img} alt={r.label} className="w-9 h-9 rounded-xl object-cover flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-semibold text-white/90">{r.label}</div>
+                                <div className="text-[9px] text-white/35 truncate">{r.sub}</div>
+                              </div>
+                              <ArrowRight className="w-3.5 h-3.5 text-blue-400/60 flex-shrink-0" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* DOOR 2 — GROW */}
+              {(() => {
+                const isActive = hoveredDoor === 1;
+                return (
+                  <div
+                    onMouseEnter={() => setHoveredDoor(1)}
+                    onMouseLeave={() => setHoveredDoor(null)}
+                    onClick={() => goTo(2)}
+                    className="relative rounded-3xl overflow-hidden cursor-pointer border transition-all duration-500"
+                    style={{
+                      flex: isActive ? "2.8" : "1",
+                      borderColor: isActive ? "rgba(201,168,76,0.5)" : "rgba(201,168,76,0.12)",
+                      boxShadow: isActive ? "0 0 60px rgba(201,168,76,0.18), inset 0 0 40px rgba(201,168,76,0.04)" : "none",
+                    }}>
+                    <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900&q=85"
+                      alt="Grow" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700"
+                      style={{ transform: isActive ? "scale(1.06)" : "scale(1)" }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0C0700]/98 via-[#0C0700]/65 to-[#0C0700]/25" />
+                    <div className="absolute inset-0" style={{ background: isActive ? "radial-gradient(ellipse 100% 60% at 50% 100%, rgba(201,168,76,0.28), transparent)" : "none" }} />
+
+                    <div className="absolute inset-0 flex flex-col justify-between p-5">
+                      <div className="flex items-start justify-between">
+                        <span className="text-[9px] px-2.5 py-1 rounded-full border border-[#C9A84C]/30 bg-[#C9A84C]/20 text-[#E8C97A] font-bold tracking-widest uppercase backdrop-blur-sm">Door 2</span>
+                        <div className="w-9 h-9 rounded-2xl bg-[#C9A84C]/20 border border-[#C9A84C]/25 backdrop-blur-md flex items-center justify-center"
+                          style={{ boxShadow: isActive ? "0 0 20px rgba(201,168,76,0.4)" : "none" }}>
+                          <TrendingUp className="w-4 h-4 text-[#C9A84C]" />
+                        </div>
                       </div>
+
+                      {!isActive && (
+                        <div>
+                          <div className="text-3xl font-bold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif" }}>GROW</div>
+                          <p className="text-[10px] text-[#C9A84C]/50 tracking-wide">CA · CS · Tax · Compliance</p>
+                        </div>
+                      )}
+
+                      {isActive && (
+                        <div className="space-y-2.5">
+                          <div>
+                            <div className="text-4xl font-bold text-white mb-0.5" style={{ fontFamily: "var(--font-cormorant), serif" }}>GROW</div>
+                            <p className="text-xs text-[#C9A84C]/60 mb-4">CA &amp; CS qualified experts for your business.</p>
+                          </div>
+                          {[
+                            { icon: FileText, label: "GST & Income Tax", sub: "Returns, audits & planning", },
+                            { icon: BarChart3, label: "DPR & Projections", sub: "Detailed project reports", },
+                            { icon: Presentation, label: "Pitch Decks", sub: "Investor-ready presentations", },
+                            { icon: Building2, label: "Business Restructuring", sub: "M&A, strategy & turnaround", },
+                          ].map(r => (
+                            <div key={r.label} className="flex items-center gap-3 rounded-2xl border border-[#C9A84C]/15 bg-[#C9A84C]/8 px-3 py-2.5 backdrop-blur-sm hover:bg-[#C9A84C]/15 transition-all">
+                              <div className="w-8 h-8 rounded-xl bg-[#C9A84C]/20 border border-[#C9A84C]/25 flex items-center justify-center flex-shrink-0">
+                                <r.icon className="w-3.5 h-3.5 text-[#C9A84C]" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-xs font-semibold text-white/90">{r.label}</div>
+                                <div className="text-[9px] text-white/35">{r.sub}</div>
+                              </div>
+                              <ArrowRight className="w-3.5 h-3.5 text-[#C9A84C]/50 flex-shrink-0" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </button>
-              </div>
+                );
+              })()}
 
-              {/* Column B — GROW + Teachers/Skilled */}
-              <div className="flex flex-col gap-3 w-[31%]">
+              {/* DOOR 3 — LAUNCH */}
+              {(() => {
+                const isActive = hoveredDoor === 2;
+                return (
+                  <div
+                    onMouseEnter={() => setHoveredDoor(2)}
+                    onMouseLeave={() => setHoveredDoor(null)}
+                    onClick={() => goTo(3)}
+                    className="relative rounded-3xl overflow-hidden cursor-pointer border transition-all duration-500"
+                    style={{
+                      flex: isActive ? "2.8" : "1",
+                      borderColor: isActive ? "rgba(139,92,246,0.5)" : "rgba(139,92,246,0.12)",
+                      boxShadow: isActive ? "0 0 60px rgba(139,92,246,0.2), inset 0 0 40px rgba(139,92,246,0.05)" : "none",
+                    }}>
+                    <img src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=900&q=85"
+                      alt="Launch" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700"
+                      style={{ transform: isActive ? "scale(1.06)" : "scale(1)" }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#08031A]/98 via-[#08031A]/65 to-[#08031A]/25" />
+                    <div className="absolute inset-0" style={{ background: isActive ? "radial-gradient(ellipse 100% 60% at 50% 100%, rgba(139,92,246,0.3), transparent)" : "none" }} />
 
-                {/* GROW */}
-                <button onClick={() => goTo(2)}
-                  className="relative rounded-3xl overflow-hidden group border border-[#C9A84C]/20 hover:border-[#C9A84C]/50 transition-all duration-500 text-left shadow-[0_0_30px_rgba(201,168,76,0.06)]"
-                  style={{ height: "46%" }}>
-                  <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=500&q=80"
-                    alt="CA Services" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0C0700]/97 via-[#0C0700]/60 to-transparent" />
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,rgba(201,168,76,0.2),transparent)]" />
-                  <div className="absolute inset-0 p-5 flex flex-col justify-between">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] px-3 py-1 rounded-full bg-[#C9A84C]/25 border border-[#C9A84C]/30 text-[#E8C97A] font-bold tracking-widest uppercase backdrop-blur-sm">Door 2</span>
-                      <div className="w-8 h-8 rounded-xl bg-[#C9A84C]/20 border border-[#C9A84C]/25 backdrop-blur-sm flex items-center justify-center">
-                        <TrendingUp className="w-3.5 h-3.5 text-[#C9A84C]" />
+                    <div className="absolute inset-0 flex flex-col justify-between p-5">
+                      <div className="flex items-start justify-between">
+                        <span className="text-[9px] px-2.5 py-1 rounded-full border border-purple-400/30 bg-purple-500/20 text-purple-300 font-bold tracking-widest uppercase backdrop-blur-sm">Door 3</span>
+                        <div className="w-9 h-9 rounded-2xl bg-purple-500/20 border border-purple-400/25 backdrop-blur-md flex items-center justify-center"
+                          style={{ boxShadow: isActive ? "0 0 20px rgba(139,92,246,0.4)" : "none" }}>
+                          <Rocket className="w-4 h-4 text-purple-300" />
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-3xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>GROW</div>
-                      <p className="text-[10px] text-[#C9A84C]/60 mt-0.5">CA · CS · Tax · Compliance · DPR</p>
-                    </div>
-                  </div>
-                </button>
 
-                {/* Teachers card */}
-                <div className="relative rounded-3xl overflow-hidden group border border-emerald-500/20 hover:border-emerald-400/40 transition-all duration-500 flex-1">
-                  <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=500&q=80"
-                    alt="Teacher" className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#030C08]/95 via-[#030C08]/50 to-transparent" />
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_50%_at_50%_100%,rgba(16,185,129,0.2),transparent)]" />
-                  <div className="absolute inset-0 p-4 flex flex-col justify-between">
-                    <span className="self-start text-[9px] px-2.5 py-1 rounded-full bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 font-bold tracking-widest uppercase">✦ New</span>
-                    <div>
-                      <div className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>Teachers & Tutors</div>
-                      <p className="text-[10px] text-white/40 mt-0.5">CBSE · IELTS · Music · Yoga · JEE</p>
-                    </div>
-                  </div>
-                </div>
+                      {!isActive && (
+                        <div>
+                          <div className="text-3xl font-bold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif" }}>LAUNCH</div>
+                          <p className="text-[10px] text-purple-300/50 tracking-wide">Startups · Investors · Partners</p>
+                        </div>
+                      )}
 
-              </div>
-
-              {/* Column C — LAUNCH + Skilled Workers */}
-              <div className="flex flex-col gap-3 flex-1">
-
-                {/* LAUNCH */}
-                <button onClick={() => goTo(3)}
-                  className="relative rounded-3xl overflow-hidden group border border-purple-500/20 hover:border-purple-400/50 transition-all duration-500 text-left shadow-[0_0_30px_rgba(139,92,246,0.06)]"
-                  style={{ height: "46%" }}>
-                  <img src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=500&q=80"
-                    alt="Startup" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#08031A]/97 via-[#08031A]/60 to-transparent" />
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,rgba(139,92,246,0.25),transparent)]" />
-                  <div className="absolute inset-0 p-5 flex flex-col justify-between">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] px-3 py-1 rounded-full bg-purple-500/25 border border-purple-400/30 text-purple-300 font-bold tracking-widest uppercase backdrop-blur-sm">Door 3</span>
-                      <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-400/25 backdrop-blur-sm flex items-center justify-center">
-                        <Rocket className="w-3.5 h-3.5 text-purple-300" />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-3xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>LAUNCH</div>
-                      <p className="text-[10px] text-purple-300/50 mt-0.5">Startups · Investors · Partners</p>
+                      {isActive && (
+                        <div className="space-y-2.5">
+                          <div>
+                            <div className="text-4xl font-bold text-white mb-0.5" style={{ fontFamily: "var(--font-cormorant), serif" }}>LAUNCH</div>
+                            <p className="text-xs text-purple-300/60 mb-4">List your startup. Pitch to investors.</p>
+                          </div>
+                          {[
+                            { label: "List Your Startup — Free", sub: "Pitch deck + video + funding ask", highlight: true },
+                            { label: "Browse Startups", sub: "Discover India's upcoming ventures" },
+                            { label: "Connect with Investors", sub: "Angels, VCs and strategic partners" },
+                            { label: "CA-Verified Financials Badge", sub: "Build trust with verified numbers" },
+                          ].map(r => (
+                            <div key={r.label} className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 backdrop-blur-sm transition-all ${r.highlight ? "border-purple-400/30 bg-purple-500/18 hover:bg-purple-500/25" : "border-purple-500/15 bg-purple-500/8 hover:bg-purple-500/14"}`}>
+                              <div className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
+                              <div className="flex-1">
+                                <div className="text-xs font-semibold text-white/90">{r.label}</div>
+                                <div className="text-[9px] text-white/35">{r.sub}</div>
+                              </div>
+                              <ArrowRight className="w-3.5 h-3.5 text-purple-400/50 flex-shrink-0" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </button>
+                );
+              })()}
 
-                {/* Skilled Workers card */}
-                <div className="relative rounded-3xl overflow-hidden group border border-amber-500/20 hover:border-amber-400/40 transition-all duration-500 flex-1">
-                  <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&q=80"
-                    alt="Electrician" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0C0800]/95 via-[#0C0800]/50 to-transparent" />
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_50%_at_50%_100%,rgba(245,158,11,0.2),transparent)]" />
-                  <div className="absolute inset-0 p-4 flex flex-col justify-between">
-                    <span className="self-start text-[9px] px-2.5 py-1 rounded-full bg-amber-500/25 border border-amber-400/30 text-amber-300 font-bold tracking-widest uppercase">✦ New</span>
-                    <div>
-                      <div className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>Skilled Workers</div>
-                      <p className="text-[10px] text-white/40 mt-0.5">Electrician · Plumber · Cook · Tailor</p>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
             </div>
           </div>
           <ScrollHint onClick={() => goTo(1)} label="Explore FIND" />
