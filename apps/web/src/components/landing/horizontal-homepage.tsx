@@ -107,138 +107,133 @@ export function HorizontalHomepage() {
             {/* ── INTERACTIVE DOOR CARDS ── */}
             <div className="flex-1 flex gap-3 px-5 pb-14 min-h-0">
 
-              {/* DOOR 1 — FIND */}
-              {(() => {
-                const isActive = hoveredDoor === 0;
+              {[
+                {
+                  idx: 0, navIdx: 1,
+                  img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=85",
+                  label: "FIND", sub: "Spaces · Talent · Jobs",
+                  desc: "Everything you need to work, hire & grow.",
+                  tint: ["rgba(30,64,175,0.55)", "rgba(37,99,235,0.18)", "rgba(59,130,246,0.08)"],
+                  accent: "#60a5fa", accentDim: "rgba(96,165,250,0.7)", accentBg: "rgba(59,130,246,0.22)", accentBorder: "rgba(96,165,250,0.4)",
+                  glowColor: "rgba(59,130,246,0.35)", borderActive: "rgba(96,165,250,0.6)", borderIdle: "rgba(59,130,246,0.25)",
+                  Icon: Search,
+                  rows: [
+                    { img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=200&q=70", label: "Coworking Spaces", sub: "500+ premium offices", dot: "#3b82f6" },
+                    { img: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=200&q=70", label: "Teachers & Tutors", sub: "CBSE · IELTS · JEE · Music", dot: "#10b981" },
+                    { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=200&q=70", label: "Skilled Workers", sub: "Electrician · Plumber · Cook · Tailor", dot: "#f59e0b" },
+                    { img: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=200&q=70", label: "Jobs & Freelancers", sub: "Verified talent · Hire in minutes", dot: "#60a5fa" },
+                  ],
+                },
+                {
+                  idx: 1, navIdx: 2,
+                  img: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900&q=85",
+                  label: "GROW", sub: "CA · CS · Tax · Compliance",
+                  desc: "CA & CS qualified experts for your business.",
+                  tint: ["rgba(120,83,10,0.55)", "rgba(161,110,14,0.18)", "rgba(201,168,76,0.08)"],
+                  accent: "#fbbf24", accentDim: "rgba(251,191,36,0.75)", accentBg: "rgba(201,168,76,0.22)", accentBorder: "rgba(251,191,36,0.4)",
+                  glowColor: "rgba(201,168,76,0.32)", borderActive: "rgba(251,191,36,0.6)", borderIdle: "rgba(201,168,76,0.28)",
+                  Icon: TrendingUp,
+                  rows: [
+                    { Icon: FileText, label: "GST & Income Tax", sub: "Returns, audits & planning" },
+                    { Icon: BarChart3, label: "DPR & Projections", sub: "Detailed project reports" },
+                    { Icon: Presentation, label: "Pitch Decks", sub: "Investor-ready presentations" },
+                    { Icon: Building2, label: "Business Restructuring", sub: "M&A, strategy & turnaround" },
+                  ],
+                },
+                {
+                  idx: 2, navIdx: 3,
+                  img: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=900&q=85",
+                  label: "LAUNCH", sub: "Startups · Investors · Partners",
+                  desc: "List your startup. Get discovered. Pitch to investors.",
+                  tint: ["rgba(76,29,149,0.55)", "rgba(109,40,217,0.18)", "rgba(139,92,246,0.08)"],
+                  accent: "#a78bfa", accentDim: "rgba(167,139,250,0.75)", accentBg: "rgba(139,92,246,0.22)", accentBorder: "rgba(167,139,250,0.4)",
+                  glowColor: "rgba(139,92,246,0.35)", borderActive: "rgba(167,139,250,0.6)", borderIdle: "rgba(139,92,246,0.25)",
+                  Icon: Rocket,
+                  rows: [
+                    { label: "List Your Startup — Free", sub: "Pitch deck + video + funding ask", highlight: true },
+                    { label: "Browse Startups", sub: "Discover India's upcoming ventures" },
+                    { label: "Connect with Investors", sub: "Angels, VCs and strategic partners" },
+                    { label: "CA-Verified Financials", sub: "Build trust with verified numbers" },
+                  ],
+                },
+              ].map((door) => {
+                const isActive = hoveredDoor === door.idx;
                 return (
-                  <div
-                    onMouseEnter={() => setHoveredDoor(0)}
+                  <div key={door.idx}
+                    onMouseEnter={() => setHoveredDoor(door.idx)}
                     onMouseLeave={() => setHoveredDoor(null)}
-                    onClick={() => goTo(1)}
+                    onClick={() => goTo(door.navIdx)}
                     className="relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-500"
                     style={{
                       flex: isActive ? "3" : "1",
-                      border: isActive ? "1.5px solid rgba(99,179,246,0.55)" : "1.5px solid rgba(59,130,246,0.18)",
-                      boxShadow: isActive ? "0 0 80px rgba(59,130,246,0.28), 0 0 0 1px rgba(99,179,246,0.1)" : "0 4px 24px rgba(0,0,0,0.4)",
+                      border: `1.5px solid ${isActive ? door.borderActive : door.borderIdle}`,
+                      boxShadow: isActive ? `0 0 70px ${door.glowColor}, 0 8px 32px rgba(0,0,0,0.5)` : "0 4px 20px rgba(0,0,0,0.35)",
                     }}>
-                    <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=85"
-                      alt="Find" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700"
-                      style={{ transform: isActive ? "scale(1.08)" : "scale(1.02)" }} />
-                    {/* strong overlay */}
-                    <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #050c1e 0%, rgba(5,12,30,0.82) 45%, rgba(5,12,30,0.35) 100%)" }} />
-                    {isActive && <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 110% 55% at 50% 105%, rgba(59,130,246,0.38), transparent)" }} />}
+
+                    {/* image */}
+                    <img src={door.img} alt={door.label}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700"
+                      style={{ transform: isActive ? "scale(1.07)" : "scale(1.02)" }} />
+
+                    {/* colour tint wash — much lighter than before */}
+                    <div className="absolute inset-0" style={{ background: door.tint[0], mixBlendMode: "multiply" }} />
+                    {/* gradient only at bottom for text legibility */}
+                    <div className="absolute inset-0" style={{ background: `linear-gradient(to top, rgba(4,6,18,0.97) 0%, rgba(4,6,18,0.65) 38%, rgba(4,6,18,0.1) 65%, transparent 100%)` }} />
+                    {/* active glow pulse from bottom */}
+                    {isActive && <div className="absolute inset-0 transition-opacity duration-500" style={{ background: `radial-gradient(ellipse 120% 50% at 50% 110%, ${door.glowColor}, transparent)` }} />}
 
                     <div className="absolute inset-0 flex flex-col justify-between p-5">
-                      {/* top row */}
+
+                      {/* top badge + icon */}
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] px-3 py-1.5 rounded-full font-extrabold tracking-widest uppercase"
-                          style={{ background: "rgba(59,130,246,0.25)", border: "1px solid rgba(99,179,246,0.45)", color: "#93c5fd", backdropFilter: "blur(8px)" }}>
-                          FIND
+                        <span className="text-[10px] px-3 py-1.5 rounded-full font-extrabold tracking-[0.2em] uppercase"
+                          style={{ background: door.accentBg, border: `1px solid ${door.accentBorder}`, color: door.accent, backdropFilter: "blur(10px)" }}>
+                          {door.label}
                         </span>
-                        <div className="w-9 h-9 rounded-2xl flex items-center justify-center"
-                          style={{ background: "rgba(59,130,246,0.22)", border: "1px solid rgba(99,179,246,0.35)", backdropFilter: "blur(8px)", boxShadow: isActive ? "0 0 24px rgba(59,130,246,0.5)" : "none" }}>
-                          <Search className="w-4 h-4" style={{ color: "#93c5fd" }} />
+                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300"
+                          style={{ background: door.accentBg, border: `1px solid ${door.accentBorder}`, backdropFilter: "blur(10px)", boxShadow: isActive ? `0 0 28px ${door.glowColor}` : "none" }}>
+                          <door.Icon className="w-5 h-5" style={{ color: door.accent }} />
                         </div>
                       </div>
 
-                      {/* bottom */}
+                      {/* bottom text + rows */}
                       <div>
-                        <p className="text-[10px] font-bold tracking-[0.25em] uppercase mb-1" style={{ color: "rgba(147,197,253,0.55)" }}>Door 1</p>
-                        <h3 className="font-extrabold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif", fontSize: isActive ? "2.6rem" : "2rem", textShadow: "0 2px 16px rgba(0,0,0,0.8)", lineHeight: 1.1 }}>FIND</h3>
-                        <p className="text-sm font-medium mb-4" style={{ color: "rgba(147,197,253,0.75)", textShadow: "0 1px 8px rgba(0,0,0,0.9)" }}>
-                          {isActive ? "Everything you need to work, hire & grow." : "Spaces · Talent · Jobs"}
+                        <p className="text-[10px] font-bold tracking-[0.28em] uppercase mb-1.5" style={{ color: door.accentDim }}>Door {door.idx + 1}</p>
+                        <h3 className="font-black text-white leading-none mb-2 transition-all duration-300"
+                          style={{ fontFamily: "var(--font-cormorant), serif", fontSize: isActive ? "3rem" : "2.2rem", textShadow: "0 2px 20px rgba(0,0,0,0.9)" }}>
+                          {door.label}
+                        </h3>
+                        <p className="text-sm font-semibold mb-4 leading-snug"
+                          style={{ color: door.accentDim, textShadow: "0 1px 10px rgba(0,0,0,1)" }}>
+                          {isActive ? door.desc : door.sub}
                         </p>
 
+                        {/* expanded rows */}
                         {isActive && (
                           <div className="space-y-2">
-                            {[
-                              { img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=200&q=70", label: "Coworking Spaces", sub: "500+ premium offices", accent: "#3b82f6" },
-                              { img: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=200&q=70", label: "Teachers & Tutors", sub: "CBSE · IELTS · JEE · Music", accent: "#10b981" },
-                              { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=200&q=70", label: "Skilled Workers", sub: "Electrician · Plumber · Cook · Tailor", accent: "#f59e0b" },
-                              { img: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=200&q=70", label: "Jobs & Freelancers", sub: "Verified talent · Hire in minutes", accent: "#3b82f6" },
-                            ].map(r => (
-                              <div key={r.label} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all hover:scale-[1.02]"
-                                style={{ background: "rgba(255,255,255,0.07)", border: `1px solid rgba(255,255,255,0.1)`, backdropFilter: "blur(12px)" }}>
-                                <div className="relative flex-shrink-0">
-                                  <img src={r.img} alt={r.label} className="w-9 h-9 rounded-xl object-cover" />
-                                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#050c1e]" style={{ background: r.accent }} />
-                                </div>
+                            {"rows" in door && (door.rows as any[]).map((r: any, i: number) => (
+                              <div key={i} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-200 hover:scale-[1.015]"
+                                style={{ background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.13)", backdropFilter: "blur(14px)" }}>
+                                {r.img ? (
+                                  <div className="relative flex-shrink-0">
+                                    <img src={r.img} alt={r.label} className="w-10 h-10 rounded-xl object-cover" />
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#040612]" style={{ background: r.dot }} />
+                                  </div>
+                                ) : r.Icon ? (
+                                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                                    style={{ background: door.accentBg, border: `1px solid ${door.accentBorder}` }}>
+                                    <r.Icon className="w-4.5 h-4.5" style={{ color: door.accent }} />
+                                  </div>
+                                ) : (
+                                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: r.highlight ? door.accent : "rgba(255,255,255,0.3)", boxShadow: r.highlight ? `0 0 10px ${door.glowColor}` : "none" }} />
+                                )}
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-bold text-white" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>{r.label}</div>
-                                  <div className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.45)" }}>{r.sub}</div>
+                                  <div className="text-sm font-bold text-white truncate">{r.label}</div>
+                                  <div className="text-[10px] text-white/50 truncate">{r.sub}</div>
                                 </div>
-                                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: `rgba(255,255,255,0.08)`, border: "1px solid rgba(255,255,255,0.12)" }}>
-                                  <ArrowRight className="w-3.5 h-3.5 text-white/60" />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* DOOR 2 — GROW */}
-              {(() => {
-                const isActive = hoveredDoor === 1;
-                return (
-                  <div
-                    onMouseEnter={() => setHoveredDoor(1)}
-                    onMouseLeave={() => setHoveredDoor(null)}
-                    onClick={() => goTo(2)}
-                    className="relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-500"
-                    style={{
-                      flex: isActive ? "3" : "1",
-                      border: isActive ? "1.5px solid rgba(201,168,76,0.6)" : "1.5px solid rgba(201,168,76,0.18)",
-                      boxShadow: isActive ? "0 0 80px rgba(201,168,76,0.25), 0 0 0 1px rgba(201,168,76,0.1)" : "0 4px 24px rgba(0,0,0,0.4)",
-                    }}>
-                    <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900&q=85"
-                      alt="Grow" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700"
-                      style={{ transform: isActive ? "scale(1.08)" : "scale(1.02)" }} />
-                    <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #120900 0%, rgba(18,9,0,0.85) 45%, rgba(18,9,0,0.35) 100%)" }} />
-                    {isActive && <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 110% 55% at 50% 105%, rgba(201,168,76,0.35), transparent)" }} />}
-
-                    <div className="absolute inset-0 flex flex-col justify-between p-5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] px-3 py-1.5 rounded-full font-extrabold tracking-widest uppercase"
-                          style={{ background: "rgba(201,168,76,0.22)", border: "1px solid rgba(201,168,76,0.45)", color: "#e8c97a", backdropFilter: "blur(8px)" }}>
-                          GROW
-                        </span>
-                        <div className="w-9 h-9 rounded-2xl flex items-center justify-center"
-                          style={{ background: "rgba(201,168,76,0.2)", border: "1px solid rgba(201,168,76,0.35)", backdropFilter: "blur(8px)", boxShadow: isActive ? "0 0 24px rgba(201,168,76,0.5)" : "none" }}>
-                          <TrendingUp className="w-4 h-4" style={{ color: "#e8c97a" }} />
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-[10px] font-bold tracking-[0.25em] uppercase mb-1" style={{ color: "rgba(232,201,122,0.55)" }}>Door 2</p>
-                        <h3 className="font-extrabold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif", fontSize: isActive ? "2.6rem" : "2rem", textShadow: "0 2px 16px rgba(0,0,0,0.8)", lineHeight: 1.1 }}>GROW</h3>
-                        <p className="text-sm font-medium mb-4" style={{ color: "rgba(232,201,122,0.75)", textShadow: "0 1px 8px rgba(0,0,0,0.9)" }}>
-                          {isActive ? "CA & CS qualified experts for your business." : "CA · CS · Tax · Compliance"}
-                        </p>
-
-                        {isActive && (
-                          <div className="space-y-2">
-                            {[
-                              { icon: FileText, label: "GST & Income Tax", sub: "Returns, audits & planning" },
-                              { icon: BarChart3, label: "DPR & Projections", sub: "Detailed project reports" },
-                              { icon: Presentation, label: "Pitch Decks", sub: "Investor-ready presentations" },
-                              { icon: Building2, label: "Business Restructuring", sub: "M&A, strategy & turnaround" },
-                            ].map(r => (
-                              <div key={r.label} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all hover:scale-[1.02]"
-                                style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(201,168,76,0.18)", backdropFilter: "blur(12px)" }}>
-                                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                                  style={{ background: "rgba(201,168,76,0.2)", border: "1px solid rgba(201,168,76,0.3)" }}>
-                                  <r.icon className="w-4 h-4" style={{ color: "#e8c97a" }} />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="text-sm font-bold text-white" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>{r.label}</div>
-                                  <div className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.45)" }}>{r.sub}</div>
-                                </div>
-                                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.2)" }}>
-                                  <ArrowRight className="w-3.5 h-3.5" style={{ color: "#e8c97a" }} />
+                                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ background: door.accentBg, border: `1px solid ${door.accentBorder}` }}>
+                                  <ArrowRight className="w-3.5 h-3.5" style={{ color: door.accent }} />
                                 </div>
                               </div>
                             ))}
@@ -248,78 +243,7 @@ export function HorizontalHomepage() {
                     </div>
                   </div>
                 );
-              })()}
-
-              {/* DOOR 3 — LAUNCH */}
-              {(() => {
-                const isActive = hoveredDoor === 2;
-                return (
-                  <div
-                    onMouseEnter={() => setHoveredDoor(2)}
-                    onMouseLeave={() => setHoveredDoor(null)}
-                    onClick={() => goTo(3)}
-                    className="relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-500"
-                    style={{
-                      flex: isActive ? "3" : "1",
-                      border: isActive ? "1.5px solid rgba(167,139,250,0.55)" : "1.5px solid rgba(139,92,246,0.18)",
-                      boxShadow: isActive ? "0 0 80px rgba(139,92,246,0.28), 0 0 0 1px rgba(167,139,250,0.1)" : "0 4px 24px rgba(0,0,0,0.4)",
-                    }}>
-                    <img src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=900&q=85"
-                      alt="Launch" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700"
-                      style={{ transform: isActive ? "scale(1.08)" : "scale(1.02)" }} />
-                    <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0a0318 0%, rgba(10,3,24,0.85) 45%, rgba(10,3,24,0.35) 100%)" }} />
-                    {isActive && <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 110% 55% at 50% 105%, rgba(139,92,246,0.38), transparent)" }} />}
-
-                    <div className="absolute inset-0 flex flex-col justify-between p-5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] px-3 py-1.5 rounded-full font-extrabold tracking-widest uppercase"
-                          style={{ background: "rgba(139,92,246,0.25)", border: "1px solid rgba(167,139,250,0.45)", color: "#c4b5fd", backdropFilter: "blur(8px)" }}>
-                          LAUNCH
-                        </span>
-                        <div className="w-9 h-9 rounded-2xl flex items-center justify-center"
-                          style={{ background: "rgba(139,92,246,0.22)", border: "1px solid rgba(167,139,250,0.35)", backdropFilter: "blur(8px)", boxShadow: isActive ? "0 0 24px rgba(139,92,246,0.5)" : "none" }}>
-                          <Rocket className="w-4 h-4" style={{ color: "#c4b5fd" }} />
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-[10px] font-bold tracking-[0.25em] uppercase mb-1" style={{ color: "rgba(196,181,253,0.55)" }}>Door 3</p>
-                        <h3 className="font-extrabold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif", fontSize: isActive ? "2.6rem" : "2rem", textShadow: "0 2px 16px rgba(0,0,0,0.8)", lineHeight: 1.1 }}>LAUNCH</h3>
-                        <p className="text-sm font-medium mb-4" style={{ color: "rgba(196,181,253,0.75)", textShadow: "0 1px 8px rgba(0,0,0,0.9)" }}>
-                          {isActive ? "List your startup. Pitch to investors." : "Startups · Investors · Partners"}
-                        </p>
-
-                        {isActive && (
-                          <div className="space-y-2">
-                            {[
-                              { label: "List Your Startup — Free", sub: "Pitch deck + video + funding ask", highlight: true },
-                              { label: "Browse Startups", sub: "Discover India's upcoming ventures", highlight: false },
-                              { label: "Connect with Investors", sub: "Angels, VCs and strategic partners", highlight: false },
-                              { label: "CA-Verified Financials", sub: "Build trust with verified numbers", highlight: false },
-                            ].map(r => (
-                              <div key={r.label} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all hover:scale-[1.02]"
-                                style={{
-                                  background: r.highlight ? "rgba(139,92,246,0.22)" : "rgba(255,255,255,0.07)",
-                                  border: r.highlight ? "1px solid rgba(167,139,250,0.4)" : "1px solid rgba(139,92,246,0.18)",
-                                  backdropFilter: "blur(12px)",
-                                }}>
-                                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: r.highlight ? "#a78bfa" : "rgba(167,139,250,0.5)", boxShadow: r.highlight ? "0 0 8px rgba(167,139,250,0.6)" : "none" }} />
-                                <div className="flex-1">
-                                  <div className="text-sm font-bold text-white" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>{r.label}</div>
-                                  <div className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.45)" }}>{r.sub}</div>
-                                </div>
-                                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(167,139,250,0.25)" }}>
-                                  <ArrowRight className="w-3.5 h-3.5" style={{ color: "#c4b5fd" }} />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+              })}
 
             </div>
           </div>
