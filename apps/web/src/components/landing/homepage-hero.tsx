@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Search, TrendingUp, MapPin, Users, Briefcase, FileText, BarChart3, Presentation, Building2, GraduationCap, ArrowRight } from "lucide-react";
+import { Search, TrendingUp, MapPin, Users, Briefcase, FileText, BarChart3, Presentation, Building2, GraduationCap, ArrowRight, Rocket } from "lucide-react";
 
 const findLinks = [
   { icon: MapPin, label: "Coworking & Offices", href: "/coworking" },
@@ -57,7 +57,7 @@ export function HomepageHero() {
               style={{ fontFamily: "var(--font-cormorant), Georgia, serif" }}>
               <span className="text-white">One platform.</span>
               <br />
-              <span className="text-white/35">Two doors.</span>
+              <span className="text-white/35">Three doors.</span>
             </h1>
           </motion.div>
 
@@ -68,7 +68,7 @@ export function HomepageHero() {
             className="text-center text-white/45 text-base md:text-lg mb-16 max-w-xl mx-auto leading-relaxed"
             style={{ fontFamily: "var(--font-poppins), sans-serif" }}
           >
-            Search and book workspaces, freelancers and jobs — or get expert CA & CS services to grow your business.
+            Search workspaces, freelancers & jobs — grow with CA & CS services — or launch your startup in front of investors.
           </motion.p>
 
           {/* TWO DOOR CARDS */}
@@ -76,7 +76,7 @@ export function HomepageHero() {
             initial={{ opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.3 }}
-            className="grid md:grid-cols-2 gap-5 max-w-4xl mx-auto"
+            className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto"
           >
             {/* FIND door */}
             <div className="group relative rounded-3xl border border-[#3B82F6]/20 bg-gradient-to-b from-[#0D1829] to-[#080E1C] p-8 overflow-hidden hover:border-[#3B82F6]/40 transition-all duration-500">
@@ -170,6 +170,53 @@ export function HomepageHero() {
                 </Link>
               </div>
             </div>
+            {/* LAUNCH door */}
+            <div className="group relative rounded-3xl border border-purple-500/20 bg-gradient-to-b from-[#110A1F] to-[#080E1C] p-8 overflow-hidden hover:border-purple-500/40 transition-all duration-500">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(139,92,246,0.12),transparent)] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center">
+                    <Rocket className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.25em] text-purple-400/60 uppercase">Door 3</p>
+                    <h2 className="text-2xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>
+                      LAUNCH
+                    </h2>
+                  </div>
+                </div>
+
+                <p className="text-white/45 text-sm mb-7 leading-relaxed">
+                  Startup Launchpad — list your startup, get discovered by investors, partners & customers.
+                </p>
+
+                <ul className="space-y-2.5 mb-8">
+                  {[
+                    { icon: Rocket, label: "List your startup", href: "/dashboard/startup/submit" },
+                    { icon: Search, label: "Browse startups", href: "/startups" },
+                    { icon: TrendingUp, label: "Pitch to investors", href: "/startups" },
+                  ].map(({ icon: Icon, label, href }) => (
+                    <li key={label}>
+                      <Link href={href} className="flex items-center gap-3 group/item">
+                        <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 group-hover/item:bg-purple-500/20 transition-colors">
+                          <Icon className="w-3.5 h-3.5 text-purple-400" />
+                        </div>
+                        <span className="text-sm text-white/65 group-hover/item:text-white transition-colors">{label}</span>
+                        <ArrowRight className="w-3 h-3 text-white/20 ml-auto opacity-0 group-hover/item:opacity-100 -translate-x-1 group-hover/item:translate-x-0 transition-all" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+
+                <Link href="/startups"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white border border-purple-500/30 hover:bg-purple-500/12 hover:border-purple-500/50 transition-all group/btn">
+                  Explore Launchpad
+                  <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
+                </Link>
+              </div>
+            </div>
+
           </motion.div>
 
           {/* Trust strip */}
