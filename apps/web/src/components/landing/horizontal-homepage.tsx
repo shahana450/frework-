@@ -120,98 +120,133 @@ export function HorizontalHomepage() {
             </div>
 
             {/* ── RIGHT: bento infographic ── */}
-            <div className="hidden lg:grid flex-1 grid-cols-3 grid-rows-2 gap-3 p-6 pt-24 pb-8 min-w-0">
+            <div className="hidden lg:flex flex-1 gap-3 p-5 pt-22 pb-6 min-w-0 overflow-hidden">
 
-              {/* FIND — spans 2 rows col 1 */}
-              <button onClick={() => goTo(1)}
-                className="row-span-2 relative rounded-3xl overflow-hidden group border border-blue-500/15 hover:border-blue-500/35 transition-all duration-500 text-left">
-                <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&q=80"
-                  alt="Coworking" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050A16]/95 via-[#050A16]/40 to-transparent" />
-                <div className="absolute inset-0 bg-blue-900/20" />
-                <div className="absolute inset-0 p-6 flex flex-col justify-between">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-500/25 border border-blue-400/30 backdrop-blur-sm flex items-center justify-center">
-                    <Search className="w-5 h-5 text-blue-300" />
+              {/* Column A — FIND tall card */}
+              <div className="flex flex-col gap-3 w-[38%]">
+                <button onClick={() => goTo(1)}
+                  className="relative flex-1 rounded-3xl overflow-hidden group border border-blue-500/20 hover:border-blue-400/50 transition-all duration-500 text-left shadow-[0_0_40px_rgba(59,130,246,0.08)]">
+                  <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&q=80"
+                    alt="Coworking" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#040810]/98 via-[#040810]/55 to-[#040810]/10" />
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,rgba(59,130,246,0.25),transparent)]" />
+                  <div className="absolute inset-0 p-6 flex flex-col justify-between">
+                    {/* top badge */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] px-3 py-1 rounded-full bg-blue-500/25 border border-blue-400/30 text-blue-300 font-bold tracking-widest uppercase backdrop-blur-sm">Door 1</span>
+                      <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-400/25 backdrop-blur-sm flex items-center justify-center">
+                        <Search className="w-4 h-4 text-blue-300" />
+                      </div>
+                    </div>
+                    {/* bottom content */}
+                    <div>
+                      <div className="text-4xl font-bold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif" }}>FIND</div>
+                      <p className="text-[11px] text-blue-200/50 mb-4 tracking-wide">Spaces · Talent · Jobs</p>
+                      {/* mini preview strips */}
+                      <div className="space-y-2">
+                        {[
+                          { img: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=300&q=70", label: "Teachers & Tutors", tag: "New" },
+                          { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300&q=70", label: "Skilled Workers", tag: "Electrician · Plumber" },
+                          { img: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=300&q=70", label: "Jobs & Freelancers", tag: "Verified" },
+                        ].map(r => (
+                          <div key={r.label} className="flex items-center gap-2.5 rounded-xl bg-white/5 border border-white/8 px-3 py-2 backdrop-blur-sm group-hover:bg-blue-500/10 transition-colors">
+                            <img src={r.img} alt={r.label} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[11px] font-semibold text-white/80 truncate">{r.label}</div>
+                              <div className="text-[9px] text-white/30">{r.tag}</div>
+                            </div>
+                            <ArrowRight className="w-3 h-3 text-blue-400/50 flex-shrink-0" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-[10px] font-bold tracking-[0.3em] text-blue-400/70 uppercase mb-1">Door 1</div>
-                    <div className="text-3xl font-bold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif" }}>FIND</div>
-                    <p className="text-xs text-white/50 leading-relaxed mb-4">Coworking · Freelancers · Jobs</p>
-                    <div className="flex flex-wrap gap-2">
-                      {["500+ Spaces", "Verified Talent", "Live Jobs"].map(t => (
-                        <span key={t} className="text-[9px] px-2 py-1 rounded-full bg-blue-500/20 border border-blue-500/25 text-blue-300 font-medium">{t}</span>
-                      ))}
+                </button>
+              </div>
+
+              {/* Column B — GROW + Teachers/Skilled */}
+              <div className="flex flex-col gap-3 w-[31%]">
+
+                {/* GROW */}
+                <button onClick={() => goTo(2)}
+                  className="relative rounded-3xl overflow-hidden group border border-[#C9A84C]/20 hover:border-[#C9A84C]/50 transition-all duration-500 text-left shadow-[0_0_30px_rgba(201,168,76,0.06)]"
+                  style={{ height: "46%" }}>
+                  <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=500&q=80"
+                    alt="CA Services" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0C0700]/97 via-[#0C0700]/60 to-transparent" />
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,rgba(201,168,76,0.2),transparent)]" />
+                  <div className="absolute inset-0 p-5 flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] px-3 py-1 rounded-full bg-[#C9A84C]/25 border border-[#C9A84C]/30 text-[#E8C97A] font-bold tracking-widest uppercase backdrop-blur-sm">Door 2</span>
+                      <div className="w-8 h-8 rounded-xl bg-[#C9A84C]/20 border border-[#C9A84C]/25 backdrop-blur-sm flex items-center justify-center">
+                        <TrendingUp className="w-3.5 h-3.5 text-[#C9A84C]" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>GROW</div>
+                      <p className="text-[10px] text-[#C9A84C]/60 mt-0.5">CA · CS · Tax · Compliance · DPR</p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Teachers card */}
+                <div className="relative rounded-3xl overflow-hidden group border border-emerald-500/20 hover:border-emerald-400/40 transition-all duration-500 flex-1">
+                  <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=500&q=80"
+                    alt="Teacher" className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#030C08]/95 via-[#030C08]/50 to-transparent" />
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_50%_at_50%_100%,rgba(16,185,129,0.2),transparent)]" />
+                  <div className="absolute inset-0 p-4 flex flex-col justify-between">
+                    <span className="self-start text-[9px] px-2.5 py-1 rounded-full bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 font-bold tracking-widest uppercase">✦ New</span>
+                    <div>
+                      <div className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>Teachers & Tutors</div>
+                      <p className="text-[10px] text-white/40 mt-0.5">CBSE · IELTS · Music · Yoga · JEE</p>
                     </div>
                   </div>
                 </div>
-              </button>
 
-              {/* GROW top */}
-              <button onClick={() => goTo(2)}
-                className="relative rounded-3xl overflow-hidden group border border-[#C9A84C]/15 hover:border-[#C9A84C]/40 transition-all duration-500 text-left">
-                <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=500&q=80"
-                  alt="CA Services" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#100900]/95 via-[#100900]/50 to-transparent" />
-                <div className="absolute inset-0 p-5 flex flex-col justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-[#C9A84C]/25 border border-[#C9A84C]/30 backdrop-blur-sm flex items-center justify-center">
-                    <TrendingUp className="w-4 h-4 text-[#C9A84C]" />
-                  </div>
-                  <div>
-                    <div className="text-[9px] font-bold tracking-[0.3em] text-[#C9A84C]/60 uppercase mb-0.5">Door 2</div>
-                    <div className="text-2xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>GROW</div>
-                    <p className="text-[11px] text-white/40 mt-0.5">CA · CS · Tax · Compliance</p>
-                  </div>
-                </div>
-              </button>
-
-              {/* LAUNCH top */}
-              <button onClick={() => goTo(3)}
-                className="relative rounded-3xl overflow-hidden group border border-purple-500/15 hover:border-purple-500/40 transition-all duration-500 text-left">
-                <img src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=500&q=80"
-                  alt="Startup" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0416]/95 via-[#0A0416]/50 to-transparent" />
-                <div className="absolute inset-0 p-5 flex flex-col justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-purple-500/25 border border-purple-400/30 backdrop-blur-sm flex items-center justify-center">
-                    <Rocket className="w-4 h-4 text-purple-300" />
-                  </div>
-                  <div>
-                    <div className="text-[9px] font-bold tracking-[0.3em] text-purple-400/60 uppercase mb-0.5">Door 3</div>
-                    <div className="text-2xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>LAUNCH</div>
-                    <p className="text-[11px] text-white/40 mt-0.5">Startups · Investors · Partners</p>
-                  </div>
-                </div>
-              </button>
-
-              {/* Bottom middle: freelancers stat card */}
-              <div className="relative rounded-3xl overflow-hidden group border border-blue-500/10 hover:border-blue-500/25 transition-all duration-500">
-                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=500&q=80"
-                  alt="Freelancer" className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050A16]/90 via-[#050A16]/30 to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <div className="text-xs font-semibold text-white/70">Hire verified freelancers</div>
-                  <div className="text-[10px] text-white/35 mt-0.5">Teachers · Designers · CAs · Plumbers</div>
-                </div>
               </div>
 
-              {/* Bottom right: quick stat pill */}
-              <div className="relative rounded-3xl border border-white/6 bg-white/2 p-5 flex flex-col justify-between overflow-hidden group hover:border-white/12 transition-all">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_120%,rgba(201,168,76,0.08),transparent)]" />
-                <div className="grid grid-cols-2 gap-3 relative z-10">
-                  {[
-                    { n: "500+", l: "Businesses", c: "text-[#C9A84C]" },
-                    { n: "CA·CS", l: "Qualified", c: "text-blue-400" },
-                    { n: "24hr", l: "Response", c: "text-emerald-400" },
-                    { n: "₹999", l: "Starting", c: "text-purple-400" },
-                  ].map(s => (
-                    <div key={s.l} className="flex flex-col">
-                      <span className={`text-xl font-bold ${s.c}`} style={{ fontFamily: "var(--font-cormorant), serif" }}>{s.n}</span>
-                      <span className="text-[9px] text-white/30 uppercase tracking-widest">{s.l}</span>
+              {/* Column C — LAUNCH + Skilled Workers */}
+              <div className="flex flex-col gap-3 flex-1">
+
+                {/* LAUNCH */}
+                <button onClick={() => goTo(3)}
+                  className="relative rounded-3xl overflow-hidden group border border-purple-500/20 hover:border-purple-400/50 transition-all duration-500 text-left shadow-[0_0_30px_rgba(139,92,246,0.06)]"
+                  style={{ height: "46%" }}>
+                  <img src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=500&q=80"
+                    alt="Startup" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#08031A]/97 via-[#08031A]/60 to-transparent" />
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,rgba(139,92,246,0.25),transparent)]" />
+                  <div className="absolute inset-0 p-5 flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] px-3 py-1 rounded-full bg-purple-500/25 border border-purple-400/30 text-purple-300 font-bold tracking-widest uppercase backdrop-blur-sm">Door 3</span>
+                      <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-400/25 backdrop-blur-sm flex items-center justify-center">
+                        <Rocket className="w-3.5 h-3.5 text-purple-300" />
+                      </div>
                     </div>
-                  ))}
-                </div>
-                <div className="text-[9px] text-white/20 mt-3 relative z-10 tracking-widest uppercase">India&apos;s all-in-one platform</div>
-              </div>
+                    <div>
+                      <div className="text-3xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>LAUNCH</div>
+                      <p className="text-[10px] text-purple-300/50 mt-0.5">Startups · Investors · Partners</p>
+                    </div>
+                  </div>
+                </button>
 
+                {/* Skilled Workers card */}
+                <div className="relative rounded-3xl overflow-hidden group border border-amber-500/20 hover:border-amber-400/40 transition-all duration-500 flex-1">
+                  <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&q=80"
+                    alt="Electrician" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0C0800]/95 via-[#0C0800]/50 to-transparent" />
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_50%_at_50%_100%,rgba(245,158,11,0.2),transparent)]" />
+                  <div className="absolute inset-0 p-4 flex flex-col justify-between">
+                    <span className="self-start text-[9px] px-2.5 py-1 rounded-full bg-amber-500/25 border border-amber-400/30 text-amber-300 font-bold tracking-widest uppercase">✦ New</span>
+                    <div>
+                      <div className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>Skilled Workers</div>
+                      <p className="text-[10px] text-white/40 mt-0.5">Electrician · Plumber · Cook · Tailor</p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
           <ScrollHint onClick={() => goTo(1)} label="Explore FIND" />
