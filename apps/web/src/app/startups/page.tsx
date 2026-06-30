@@ -1,123 +1,229 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/page-layout";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
-import { Search, MapPin, TrendingUp, Users, DollarSign, Rocket, Globe, Star, ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+import { Rocket, Search, ArrowRight, Play, FileText, MapPin, ExternalLink, Mail } from "lucide-react";
 
-const STARTUPS = [
-  { id: "1", name: "AgroAI", tagline: "AI-powered crop disease detection for Indian farmers", sector: "AgriTech", stage: "Series A", raised: "₹12 Cr", team: 18, location: "Pune", logo: "🌱", founded: 2022, traction: "50,000+ farmers served", looking: "Product Designer, Backend Dev", highlight: "YC W24" },
-  { id: "2", name: "MediChain", tagline: "Blockchain-based medical records for 1.4B Indians", sector: "HealthTech", stage: "Seed", raised: "$2.1M", team: 9, location: "Hyderabad", logo: "🏥", founded: 2023, traction: "12 hospitals onboarded", looking: "Solidity Dev, BD Lead", highlight: null },
-  { id: "3", name: "SkoolOS", tagline: "Full-stack operating system for Indian K-12 schools", sector: "EdTech", stage: "Pre-Series A", raised: "₹6 Cr", team: 24, location: "Bangalore", logo: "📚", founded: 2021, traction: "800+ schools, 2L+ students", looking: "Sales Head, Data Scientist", highlight: "Sequoia Scout" },
-  { id: "4", name: "ClimateCreds", tagline: "Carbon credit marketplace for SMEs in Southeast Asia", sector: "CleanTech", stage: "Seed", raised: "$1.8M", team: 7, location: "Singapore / Remote", logo: "🌍", founded: 2023, traction: "250+ SMEs registered", looking: "Frontend Dev, Growth Lead", highlight: null },
-  { id: "5", name: "LegalGPT", tagline: "AI legal assistant for Indian law firms and individuals", sector: "LegalTech", stage: "Angel", raised: "₹2.5 Cr", team: 6, location: "Delhi", logo: "⚖️", founded: 2024, traction: "3,000+ active users", looking: "Full-Stack Dev, Sales Dev", highlight: "AWS Activate" },
-  { id: "6", name: "FinBridge", tagline: "Neo-bank for India's 450M unbanked rural population", sector: "FinTech", stage: "Pre-Seed", raised: "₹1.2 Cr", team: 5, location: "Jaipur", logo: "🏦", founded: 2023, traction: "Pilot in 10 villages", looking: "React Native Dev, Operations Lead", highlight: null },
-];
+const SECTORS = ["All", "AgriTech", "FinTech", "HealthTech", "EdTech", "LegalTech", "SaaS", "D2C", "CleanTech", "Other"];
+const STAGES = ["All stages", "Idea", "Pre-seed", "Seed", "Pre-Series A", "Series A+"];
 
-const SECTORS = ["All", "FinTech", "HealthTech", "EdTech", "AgriTech", "CleanTech", "LegalTech", "SaaS", "D2C"];
-const STAGES = ["All Stages", "Pre-Seed", "Seed", "Angel", "Pre-Series A", "Series A", "Series B+"];
+interface Startup {
+  id: string;
+  slug: string;
+  name: string;
+  tagline: string;
+  sector: string;
+  stage: string;
+  city: string;
+  funding_ask: string;
+  video_url: string;
+  deck_url: string;
+  team_size: number;
+  logo_url: string;
+  status: string;
+}
 
 export default function StartupsPage() {
+  const [startups, setStartups] = useState<Startup[]>([]);
+  const [search, setSearch] = useState("");
   const [sector, setSector] = useState("All");
-  const [query, setQuery] = useState("");
+  const [stage, setStage] = useState("All stages");
+  const [loading, setLoading] = useState(true);
 
-  const filtered = STARTUPS.filter(s =>
-    (sector === "All" || s.sector === sector) &&
-    (!query || s.name.toLowerCase().includes(query.toLowerCase()) || s.tagline.toLowerCase().includes(query.toLowerCase()))
-  );
+  useEffect(() => {
+    async function load() {
+      const { data } = await supabase
+        .from("fw_startups")
+        .select("*")
+        .eq("status", "live")
+        .order("created_at", { ascending: false });
+      setStartups(data ?? []);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  const filtered = startups.filter(s => {
+    const matchSearch = !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.tagline.toLowerCase().includes(search.toLowerCase());
+    const matchSector = sector === "All" || s.sector === sector;
+    const matchStage = stage === "All stages" || s.stage === stage;
+    return matchSearch && matchSector && matchStage;
+  });
 
   return (
     <PageLayout>
-      <div className="bg-gradient-to-br from-violet-500/10 via-indigo-500/5 to-transparent border-b border-border">
-        <div className="container py-12">
-          <div className="flex items-center gap-3 mb-3">
-            <Rocket className="w-8 h-8 text-violet-500" />
-            <h1 className="text-4xl font-bold">Startup Hub</h1>
+      {/* Hero */}
+      <section className="relative bg-[#060C18] pt-32 pb-16 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(59,130,246,0.08),transparent)]" />
+        <div className="container mx-auto px-4 relative z-10 max-w-5xl text-center">
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-500/25 bg-blue-500/8 text-blue-400 text-xs font-semibold tracking-widest uppercase mb-8">
+            FIND · Startup Launchpad
+          </span>
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6" style={{ fontFamily: "var(--font-cormorant), serif" }}>
+            India&apos;s next big thing<br />
+            <span className="text-white/30">starts here.</span>
+          </h1>
+          <p className="text-white/50 text-lg leading-relaxed max-w-2xl mx-auto mb-10">
+            Discover startups across India — watch founder pitches, browse decks, and connect directly with builders.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/dashboard/startup/submit"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors">
+              <Rocket className="w-4 h-4" /> List your startup
+            </Link>
+            <a href="#browse"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white/70 border border-white/10 hover:border-white/20 hover:text-white transition-colors">
+              Browse startups <ArrowRight className="w-4 h-4" />
+            </a>
           </div>
-          <p className="text-muted-foreground text-lg mb-8">Discover funded startups, join as co-founder or early employee, or get your startup listed</p>
+        </div>
+      </section>
 
-          <div className="grid grid-cols-3 gap-6 max-w-lg mb-8">
-            {[["1,200+", "Startups Listed"], ["$180M+", "Total Funding"], ["8,500+", "Jobs Available"]].map(([v, l]) => (
-              <div key={l} className="text-center">
-                <p className="text-2xl font-bold text-violet-500">{v}</p>
-                <p className="text-xs text-muted-foreground">{l}</p>
+      {/* Stats bar */}
+      <section className="bg-[#070D1A] border-y border-white/6">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <div className="grid grid-cols-3 divide-x divide-white/6">
+            {[
+              { label: "Startups listed", value: startups.length || "0" },
+              { label: "Sectors covered", value: "10+" },
+              { label: "Be the first", value: "🚀" },
+            ].map(s => (
+              <div key={s.label} className="py-6 text-center">
+                <div className="text-2xl font-bold text-white mb-1">{s.value}</div>
+                <div className="text-xs text-white/35">{s.label}</div>
               </div>
             ))}
           </div>
+        </div>
+      </section>
 
-          <div className="flex gap-3 max-w-2xl">
-            <div className="flex-1 flex items-center gap-3 bg-background border border-border rounded-xl px-4 h-12">
-              <Search className="w-4 h-4 text-muted-foreground" />
-              <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search startups by name or sector..." className="flex-1 bg-transparent outline-none text-sm" />
+      {/* Browse */}
+      <section id="browse" className="py-20 bg-[#060C18]">
+        <div className="container mx-auto px-4 max-w-5xl">
+
+          {/* Search + filters */}
+          <div className="flex flex-col md:flex-row gap-3 mb-8">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search by name, sector or keyword…"
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#070D1A] border border-white/8 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-blue-500/50"
+              />
             </div>
-            <Button className="h-12 px-6 bg-gradient-to-r from-violet-500 to-indigo-600 text-white">Search</Button>
-            <Button variant="outline" className="h-12 px-4">List Your Startup</Button>
+            <select value={stage} onChange={e => setStage(e.target.value)}
+              className="px-4 py-3 rounded-xl bg-[#070D1A] border border-white/8 text-white/60 text-sm focus:outline-none focus:border-blue-500/50">
+              {STAGES.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <select value={sector} onChange={e => setSector(e.target.value)}
+              className="px-4 py-3 rounded-xl bg-[#070D1A] border border-white/8 text-white/60 text-sm focus:outline-none focus:border-blue-500/50">
+              {SECTORS.map(s => <option key={s}>{s}</option>)}
+            </select>
           </div>
-        </div>
-      </div>
 
-      <div className="container py-8">
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-          {SECTORS.map(s => (
-            <button key={s} onClick={() => setSector(s)} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${sector === s ? "bg-violet-500 text-white" : "bg-muted text-muted-foreground hover:text-foreground"}`}>{s}</button>
-          ))}
-        </div>
+          {/* Sector pills */}
+          <div className="flex flex-wrap gap-2 mb-10">
+            {SECTORS.map(s => (
+              <button key={s} onClick={() => setSector(s)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${sector === s ? "bg-blue-600 text-white" : "border border-white/10 text-white/40 hover:border-white/20 hover:text-white/70"}`}>
+                {s}
+              </button>
+            ))}
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((startup, i) => (
-            <motion.div key={startup.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
-              <div className="group bg-card border border-border rounded-2xl p-6 hover:border-violet-400/50 hover:shadow-lg hover:shadow-violet-500/5 transition-all h-full flex flex-col">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 flex items-center justify-center text-2xl">{startup.logo}</div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold group-hover:text-violet-500 transition-colors">{startup.name}</h3>
-                        {startup.highlight && <span className="text-xs px-2 py-0.5 bg-violet-500/10 text-violet-500 rounded-full font-medium">{startup.highlight}</span>}
-                      </div>
-                      <span className="text-xs px-2 py-0.5 bg-muted rounded-full">{startup.sector}</span>
+          {/* Results */}
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-2xl border border-white/6 bg-[#070D1A] py-24 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-blue-500/8 border border-blue-500/15 flex items-center justify-center mx-auto mb-5">
+                <Rocket className="w-7 h-7 text-blue-400/50" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3" style={{ fontFamily: "var(--font-cormorant), serif" }}>
+                {search || sector !== "All" || stage !== "All stages" ? "No results found" : "Be the first on the launchpad"}
+              </h3>
+              <p className="text-white/35 text-sm mb-7 max-w-sm mx-auto">
+                {search || sector !== "All" || stage !== "All stages"
+                  ? "Try a different search or filter."
+                  : "No startups listed yet. If you're building something, list it here — it's free."}
+              </p>
+              <Link href="/dashboard/startup/submit"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-colors">
+                <Rocket className="w-4 h-4" /> List your startup
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filtered.map(s => (
+                <Link key={s.id} href={`/startups/${s.slug}`}
+                  className="flex gap-4 items-start rounded-2xl border border-white/6 bg-[#070D1A] p-5 hover:border-blue-500/25 transition-colors group">
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/15 flex items-center justify-center flex-shrink-0 text-lg font-bold text-blue-400">
+                    {s.logo_url ? <img src={s.logo_url} alt={s.name} className="w-full h-full object-cover rounded-xl" /> : s.name[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="font-semibold text-white group-hover:text-blue-300 transition-colors">{s.name}</h3>
+                      <ArrowRight className="w-4 h-4 text-white/20 group-hover:text-blue-400 flex-shrink-0 mt-0.5 transition-colors" />
+                    </div>
+                    <p className="text-sm text-white/45 mb-3 leading-snug">{s.tagline}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/15 text-blue-400">{s.stage}</span>
+                      <span className="text-xs px-2.5 py-1 rounded-full border border-white/8 text-white/35">{s.sector}</span>
+                      {s.city && <span className="text-xs px-2.5 py-1 rounded-full border border-white/8 text-white/35 flex items-center gap-1"><MapPin className="w-3 h-3" />{s.city}</span>}
+                      {s.funding_ask && <span className="text-xs px-2.5 py-1 rounded-full border border-white/8 text-white/35">Seeking {s.funding_ask}</span>}
+                      {s.video_url && <span className="text-xs px-2.5 py-1 rounded-full border border-white/8 text-white/35 flex items-center gap-1"><Play className="w-3 h-3" />Video</span>}
+                      {s.deck_url && <span className="text-xs px-2.5 py-1 rounded-full border border-white/8 text-white/35 flex items-center gap-1"><FileText className="w-3 h-3" />Deck</span>}
                     </div>
                   </div>
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${startup.stage === "Series A" ? "bg-green-500/10 text-green-600" : startup.stage === "Seed" ? "bg-blue-500/10 text-blue-600" : "bg-orange-500/10 text-orange-600"}`}>{startup.stage}</span>
-                </div>
-
-                <p className="text-sm text-muted-foreground mb-4 flex-1">{startup.tagline}</p>
-
-                <div className="grid grid-cols-3 gap-3 mb-4 text-center">
-                  <div className="bg-muted/40 rounded-lg p-2">
-                    <p className="text-xs font-bold text-violet-500">{startup.raised}</p>
-                    <p className="text-xs text-muted-foreground">Raised</p>
-                  </div>
-                  <div className="bg-muted/40 rounded-lg p-2">
-                    <p className="text-xs font-bold">{startup.team}</p>
-                    <p className="text-xs text-muted-foreground">Team</p>
-                  </div>
-                  <div className="bg-muted/40 rounded-lg p-2">
-                    <p className="text-xs font-bold">{startup.founded}</p>
-                    <p className="text-xs text-muted-foreground">Founded</p>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-xs text-muted-foreground mb-1">Traction</p>
-                  <p className="text-xs font-medium flex items-center gap-1"><TrendingUp className="w-3 h-3 text-green-500" />{startup.traction}</p>
-                </div>
-
-                <div className="border-t border-border pt-4">
-                  <p className="text-xs text-muted-foreground mb-2">Hiring for</p>
-                  <p className="text-xs font-medium text-violet-600 mb-3">{startup.looking}</p>
-                  <div className="flex gap-2">
-                    <Button size="sm" className="flex-1 bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-xs">View Startup</Button>
-                    <Button size="sm" variant="outline" className="text-xs">Apply</Button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
-      </div>
+      </section>
+
+      {/* Why list */}
+      <section className="py-20 bg-[#070D1A] border-t border-white/6">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>Why list on FreWork Launchpad?</h2>
+            <div className="w-12 h-px bg-blue-500/30 mx-auto mt-4" />
+          </div>
+          <div className="grid md:grid-cols-3 gap-5">
+            {[
+              { icon: Search, title: "Get discovered", body: "Investors, customers and co-founders actively browse. Your listing works 24/7." },
+              { icon: Play, title: "Show, don't just tell", body: "Embed your founder video, share your pitch deck and tell your story in full." },
+              { icon: FileText, title: "CA-verified badge", body: "Let FreWork's CA team verify your financials — builds instant credibility with investors." },
+            ].map(f => (
+              <div key={f.title} className="rounded-2xl border border-white/6 bg-[#060C18] p-6 hover:border-blue-500/20 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/8 border border-blue-500/15 flex items-center justify-center mb-4">
+                  <f.icon className="w-5 h-5 text-blue-400" />
+                </div>
+                <h3 className="font-semibold text-white mb-2">{f.title}</h3>
+                <p className="text-sm text-white/40 leading-relaxed">{f.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-20 bg-[#060C18] border-t border-white/6">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4" style={{ fontFamily: "var(--font-cormorant), serif" }}>Ready to launch?</h2>
+          <p className="text-white/40 mb-8">Free to list. Takes 10 minutes. Your startup, in front of the right people.</p>
+          <Link href="/dashboard/startup/submit"
+            className="inline-flex items-center gap-2 px-10 py-4 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors">
+            List your startup <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </section>
     </PageLayout>
   );
 }

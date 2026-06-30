@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Search,
   TrendingUp,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ const findItems = [
   { title: "Coworking & Offices", href: "/coworking", icon: MapPin, description: "Search, filter and book workspaces" },
   { title: "Freelancers", href: "/freelancers", icon: Users, description: "Browse by skill and hire talent" },
   { title: "Jobs", href: "/jobs", icon: Briefcase, description: "Search vacancies and apply" },
+  { title: "Startup Launchpad", href: "/startups", icon: Rocket, description: "Discover startups seeking investment & partners" },
 ];
 
 const growItems = [

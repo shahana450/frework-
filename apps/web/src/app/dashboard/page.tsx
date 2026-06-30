@@ -19,6 +19,7 @@ import {
   Briefcase,
   AlertCircle,
   Plus,
+  Rocket,
 } from "lucide-react";
 
 interface UserProfile {
@@ -263,6 +264,7 @@ export default function DashboardPage() {
                   { icon: Building2, label: "Find Workspace", href: "/coworking" },
                   { icon: Briefcase, label: "Browse Jobs", href: "/jobs" },
                   { icon: FileText, label: "Compliance", href: "/services/compliance" },
+                  { icon: Rocket, label: "List Startup", href: "/dashboard/startup/submit" },
                   { icon: AlertCircle, label: "Contact Us", href: "/contact" },
                 ].map(({ icon: Icon, label, href }) => (
                   <Link key={label} href={href}
