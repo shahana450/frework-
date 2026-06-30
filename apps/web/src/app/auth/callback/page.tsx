@@ -25,8 +25,8 @@ export default function AuthCallback() {
         method: "google",
       }, { onConflict: "id" });
 
-      // Redirect to homepage after successful Google sign-in
-      router.replace("/");
+      // Redirect to dashboard after successful Google sign-in
+      router.replace("/dashboard");
     });
   }, [router]);
 
