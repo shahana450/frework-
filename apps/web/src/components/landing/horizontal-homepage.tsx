@@ -243,42 +243,42 @@ export function HorizontalHomepage() {
 
                       {/* bottom text + rows */}
                       <div>
-                        <p className="text-[10px] font-bold tracking-[0.28em] uppercase mb-1.5" style={{ color: door.accentDim }}>Door {door.idx + 1}</p>
-                        <h3 className="font-black text-white leading-none mb-2 transition-all duration-300"
-                          style={{ fontFamily: "var(--font-cormorant), serif", fontSize: isActive ? "3rem" : "2.2rem", textShadow: "0 2px 20px rgba(0,0,0,0.9)" }}>
+                        <p className="text-[10px] font-bold tracking-[0.28em] uppercase mb-1" style={{ color: door.accentDim }}>Door {door.idx + 1}</p>
+                        <h3 className="font-black text-white leading-none mb-1.5 transition-all duration-300"
+                          style={{ fontFamily: "var(--font-cormorant), serif", fontSize: isActive ? "2.6rem" : "2.2rem", textShadow: "0 2px 20px rgba(0,0,0,0.9)" }}>
                           {door.label}
                         </h3>
-                        <p className="text-sm font-semibold mb-4 leading-snug"
+                        <p className="text-sm font-semibold mb-3 leading-snug"
                           style={{ color: door.accentDim, textShadow: "0 1px 10px rgba(0,0,0,1)" }}>
                           {isActive ? door.desc : door.sub}
                         </p>
 
                         {/* expanded rows */}
                         {isActive && (
-                          <div className="space-y-2">
+                          <div className="space-y-1.5">
                             {"rows" in door && (door.rows as any[]).map((r: any, i: number) => (
-                              <div key={i} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-200 hover:scale-[1.015]"
+                              <div key={i} className="flex items-center gap-2.5 rounded-xl px-3 py-2 transition-all duration-200 hover:scale-[1.015]"
                                 style={{ background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.13)", backdropFilter: "blur(14px)" }}>
                                 {r.img ? (
                                   <div className="relative flex-shrink-0">
-                                    <img src={r.img} alt={r.label} className="w-10 h-10 rounded-xl object-cover" />
-                                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#040612]" style={{ background: r.dot }} />
+                                    <img src={r.img} alt={r.label} className="w-8 h-8 rounded-lg object-cover" />
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#040612]" style={{ background: r.dot }} />
                                   </div>
                                 ) : r.Icon ? (
-                                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                                     style={{ background: door.accentBg, border: `1px solid ${door.accentBorder}` }}>
-                                    <r.Icon className="w-4.5 h-4.5" style={{ color: door.accent }} />
+                                    <r.Icon className="w-4 h-4" style={{ color: door.accent }} />
                                   </div>
                                 ) : (
-                                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: r.highlight ? door.accent : "rgba(255,255,255,0.3)", boxShadow: r.highlight ? `0 0 10px ${door.glowColor}` : "none" }} />
+                                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: r.highlight ? door.accent : "rgba(255,255,255,0.3)", boxShadow: r.highlight ? `0 0 10px ${door.glowColor}` : "none" }} />
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-bold text-white truncate">{r.label}</div>
-                                  <div className="text-[10px] text-white/50 truncate">{r.sub}</div>
+                                  <div className="text-xs font-bold text-white truncate">{r.label}</div>
+                                  <div className="text-[9px] text-white/50 truncate">{r.sub}</div>
                                 </div>
-                                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                                <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                                   style={{ background: door.accentBg, border: `1px solid ${door.accentBorder}` }}>
-                                  <ArrowRight className="w-3.5 h-3.5" style={{ color: door.accent }} />
+                                  <ArrowRight className="w-3 h-3" style={{ color: door.accent }} />
                                 </div>
                               </div>
                             ))}
