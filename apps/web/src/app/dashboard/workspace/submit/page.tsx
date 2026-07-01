@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { Building2, ArrowLeft, CheckCircle, Upload, MapPin, Phone, Mail, Globe, IndianRupee } from "lucide-react";
+import { Building2, ArrowLeft, CheckCircle, Camera, MapPin, Phone, Mail, Globe, IndianRupee } from "lucide-react";
+import { PhotoUpload } from "@/components/ui/photo-upload";
 
 const AMENITIES = ["High-speed WiFi","Meeting Rooms","24/7 Access","Parking","Cafeteria","AC","Power Backup","CCTV","Reception","Printing"];
 const TYPES = ["Hot Desk","Dedicated Desk","Private Cabin","Team Suite","Virtual Office","Event Space"];
@@ -14,11 +15,11 @@ export default function WorkspaceSubmitPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [form, setForm] = useState({
     name: "", type: "", address: "", city: "", state: "", pincode: "",
     price_per_day: "", price_per_month: "", capacity: "", description: "",
     contact_email: "", contact_phone: "", website: "",
-    photos: "",
   });
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function WorkspaceSubmitPage() {
     await supabase.from("fw_workspaces").insert({
       user_id: userId, ...form,
       amenities: selected,
+      photos: photoUrls,
       price_per_day: form.price_per_day ? parseInt(form.price_per_day) : null,
       price_per_month: form.price_per_month ? parseInt(form.price_per_month) : null,
       capacity: form.capacity ? parseInt(form.capacity) : null,
@@ -129,9 +131,16 @@ export default function WorkspaceSubmitPage() {
           </Section>
 
           {/* Photos */}
-          <Section title="Photos" icon={Upload} color="blue">
-            <Textarea label="Photo URLs (one per line)" value={form.photos} onChange={set("photos")} placeholder={"https://example.com/photo1.jpg\nhttps://example.com/photo2.jpg"} rows={3} />
-            <p className="text-[10px] text-white/25 mt-1">Upload photos to Google Drive / Imgur and paste links here</p>
+          <Section title="Photos" icon={Camera} color="blue">
+            {userId && (
+              <PhotoUpload
+                userId={userId}
+                folder="workspaces"
+                maxPhotos={10}
+                onUrlsChange={setPhotoUrls}
+                accentColor="blue"
+              />
+            )}
           </Section>
 
           {/* Contact */}

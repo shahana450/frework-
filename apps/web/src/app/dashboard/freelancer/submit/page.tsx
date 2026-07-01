@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Users, ArrowLeft, CheckCircle, MapPin, Phone, Mail, Globe, IndianRupee } from "lucide-react";
+import { PhotoUpload } from "@/components/ui/photo-upload";
 
 const CATEGORIES = ["Software & Tech","Design & Creative","Marketing & SEO","Finance & Accounting","Legal","Content & Writing","Video & Media","AI / ML","Consulting","Other"];
 
@@ -12,6 +13,7 @@ export default function FreelancerSubmitPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [form, setForm] = useState({
     name: "", title: "", category: "", city: "", bio: "",
     skills: "", hourly_rate: "", contact_email: "", contact_phone: "",
@@ -39,6 +41,7 @@ export default function FreelancerSubmitPage() {
       hourly_rate: form.hourly_rate ? parseInt(form.hourly_rate) : null,
       experience_years: form.experience_years ? parseInt(form.experience_years) : null,
       skills: form.skills.split(",").map(s => s.trim()).filter(Boolean),
+      photos: photoUrls,
       status: "pending",
     });
     setLoading(false);
@@ -90,6 +93,13 @@ export default function FreelancerSubmitPage() {
           <Card>
             <Row><Field label="Email *" value={form.contact_email} onChange={set("contact_email")} type="email" required icon={Mail} /><Field label="Phone" value={form.contact_phone} onChange={set("contact_phone")} placeholder="+91 98765 43210" icon={Phone} /></Row>
             <Row><Field label="LinkedIn" value={form.linkedin} onChange={set("linkedin")} placeholder="linkedin.com/in/yourname" icon={Globe} /><Field label="Portfolio / Website" value={form.portfolio} onChange={set("portfolio")} placeholder="yourportfolio.com" icon={Globe} /></Row>
+          </Card>
+          <Card>
+            <p className="text-sm font-semibold text-white/60 mb-1">Profile / Work Photos</p>
+            <p className="text-xs text-white/30 mb-3">Upload your profile picture or portfolio work samples</p>
+            {userId && (
+              <PhotoUpload userId={userId} folder="freelancers" maxPhotos={6} onUrlsChange={setPhotoUrls} accentColor="blue" />
+            )}
           </Card>
           <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
             {loading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Users className="w-4 h-4" />}

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { GraduationCap, ArrowLeft, CheckCircle, MapPin, Phone, Mail, IndianRupee } from "lucide-react";
+import { PhotoUpload } from "@/components/ui/photo-upload";
 
 const SUBJECTS = ["Mathematics","Physics","Chemistry","Biology","English","Hindi","Social Studies","Computer Science","Accountancy","Economics","Business Studies","Music","Dance","Yoga","Art","Sports Coaching","IELTS/TOEFL","JEE Coaching","NEET Coaching","MBA Entrance","Other"];
 const MODES = ["Home Tuition","Online Classes","At My Location","Group Classes","School/College Level"];
@@ -15,6 +16,7 @@ export default function TeacherSubmitPage() {
   const [success, setSuccess] = useState(false);
   const [selSubjects, setSelSubjects] = useState<string[]>([]);
   const [selModes, setSelModes] = useState<string[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [form, setForm] = useState({ name: "", qualification: "", city: "", experience_years: "", hourly_rate: "", bio: "", contact_email: "", contact_phone: "", boards: "", languages: "" });
 
   useEffect(() => {
@@ -35,6 +37,7 @@ export default function TeacherSubmitPage() {
       user_id: userId, ...form,
       category: "Teacher",
       skills: selSubjects,
+      photos: photoUrls,
       hourly_rate: form.hourly_rate ? parseInt(form.hourly_rate) : null,
       experience_years: form.experience_years ? parseInt(form.experience_years) : null,
       extra: { modes: selModes, boards: form.boards, languages: form.languages },
@@ -112,6 +115,14 @@ export default function TeacherSubmitPage() {
               <F label="Phone *" value={form.contact_phone} onChange={set("contact_phone")} placeholder="+91 98765 43210" required icon={Phone} />
             </div>
           </Card>
+
+          <div className="rounded-2xl border border-white/6 bg-[#070D1A] p-5 space-y-3">
+            <p className="text-sm font-semibold text-white/60">Profile Photo</p>
+            <p className="text-xs text-white/30">A clear photo helps students trust you</p>
+            {userId && (
+              <PhotoUpload userId={userId} folder="teachers" maxPhotos={3} onUrlsChange={setPhotoUrls} accentColor="emerald" />
+            )}
+          </div>
 
           <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
             {loading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <GraduationCap className="w-4 h-4" />}

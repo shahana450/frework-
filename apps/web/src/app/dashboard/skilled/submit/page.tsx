@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Wrench, ArrowLeft, CheckCircle, MapPin, Phone, Mail, IndianRupee } from "lucide-react";
+import { PhotoUpload } from "@/components/ui/photo-upload";
 
 const TRADES = ["Electrician","Plumber","Carpenter","Painter","Housekeeping / Maid","Cook / Chef","Tailor","Driver","Security Guard","AC Technician","Welder","Mason / Construction","Gardener","Pest Control","Water Purifier Technician","CCTV Installation","Home Renovation","Moving & Packing","Other"];
 const AVAILABILITY = ["Weekdays","Weekends","Full Time","Part Time","On-call / Emergency"];
@@ -15,6 +16,7 @@ export default function SkilledSubmitPage() {
   const [success, setSuccess] = useState(false);
   const [selTrades, setSelTrades] = useState<string[]>([]);
   const [selAvail, setSelAvail] = useState<string[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [form, setForm] = useState({ name: "", city: "", area: "", experience_years: "", hourly_rate: "", bio: "", contact_email: "", contact_phone: "", daily_rate: "" });
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function SkilledSubmitPage() {
       hourly_rate: form.hourly_rate ? parseInt(form.hourly_rate) : null,
       experience_years: form.experience_years ? parseInt(form.experience_years) : null,
       extra: { availability: selAvail, daily_rate: form.daily_rate, area: form.area },
+      photos: photoUrls,
       status: "pending",
     });
     setLoading(false);
@@ -114,6 +117,14 @@ export default function SkilledSubmitPage() {
               <F label="Phone *" value={form.contact_phone} onChange={set("contact_phone")} placeholder="+91 98765 43210" required icon={Phone} />
               <F label="Email" value={form.contact_email} onChange={set("contact_email")} type="email" icon={Mail} />
             </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/6 bg-[#070D1A] p-5 space-y-3">
+            <p className="text-sm font-semibold text-white/60">Work Photos</p>
+            <p className="text-xs text-white/30">Show examples of your work — before/after, tools, certificates</p>
+            {userId && (
+              <PhotoUpload userId={userId} folder="skilled" maxPhotos={8} onUrlsChange={setPhotoUrls} accentColor="amber" />
+            )}
           </div>
 
           <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-amber-600 hover:bg-amber-500 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
