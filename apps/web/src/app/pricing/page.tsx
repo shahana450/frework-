@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { motion } from "framer-motion";
 import { Check, X, Zap, Building2, Rocket, Crown, Users, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-const PLANS = [
+type Plan = {
+  name: string; icon: React.ElementType; price: { monthly: number; yearly: number; original?: number };
+  desc: string; popular?: boolean;
+  accent: { card: string; icon: string; badge: string | null; cta: string };
+  features: string[]; notIncluded: string[]; cta: string; ctaHref: string;
+};
+
+const PLANS: Plan[] = [
   {
     name: "Free",
     icon: Zap,
