@@ -26,7 +26,8 @@ const plans = [
   },
   {
     name: "Professional",
-    price: { monthly: 999, yearly: 649 },
+    price: { monthly: 299, yearly: 194 },
+    originalPrice: 999,
     description: "For serious freelancers & clients",
     badge: "Most Popular",
     features: [
@@ -44,15 +45,31 @@ const plans = [
     variant: "default" as const,
   },
   {
-    name: "Business",
-    price: { monthly: 3999, yearly: 2599 },
-    description: "For agencies & growing teams",
+    name: "Growth",
+    price: { monthly: 2999, yearly: 1949 },
+    description: "For growing teams",
     badge: null,
     features: [
       "Everything in Professional",
-      "Team collaboration (10 seats)",
-      "API access",
+      "Team collaboration (5 seats)",
+      "Client portal",
       "Custom contracts",
+      "Branded proposals",
+      "Revenue analytics",
+    ],
+    cta: "Start Free Trial",
+    ctaHref: "/register?plan=growth",
+    variant: "outline" as const,
+  },
+  {
+    name: "Business",
+    price: { monthly: 4999, yearly: 3249 },
+    description: "For agencies & growing teams",
+    badge: null,
+    features: [
+      "Everything in Growth",
+      "Team collaboration (20 seats)",
+      "API access",
       "Dedicated account manager",
       "White-label invoices",
       "Bulk hiring tools",
@@ -64,7 +81,7 @@ const plans = [
   },
   {
     name: "Enterprise",
-    price: { monthly: null, yearly: null },
+    price: { monthly: 9999, yearly: 6499 },
     description: "For large organizations",
     badge: null,
     features: [
@@ -77,8 +94,8 @@ const plans = [
       "24/7 premium support",
       "Custom SLA",
     ],
-    cta: "Contact Sales",
-    ctaHref: "/contact",
+    cta: "Start Enterprise Trial",
+    ctaHref: "/register?plan=enterprise",
     variant: "outline" as const,
   },
 ];
@@ -113,7 +130,7 @@ export function Pricing() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-start">
           {plans.map((plan, i) => (
             <motion.div
               key={plan.name}
@@ -136,12 +153,17 @@ export function Pricing() {
               <div className="mb-6">
                 <h3 className="text-lg font-bold mb-1">{plan.name}</h3>
                 <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
-                <div className="flex items-baseline gap-1">
+                <div className="flex items-baseline gap-1.5 flex-wrap">
                   {plan.price.monthly !== null ? (
                     <>
                       <span className="text-4xl font-bold">
                         ₹{(billing === "monthly" ? plan.price.monthly : plan.price.yearly)?.toLocaleString("en-IN")}
                       </span>
+                      {plan.originalPrice && billing === "monthly" && (
+                        <span className="text-base text-muted-foreground line-through">
+                          ₹{plan.originalPrice.toLocaleString("en-IN")}
+                        </span>
+                      )}
                       <span className="text-muted-foreground text-sm">/month</span>
                     </>
                   ) : (
