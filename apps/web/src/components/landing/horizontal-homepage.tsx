@@ -227,7 +227,7 @@ export function HorizontalHomepage() {
                     {/* active glow pulse from bottom */}
                     {isActive && <div className="absolute inset-0 transition-opacity duration-500" style={{ background: `radial-gradient(ellipse 120% 50% at 50% 110%, ${door.glowColor}, transparent)` }} />}
 
-                    <div className="absolute inset-0 flex flex-col justify-between p-5">
+                    <div className="absolute inset-0 flex flex-col justify-between p-5 pb-6">
 
                       {/* top badge + icon */}
                       <div className="flex items-center justify-between">
