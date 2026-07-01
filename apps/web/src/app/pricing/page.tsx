@@ -144,10 +144,12 @@ export default function PricingPage() {
 
   const handlePlanClick = (e: React.MouseEvent, plan: Plan) => {
     e.preventDefault();
+    const key = plan.name.toLowerCase();
     if (loggedIn) {
-      router.push("/dashboard");
+      if (key === "free") router.push("/dashboard");
+      else router.push(`/subscribe?plan=${key}`);
     } else {
-      router.push(plan.name === "Free" ? "/register" : `/register?plan=${plan.name.toLowerCase()}`);
+      router.push(key === "free" ? "/register" : `/register?plan=${key}`);
     }
   };
 
@@ -238,7 +240,7 @@ export default function PricingPage() {
                       ? "text-[#0B1120]"
                       : `${plan.accent.cta} bg-transparent`}`}
                   style={isPopular ? { background: "linear-gradient(135deg,#E8C97A,#C9A84C,#B8973E)" } : {}}>
-                  {loggedIn ? "Go to Dashboard" : plan.cta}
+                  {loggedIn && plan.name !== "Free" ? "Subscribe Now" : loggedIn ? "Go to Dashboard" : plan.cta}
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </button>
 
