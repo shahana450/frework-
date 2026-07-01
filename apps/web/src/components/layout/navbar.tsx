@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,8 +12,6 @@ import {
   Menu,
   X,
   FileText,
-  Calculator,
-  BookOpen,
   BarChart3,
   Presentation,
   GraduationCap,
@@ -21,8 +19,12 @@ import {
   Search,
   TrendingUp,
   Rocket,
+  LayoutDashboard,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 const findItems = [
   { title: "Coworking & Offices", href: "/coworking", icon: MapPin, description: "Search, filter and book workspaces" },
@@ -73,13 +75,29 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<"find" | "grow" | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+    setIsMobileOpen(false);
+  };
 
   return (
     <header
@@ -210,18 +228,35 @@ export function Navbar() {
 
         {/* CTA */}
         <div className="hidden lg:flex items-center gap-3">
-          <Link href="/login" className="text-sm font-medium text-white/70 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/6">
-            Sign in
-          </Link>
-          <Link
-            href="/register"
-            className="relative inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-[#0B1120] overflow-hidden group transition-all"
-            style={{ background: "linear-gradient(135deg, #E8C97A, #C9A84C, #A07830)" }}
-          >
-            <span className="relative z-10">Get Started</span>
-            <ChevronRight className="w-4 h-4 relative z-10 group-hover:translate-x-0.5 transition-transform" />
-            <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors" />
-          </Link>
+          {user ? (
+            <>
+              <Link href="/dashboard"
+                className="flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/6">
+                <LayoutDashboard className="w-4 h-4" />
+                Dashboard
+              </Link>
+              <button onClick={handleSignOut}
+                className="flex items-center gap-2 text-sm font-medium text-white/40 hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-red-500/8">
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="text-sm font-medium text-white/70 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/6">
+                Sign in
+              </Link>
+              <Link
+                href="/register"
+                className="relative inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-[#0B1120] overflow-hidden group transition-all"
+                style={{ background: "linear-gradient(135deg, #E8C97A, #C9A84C, #A07830)" }}
+              >
+                <span className="relative z-10">Get Started</span>
+                <ChevronRight className="w-4 h-4 relative z-10 group-hover:translate-x-0.5 transition-transform" />
+                <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors" />
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -272,12 +307,28 @@ export function Navbar() {
               ))}
 
               <div className="border-t border-white/8 pt-4 mt-2 flex flex-col gap-2">
-                <Link href="/login" className="w-full text-center py-3 rounded-xl text-sm font-medium text-white/70 border border-white/12 hover:border-white/25 hover:text-white transition-all" onClick={() => setIsMobileOpen(false)}>
-                  Sign in
-                </Link>
-                <Link href="/register" className="w-full text-center py-3 rounded-xl text-sm font-semibold text-[#0B1120]" style={{ background: "linear-gradient(135deg, #E8C97A, #C9A84C)" }} onClick={() => setIsMobileOpen(false)}>
-                  Get Started Free
-                </Link>
+                {user ? (
+                  <>
+                    <Link href="/dashboard" onClick={() => setIsMobileOpen(false)}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-[#0B1120]"
+                      style={{ background: "linear-gradient(135deg, #E8C97A, #C9A84C)" }}>
+                      <LayoutDashboard className="w-4 h-4" /> Dashboard
+                    </Link>
+                    <button onClick={handleSignOut}
+                      className="w-full text-center py-3 rounded-xl text-sm font-medium text-red-400/70 border border-red-500/15 hover:border-red-500/30 hover:text-red-400 transition-all">
+                      Sign out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" className="w-full text-center py-3 rounded-xl text-sm font-medium text-white/70 border border-white/12 hover:border-white/25 hover:text-white transition-all" onClick={() => setIsMobileOpen(false)}>
+                      Sign in
+                    </Link>
+                    <Link href="/register" className="w-full text-center py-3 rounded-xl text-sm font-semibold text-[#0B1120]" style={{ background: "linear-gradient(135deg, #E8C97A, #C9A84C)" }} onClick={() => setIsMobileOpen(false)}>
+                      Get Started Free
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

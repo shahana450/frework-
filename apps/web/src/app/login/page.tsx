@@ -57,17 +57,12 @@ function LoginForm() {
     setLoading(true);
     setError("");
     try {
-      const { data, error: err } = await supabase
-        .from("fw_users")
-        .select()
-        .eq("email", email)
-        .maybeSingle();
+      const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
       if (err) throw err;
-      if (!data) throw new Error("Account not found. Please register first.");
-      setUserId(data.id ?? "");
-      setStep("mobile");
+      setUserId(data.user?.id ?? "");
+      setStep("done");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Sign-in failed");
+      setError(e instanceof Error ? e.message : "Sign-in failed. Check your email and password.");
     } finally {
       setLoading(false);
     }
