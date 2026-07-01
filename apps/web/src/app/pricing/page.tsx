@@ -28,7 +28,7 @@ const PLANS = [
   {
     name: "Professional",
     icon: Rocket,
-    price: { monthly: 299, yearly: 194, original: 999 },
+    price: { monthly: 999, yearly: 649 },
     desc: "For serious freelancers",
     popular: true,
     accent: { card: "border-[#C9A84C]/40", icon: "bg-[#C9A84C]/15 text-[#E8C97A]", badge: "Most Popular", cta: "text-[#0B1120] font-bold" },
