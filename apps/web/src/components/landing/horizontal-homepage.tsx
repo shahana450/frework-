@@ -87,25 +87,70 @@ export function HorizontalHomepage() {
             <div className={`absolute inset-0 transition-all duration-700 ${hoveredDoor === 2 ? "opacity-100" : "opacity-30"} bg-[radial-gradient(ellipse_60%_80%_at_80%_50%,rgba(139,92,246,0.15),transparent)]`} />
           </div>
 
-          <div className="relative z-10 h-full flex flex-col pt-[72px]">
+          <div className="relative z-10 h-full flex flex-col pt-[68px]">
 
             {/* top headline strip */}
-            <div className="text-center pt-8 pb-4 px-4">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/8 bg-white/3 text-white/30 text-[10px] font-semibold tracking-[0.3em] uppercase mb-4">
+            <div className="text-center pt-5 pb-3 px-4">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/8 bg-white/3 text-white/30 text-[10px] font-semibold tracking-[0.25em] uppercase mb-3">
                 India&apos;s Professional Growth Platform
               </span>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight"
                 style={{ fontFamily: "var(--font-cormorant), Georgia, serif" }}>
                 <span className="text-white">One platform. </span>
                 <span className="bg-gradient-to-r from-blue-400 via-[#C9A84C] to-purple-400 bg-clip-text text-transparent">Three doors.</span>
               </h1>
-              <p className="text-white/30 text-sm mt-2 max-w-lg mx-auto">
+              <p className="text-white/35 text-xs md:text-sm mt-1.5 max-w-lg mx-auto">
                 Spaces &amp; Talent &nbsp;·&nbsp; CA &amp; CS Services &nbsp;·&nbsp; Startup Launchpad
               </p>
             </div>
 
-            {/* ── INTERACTIVE DOOR CARDS ── */}
-            <div className="flex-1 flex gap-3 px-5 pb-14 min-h-0">
+            {/* ── MOBILE: vertical cards ── */}
+            <div className="lg:hidden flex-1 flex flex-col gap-3 px-4 pb-16 overflow-y-auto">
+              {[
+                { navIdx: 1, img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80", label: "FIND", sub: "Coworking · Teachers · Skilled Workers · Jobs", tint: "rgba(30,64,175,0.5)", accent: "#60a5fa", accentBg: "rgba(59,130,246,0.22)", accentBorder: "rgba(96,165,250,0.4)", glow: "rgba(59,130,246,0.3)", Icon: Search,
+                  items: ["Coworking Spaces — 500+ offices", "Teachers & Tutors — CBSE · JEE · Music", "Skilled Workers — Electrician · Plumber · Cook", "Jobs & Freelancers — Verified talent"] },
+                { navIdx: 2, img: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=80", label: "GROW", sub: "CA · CS · Tax · Compliance · DPR", tint: "rgba(120,83,10,0.5)", accent: "#fbbf24", accentBg: "rgba(201,168,76,0.22)", accentBorder: "rgba(251,191,36,0.4)", glow: "rgba(201,168,76,0.3)", Icon: TrendingUp,
+                  items: ["GST & Income Tax — Returns & audits", "DPR & Projections — Project reports", "Pitch Decks — Investor-ready decks", "Business Restructuring — M&A & strategy"] },
+                { navIdx: 3, img: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=600&q=80", label: "LAUNCH", sub: "Startups · Investors · Partners", tint: "rgba(76,29,149,0.5)", accent: "#a78bfa", accentBg: "rgba(139,92,246,0.22)", accentBorder: "rgba(167,139,250,0.4)", glow: "rgba(139,92,246,0.3)", Icon: Rocket,
+                  items: ["List Your Startup — Free listing", "Browse Startups — Discover ventures", "Connect with Investors — Angels & VCs", "CA-Verified Financials — Build trust"] },
+              ].map((door, i) => (
+                <div key={i} onClick={() => goTo(door.navIdx)}
+                  className="relative rounded-2xl overflow-hidden cursor-pointer flex-shrink-0"
+                  style={{ border: `1.5px solid ${door.accentBorder}`, boxShadow: `0 4px 24px ${door.glow}`, minHeight: "160px" }}>
+                  <img src={door.img} alt={door.label} className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0" style={{ background: door.tint, mixBlendMode: "multiply" }} />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(4,6,18,0.97) 0%, rgba(4,6,18,0.7) 55%, rgba(4,6,18,0.2) 100%)" }} />
+
+                  <div className="relative z-10 flex items-center gap-4 p-4">
+                    {/* left: icon + title */}
+                    <div className="flex flex-col items-center gap-2 flex-shrink-0 w-16">
+                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: door.accentBg, border: `1.5px solid ${door.accentBorder}`, boxShadow: `0 0 16px ${door.glow}` }}>
+                        <door.Icon className="w-5 h-5" style={{ color: door.accent }} />
+                      </div>
+                      <span className="text-xl font-black text-white leading-none text-center" style={{ fontFamily: "var(--font-cormorant), serif", textShadow: "0 2px 8px rgba(0,0,0,0.9)" }}>{door.label}</span>
+                    </div>
+                    {/* right: items */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold mb-2" style={{ color: door.accent }}>{door.sub}</p>
+                      <div className="grid grid-cols-1 gap-1">
+                        {door.items.slice(0, 3).map((item, j) => (
+                          <div key={j} className="flex items-center gap-1.5 text-[11px] text-white/70">
+                            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: door.accent }} />
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: door.accentBg, border: `1px solid ${door.accentBorder}` }}>
+                      <ArrowRight className="w-4 h-4" style={{ color: door.accent }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── DESKTOP: expanding horizontal cards ── */}
+            <div className="hidden lg:flex flex-1 gap-3 px-5 pb-14 min-h-0">
 
               {[
                 {
@@ -244,8 +289,8 @@ export function HorizontalHomepage() {
                   </div>
                 );
               })}
-
             </div>
+
           </div>
           <ScrollHint onClick={() => goTo(1)} label="Explore FIND" />
         </Panel>
