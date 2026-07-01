@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { motion } from "framer-motion";
 import { Check, X, Zap, Building2, Rocket, Crown, Users, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 type Plan = {
   name: string; icon: React.ElementType; price: { monthly: number; yearly: number; original?: number };
@@ -131,6 +133,23 @@ const FAQS = [
 
 export default function PricingPage() {
   const [yearly, setYearly] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setLoggedIn(!!session);
+    });
+  }, []);
+
+  const handlePlanClick = (e: React.MouseEvent, plan: Plan) => {
+    e.preventDefault();
+    if (loggedIn) {
+      router.push("/dashboard");
+    } else {
+      router.push(plan.name === "Free" ? "/register" : `/register?plan=${plan.name.toLowerCase()}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#060C18]">
@@ -213,15 +232,15 @@ export default function PricingPage() {
                 </div>
 
                 {/* CTA */}
-                <Link href={plan.ctaHref}
-                  className={`w-full mb-6 py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-all group
+                <button onClick={(e) => handlePlanClick(e, plan)}
+                  className={`w-full mb-6 py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-all group cursor-pointer
                     ${isPopular
                       ? "text-[#0B1120]"
                       : `${plan.accent.cta} bg-transparent`}`}
                   style={isPopular ? { background: "linear-gradient(135deg,#E8C97A,#C9A84C,#B8973E)" } : {}}>
-                  {plan.cta}
+                  {loggedIn ? "Go to Dashboard" : plan.cta}
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
+                </button>
 
                 {/* Feature divider */}
                 <div className="border-t border-white/6 mb-4" />
