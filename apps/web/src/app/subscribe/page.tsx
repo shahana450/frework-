@@ -65,6 +65,8 @@ function SubscribeInner() {
       await pay({
         plan: planKey,
         amount: yearly ? plan.yearly * 100 : plan.price * 100,
+        userId: user.id,
+        billing: yearly ? "yearly" : "monthly",
         userName: user.name,
         userEmail: user.email,
         userPhone: user.phone,

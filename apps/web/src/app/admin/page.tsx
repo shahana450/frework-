@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, UserCheck, Smartphone, Globe, Download, Search, RefreshCw, Trash2, Shield, FileText } from "lucide-react";
+import { Users, UserCheck, Smartphone, Globe, Download, Search, RefreshCw, Trash2, Shield, FileText, CheckCircle, XCircle, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -26,17 +26,41 @@ interface FwEnquiry {
   created_at: string;
 }
 
+interface Listing {
+  id: string;
+  kind: "workspace" | "freelancer" | "service" | "startup";
+  name: string;
+  city?: string;
+  status: string;
+  created_at: string;
+  user_id: string;
+}
+
+interface FwSubscription {
+  id: string;
+  user_id: string;
+  plan: string;
+  billing: string;
+  amount: number;
+  status: string;
+  started_at: string;
+  fw_users?: { name?: string; email?: string };
+}
+
 const ADMIN_PASS = "frework@admin2024";
 
 export default function AdminPage() {
   const [users, setUsers] = useState<FwUser[]>([]);
   const [enquiries, setEnquiries] = useState<FwEnquiry[]>([]);
-  const [tab, setTab] = useState<"users" | "enquiries">("users");
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [subscriptions, setSubscriptions] = useState<FwSubscription[]>([]);
+  const [tab, setTab] = useState<"users" | "enquiries" | "approvals" | "subscriptions">("users");
   const [search, setSearch] = useState("");
   const [authed, setAuthed] = useState(false);
   const [pass, setPass] = useState("");
   const [passErr, setPassErr] = useState(false);
   const [filter, setFilter] = useState<"all" | "google" | "email">("all");
+  const [approvalFilter, setApprovalFilter] = useState<"pending" | "active" | "rejected">("pending");
   const [loadErr, setLoadErr] = useState("");
 
   const load = async () => {
@@ -48,9 +72,37 @@ export default function AdminPage() {
       const { data: e, error: ee } = await supabase.from("fw_enquiries").select("*").order("created_at", { ascending: false });
       if (ee) throw ee;
       setEnquiries(e || []);
+
+      // Load all listing types
+      const [ws, fl, sv, st] = await Promise.all([
+        supabase.from("fw_workspaces").select("id,name,city,status,created_at,user_id").order("created_at", { ascending: false }),
+        supabase.from("fw_freelancers").select("id,name,city,status,created_at,user_id").order("created_at", { ascending: false }),
+        supabase.from("fw_services").select("id,provider_name,status,created_at,user_id").order("created_at", { ascending: false }),
+        supabase.from("fw_startups").select("id,company_name,city,status,created_at,user_id").order("created_at", { ascending: false }),
+      ]);
+      const combined: Listing[] = [
+        ...(ws.data ?? []).map((r: {id:string;name:string;city?:string;status:string;created_at:string;user_id:string}) => ({ ...r, kind: "workspace" as const })),
+        ...(fl.data ?? []).map((r: {id:string;name:string;city?:string;status:string;created_at:string;user_id:string}) => ({ ...r, kind: "freelancer" as const })),
+        ...(sv.data ?? []).map((r: {id:string;provider_name:string;status:string;created_at:string;user_id:string}) => ({ id:r.id, name:r.provider_name, city:undefined, status:r.status, created_at:r.created_at, user_id:r.user_id, kind: "service" as const })),
+        ...(st.data ?? []).map((r: {id:string;company_name:string;city?:string;status:string;created_at:string;user_id:string}) => ({ id:r.id, name:r.company_name, city:r.city, status:r.status, created_at:r.created_at, user_id:r.user_id, kind: "startup" as const })),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setListings(combined);
+
+      const { data: subs } = await supabase.from("fw_subscriptions").select("*, fw_users(name, email)").order("started_at", { ascending: false });
+      setSubscriptions(subs ?? []);
     } catch (err: unknown) {
       setLoadErr(err instanceof Error ? err.message : "Failed to load data. Check Supabase env vars.");
     }
+  };
+
+  const approveListing = async (listing: Listing) => {
+    await supabase.from(`fw_${listing.kind}s`).update({ status: "active" }).eq("id", listing.id);
+    setListings(l => l.map(x => x.id === listing.id ? { ...x, status: "active" } : x));
+  };
+
+  const rejectListing = async (listing: Listing) => {
+    await supabase.from(`fw_${listing.kind}s`).update({ status: "rejected" }).eq("id", listing.id);
+    setListings(l => l.map(x => x.id === listing.id ? { ...x, status: "rejected" } : x));
   };
 
   useEffect(() => { if (authed) load(); }, [authed]);
@@ -160,21 +212,27 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-4">
-          {([["users", "Users", users.length], ["enquiries", "Enquiries", enquiries.length]] as const).map(([t, label, count]) => (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {([
+            ["users", "Users", users.length, Users],
+            ["enquiries", "Enquiries", enquiries.length, FileText],
+            ["approvals", "Approvals", listings.filter(l => l.status === "pending").length, CheckCircle],
+            ["subscriptions", "Subscriptions", subscriptions.length, Crown],
+          ] as const).map(([t, label, count, Icon]) => (
             <button key={t} onClick={() => setTab(t)} className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${tab === t ? "bg-violet-600 text-white shadow" : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-violet-300"}`}>
-              {t === "users" ? <Users className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+              <Icon className="w-4 h-4" />
               {label} <span className={`text-xs rounded-full px-2 py-0.5 ${tab === t ? "bg-white/20" : "bg-gray-100 dark:bg-gray-700 text-gray-500"}`}>{count}</span>
             </button>
           ))}
         </div>
 
-        {/* Filters & Search */}
+        {/* Table panel */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+          {/* Search + filter bar */}
           <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={tab === "users" ? "Search name, email, mobile…" : "Search name, email, service…"} className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm dark:text-white outline-none focus:border-violet-400 transition-all" />
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm dark:text-white outline-none focus:border-violet-400 transition-all" />
             </div>
             {tab === "users" && (
               <div className="flex gap-2">
@@ -185,13 +243,23 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
+            {tab === "approvals" && (
+              <div className="flex gap-2">
+                {(["pending", "active", "rejected"] as const).map(f => (
+                  <button key={f} onClick={() => setApprovalFilter(f)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all capitalize ${approvalFilter === f ? "bg-violet-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200"}`}>
+                    {f} ({listings.filter(l => l.status === f).length})
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {tab === "users" ? (
+          {/* Users tab */}
+          {tab === "users" && (
             filtered.length === 0 ? (
               <div className="py-20 text-center">
                 <Users className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">{users.length === 0 ? "No users yet. Sign-ups will appear here." : "No users match your search."}</p>
+                <p className="text-gray-500 text-sm">{users.length === 0 ? "No users yet." : "No users match your search."}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -226,18 +294,22 @@ export default function AdminPage() {
                 <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400">Showing {filtered.length} of {users.length} users</div>
               </div>
             )
-          ) : (
-            enquiries.filter(e => !search || [e.name, e.email, e.mobile, e.service].some(v => v?.toLowerCase().includes(search.toLowerCase()))).length === 0 ? (
+          )}
+
+          {/* Enquiries tab */}
+          {tab === "enquiries" && (() => {
+            const enqFiltered = enquiries.filter(e => !search || [e.name, e.email, e.mobile, e.service].some(v => v?.toLowerCase().includes(search.toLowerCase())));
+            return enqFiltered.length === 0 ? (
               <div className="py-20 text-center">
                 <FileText className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">{enquiries.length === 0 ? "No enquiries yet. Contact form submissions will appear here." : "No enquiries match your search."}</p>
+                <p className="text-gray-500 text-sm">{enquiries.length === 0 ? "No enquiries yet." : "No enquiries match."}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead><tr className="bg-gray-50 dark:bg-gray-800/50">{["Name", "Mobile", "Email", "Service", "Message", "Date"].map(h => <th key={h} className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 px-5 py-3 uppercase tracking-wide">{h}</th>)}</tr></thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {enquiries.filter(e => !search || [e.name, e.email, e.mobile, e.service].some(v => v?.toLowerCase().includes(search.toLowerCase()))).map((enq, i) => (
+                    {enqFiltered.map((enq, i) => (
                       <motion.tr key={enq.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                         <td className="px-5 py-4 font-medium text-sm text-gray-900 dark:text-white">{enq.name}</td>
                         <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">+91 {enq.mobile}</td>
@@ -251,7 +323,93 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
-                <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400">Showing {enquiries.length} enquiries</div>
+                <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400">Showing {enqFiltered.length} enquiries</div>
+              </div>
+            );
+          })()}
+
+          {/* Approvals tab */}
+          {tab === "approvals" && (() => {
+            const filtered2 = listings.filter(l => l.status === approvalFilter && (!search || l.name?.toLowerCase().includes(search.toLowerCase())));
+            const kindColor: Record<string, string> = { workspace: "bg-blue-50 text-blue-700", freelancer: "bg-violet-50 text-violet-700", service: "bg-amber-50 text-amber-700", startup: "bg-purple-50 text-purple-700" };
+            return filtered2.length === 0 ? (
+              <div className="py-20 text-center">
+                <CheckCircle className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">No {approvalFilter} listings.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead><tr className="bg-gray-50 dark:bg-gray-800/50">{["Name", "Type", "City", "Submitted", "Status", "Actions"].map(h => <th key={h} className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 px-5 py-3 uppercase tracking-wide">{h}</th>)}</tr></thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {filtered2.map((item, i) => (
+                      <motion.tr key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                        <td className="px-5 py-4 font-medium text-sm text-gray-900 dark:text-white">{item.name}</td>
+                        <td className="px-5 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${kindColor[item.kind] ?? "bg-gray-100 text-gray-600"}`}>{item.kind}</span>
+                        </td>
+                        <td className="px-5 py-4 text-sm text-gray-500">{item.city || "—"}</td>
+                        <td className="px-5 py-4 text-sm text-gray-400">{new Date(item.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</td>
+                        <td className="px-5 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${item.status === "active" ? "bg-green-50 text-green-700" : item.status === "pending" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-600"}`}>{item.status}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            {item.status !== "active" && (
+                              <button onClick={() => approveListing(item)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-xs font-medium transition-colors">
+                                <CheckCircle className="w-3.5 h-3.5" /> Approve
+                              </button>
+                            )}
+                            {item.status !== "rejected" && (
+                              <button onClick={() => rejectListing(item)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-medium transition-colors">
+                                <XCircle className="w-3.5 h-3.5" /> Reject
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400">Showing {filtered2.length} listings</div>
+              </div>
+            );
+          })()}
+
+          {/* Subscriptions tab */}
+          {tab === "subscriptions" && (
+            subscriptions.length === 0 ? (
+              <div className="py-20 text-center">
+                <Crown className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">No subscriptions yet.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead><tr className="bg-gray-50 dark:bg-gray-800/50">{["User", "Plan", "Billing", "Amount", "Status", "Since"].map(h => <th key={h} className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 px-5 py-3 uppercase tracking-wide">{h}</th>)}</tr></thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {subscriptions.filter(s => !search || s.fw_users?.email?.toLowerCase().includes(search.toLowerCase()) || s.plan.includes(search)).map((sub, i) => (
+                      <motion.tr key={sub.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                        <td className="px-5 py-4">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{sub.fw_users?.name || "—"}</p>
+                          <p className="text-xs text-gray-400">{sub.fw_users?.email}</p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="px-2.5 py-1 rounded-full text-xs font-medium capitalize bg-amber-50 text-amber-700">{sub.plan}</span>
+                        </td>
+                        <td className="px-5 py-4 text-sm text-gray-500 capitalize">{sub.billing}</td>
+                        <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white">₹{sub.amount?.toLocaleString("en-IN")}</td>
+                        <td className="px-5 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${sub.status === "active" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>{sub.status}</span>
+                        </td>
+                        <td className="px-5 py-4 text-sm text-gray-400">{new Date(sub.started_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400">
+                  Total revenue: ₹{subscriptions.reduce((sum, s) => sum + (s.amount ?? 0), 0).toLocaleString("en-IN")}
+                </div>
               </div>
             )
           )}

@@ -34,6 +34,8 @@ interface RazorpayResponse {
 export interface PaymentOptions {
   plan: string;
   amount: number;
+  userId?: string;
+  billing?: string;
   userName?: string;
   userEmail?: string;
   userPhone?: string;
@@ -61,7 +63,7 @@ export function useRazorpay() {
     const res = await fetch("/api/razorpay/create-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan: opts.plan }),
+      body: JSON.stringify({ plan: opts.plan, userId: opts.userId, billing: opts.billing }),
     });
 
     if (!res.ok) throw new Error("Could not create payment order");

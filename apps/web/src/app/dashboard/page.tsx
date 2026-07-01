@@ -28,6 +28,13 @@ interface Startup {
   status: string;
 }
 
+interface Subscription {
+  plan: string;
+  billing: string;
+  status: string;
+  started_at: string;
+}
+
 function EmptyState({ icon: Icon, title, desc, cta, href }: {
   icon: React.ElementType; title: string; desc: string; cta: string; href: string;
 }) {
@@ -50,6 +57,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [startups, setStartups] = useState<Startup[]>([]);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -62,12 +70,12 @@ export default function DashboardPage() {
         name: u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email?.split("@")[0] ?? "User",
         avatar: u.user_metadata?.avatar_url,
       });
-      const { data } = await supabase
-        .from("fw_startups")
-        .select("id, slug, name, tagline, sector, stage, status")
-        .eq("user_id", u.id)
-        .order("created_at", { ascending: false });
-      setStartups(data ?? []);
+      const [{ data: startupData }, { data: subData }] = await Promise.all([
+        supabase.from("fw_startups").select("id, slug, name, tagline, sector, stage, status").eq("user_id", u.id).order("created_at", { ascending: false }),
+        supabase.from("fw_subscriptions").select("plan, billing, status, started_at").eq("user_id", u.id).maybeSingle(),
+      ]);
+      setStartups(startupData ?? []);
+      setSubscription(subData);
       setLoading(false);
     });
   }, [router]);
@@ -179,8 +187,8 @@ export default function DashboardPage() {
               <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
                 ● Active account
               </span>
-              <span className="text-xs px-3 py-1 rounded-full bg-white/6 border border-white/10 text-white/40">
-                Free Plan
+              <span className="text-xs px-3 py-1 rounded-full bg-white/6 border border-white/10 text-white/40 capitalize">
+                {subscription ? `${subscription.plan} Plan` : "Free Plan"}
               </span>
             </div>
           </div>
@@ -438,26 +446,48 @@ export default function DashboardPage() {
                 <h2 className="font-semibold text-white text-sm">Subscription</h2>
               </div>
               <div className="px-5 py-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-white/8 border border-white/10 text-white/50">Free Plan</span>
-                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                  <span className="text-xs text-white/35">Active</span>
-                </div>
-                <ul className="space-y-2 mb-5">
-                  {["1 active query", "Basic CA support", "Email updates", "1 startup listing"].map(f => (
-                    <li key={f} className="flex items-center gap-2 text-xs text-white/45">
-                      <svg className="w-3.5 h-3.5 text-[#C9A84C]/60 flex-shrink-0" viewBox="0 0 12 10" fill="none">
-                        <path d="M1 5l3.5 3.5L11 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/pricing"
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs text-[#0B1120] transition-opacity hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, #E8C97A, #C9A84C)" }}>
-                  Upgrade to Pro <ArrowRight className="w-3 h-3" />
-                </Link>
+                {subscription ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs px-2.5 py-1 rounded-full capitalize"
+                        style={{ background: "linear-gradient(135deg,rgba(232,201,122,0.15),rgba(201,168,76,0.1))", border: "1px solid rgba(201,168,76,0.3)", color: "#E8C97A" }}>
+                        {subscription.plan} Plan
+                      </span>
+                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+                      <span className="text-xs text-emerald-400">Active</span>
+                    </div>
+                    <p className="text-[11px] text-white/30 mb-4 capitalize">
+                      Billing: {subscription.billing} · Since {new Date(subscription.started_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                    <Link href="/pricing"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs border border-[#C9A84C]/30 text-[#C9A84C] hover:bg-[#C9A84C]/8 transition-colors">
+                      Manage Plan <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-white/8 border border-white/10 text-white/50">Free Plan</span>
+                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+                      <span className="text-xs text-white/35">Active</span>
+                    </div>
+                    <ul className="space-y-2 mb-5">
+                      {["1 active query", "Basic CA support", "Email updates", "1 startup listing"].map(f => (
+                        <li key={f} className="flex items-center gap-2 text-xs text-white/45">
+                          <svg className="w-3.5 h-3.5 text-[#C9A84C]/60 flex-shrink-0" viewBox="0 0 12 10" fill="none">
+                            <path d="M1 5l3.5 3.5L11 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    <Link href="/pricing"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs text-[#0B1120] transition-opacity hover:opacity-90"
+                      style={{ background: "linear-gradient(135deg, #E8C97A, #C9A84C)" }}>
+                      Upgrade to Pro <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
 
