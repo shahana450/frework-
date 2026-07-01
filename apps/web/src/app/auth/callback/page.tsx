@@ -1,15 +1,32 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
+import { Suspense } from "react";
 
-export default function AuthCallback() {
+function AuthCallbackInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    const handleCallback = async () => {
+      const code = searchParams.get("code");
+
+      if (code) {
+        // PKCE flow — exchange the code for a session
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          console.error("Auth exchange error:", error.message);
+          router.replace("/login?error=auth_failed");
+          return;
+        }
+      }
+
+      // Session is now established — get it and upsert user
+      const { data: { session } } = await supabase.auth.getSession();
+
       if (!session?.user) {
         router.replace("/login");
         return;
@@ -17,7 +34,6 @@ export default function AuthCallback() {
 
       const user = session.user;
 
-      // Upsert into fw_users
       await supabase.from("fw_users").upsert({
         id: user.id,
         email: user.email ?? "",
@@ -25,10 +41,11 @@ export default function AuthCallback() {
         method: "google",
       }, { onConflict: "id" });
 
-      // Redirect to dashboard after successful Google sign-in
       router.replace("/dashboard");
-    });
-  }, [router]);
+    };
+
+    handleCallback();
+  }, [router, searchParams]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#060C18]">
@@ -37,5 +54,17 @@ export default function AuthCallback() {
         <p className="text-white/50 text-sm">Signing you in…</p>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#060C18]">
+        <Loader2 className="w-8 h-8 text-[#C9A84C] animate-spin" />
+      </div>
+    }>
+      <AuthCallbackInner />
+    </Suspense>
   );
 }
