@@ -8,7 +8,7 @@ import {
   MessageSquare, CalendarClock, CheckSquare, Crown, LogOut,
   ArrowRight, FileText, TrendingUp, Building2, Briefcase,
   AlertCircle, Plus, Rocket, ChevronRight, Zap, Star,
-  ExternalLink, Edit3, Globe, MapPin,
+  ExternalLink, Edit3, Globe, MapPin, Users, GraduationCap, Wrench,
 } from "lucide-react";
 
 interface UserProfile {
@@ -183,6 +183,118 @@ export default function DashboardPage() {
                 Free Plan
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* ── POST A LISTING HUB ── */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>Post a Listing</h2>
+              <p className="text-xs text-white/30 mt-0.5">Add your space, profile, job or service across all three doors</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            {/* FIND door listings */}
+            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/4 p-4 hover:border-blue-500/35 hover:bg-blue-500/7 transition-all">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-500/25 flex items-center justify-center">
+                  <Globe className="w-4 h-4 text-blue-400" />
+                </div>
+                <div>
+                  <div className="text-[9px] font-bold tracking-widest uppercase text-blue-400/50">Door 1</div>
+                  <div className="text-sm font-bold text-white">FIND</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { icon: Building2, label: "Add Workspace / Office", sub: "List your coworking or office space", href: "/dashboard/workspace/submit", badge: "Free" },
+                  { icon: Users, label: "Create Freelancer Profile", sub: "Offer your skills & services", href: "/dashboard/freelancer/submit", badge: "Free" },
+                  { icon: GraduationCap, label: "Register as Teacher/Tutor", sub: "Offer classes, tutoring & coaching", href: "/dashboard/teacher/submit", badge: "Free" },
+                  { icon: Wrench, label: "Register as Skilled Worker", sub: "Electrician, Plumber, Cook, etc.", href: "/dashboard/skilled/submit", badge: "Free" },
+                  { icon: Briefcase, label: "Post a Job", sub: "Hire talent for your business", href: "/dashboard/job/submit", badge: "Free" },
+                ].map(({ icon: Icon, label, sub, href, badge }) => (
+                  <Link key={label} href={href}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-blue-500/10 bg-blue-500/5 hover:border-blue-500/30 hover:bg-blue-500/12 transition-all group">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/25 transition-colors">
+                      <Icon className="w-3.5 h-3.5 text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-white/85 truncate">{label}</div>
+                      <div className="text-[9px] text-white/35 truncate">{sub}</div>
+                    </div>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 flex-shrink-0">{badge}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* GROW door listings */}
+            <div className="rounded-2xl border border-[#C9A84C]/20 bg-[#C9A84C]/4 p-4 hover:border-[#C9A84C]/35 transition-all">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-[#C9A84C]/20 border border-[#C9A84C]/25 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-[#C9A84C]" />
+                </div>
+                <div>
+                  <div className="text-[9px] font-bold tracking-widest uppercase text-[#C9A84C]/50">Door 2</div>
+                  <div className="text-sm font-bold text-white">GROW</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { icon: FileText, label: "Offer CA/CS Service", sub: "GST, Tax, Audit, Company registration", href: "/dashboard/service/submit", badge: "Free" },
+                  { icon: Star, label: "Offer Training / Workshop", sub: "Corporate or individual training", href: "/dashboard/service/submit?type=training", badge: "Free" },
+                  { icon: TrendingUp, label: "Offer DPR / Business Plan", sub: "Project reports & financial models", href: "/dashboard/service/submit?type=dpr", badge: "Free" },
+                  { icon: Building2, label: "Offer Restructuring Advisory", sub: "M&A, turnaround & strategy", href: "/dashboard/service/submit?type=restructuring", badge: "Free" },
+                ].map(({ icon: Icon, label, sub, href, badge }) => (
+                  <Link key={label} href={href}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-[#C9A84C]/10 bg-[#C9A84C]/5 hover:border-[#C9A84C]/30 hover:bg-[#C9A84C]/12 transition-all group">
+                    <div className="w-8 h-8 rounded-lg bg-[#C9A84C]/15 border border-[#C9A84C]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#C9A84C]/25 transition-colors">
+                      <Icon className="w-3.5 h-3.5 text-[#C9A84C]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-white/85 truncate">{label}</div>
+                      <div className="text-[9px] text-white/35 truncate">{sub}</div>
+                    </div>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 flex-shrink-0">{badge}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* LAUNCH door listings */}
+            <div className="rounded-2xl border border-purple-500/20 bg-purple-500/4 p-4 hover:border-purple-500/35 transition-all">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/25 flex items-center justify-center">
+                  <Rocket className="w-4 h-4 text-purple-400" />
+                </div>
+                <div>
+                  <div className="text-[9px] font-bold tracking-widest uppercase text-purple-400/50">Door 3</div>
+                  <div className="text-sm font-bold text-white">LAUNCH</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { icon: Rocket, label: "List Your Startup", sub: "Pitch deck, video & funding ask", href: "/dashboard/startup/submit", badge: "Free" },
+                  { icon: Star, label: "Investor Profile", sub: "Connect with founders & startups", href: "/dashboard/investor/submit", badge: "Free" },
+                  { icon: Users, label: "List as Co-founder", sub: "Looking for a co-founder?", href: "/dashboard/cofounder/submit", badge: "Free" },
+                ].map(({ icon: Icon, label, sub, href, badge }) => (
+                  <Link key={label} href={href}
+                    className="flex items-center gap-3 p-2.5 rounded-xl border border-purple-500/10 bg-purple-500/5 hover:border-purple-500/30 hover:bg-purple-500/12 transition-all group">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/25 transition-colors">
+                      <Icon className="w-3.5 h-3.5 text-purple-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-white/85 truncate">{label}</div>
+                      <div className="text-[9px] text-white/35 truncate">{sub}</div>
+                    </div>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 flex-shrink-0">{badge}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
 
