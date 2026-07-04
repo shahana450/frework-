@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, UserCheck, Smartphone, Globe, Download, Search, RefreshCw, Trash2, Shield, FileText, CheckCircle, XCircle, Crown } from "lucide-react";
+import { Users, UserCheck, Smartphone, Globe, Download, Search, RefreshCw, Trash2, Shield, FileText, CheckCircle, XCircle, Crown, Phone, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -36,6 +36,19 @@ interface Listing {
   user_id: string;
 }
 
+interface FwLead {
+  id: string;
+  name: string;
+  mobile: string;
+  email?: string;
+  service?: string;
+  source?: string;
+  utm_campaign?: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+}
+
 interface FwSubscription {
   id: string;
   user_id: string;
@@ -54,7 +67,8 @@ export default function AdminPage() {
   const [enquiries, setEnquiries] = useState<FwEnquiry[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [subscriptions, setSubscriptions] = useState<FwSubscription[]>([]);
-  const [tab, setTab] = useState<"users" | "enquiries" | "approvals" | "subscriptions">("users");
+  const [leads, setLeads] = useState<FwLead[]>([]);
+  const [tab, setTab] = useState<"leads" | "users" | "enquiries" | "approvals" | "subscriptions">("leads");
   const [search, setSearch] = useState("");
   const [authed, setAuthed] = useState(false);
   const [pass, setPass] = useState("");
@@ -90,6 +104,9 @@ export default function AdminPage() {
 
       const { data: subs } = await supabase.from("fw_subscriptions").select("*, fw_users(name, email)").order("started_at", { ascending: false });
       setSubscriptions(subs ?? []);
+
+      const { data: leadsData } = await supabase.from("fw_leads").select("*").order("created_at", { ascending: false });
+      setLeads(leadsData ?? []);
     } catch (err: unknown) {
       setLoadErr(err instanceof Error ? err.message : "Failed to load data. Check Supabase env vars.");
     }
@@ -98,6 +115,19 @@ export default function AdminPage() {
   const approveListing = async (listing: Listing) => {
     await supabase.from(`fw_${listing.kind}s`).update({ status: "active" }).eq("id", listing.id);
     setListings(l => l.map(x => x.id === listing.id ? { ...x, status: "active" } : x));
+  };
+
+  const updateLeadStatus = async (id: string, status: string) => {
+    await supabase.from("fw_leads").update({ status }).eq("id", id);
+    setLeads(l => l.map(x => x.id === id ? { ...x, status } : x));
+  };
+
+  const exportLeadsCSV = () => {
+    const header = "Name,Mobile,Email,Service,Source,Campaign,Status,Date";
+    const rows = leads.map(l => `"${l.name}","${l.mobile}","${l.email||""}","${l.service||""}","${l.source||""}","${l.utm_campaign||""}","${l.status}","${l.created_at}"`).join("\n");
+    const blob = new Blob([header + "\n" + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "frework_leads.csv"; a.click();
   };
 
   const rejectListing = async (listing: Listing) => {
@@ -214,6 +244,7 @@ export default function AdminPage() {
         {/* Tabs */}
         <div className="flex flex-wrap gap-2 mb-4">
           {([
+            ["leads", "Leads 🎯", leads.length, Phone],
             ["users", "Users", users.length, Users],
             ["enquiries", "Enquiries", enquiries.length, FileText],
             ["approvals", "Approvals", listings.filter(l => l.status === "pending").length, CheckCircle],
@@ -253,6 +284,85 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+
+          {/* Leads tab */}
+          {tab === "leads" && (() => {
+            const newLeads = leads.filter(l => l.status === "new").length;
+            const statusColors: Record<string, string> = {
+              new: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
+              contacted: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
+              qualified: "bg-violet-50 text-violet-700",
+              converted: "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400",
+              lost: "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400",
+            };
+            const filtered3 = leads.filter(l => !search || [l.name, l.mobile, l.email, l.service, l.utm_campaign].some(v => v?.toLowerCase().includes(search.toLowerCase())));
+            return (
+              <>
+                {newLeads > 0 && (
+                  <div className="mx-5 mt-4 mb-2 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/15 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 text-sm font-medium">
+                    🎯 <strong>{newLeads} new leads</strong> from Meta / Instagram ads — assign status below
+                    <button onClick={exportLeadsCSV} className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors">
+                      <Download className="w-3 h-3" /> Export CSV
+                    </button>
+                  </div>
+                )}
+                {filtered3.length === 0 ? (
+                  <div className="py-20 text-center">
+                    <Phone className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">No leads yet. Share your ad landing page: <strong>frework.online/lp</strong></p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead><tr className="bg-gray-50 dark:bg-gray-800/50">{["Name & Contact", "Service Interest", "Source / Campaign", "Status", "Date", "Update"].map(h => <th key={h} className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 px-5 py-3 uppercase tracking-wide">{h}</th>)}</tr></thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {filtered3.map((lead, i) => (
+                          <motion.tr key={lead.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                            <td className="px-5 py-4">
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{lead.name}</p>
+                              <a href={`tel:+91${lead.mobile}`} className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 mt-0.5">
+                                <Phone className="w-3 h-3" /> +91 {lead.mobile}
+                              </a>
+                              {lead.email && <p className="text-[11px] text-gray-400 mt-0.5">{lead.email}</p>}
+                            </td>
+                            <td className="px-5 py-4">
+                              {lead.service ? (
+                                <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                                  <Tag className="w-3 h-3" /> {lead.service}
+                                </span>
+                              ) : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 capitalize font-medium">{lead.source || "website"}</span>
+                              {lead.utm_campaign && <p className="text-[10px] text-gray-400 mt-1">{lead.utm_campaign}</p>}
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${statusColors[lead.status] ?? "bg-gray-100 text-gray-600"}`}>
+                                {lead.status}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4 text-xs text-gray-400">{new Date(lead.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                            <td className="px-5 py-4">
+                              <select value={lead.status} onChange={e => updateLeadStatus(lead.id, e.target.value)}
+                                className="text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer outline-none">
+                                {["new","contacted","qualified","converted","lost"].map(s => <option key={s} value={s} className="capitalize">{s}</option>)}
+                              </select>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400 flex items-center justify-between">
+                      <span>{filtered3.length} leads · {leads.filter(l => l.status === "converted").length} converted · {leads.filter(l => l.status === "new").length} new</span>
+                      <button onClick={exportLeadsCSV} className="flex items-center gap-1.5 text-violet-600 hover:text-violet-700 font-medium">
+                        <Download className="w-3.5 h-3.5" /> Export CSV
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* Users tab */}
           {tab === "users" && (
