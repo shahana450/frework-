@@ -45,6 +45,9 @@ const OFFERINGS = [
   { icon: Users, label: "Hire Talent", desc: "Verified freelancers & skilled workers" },
 ];
 
+const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 99999 99999";
+const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "919999999999";
+
 function LandingInner() {
   const params = useSearchParams();
   const [form, setForm] = useState({ name: "", mobile: "", email: "", service: "" });
@@ -98,7 +101,7 @@ function LandingInner() {
           <a href="/" className="px-6 py-3 rounded-xl border border-white/15 text-white/60 text-sm font-semibold hover:border-white/30 hover:text-white transition-all">
             Explore FreWork →
           </a>
-          <a href="https://wa.me/919999999999" target="_blank" rel="noopener noreferrer"
+          <a href="{`https://wa.me/${WHATSAPP_NUMBER}`}" target="_blank" rel="noopener noreferrer"
             className="px-6 py-3 rounded-xl font-semibold text-sm text-[#0B1120]"
             style={{ background: "linear-gradient(135deg,#F0D78A,#C9A84C)" }}>
             WhatsApp Us
@@ -138,9 +141,9 @@ function LandingInner() {
               </svg>
               <span className="font-bold text-white text-lg" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif" }}>FreWork</span>
             </div>
-            <a href="tel:+919999999999"
+            <a href="{`tel:${SUPPORT_PHONE}`}"
               className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[#C9A84C]/30 text-[#C9A84C] text-sm font-semibold hover:bg-[#C9A84C]/8 transition-all">
-              <Phone className="w-3.5 h-3.5" /> Call Us Free
+              <Phone className="w-3.5 h-3.5" /> {SUPPORT_PHONE}
             </a>
           </div>
         </header>
