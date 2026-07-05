@@ -1,11 +1,11 @@
-import { HorizontalHomepage } from "@/components/landing/horizontal-homepage";
+import { BusinessOSHomepage } from "@/components/landing/business-os-homepage";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "FreWork – Find. Grow. Launch. | India's Professional Platform",
-  description: "FIND coworking spaces, freelancers and jobs — GROW with expert CA & CS services — LAUNCH your startup to investors. India's all-in-one professional growth platform.",
+  title: "FreWork – The Operating System for Indian Businesses",
+  description: "Start, Run and Grow Your Business — All in One Place. Company registration, GST, income tax, freelancers, coworking, DPR, pitch decks, and startup funding. India's all-in-one business platform.",
 };
 
 export default function HomePage() {
-  return <HorizontalHomepage />;
+  return <BusinessOSHomepage />;
 }

@@ -28,7 +28,7 @@ const SERVICES = [
 const REVIEWS: { name: string; role: string; text: string; stars: number }[] = [];
 
 const TRUST = [
-  { icon: BadgeCheck, text: "ICAI-registered CA & CS experts" },
+  { icon: BadgeCheck, text: "Verified & qualified professionals" },
   { icon: Shield, text: "100% data security & confidentiality" },
   { icon: Clock, text: "Response within 2 hours" },
   { icon: Star, text: "Early access — join our first clients" },
@@ -162,14 +162,14 @@ function LandingInner() {
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.05] mb-6"
               style={{ fontFamily: "var(--font-cormorant), serif" }}>
-              Your CA/CS work,<br />
+              Your business compliance,<br />
               <span style={{ background: "linear-gradient(135deg,#F0D78A,#C9A84C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                done in days.
+                handled end-to-end.
               </span>
             </h1>
 
             <p className="text-white/55 text-lg leading-relaxed mb-8">
-              GST filing, ITR, company registration, bookkeeping, audit — handled by <strong className="text-white">ICAI-registered experts</strong> at a fraction of CA firm rates.
+              GST filing, ITR, company registration, bookkeeping, audit — handled by <strong className="text-white">verified professionals</strong> at transparent, affordable rates.
             </p>
 
             {/* Offerings */}

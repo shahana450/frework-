@@ -21,24 +21,33 @@ import {
   Rocket,
   LayoutDashboard,
   LogOut,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
+const servicesItems = [
+  { title: "Company Registration", href: "/services/compliance", icon: Building2, description: "Pvt Ltd, LLP, OPC, Partnership" },
+  { title: "GST Registration", href: "/services/compliance", icon: FileText, description: "GSTIN in 3–5 working days" },
+  { title: "Income Tax (ITR)", href: "/services/compliance", icon: BarChart3, description: "Returns filing & planning" },
+  { title: "GST Filing", href: "/services/compliance", icon: FileText, description: "GSTR-1, 3B, annual return" },
+  { title: "ROC Compliance", href: "/services/compliance", icon: Building2, description: "MCA filings, board meetings" },
+  { title: "MSME / Udyam", href: "/services/compliance", icon: GraduationCap, description: "Registration & certificate" },
+];
+
 const findItems = [
-  { title: "Coworking & Offices", href: "/coworking", icon: MapPin, description: "Search, filter and book workspaces" },
-  { title: "Freelancers", href: "/freelancers", icon: Users, description: "Browse by skill and hire talent" },
-  { title: "Jobs", href: "/jobs", icon: Briefcase, description: "Search vacancies and apply" },
-  { title: "Startup Launchpad", href: "/startups", icon: Rocket, description: "Discover startups seeking investment & partners" },
+  { title: "Hire Professionals", href: "/freelancers", icon: Users, description: "CA, CS, developers, designers" },
+  { title: "Coworking Spaces", href: "/coworking", icon: MapPin, description: "Premium offices across India" },
+  { title: "Job Board", href: "/jobs", icon: Briefcase, description: "Full-time, remote, freelance" },
+  { title: "Startup Launchpad", href: "/startups", icon: Rocket, description: "Funding & investor connect" },
 ];
 
 const growItems = [
-  { title: "Compliance", href: "/services/compliance", icon: FileText, description: "Income Tax, GST, Accounts & ROC" },
-  { title: "DPR", href: "/services/dpr", icon: BarChart3, description: "Detailed Project Reports" },
+  { title: "Detailed Project Report", href: "/services/dpr", icon: BarChart3, description: "For loans, grants, investors" },
   { title: "Pitch Decks", href: "/services/pitch-decks", icon: Presentation, description: "Investor-ready presentations" },
   { title: "Business Restructuring", href: "/services/restructuring", icon: Building2, description: "Strategy, M&A and turnaround" },
-  { title: "Training", href: "/services/training", icon: GraduationCap, description: "Workshops for teams and founders" },
+  { title: "Training & Workshops", href: "/services/training", icon: GraduationCap, description: "For teams and founders" },
 ];
 
 /* FreWork Official Logo Icon */
@@ -74,7 +83,7 @@ function FreWorkLogo({ size = 38 }: { size?: number }) {
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<"find" | "grow" | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<"services" | "find" | "grow" | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -114,46 +123,51 @@ export function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
           <FreWorkLogo />
-          <span
-            className="font-bold tracking-[-0.025em] text-[#F6F4FC] group-hover:text-white transition-colors duration-300"
-            style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "1.22rem", lineHeight: 1 }}
-          >
-            FreWork
-          </span>
+          <div>
+            <span
+              className="font-bold tracking-[-0.025em] text-[#F6F4FC] group-hover:text-white transition-colors duration-300 block"
+              style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "1.22rem", lineHeight: 1 }}
+            >
+              FreWork
+            </span>
+            <span className="text-[9px] tracking-[0.1em] uppercase block mt-0.5" style={{ color: "rgba(201,168,76,0.55)" }}>
+              Business OS
+            </span>
+          </div>
         </Link>
 
-        {/* Desktop Nav — two door pills */}
+        {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-1">
 
-          {/* FIND pill */}
-          <div className="relative" onMouseEnter={() => setActiveDropdown("find")}>
+          {/* SERVICES pill */}
+          <div className="relative" onMouseEnter={() => setActiveDropdown("services")}>
             <button className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors",
-              activeDropdown === "find"
-                ? "bg-[#3B82F6]/15 text-[#7DD3FC]"
+              activeDropdown === "services"
+                ? "bg-[#10B981]/15 text-[#34D399]"
                 : "text-white/70 hover:text-white hover:bg-white/6"
             )}>
-              <Search className="w-3.5 h-3.5" />
-              FIND
+              <Building2 className="w-3.5 h-3.5" />
+              Services
               <span className="text-[10px] font-normal text-white/35 ml-0.5">▾</span>
             </button>
 
             <AnimatePresence>
-              {activeDropdown === "find" && (
+              {activeDropdown === "services" && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute top-full left-0 mt-2 w-72 p-4 bg-[#080E1C] border border-[#3B82F6]/25 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+                  className="absolute top-full left-0 mt-2 w-80 p-4 bg-[#080E1C] border border-[#10B981]/25 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
                 >
-                  <p className="text-[10px] font-semibold tracking-[0.2em] text-[#7DD3FC]/60 uppercase mb-3 px-1">Marketplace & Community</p>
+                  <p className="text-[10px] font-semibold tracking-[0.2em] text-[#34D399]/60 uppercase mb-3 px-1">Start & Comply</p>
                   <ul className="space-y-1">
-                    {findItems.map((item) => (
-                      <li key={item.href}>
-                        <Link href={item.href} className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#3B82F6]/8 group transition-colors" onClick={() => setActiveDropdown(null)}>
-                          <div className="w-8 h-8 rounded-lg bg-[#3B82F6]/12 border border-[#3B82F6]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#3B82F6]/25 transition-colors">
-                            <item.icon className="w-4 h-4 text-[#7DD3FC]" />
+                    {servicesItems.map((item) => (
+                      <li key={item.title}>
+                        <Link href={item.href} className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#10B981]/8 group transition-colors" onClick={() => setActiveDropdown(null)}>
+                          <div className="w-8 h-8 rounded-lg bg-[#10B981]/12 border border-[#10B981]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#10B981]/25 transition-colors">
+                            <item.icon className="w-4 h-4 text-[#34D399]" />
                           </div>
                           <div>
                             <div className="text-sm font-medium text-white/90 group-hover:text-white">{item.title}</div>
@@ -171,35 +185,35 @@ export function Navbar() {
           {/* Divider */}
           <div className="w-px h-5 bg-white/10 mx-1" />
 
-          {/* GROW pill */}
-          <div className="relative" onMouseEnter={() => setActiveDropdown("grow")}>
+          {/* FIND pill */}
+          <div className="relative" onMouseEnter={() => setActiveDropdown("find")}>
             <button className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors",
-              activeDropdown === "grow"
-                ? "bg-[#C9A84C]/15 text-[#E8C97A]"
+              activeDropdown === "find"
+                ? "bg-[#F59E0B]/15 text-[#FCD34D]"
                 : "text-white/70 hover:text-white hover:bg-white/6"
             )}>
-              <TrendingUp className="w-3.5 h-3.5" />
-              GROW
+              <Search className="w-3.5 h-3.5" />
+              Find
               <span className="text-[10px] font-normal text-white/35 ml-0.5">▾</span>
             </button>
 
             <AnimatePresence>
-              {activeDropdown === "grow" && (
+              {activeDropdown === "find" && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute top-full left-0 mt-2 w-72 p-4 bg-[#080E1C] border border-[#C9A84C]/25 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+                  className="absolute top-full left-0 mt-2 w-72 p-4 bg-[#080E1C] border border-[#F59E0B]/25 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
                 >
-                  <p className="text-[10px] font-semibold tracking-[0.2em] text-[#C9A84C]/60 uppercase mb-3 px-1">Professional Business Services</p>
+                  <p className="text-[10px] font-semibold tracking-[0.2em] text-[#FCD34D]/60 uppercase mb-3 px-1">Marketplace & Community</p>
                   <ul className="space-y-1">
-                    {growItems.map((item) => (
+                    {findItems.map((item) => (
                       <li key={item.href}>
-                        <Link href={item.href} className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#C9A84C]/6 group transition-colors" onClick={() => setActiveDropdown(null)}>
-                          <div className="w-8 h-8 rounded-lg bg-[#C9A84C]/10 border border-[#C9A84C]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#C9A84C]/20 transition-colors">
-                            <item.icon className="w-4 h-4 text-[#C9A84C]" />
+                        <Link href={item.href} className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#F59E0B]/8 group transition-colors" onClick={() => setActiveDropdown(null)}>
+                          <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/12 border border-[#F59E0B]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#F59E0B]/25 transition-colors">
+                            <item.icon className="w-4 h-4 text-[#FCD34D]" />
                           </div>
                           <div>
                             <div className="text-sm font-medium text-white/90 group-hover:text-white">{item.title}</div>
@@ -214,9 +228,54 @@ export function Navbar() {
             </AnimatePresence>
           </div>
 
-          {/* Other links */}
+          {/* GROW pill */}
+          <div className="relative" onMouseEnter={() => setActiveDropdown("grow")}>
+            <button className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors",
+              activeDropdown === "grow"
+                ? "bg-[#C9A84C]/15 text-[#E8C97A]"
+                : "text-white/70 hover:text-white hover:bg-white/6"
+            )}>
+              <TrendingUp className="w-3.5 h-3.5" />
+              Grow
+              <span className="text-[10px] font-normal text-white/35 ml-0.5">▾</span>
+            </button>
+
+            <AnimatePresence>
+              {activeDropdown === "grow" && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full left-0 mt-2 w-72 p-4 bg-[#080E1C] border border-[#C9A84C]/25 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+                >
+                  <p className="text-[10px] font-semibold tracking-[0.2em] text-[#E8C97A]/60 uppercase mb-3 px-1">Scale Your Business</p>
+                  <ul className="space-y-1">
+                    {growItems.map((item) => (
+                      <li key={item.href + item.title}>
+                        <Link href={item.href} className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#C9A84C]/8 group transition-colors" onClick={() => setActiveDropdown(null)}>
+                          <div className="w-8 h-8 rounded-lg bg-[#C9A84C]/10 border border-[#C9A84C]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#C9A84C]/25 transition-colors">
+                            <item.icon className="w-4 h-4 text-[#E8C97A]" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-white/90 group-hover:text-white">{item.title}</div>
+                            <div className="text-xs text-white/40 mt-0.5">{item.description}</div>
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Divider */}
           <div className="w-px h-5 bg-white/10 mx-1" />
-          {[["Pricing", "/pricing"], ["About", "/about"], ["Contact", "/contact"]].map(([label, href]) => (
+
+          {/* Other links */}
+          {([["Pricing", "/pricing"], ["About", "/about"]] as [string,string][]).map(([label, href]) => (
             <Link key={label} href={href} className={cn(
               "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
               pathname === href ? "text-[#C9A84C]" : "text-white/60 hover:text-white hover:bg-white/6"
@@ -228,6 +287,11 @@ export function Navbar() {
 
         {/* CTA */}
         <div className="hidden lg:flex items-center gap-3">
+          <a href="tel:+918590874681"
+            className="flex items-center gap-1.5 text-xs font-medium text-white/35 hover:text-white/65 transition-colors px-3 py-2 rounded-lg hover:bg-white/5">
+            <Phone className="w-3 h-3" />
+            <span>+91 85908 74681</span>
+          </a>
           {user ? (
             <>
               <Link href="/dashboard"

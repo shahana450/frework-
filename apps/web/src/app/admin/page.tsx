@@ -60,7 +60,7 @@ interface FwSubscription {
   fw_users?: { name?: string; email?: string };
 }
 
-const ADMIN_PASS = "frework@admin2024";
+const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASS ?? "";
 
 export default function AdminPage() {
   const [users, setUsers] = useState<FwUser[]>([]);
