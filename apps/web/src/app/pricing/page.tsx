@@ -240,7 +240,7 @@ const FAQS = [
 
 const TRUST = [
   { icon: ShieldCheck, label: "SOC 2 compliant infrastructure" },
-  { icon: BadgeCheck, label: "ICAI-registered CA/CS experts" },
+  { icon: BadgeCheck, label: "Verified professional experts" },
   { icon: Clock, label: "14-day free trial, no card" },
   { icon: Headphones, label: "24/7 dedicated support" },
 ];

@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import {
   Building2, FileText, IndianRupee, Users, TrendingUp, MapPin, Rocket, LayoutDashboard,
   ArrowRight, ChevronRight, MessageCircle, Search, CheckCircle, Shield, Clock, Star,
-  Briefcase, BarChart3, Presentation, GraduationCap, Phone,
+  Briefcase, BarChart3, Presentation, GraduationCap, Phone, Zap, Check,
 } from "lucide-react";
 
 const SUPPORT_PHONE = (process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 85908 74681").replace(/^﻿/, "");
@@ -388,6 +388,139 @@ export function BusinessOSHomepage() {
                 </motion.div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="py-20 px-4">
+        <div className="container max-w-5xl mx-auto">
+          <div className="text-center mb-14">
+            <p className="text-xs font-bold tracking-[0.3em] uppercase mb-3" style={{ color: "rgba(201,168,76,0.7)" }}>Simple pricing</p>
+            <h2 className="text-3xl md:text-4xl font-bold" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif" }}>
+              Pay only for what you need
+            </h2>
+            <p className="mt-3 text-sm max-w-md mx-auto" style={{ color: "rgba(255,255,255,0.45)" }}>
+              Start free. Upgrade as your business grows. Cancel anytime — no lock-in.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {[
+              {
+                name: "Free",
+                icon: Zap,
+                price: "₹0",
+                per: "forever",
+                tagline: "Just getting started",
+                color: "rgba(255,255,255,0.06)",
+                border: "rgba(255,255,255,0.1)",
+                accent: "rgba(255,255,255,0.5)",
+                features: ["Browse all listings", "1 active listing", "5 job applications/mo", "Email support"],
+                cta: "Get Started",
+                ctaHref: "/register",
+                popular: false,
+              },
+              {
+                name: "Professional",
+                icon: Rocket,
+                price: "₹999",
+                per: "/month",
+                tagline: "For freelancers & CAs",
+                color: "rgba(201,168,76,0.06)",
+                border: "rgba(201,168,76,0.4)",
+                accent: "#C9A84C",
+                features: ["Unlimited listings", "Verified Badge", "GST Registration (one-time)", "Monthly GST filing", "Income Tax Return (ITR)", "24/7 chat support"],
+                cta: "Start Free Trial",
+                ctaHref: "/register?plan=professional",
+                popular: true,
+              },
+              {
+                name: "Growth",
+                icon: TrendingUp,
+                price: "₹2,999",
+                per: "/month",
+                tagline: "For SMEs & agencies",
+                color: "rgba(59,130,246,0.05)",
+                border: "rgba(59,130,246,0.25)",
+                accent: "#60A5FA",
+                features: ["5 team seats", "Monthly bookkeeping", "ROC annual filing", "MSME registration", "Revenue analytics", "Client portal"],
+                cta: "Start Trial",
+                ctaHref: "/register?plan=growth",
+                popular: false,
+              },
+              {
+                name: "Business",
+                icon: Building2,
+                price: "₹4,999",
+                per: "/month",
+                tagline: "For established firms",
+                color: "rgba(139,92,246,0.05)",
+                border: "rgba(139,92,246,0.25)",
+                accent: "#A78BFA",
+                features: ["20 team seats", "Dedicated manager", "Internal & annual audit", "Tax audit (Form 3CA/3CB)", "DPR & CMA data", "API access"],
+                cta: "Start Trial",
+                ctaHref: "/register?plan=business",
+                popular: false,
+              },
+            ].map((plan, i) => {
+              const Icon = plan.icon;
+              return (
+                <motion.div key={plan.name}
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+                  className="relative flex flex-col rounded-2xl border p-5"
+                  style={{ background: plan.color, borderColor: plan.border }}>
+                  {plan.popular && (
+                    <div className="absolute -top-px left-1/2 -translate-x-1/2">
+                      <div className="px-3 py-1 rounded-b-xl text-[10px] font-black tracking-widest uppercase"
+                        style={{ background: "linear-gradient(135deg,#F0D78A,#C9A84C)", color: "#060C18" }}>
+                        Most Popular
+                      </div>
+                    </div>
+                  )}
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 mt-2"
+                    style={{ background: `${plan.accent}18`, border: `1px solid ${plan.accent}30` }}>
+                    <Icon className="w-4 h-4" style={{ color: plan.accent }} />
+                  </div>
+                  <p className="text-[10px] font-bold tracking-widest uppercase mb-1" style={{ color: plan.accent }}>
+                    {plan.name}
+                  </p>
+                  <p className="text-xs mb-3" style={{ color: "rgba(255,255,255,0.4)" }}>{plan.tagline}</p>
+                  <div className="flex items-end gap-1 mb-5">
+                    <span className="text-3xl font-black" style={{ color: "rgba(255,255,255,0.95)", fontFamily: "var(--font-plus-jakarta), sans-serif" }}>
+                      {plan.price}
+                    </span>
+                    <span className="text-xs pb-1" style={{ color: "rgba(255,255,255,0.3)" }}>{plan.per}</span>
+                  </div>
+                  <ul className="space-y-2 mb-6 flex-1">
+                    {plan.features.map(f => (
+                      <li key={f} className="flex items-start gap-2">
+                        <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                          style={{ background: `${plan.accent}18` }}>
+                          <Check className="w-2.5 h-2.5" style={{ color: plan.accent }} />
+                        </div>
+                        <span className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href={plan.ctaHref}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold text-center transition-all block"
+                    style={plan.popular
+                      ? { background: "linear-gradient(135deg,#F0D78A,#C9A84C)", color: "#060C18" }
+                      : { border: `1px solid ${plan.border}`, color: plan.accent }}>
+                    {plan.cta}
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <div className="text-center">
+            <Link href="/pricing"
+              className="inline-flex items-center gap-2 text-sm font-semibold transition-all"
+              style={{ color: "rgba(201,168,76,0.8)" }}>
+              See full plan comparison & Enterprise pricing <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
       </section>
