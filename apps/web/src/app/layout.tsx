@@ -31,7 +31,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://frework.online"),
+  metadataBase: new URL((process.env.NEXT_PUBLIC_APP_URL ?? "https://frework.online").replace(/^﻿/, "")),
   title: {
     default: "FreWork – India's Platform for Freelancers, Coworking & Startups",
     template: "%s | FreWork",
