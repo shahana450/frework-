@@ -41,8 +41,8 @@ const OFFERINGS = [
   { icon: Users, label: "Hire Talent", desc: "Verified freelancers & skilled workers" },
 ];
 
-const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 85908 74681";
-const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "918590874681";
+const SUPPORT_PHONE = (process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 85908 74681").replace(/^﻿/, "");
+const WHATSAPP_NUMBER = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "918590874681").replace(/^﻿/, "");
 
 function LandingInner() {
   const params = useSearchParams();
