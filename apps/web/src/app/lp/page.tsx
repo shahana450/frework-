@@ -25,28 +25,24 @@ const SERVICES = [
   "Other",
 ];
 
-const REVIEWS = [
-  { name: "Ravi Menon", role: "Startup Founder, Bangalore", text: "Got GST registered in 3 days. The CA team was incredibly responsive. Worth every rupee.", stars: 5 },
-  { name: "Priya Sharma", role: "Freelance Designer, Mumbai", text: "Found my best workspace through FreWork. Profile views tripled after getting the verified badge.", stars: 5 },
-  { name: "Ankit Joshi", role: "SME Owner, Pune", text: "Bookkeeping and quarterly filing handled seamlessly. I can finally focus on my business.", stars: 5 },
-];
+const REVIEWS: { name: string; role: string; text: string; stars: number }[] = [];
 
 const TRUST = [
   { icon: BadgeCheck, text: "ICAI-registered CA & CS experts" },
   { icon: Shield, text: "100% data security & confidentiality" },
   { icon: Clock, text: "Response within 2 hours" },
-  { icon: Star, text: "4.9 / 5 from 500+ clients" },
+  { icon: Star, text: "Early access — join our first clients" },
 ];
 
 const OFFERINGS = [
   { icon: FileText, label: "GST & Tax Filing", desc: "GSTR-1, 3B, ITR, TDS — handled by experts" },
   { icon: TrendingUp, label: "Business Growth", desc: "Bookkeeping, Audit, DPR, Pitch Decks" },
-  { icon: Building2, label: "Workspaces", desc: "Premium coworking in 50+ cities" },
+  { icon: Building2, label: "Workspaces", desc: "Premium coworking — launching soon" },
   { icon: Users, label: "Hire Talent", desc: "Verified freelancers & skilled workers" },
 ];
 
-const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 99999 99999";
-const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "919999999999";
+const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 85908 74681";
+const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "918590874681";
 
 function LandingInner() {
   const params = useSearchParams();
@@ -101,7 +97,7 @@ function LandingInner() {
           <a href="/" className="px-6 py-3 rounded-xl border border-white/15 text-white/60 text-sm font-semibold hover:border-white/30 hover:text-white transition-all">
             Explore FreWork →
           </a>
-          <a href="{`https://wa.me/${WHATSAPP_NUMBER}`}" target="_blank" rel="noopener noreferrer"
+          <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer"
             className="px-6 py-3 rounded-xl font-semibold text-sm text-[#0B1120]"
             style={{ background: "linear-gradient(135deg,#F0D78A,#C9A84C)" }}>
             WhatsApp Us
@@ -141,7 +137,7 @@ function LandingInner() {
               </svg>
               <span className="font-bold text-white text-lg" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif" }}>FreWork</span>
             </div>
-            <a href="{`tel:${SUPPORT_PHONE}`}"
+            <a href={`tel:${SUPPORT_PHONE}`}
               className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[#C9A84C]/30 text-[#C9A84C] text-sm font-semibold hover:bg-[#C9A84C]/8 transition-all">
               <Phone className="w-3.5 h-3.5" /> {SUPPORT_PHONE}
             </a>
@@ -154,8 +150,14 @@ function LandingInner() {
           {/* Left — copy */}
           <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.55 }}>
 
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/25 text-[#C9A84C] text-xs font-bold tracking-widest uppercase mb-6">
-              🇮🇳 India&apos;s Professional Growth Platform
+            <div className="flex items-center gap-3 mb-6 flex-wrap">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/25 text-[#C9A84C] text-xs font-bold tracking-widest uppercase">
+                🇮🇳 India&apos;s Professional Growth Platform
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold tracking-widest uppercase">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Beta
+              </div>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.05] mb-6"
@@ -271,46 +273,40 @@ function LandingInner() {
               </form>
             </div>
 
-            {/* Mini social proof */}
-            <div className="mt-4 flex items-center justify-center gap-3">
-              <div className="flex -space-x-2">
-                {["R","P","A","S","M"].map((l, i) => (
-                  <div key={i} className="w-7 h-7 rounded-full border-2 border-[#060C18] flex items-center justify-center text-[10px] font-bold text-white"
-                    style={{ background: ["#7C3AED","#C9A84C","#0EA5E9","#10B981","#F59E0B"][i] }}>
-                    {l}
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-white/35">
-                <span className="text-white/60 font-semibold">500+</span> professionals consulted this month
+            {/* Beta invite note */}
+            <div className="mt-4 text-center">
+              <p className="text-xs text-white/30">
+                🚀 <span className="text-white/50 font-semibold">Early access</span> — be among our founding clients
               </p>
             </div>
           </motion.div>
         </section>
 
-        {/* ── Reviews ── */}
-        <section className="border-t border-white/6 py-14 px-4">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-center text-xs font-bold tracking-widest uppercase text-white/25 mb-8">What our clients say</p>
-            <div className="grid md:grid-cols-3 gap-4">
-              {REVIEWS.map((r) => (
-                <motion.div key={r.name} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                  className="rounded-2xl border border-white/8 bg-white/3 p-5">
-                  <div className="flex gap-0.5 mb-3">
-                    {Array.from({ length: r.stars }).map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 text-[#C9A84C] fill-[#C9A84C]" />
-                    ))}
-                  </div>
-                  <p className="text-sm text-white/60 leading-relaxed mb-4">&ldquo;{r.text}&rdquo;</p>
-                  <div>
-                    <p className="text-xs font-bold text-white/80">{r.name}</p>
-                    <p className="text-[10px] text-white/30">{r.role}</p>
-                  </div>
-                </motion.div>
-              ))}
+        {/* ── Reviews — shown only when real reviews exist ── */}
+        {REVIEWS.length > 0 && (
+          <section className="border-t border-white/6 py-14 px-4">
+            <div className="max-w-4xl mx-auto">
+              <p className="text-center text-xs font-bold tracking-widest uppercase text-white/25 mb-8">What our clients say</p>
+              <div className="grid md:grid-cols-3 gap-4">
+                {REVIEWS.map((r) => (
+                  <motion.div key={r.name} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                    className="rounded-2xl border border-white/8 bg-white/3 p-5">
+                    <div className="flex gap-0.5 mb-3">
+                      {Array.from({ length: r.stars }).map((_, i) => (
+                        <Star key={i} className="w-3.5 h-3.5 text-[#C9A84C] fill-[#C9A84C]" />
+                      ))}
+                    </div>
+                    <p className="text-sm text-white/60 leading-relaxed mb-4">&ldquo;{r.text}&rdquo;</p>
+                    <div>
+                      <p className="text-xs font-bold text-white/80">{r.name}</p>
+                      <p className="text-[10px] text-white/30">{r.role}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* ── Footer strip ── */}
         <footer className="border-t border-white/6 py-6 px-4 text-center">

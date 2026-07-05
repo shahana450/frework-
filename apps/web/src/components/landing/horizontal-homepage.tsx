@@ -108,7 +108,7 @@ export function HorizontalHomepage() {
             <div className="lg:hidden flex-1 flex flex-col gap-3 px-4 pb-16 overflow-y-auto">
               {[
                 { navIdx: 1, img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80", label: "FIND", sub: "Coworking · Teachers · Skilled Workers · Jobs", tint: "rgba(30,64,175,0.5)", accent: "#60a5fa", accentBg: "rgba(59,130,246,0.22)", accentBorder: "rgba(96,165,250,0.4)", glow: "rgba(59,130,246,0.3)", Icon: Search,
-                  items: ["Coworking Spaces — 500+ offices", "Teachers & Tutors — CBSE · JEE · Music", "Skilled Workers — Electrician · Plumber · Cook", "Jobs & Freelancers — Verified talent"] },
+                  items: ["Coworking Spaces — Launching Soon", "Teachers & Tutors — CBSE · JEE · Music", "Skilled Workers — Electrician · Plumber · Cook", "Jobs & Freelancers — Verified talent"] },
                 { navIdx: 2, img: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=80", label: "GROW", sub: "CA · CS · Tax · Compliance · DPR", tint: "rgba(120,83,10,0.5)", accent: "#fbbf24", accentBg: "rgba(201,168,76,0.22)", accentBorder: "rgba(251,191,36,0.4)", glow: "rgba(201,168,76,0.3)", Icon: TrendingUp,
                   items: ["GST & Income Tax — Returns & audits", "DPR & Projections — Project reports", "Pitch Decks — Investor-ready decks", "Business Restructuring — M&A & strategy"] },
                 { navIdx: 3, img: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=600&q=80", label: "LAUNCH", sub: "Startups · Investors · Partners", tint: "rgba(76,29,149,0.5)", accent: "#a78bfa", accentBg: "rgba(139,92,246,0.22)", accentBorder: "rgba(167,139,250,0.4)", glow: "rgba(139,92,246,0.3)", Icon: Rocket,
@@ -163,7 +163,7 @@ export function HorizontalHomepage() {
                   glowColor: "rgba(59,130,246,0.35)", borderActive: "rgba(96,165,250,0.6)", borderIdle: "rgba(59,130,246,0.25)",
                   Icon: Search,
                   rows: [
-                    { img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=200&q=70", label: "Coworking Spaces", sub: "500+ premium offices", dot: "#3b82f6" },
+                    { img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=200&q=70", label: "Coworking Spaces", sub: "Launching across India", dot: "#3b82f6" },
                     { img: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=200&q=70", label: "Teachers & Tutors", sub: "CBSE · IELTS · JEE · Music", dot: "#10b981" },
                     { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=200&q=70", label: "Skilled Workers", sub: "Electrician · Plumber · Cook · Tailor", dot: "#f59e0b" },
                     { img: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=200&q=70", label: "Jobs & Freelancers", sub: "Verified talent · Hire in minutes", dot: "#60a5fa" },
@@ -313,7 +313,7 @@ export function HorizontalHomepage() {
 
             <div className="grid md:grid-cols-3 gap-4">
               {[
-                { icon: MapPin, title: "Coworking & Offices", desc: "Search, filter and book premium workspaces across India.", href: "/coworking", tag: "500+ spaces" },
+                { icon: MapPin, title: "Coworking & Offices", desc: "Search, filter and book premium workspaces across India.", href: "/coworking", tag: "Launching Soon" },
                 { icon: Users, title: "Freelancers", desc: "Browse skilled freelancers by expertise and hire in minutes.", href: "/freelancers", tag: "Verified talent" },
                 { icon: Briefcase, title: "Jobs", desc: "Discover job vacancies and apply directly to growing companies.", href: "/jobs", tag: "Live listings" },
               ].map(c => (
