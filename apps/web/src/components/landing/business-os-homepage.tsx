@@ -331,6 +331,139 @@ export function BusinessOSHomepage() {
         </div>
       </section>
 
+      {/* Coworking Feature */}
+      <section className="py-20 px-4 relative overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute right-0 top-0 w-[500px] h-[500px] rounded-full opacity-15"
+            style={{ background: "radial-gradient(circle, #F97316 0%, transparent 70%)", filter: "blur(80px)" }} />
+        </div>
+        <div className="container max-w-6xl mx-auto relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black tracking-[0.25em] uppercase mb-6 border"
+                style={{ background: "rgba(249,115,22,0.1)", borderColor: "rgba(249,115,22,0.3)", color: "#FB923C" }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+                Launching Soon · Coworking Spaces
+              </span>
+              <h2 className="text-3xl md:text-5xl font-bold leading-tight mb-5"
+                style={{ fontFamily: "var(--font-plus-jakarta), sans-serif" }}>
+                Your perfect office,<br />
+                <span style={{ color: "#F97316" }}>wherever you work.</span>
+              </h2>
+              <p className="text-base leading-relaxed mb-8" style={{ color: "rgba(255,255,255,0.55)" }}>
+                Day desk or private cabin, by the hour or by the month — FreWork is onboarding
+                verified coworking spaces across India. No fake listings. Every space personally checked.
+              </p>
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                {[
+                  { icon: "📶", label: "High-speed WiFi", desc: "Fibre in every space" },
+                  { icon: "☕", label: "Café & Cafeteria", desc: "Coffee & meals on-site" },
+                  { icon: "🚗", label: "Parking", desc: "Two-wheeler & car" },
+                  { icon: "🏛️", label: "Meeting Rooms", desc: "Book by the hour" },
+                  { icon: "🕐", label: "Flexible Plans", desc: "Day · Monthly · Annual" },
+                  { icon: "✅", label: "Verified Only", desc: "Every space checked" },
+                ].map(f => (
+                  <div key={f.label} className="flex items-start gap-3 p-3 rounded-xl border"
+                    style={{ background: "rgba(249,115,22,0.05)", borderColor: "rgba(249,115,22,0.15)" }}>
+                    <span className="text-lg leading-none">{f.icon}</span>
+                    <div>
+                      <p className="text-xs font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{f.label}</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mb-8">
+                <p className="text-[10px] font-bold tracking-widest uppercase mb-3" style={{ color: "rgba(249,115,22,0.6)" }}>
+                  Launching in these cities
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {["Mumbai", "Bangalore", "Delhi NCR", "Hyderabad", "Pune", "Chennai", "Kolkata", "Ahmedabad"].map(city => (
+                    <span key={city} className="px-3 py-1 rounded-full text-xs font-medium border"
+                      style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
+                      📍 {city}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 flex-wrap">
+                <Link href="/coworking"
+                  className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #FB923C, #F97316)", color: "#fff" }}>
+                  Explore Spaces <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link href="/coworking"
+                  className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold border transition-all"
+                  style={{ borderColor: "rgba(249,115,22,0.3)", color: "#FB923C" }}>
+                  List your space free
+                </Link>
+              </div>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="relative">
+              <div className="rounded-3xl border overflow-hidden"
+                style={{ background: "linear-gradient(160deg, #0F0A00 0%, #0A0E18 100%)", borderColor: "rgba(249,115,22,0.3)", boxShadow: "0 0 60px rgba(249,115,22,0.12), 0 24px 48px rgba(0,0,0,0.5)" }}>
+                <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+                      style={{ background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.25)" }}>
+                      🏢
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold" style={{ color: "rgba(255,255,255,0.9)" }}>FreWork Coworking</p>
+                      <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>Verified space · Bangalore</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold"
+                    style={{ background: "rgba(16,185,129,0.15)", color: "#34D399", border: "1px solid rgba(16,185,129,0.3)" }}>
+                    Available
+                  </span>
+                </div>
+                <div className="p-5">
+                  <div className="grid grid-cols-3 gap-3 mb-5">
+                    {[
+                      { emoji: "💺", label: "Hot Desk", price: "₹350/day" },
+                      { emoji: "🔒", label: "Private Cabin", price: "₹8,000/mo" },
+                      { emoji: "📽️", label: "Meeting Room", price: "₹500/hr" },
+                    ].map(opt => (
+                      <div key={opt.label} className="rounded-2xl p-3 text-center border"
+                        style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}>
+                        <p className="text-2xl mb-1">{opt.emoji}</p>
+                        <p className="text-[10px] font-semibold" style={{ color: "rgba(255,255,255,0.7)" }}>{opt.label}</p>
+                        <p className="text-[10px] font-bold mt-0.5" style={{ color: "#F97316" }}>{opt.price}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-5">
+                    {["📶 WiFi", "☕ Café", "🅿️ Parking", "🖨️ Printer", "❄️ AC", "🔐 24/7 Access"].map(tag => (
+                      <span key={tag} className="px-2.5 py-1 rounded-lg text-[10px] font-medium"
+                        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <Link href="/coworking"
+                    className="w-full py-3 rounded-2xl text-sm font-bold text-center block transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, #FB923C, #F97316)", color: "#fff" }}>
+                    Book a visit →
+                  </Link>
+                </div>
+              </div>
+              <div className="absolute -bottom-4 -left-4 px-4 py-3 rounded-2xl border shadow-xl"
+                style={{ background: "#070D1A", borderColor: "rgba(249,115,22,0.3)" }}>
+                <p className="text-[10px] font-bold tracking-widest uppercase mb-1" style={{ color: "rgba(249,115,22,0.7)" }}>
+                  Coming to 8 cities
+                </p>
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+                  Be first in your city →&nbsp;
+                  <Link href="/coworking" className="underline" style={{ color: "#FB923C" }}>Notify me</Link>
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="py-20 px-4" style={{ background: "rgba(255,255,255,0.02)", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="container max-w-4xl mx-auto">
@@ -521,164 +654,6 @@ export function BusinessOSHomepage() {
               style={{ color: "rgba(201,168,76,0.8)" }}>
               See full plan comparison & Enterprise pricing <ArrowRight className="w-4 h-4" />
             </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Coworking Feature */}
-      <section className="py-20 px-4 relative overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        {/* Ambient glow */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute right-0 top-0 w-[500px] h-[500px] rounded-full opacity-15"
-            style={{ background: "radial-gradient(circle, #F97316 0%, transparent 70%)", filter: "blur(80px)" }} />
-        </div>
-
-        <div className="container max-w-6xl mx-auto relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-
-            {/* Left — copy */}
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black tracking-[0.25em] uppercase mb-6 border"
-                style={{ background: "rgba(249,115,22,0.1)", borderColor: "rgba(249,115,22,0.3)", color: "#FB923C" }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
-                Launching Soon · Coworking Spaces
-              </span>
-
-              <h2 className="text-3xl md:text-5xl font-bold leading-tight mb-5"
-                style={{ fontFamily: "var(--font-plus-jakarta), sans-serif" }}>
-                Your perfect office,<br />
-                <span style={{ color: "#F97316" }}>wherever you work.</span>
-              </h2>
-
-              <p className="text-base leading-relaxed mb-8" style={{ color: "rgba(255,255,255,0.55)" }}>
-                Day desk or private cabin, by the hour or by the month — FreWork is onboarding
-                verified coworking spaces across India. No fake listings. Every space personally checked.
-              </p>
-
-              {/* Feature list */}
-              <div className="grid grid-cols-2 gap-3 mb-8">
-                {[
-                  { icon: "📶", label: "High-speed WiFi", desc: "Fibre in every space" },
-                  { icon: "☕", label: "Café & Cafeteria", desc: "Coffee & meals on-site" },
-                  { icon: "🚗", label: "Parking", desc: "Two-wheeler & car" },
-                  { icon: "🏛️", label: "Meeting Rooms", desc: "Book by the hour" },
-                  { icon: "🕐", label: "Flexible Plans", desc: "Day · Monthly · Annual" },
-                  { icon: "✅", label: "Verified Only", desc: "Every space checked" },
-                ].map(f => (
-                  <div key={f.label} className="flex items-start gap-3 p-3 rounded-xl border"
-                    style={{ background: "rgba(249,115,22,0.05)", borderColor: "rgba(249,115,22,0.15)" }}>
-                    <span className="text-lg leading-none">{f.icon}</span>
-                    <div>
-                      <p className="text-xs font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>{f.label}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{f.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* City pills */}
-              <div className="mb-8">
-                <p className="text-[10px] font-bold tracking-widest uppercase mb-3" style={{ color: "rgba(249,115,22,0.6)" }}>
-                  Launching in these cities
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {["Mumbai", "Bangalore", "Delhi NCR", "Hyderabad", "Pune", "Chennai", "Kolkata", "Ahmedabad"].map(city => (
-                    <span key={city}
-                      className="px-3 py-1 rounded-full text-xs font-medium border"
-                      style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
-                      📍 {city}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-3 flex-wrap">
-                <Link href="/coworking"
-                  className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, #FB923C, #F97316)", color: "#fff" }}>
-                  Explore Spaces <ArrowRight className="w-4 h-4" />
-                </Link>
-                <Link href="/coworking"
-                  className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold border transition-all"
-                  style={{ borderColor: "rgba(249,115,22,0.3)", color: "#FB923C" }}>
-                  List your space free
-                </Link>
-              </div>
-            </motion.div>
-
-            {/* Right — visual cards */}
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-              className="relative">
-
-              {/* Main space card */}
-              <div className="rounded-3xl border overflow-hidden"
-                style={{ background: "linear-gradient(160deg, #0F0A00 0%, #0A0E18 100%)", borderColor: "rgba(249,115,22,0.3)", boxShadow: "0 0 60px rgba(249,115,22,0.12), 0 24px 48px rgba(0,0,0,0.5)" }}>
-
-                {/* Top bar */}
-                <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                      style={{ background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.25)" }}>
-                      🏢
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold" style={{ color: "rgba(255,255,255,0.9)" }}>FreWork Coworking</p>
-                      <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>Verified space · Bangalore</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold"
-                    style={{ background: "rgba(16,185,129,0.15)", color: "#34D399", border: "1px solid rgba(16,185,129,0.3)" }}>
-                    Available
-                  </span>
-                </div>
-
-                {/* Amenities */}
-                <div className="p-5">
-                  <div className="grid grid-cols-3 gap-3 mb-5">
-                    {[
-                      { emoji: "💺", label: "Hot Desk", price: "₹350/day" },
-                      { emoji: "🔒", label: "Private Cabin", price: "₹8,000/mo" },
-                      { emoji: "📽️", label: "Meeting Room", price: "₹500/hr" },
-                    ].map(opt => (
-                      <div key={opt.label} className="rounded-2xl p-3 text-center border"
-                        style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}>
-                        <p className="text-2xl mb-1">{opt.emoji}</p>
-                        <p className="text-[10px] font-semibold" style={{ color: "rgba(255,255,255,0.7)" }}>{opt.label}</p>
-                        <p className="text-[10px] font-bold mt-0.5" style={{ color: "#F97316" }}>{opt.price}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Perks row */}
-                  <div className="flex flex-wrap gap-2 mb-5">
-                    {["📶 WiFi", "☕ Café", "🅿️ Parking", "🖨️ Printer", "❄️ AC", "🔐 24/7 Access"].map(tag => (
-                      <span key={tag} className="px-2.5 py-1 rounded-lg text-[10px] font-medium"
-                        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <Link href="/coworking"
-                    className="w-full py-3 rounded-2xl text-sm font-bold text-center block transition-all hover:opacity-90"
-                    style={{ background: "linear-gradient(135deg, #FB923C, #F97316)", color: "#fff" }}>
-                    Book a visit →
-                  </Link>
-                </div>
-              </div>
-
-              {/* Floating stat chip */}
-              <div className="absolute -bottom-4 -left-4 px-4 py-3 rounded-2xl border shadow-xl"
-                style={{ background: "#070D1A", borderColor: "rgba(249,115,22,0.3)" }}>
-                <p className="text-[10px] font-bold tracking-widest uppercase mb-1" style={{ color: "rgba(249,115,22,0.7)" }}>
-                  Coming to 8 cities
-                </p>
-                <p className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
-                  Be first in your city →&nbsp;
-                  <Link href="/coworking" className="underline" style={{ color: "#FB923C" }}>Notify me</Link>
-                </p>
-              </div>
-            </motion.div>
           </div>
         </div>
       </section>
