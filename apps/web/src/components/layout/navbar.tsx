@@ -121,16 +121,18 @@ export function Navbar() {
       <div className="container flex h-[68px] items-center justify-between">
 
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
-          <FreWorkLogo />
-          <div>
+        <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0 min-w-0">
+          <div className="flex-shrink-0">
+            <FreWorkLogo size={36} />
+          </div>
+          <div className="flex-shrink-0">
             <span
-              className="font-bold tracking-[-0.025em] transition-colors duration-300 block"
-              style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "1.22rem", lineHeight: 1, color: "#1A1208" }}
+              className="font-bold tracking-[-0.025em] transition-colors duration-300 block whitespace-nowrap"
+              style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "1.18rem", lineHeight: 1.1, color: "#1A1208" }}
             >
               FreWork
             </span>
-            <span className="text-[9px] tracking-[0.1em] uppercase block mt-0.5" style={{ color: "rgba(184,144,58,0.6)" }}>
+            <span className="text-[9px] tracking-[0.1em] uppercase block mt-0.5 whitespace-nowrap" style={{ color: "rgba(184,144,58,0.6)" }}>
               Business OS
             </span>
           </div>
