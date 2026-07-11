@@ -113,8 +113,8 @@ export function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
         isScrolled
-          ? "bg-[#070D1A]/95 backdrop-blur-xl border-b border-[#C9A84C]/15 shadow-[0_4px_32px_rgba(0,0,0,0.4)]"
-          : "bg-[#070D1A]/80 backdrop-blur-sm"
+          ? "bg-[#FAFAF5]/95 backdrop-blur-xl border-b border-[#B8903A]/18 shadow-[0_2px_20px_rgba(139,108,50,0.09)]"
+          : "bg-[#FAFAF5]/90 backdrop-blur-sm border-b border-[#B8903A]/10"
       )}
       onMouseLeave={() => setActiveDropdown(null)}
     >
@@ -125,12 +125,12 @@ export function Navbar() {
           <FreWorkLogo />
           <div>
             <span
-              className="font-bold tracking-[-0.025em] text-[#F6F4FC] group-hover:text-white transition-colors duration-300 block"
-              style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "1.22rem", lineHeight: 1 }}
+              className="font-bold tracking-[-0.025em] transition-colors duration-300 block"
+              style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "1.22rem", lineHeight: 1, color: "#1A1208" }}
             >
               FreWork
             </span>
-            <span className="text-[9px] tracking-[0.1em] uppercase block mt-0.5" style={{ color: "rgba(201,168,76,0.55)" }}>
+            <span className="text-[9px] tracking-[0.1em] uppercase block mt-0.5" style={{ color: "rgba(184,144,58,0.6)" }}>
               Business OS
             </span>
           </div>
@@ -144,8 +144,8 @@ export function Navbar() {
             <button className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors",
               activeDropdown === "services"
-                ? "bg-[#10B981]/15 text-[#34D399]"
-                : "text-white/70 hover:text-white hover:bg-white/6"
+                ? "bg-[#059669]/10 text-[#065F46]"
+                : "text-[#6B5B3E] hover:text-[#1A1208] hover:bg-[#B8903A]/8"
             )}>
               <Building2 className="w-3.5 h-3.5" />
               Services
@@ -159,19 +159,19 @@ export function Navbar() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute top-full left-0 mt-2 w-80 p-4 bg-[#080E1C] border border-[#10B981]/25 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+                  className="absolute top-full left-0 mt-2 w-80 p-4 bg-[#FAFAF5] border border-[#B8903A]/15 rounded-2xl shadow-[0_8px_40px_rgba(139,108,50,0.12)]"
                 >
-                  <p className="text-[10px] font-semibold tracking-[0.2em] text-[#34D399]/60 uppercase mb-3 px-1">Start & Comply</p>
+                  <p className="text-[10px] font-semibold tracking-[0.2em] text-[#059669]/60 uppercase mb-3 px-1">Start & Comply</p>
                   <ul className="space-y-1">
                     {servicesItems.map((item) => (
                       <li key={item.title}>
-                        <Link href={item.href} className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#10B981]/8 group transition-colors" onClick={() => setActiveDropdown(null)}>
-                          <div className="w-8 h-8 rounded-lg bg-[#10B981]/12 border border-[#10B981]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#10B981]/25 transition-colors">
-                            <item.icon className="w-4 h-4 text-[#34D399]" />
+                        <Link href={item.href} className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#059669]/6 group transition-colors" onClick={() => setActiveDropdown(null)}>
+                          <div className="w-8 h-8 rounded-lg bg-[#059669]/8 border border-[#059669]/15 flex items-center justify-center flex-shrink-0 group-hover:bg-[#059669]/15 transition-colors">
+                            <item.icon className="w-4 h-4 text-[#059669]" />
                           </div>
                           <div>
-                            <div className="text-sm font-medium text-white/90 group-hover:text-white">{item.title}</div>
-                            <div className="text-xs text-white/40 mt-0.5">{item.description}</div>
+                            <div className="text-sm font-medium text-[#1A1208]">{item.title}</div>
+                            <div className="text-xs text-[#9C8B70] mt-0.5">{item.description}</div>
                           </div>
                         </Link>
                       </li>
@@ -183,19 +183,19 @@ export function Navbar() {
           </div>
 
           {/* Divider */}
-          <div className="w-px h-5 bg-white/10 mx-1" />
+          <div className="w-px h-5 bg-[#B8903A]/15 mx-1" />
 
           {/* FIND pill */}
           <div className="relative" onMouseEnter={() => setActiveDropdown("find")}>
             <button className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors",
               activeDropdown === "find"
-                ? "bg-[#F59E0B]/15 text-[#FCD34D]"
-                : "text-white/70 hover:text-white hover:bg-white/6"
+                ? "bg-[#D97706]/10 text-[#92400E]"
+                : "text-[#6B5B3E] hover:text-[#1A1208] hover:bg-[#B8903A]/8"
             )}>
               <Search className="w-3.5 h-3.5" />
               Find
-              <span className="text-[10px] font-normal text-white/35 ml-0.5">▾</span>
+              <span className="text-[10px] font-normal text-[#B8903A]/50 ml-0.5">▾</span>
             </button>
 
             <AnimatePresence>
@@ -205,19 +205,19 @@ export function Navbar() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute top-full left-0 mt-2 w-72 p-4 bg-[#080E1C] border border-[#F59E0B]/25 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+                  className="absolute top-full left-0 mt-2 w-72 p-4 bg-[#FAFAF5] border border-[#B8903A]/15 rounded-2xl shadow-[0_8px_40px_rgba(139,108,50,0.12)]"
                 >
-                  <p className="text-[10px] font-semibold tracking-[0.2em] text-[#FCD34D]/60 uppercase mb-3 px-1">Marketplace & Community</p>
+                  <p className="text-[10px] font-semibold tracking-[0.2em] text-[#D97706]/60 uppercase mb-3 px-1">Marketplace & Community</p>
                   <ul className="space-y-1">
                     {findItems.map((item) => (
                       <li key={item.href}>
-                        <Link href={item.href} className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#F59E0B]/8 group transition-colors" onClick={() => setActiveDropdown(null)}>
-                          <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/12 border border-[#F59E0B]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#F59E0B]/25 transition-colors">
-                            <item.icon className="w-4 h-4 text-[#FCD34D]" />
+                        <Link href={item.href} className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#D97706]/6 group transition-colors" onClick={() => setActiveDropdown(null)}>
+                          <div className="w-8 h-8 rounded-lg bg-[#D97706]/8 border border-[#D97706]/15 flex items-center justify-center flex-shrink-0 group-hover:bg-[#D97706]/15 transition-colors">
+                            <item.icon className="w-4 h-4 text-[#D97706]" />
                           </div>
                           <div>
-                            <div className="text-sm font-medium text-white/90 group-hover:text-white">{item.title}</div>
-                            <div className="text-xs text-white/40 mt-0.5">{item.description}</div>
+                            <div className="text-sm font-medium text-[#1A1208]">{item.title}</div>
+                            <div className="text-xs text-[#9C8B70] mt-0.5">{item.description}</div>
                           </div>
                         </Link>
                       </li>
@@ -233,12 +233,12 @@ export function Navbar() {
             <button className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors",
               activeDropdown === "grow"
-                ? "bg-[#C9A84C]/15 text-[#E8C97A]"
-                : "text-white/70 hover:text-white hover:bg-white/6"
+                ? "bg-[#B8903A]/12 text-[#8C6A1E]"
+                : "text-[#6B5B3E] hover:text-[#1A1208] hover:bg-[#B8903A]/8"
             )}>
               <TrendingUp className="w-3.5 h-3.5" />
               Grow
-              <span className="text-[10px] font-normal text-white/35 ml-0.5">▾</span>
+              <span className="text-[10px] font-normal text-[#B8903A]/50 ml-0.5">▾</span>
             </button>
 
             <AnimatePresence>
@@ -248,19 +248,19 @@ export function Navbar() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute top-full left-0 mt-2 w-72 p-4 bg-[#080E1C] border border-[#C9A84C]/25 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+                  className="absolute top-full left-0 mt-2 w-72 p-4 bg-[#FAFAF5] border border-[#B8903A]/15 rounded-2xl shadow-[0_8px_40px_rgba(139,108,50,0.12)]"
                 >
-                  <p className="text-[10px] font-semibold tracking-[0.2em] text-[#E8C97A]/60 uppercase mb-3 px-1">Scale Your Business</p>
+                  <p className="text-[10px] font-semibold tracking-[0.2em] text-[#B8903A]/70 uppercase mb-3 px-1">Scale Your Business</p>
                   <ul className="space-y-1">
                     {growItems.map((item) => (
                       <li key={item.href + item.title}>
-                        <Link href={item.href} className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#C9A84C]/8 group transition-colors" onClick={() => setActiveDropdown(null)}>
-                          <div className="w-8 h-8 rounded-lg bg-[#C9A84C]/10 border border-[#C9A84C]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#C9A84C]/25 transition-colors">
-                            <item.icon className="w-4 h-4 text-[#E8C97A]" />
+                        <Link href={item.href} className="flex items-start gap-3 rounded-xl p-3 hover:bg-[#B8903A]/6 group transition-colors" onClick={() => setActiveDropdown(null)}>
+                          <div className="w-8 h-8 rounded-lg bg-[#B8903A]/8 border border-[#B8903A]/18 flex items-center justify-center flex-shrink-0 group-hover:bg-[#B8903A]/15 transition-colors">
+                            <item.icon className="w-4 h-4 text-[#B8903A]" />
                           </div>
                           <div>
-                            <div className="text-sm font-medium text-white/90 group-hover:text-white">{item.title}</div>
-                            <div className="text-xs text-white/40 mt-0.5">{item.description}</div>
+                            <div className="text-sm font-medium text-[#1A1208]">{item.title}</div>
+                            <div className="text-xs text-[#9C8B70] mt-0.5">{item.description}</div>
                           </div>
                         </Link>
                       </li>
@@ -272,13 +272,13 @@ export function Navbar() {
           </div>
 
           {/* Divider */}
-          <div className="w-px h-5 bg-white/10 mx-1" />
+          <div className="w-px h-5 bg-[#B8903A]/15 mx-1" />
 
           {/* Other links */}
           {([["Pricing", "/pricing"], ["About", "/about"]] as [string,string][]).map(([label, href]) => (
             <Link key={label} href={href} className={cn(
               "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-              pathname === href ? "text-[#C9A84C]" : "text-white/60 hover:text-white hover:bg-white/6"
+              pathname === href ? "text-[#B8903A]" : "text-[#6B5B3E] hover:text-[#1A1208] hover:bg-[#B8903A]/8"
             )}>
               {label}
             </Link>
@@ -300,36 +300,40 @@ export function Navbar() {
             WhatsApp Us
           </a>
           <a href="tel:+918590874681"
-            className="flex items-center gap-1.5 text-xs font-medium text-white/35 hover:text-white/65 transition-colors px-3 py-2 rounded-lg hover:bg-white/5">
+            className="flex items-center gap-1.5 text-xs font-medium transition-colors px-3 py-2 rounded-lg hover:bg-[#B8903A]/8"
+            style={{ color: "#9C8B70" }}>
             <Phone className="w-3 h-3" />
             <span>+91 85908 74681</span>
           </a>
           {user ? (
             <>
               <Link href="/dashboard"
-                className="flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/6">
+                className="flex items-center gap-2 text-sm font-medium transition-colors px-4 py-2 rounded-lg hover:bg-[#B8903A]/8"
+                style={{ color: "#6B5B3E" }}>
                 <LayoutDashboard className="w-4 h-4" />
                 Dashboard
               </Link>
               <button onClick={handleSignOut}
-                className="flex items-center gap-2 text-sm font-medium text-white/40 hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-red-500/8">
+                className="flex items-center gap-2 text-sm font-medium transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
+                style={{ color: "#9C8B70" }}>
                 <LogOut className="w-4 h-4" />
                 Sign out
               </button>
             </>
           ) : (
             <>
-              <Link href="/login" className="text-sm font-medium text-white/70 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/6">
+              <Link href="/login"
+                className="text-sm font-medium transition-colors px-4 py-2 rounded-lg hover:bg-[#B8903A]/8"
+                style={{ color: "#6B5B3E" }}>
                 Sign in
               </Link>
               <Link
                 href="/register"
-                className="relative inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-[#0B1120] overflow-hidden group transition-all"
-                style={{ background: "linear-gradient(135deg, #E8C97A, #C9A84C, #A07830)" }}
+                className="relative inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold overflow-hidden group transition-all hover:opacity-90 hover:scale-[1.02]"
+                style={{ background: "linear-gradient(135deg, #E8C97A, #B8903A)", color: "#fff", boxShadow: "0 2px 12px rgba(184,144,58,0.25)" }}
               >
                 <span className="relative z-10">Get Started</span>
                 <ChevronRight className="w-4 h-4 relative z-10 group-hover:translate-x-0.5 transition-transform" />
-                <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors" />
               </Link>
             </>
           )}
@@ -348,7 +352,7 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-[#070D1A] border-b border-[#C9A84C]/15 overflow-hidden"
+            className="lg:hidden bg-[#FAFAF5] border-b border-[#B8903A]/15 overflow-hidden"
           >
             <div className="container py-5 flex flex-col gap-1">
 
