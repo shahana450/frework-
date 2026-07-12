@@ -1,6 +1,5 @@
 import { BusinessOSHomepage } from "@/components/landing/business-os-homepage";
 import { TaxNewsSection } from "@/components/landing/tax-news-section";
-import { AnnouncementTicker } from "@/components/landing/announcement-ticker";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -61,7 +60,6 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <AnnouncementTicker />
       <BusinessOSHomepage />
       <TaxNewsSection />
     </>
