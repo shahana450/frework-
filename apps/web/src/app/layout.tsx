@@ -33,24 +33,34 @@ const cormorant = Cormorant_Garamond({
 export const metadata: Metadata = {
   metadataBase: new URL((process.env.NEXT_PUBLIC_APP_URL ?? "https://frework.online").replace(/^﻿/, "")),
   title: {
-    default: "FreWork – The Operating System for Indian Businesses",
-    template: "%s | FreWork",
+    default: "FreWork – GST Registration, IT Filing & CA Services Online India",
+    template: "%s | FreWork India",
   },
   description:
-    "Start, Run and Grow Your Business — All in One Place. Company registration, GST filing, income tax, hire professionals, coworking spaces, DPR, pitch decks, and startup funding. India's all-in-one business platform.",
+    "FreWork offers GST registration, GST filing, income tax return (ITR) filing, company registration, accounting, audit, and CA services online across India. Start, run and grow your business with expert CAs and CSs.",
   keywords: [
-    "company registration India",
     "GST registration India",
+    "GST filing online India",
     "income tax filing India",
+    "ITR filing online",
+    "company registration India",
     "CA services online India",
+    "accounting services India",
+    "virtual accountant India",
+    "statutory audit India",
+    "tax audit India",
+    "ROC compliance India",
+    "TDS filing India",
+    "MSME registration India",
     "business registration India",
-    "coworking spaces India",
-    "hire freelancer India",
-    "startup funding India",
-    "business plan India",
-    "ROC compliance",
-    "MSME registration",
+    "GST return filing",
+    "online CA consultant India",
+    "GST consultant India",
+    "income tax consultant India",
+    "bookkeeping services India",
+    "payroll services India",
     "FreWork",
+    "frework.online",
   ],
   authors: [{ name: "FreWork" }],
   creator: "FreWork",
@@ -58,16 +68,16 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_IN",
     url: "https://frework.online",
-    title: "FreWork – The Operating System for Indian Businesses",
+    title: "FreWork – GST Registration, IT Filing & CA Services Online India",
     description:
-      "Start, Run and Grow Your Business — All in One Place. Company registration, GST, income tax, hire professionals, coworking, DPR, pitch decks and startup funding.",
+      "Online GST registration, GST filing, ITR filing, company registration, accounting, audit and CA services across India. Expert CAs & CSs at your fingertips.",
     siteName: "FreWork",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "FreWork – The Operating System for Indian Businesses",
-    description: "Start, Run and Grow Your Business — All in One Place. India's all-in-one business platform.",
+    title: "FreWork – GST Registration, IT Filing & CA Services India",
+    description: "GST registration, income tax filing, accounting and CA services online. India's all-in-one business platform.",
     creator: "@frework",
     images: ["/og-image.png"],
   },
@@ -91,6 +101,60 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${plusJakartaSans.variable} ${cormorant.variable}`}>
       <head>
+        {/* JSON-LD: LocalBusiness + Services structured data for Google */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "AccountingService",
+                "@id": "https://frework.online/#organization",
+                "name": "FreWork",
+                "alternateName": "FreWork India",
+                "url": "https://frework.online",
+                "logo": "https://frework.online/logo.png",
+                "description": "FreWork provides GST registration, GST filing, income tax (ITR) filing, company registration, accounting, virtual accountant, audit, and CA/CS services online across India.",
+                "areaServed": { "@type": "Country", "name": "India" },
+                "priceRange": "₹₹",
+                "currenciesAccepted": "INR",
+                "paymentAccepted": "Cash, Credit Card, UPI, Net Banking",
+                "telephone": "+918590874681",
+                "email": "support@frework.online",
+                "sameAs": ["https://frework.online"],
+                "hasOfferCatalog": {
+                  "@type": "OfferCatalog",
+                  "name": "FreWork Services",
+                  "itemListElement": [
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "GST Registration", "description": "Online GST registration for businesses across India. Get your GSTIN in 3-5 working days." } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "GST Return Filing", "description": "Monthly, quarterly and annual GST return filing — GSTR-1, GSTR-3B, GSTR-9 by expert CAs." } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Income Tax Return Filing", "description": "ITR-1 to ITR-6 filing for individuals, salaried, business owners and companies." } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Company Registration", "description": "Private Limited, LLP, OPC, Sole Proprietorship and Partnership firm registration in India." } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Virtual Accountant", "description": "Dedicated virtual accountant for bookkeeping, invoicing, payroll and financial reporting." } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "TDS Filing", "description": "TDS deduction calculation, challan payment and quarterly return filing (24Q, 26Q)." } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "ROC / MCA Compliance", "description": "Annual ROC filings, DIR-3 KYC, MGT-7, AOC-4 and MCA compliance for companies." } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Statutory Audit", "description": "Statutory audit under Companies Act 2013 by qualified Chartered Accountants." } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Tax Audit (44AB)", "description": "Tax audit under Section 44AB of the Income Tax Act for eligible businesses." } },
+                    { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "MSME Registration", "description": "Online Udyam / MSME registration to avail government benefits and subsidies." } }
+                  ]
+                }
+              },
+              {
+                "@type": "WebSite",
+                "@id": "https://frework.online/#website",
+                "url": "https://frework.online",
+                "name": "FreWork",
+                "description": "GST Registration, Income Tax Filing, Accounting & CA Services Online India",
+                "publisher": { "@id": "https://frework.online/#organization" },
+                "potentialAction": {
+                  "@type": "SearchAction",
+                  "target": { "@type": "EntryPoint", "urlTemplate": "https://frework.online/services?q={search_term_string}" },
+                  "query-input": "required name=search_term_string"
+                }
+              }
+            ]
+          }) }}
+        />
         {META_PIXEL_ID && (
           <>
             <Script id="meta-pixel" strategy="afterInteractive">{`
