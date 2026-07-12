@@ -240,7 +240,7 @@ export function BusinessOSHomepage() {
     <div className="min-h-screen overflow-x-hidden" style={{ background: L.bg, color: L.text }}>
 
       {/* ─── HERO ─── */}
-      <section className="relative min-h-screen flex items-center justify-center px-4 pt-24 pb-20 overflow-hidden">
+      <section className="relative min-h-screen flex items-center justify-center px-4 pt-36 pb-20 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 70% 55% at 50% -5%, rgba(184,144,58,0.12) 0%, transparent 60%)" }} />
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 50% 40% at 80% 80%, rgba(234,224,200,0.4) 0%, transparent 55%)" }} />

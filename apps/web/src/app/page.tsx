@@ -1,5 +1,6 @@
 import { BusinessOSHomepage } from "@/components/landing/business-os-homepage";
 import { TaxNewsSection } from "@/components/landing/tax-news-section";
+import { AnnouncementTicker } from "@/components/landing/announcement-ticker";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <>
+      <AnnouncementTicker />
       <BusinessOSHomepage />
       <TaxNewsSection />
     </>
