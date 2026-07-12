@@ -383,6 +383,40 @@ export function BusinessOSHomepage() {
             </a>
           </motion.div>
 
+          {/* ── Services Quick-Link Strip ── */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
+            className="mb-12">
+            <p className="text-[10px] font-black tracking-[0.3em] uppercase mb-4" style={{ color: L.textMuted }}>
+              What we do
+            </p>
+            <div className="flex flex-wrap justify-center gap-2.5">
+              {[
+                { label: "GST Registration",     color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/gst" },
+                { label: "GST Filing",            color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/gst" },
+                { label: "Income Tax Return",     color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/income-tax" },
+                { label: "Virtual Accountant",    color: "#059669", bg: "rgba(5,150,105,0.07)",  href: "/services/accounting" },
+                { label: "Virtual CFO",           color: "#059669", bg: "rgba(5,150,105,0.07)",  href: "/services/virtual-cfo" },
+                { label: "All Types of Audits",   color: "#7C3AED", bg: "rgba(124,58,237,0.07)", href: "/services/audit" },
+                { label: "Company Registration",  color: "#B8903A", bg: "rgba(184,144,58,0.07)", href: "/services/business-registration" },
+                { label: "Business Restructuring",color: "#B8903A", bg: "rgba(184,144,58,0.07)", href: "/services/restructuring" },
+                { label: "Coworking Spaces",      color: "#EA580C", bg: "rgba(234,88,12,0.07)",  href: "/coworking" },
+                { label: "Find Freelancers",      color: "#EA580C", bg: "rgba(234,88,12,0.07)",  href: "/freelancers" },
+              ].map(({ label, color, bg, href }) => (
+                <Link key={label} href={href}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all hover:scale-[1.05] hover:shadow-md"
+                  style={{ background: bg, color, borderColor: `${color}25` }}>
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color, opacity: 0.7 }} />
+                  {label}
+                </Link>
+              ))}
+              <Link href="/services"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black border transition-all hover:scale-[1.05]"
+                style={{ background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, color: "#1A1208", border: "none", boxShadow: "0 4px 16px rgba(184,144,58,0.3)" }}>
+                View All Services →
+              </Link>
+            </div>
+          </motion.div>
+
           {/* Marquee */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="relative overflow-hidden">
             <div className="flex gap-8 animate-marquee whitespace-nowrap">
