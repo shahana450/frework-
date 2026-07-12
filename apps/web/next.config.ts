@@ -32,6 +32,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.frework.online" }],
+        destination: "https://frework.online/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     const apiUrl = process.env.API_URL ?? "http://localhost:4000"; // frework.online API
     return [
