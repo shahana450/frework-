@@ -4,56 +4,68 @@
 
 @layer base {
   :root {
-    --background: 0 0% 99%;
-    --foreground: 222 47% 8%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 8%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 8%;
-    --primary: 243 75% 59%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 8%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 220 14% 96%;
-    --accent-foreground: 222 47% 8%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 243 75% 59%;
-    --radius: 0.75rem;
+    /* Base */
+    --background: 0 0% 100%;
+    --foreground: 215 32% 9%;
 
-    /* Luxury gold palette */
-    --gold: 43 74% 49%;
-    --gold-light: 43 85% 68%;
-    --gold-dark: 36 60% 35%;
-    --navy: 222 47% 8%;
-    --navy-mid: 222 40% 14%;
-    --navy-light: 222 30% 20%;
+    /* Card / Popover */
+    --card: 0 0% 100%;
+    --card-foreground: 215 32% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 32% 9%;
+
+    /* Primary — Professional blue */
+    --primary: 221 83% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary / Muted */
+    --secondary: 215 25% 96%;
+    --secondary-foreground: 215 32% 9%;
+    --muted: 215 20% 94%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent */
+    --accent: 215 25% 94%;
+    --accent-foreground: 215 32% 9%;
+
+    /* Utility */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 26% 89%;
+    --input: 214 26% 89%;
+    --ring: 221 83% 42%;
+    --radius: 0.5rem;
+
+    /* Brand palette */
+    --navy: 215 55% 9%;
+    --navy-mid: 215 50% 14%;
+    --navy-light: 215 40% 20%;
+    --blue: 221 83% 42%;
+    --blue-light: 217 91% 60%;
+    --blue-dark: 224 76% 32%;
+    --slate: 215 16% 47%;
   }
 
   .dark {
     --background: 222 47% 6%;
-    --foreground: 40 20% 96%;
+    --foreground: 215 20% 95%;
     --card: 222 40% 9%;
-    --card-foreground: 40 20% 96%;
+    --card-foreground: 215 20% 95%;
     --popover: 222 40% 9%;
-    --popover-foreground: 40 20% 96%;
-    --primary: 43 74% 55%;
-    --primary-foreground: 222 47% 8%;
-    --secondary: 222 30% 14%;
-    --secondary-foreground: 40 20% 96%;
-    --muted: 222 30% 14%;
-    --muted-foreground: 220 15% 55%;
-    --accent: 222 30% 14%;
-    --accent-foreground: 40 20% 96%;
+    --popover-foreground: 215 20% 95%;
+    --primary: 221 83% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 30% 13%;
+    --secondary-foreground: 215 20% 95%;
+    --muted: 222 30% 13%;
+    --muted-foreground: 215 16% 55%;
+    --accent: 222 30% 13%;
+    --accent-foreground: 215 20% 95%;
     --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 222 25% 16%;
-    --input: 222 25% 16%;
-    --ring: 43 74% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 25% 17%;
+    --input: 222 25% 17%;
+    --ring: 221 83% 55%;
   }
 }
 
@@ -61,64 +73,72 @@
   * { @apply border-border; }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: var(--font-inter), var(--font-plus-jakarta), system-ui, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1, "cv11" 1;
   }
-  h1, h2, h3 {
-    font-family: var(--font-cormorant), Georgia, serif;
-    @apply font-semibold tracking-tight;
-  }
-  h4, h5, h6 {
-    @apply font-semibold tracking-tight;
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-plus-jakarta), var(--font-inter), system-ui, sans-serif;
+    @apply font-bold tracking-tight;
   }
 }
 
 @layer utilities {
+  /* Typography */
   .font-display {
-    font-family: var(--font-cormorant), Georgia, serif;
+    font-family: var(--font-plus-jakarta), system-ui, sans-serif;
   }
-  .text-gold {
-    color: hsl(var(--gold));
+
+  /* Navy */
+  .text-navy { color: hsl(var(--navy)); }
+  .bg-navy { background-color: hsl(var(--navy)); }
+  .bg-navy-mid { background-color: hsl(var(--navy-mid)); }
+
+  /* Blue accent */
+  .text-blue-brand { color: hsl(var(--blue)); }
+  .bg-blue-brand { background-color: hsl(var(--blue)); }
+  .border-blue-brand { border-color: hsl(var(--blue)); }
+
+  /* Gradients */
+  .gradient-brand {
+    background: linear-gradient(135deg, #1246C8, #2563EB, #1246C8);
   }
-  .bg-gold {
-    background-color: hsl(var(--gold));
-  }
-  .border-gold {
-    border-color: hsl(var(--gold));
-  }
-  .text-gold-light {
-    color: hsl(var(--gold-light));
-  }
-  .bg-navy {
-    background-color: hsl(var(--navy));
-  }
-  .bg-navy-mid {
-    background-color: hsl(var(--navy-mid));
-  }
-  .gradient-gold {
-    background: linear-gradient(135deg, #C9A84C, #F0D080, #C9A84C);
-  }
-  .gradient-gold-text {
-    background: linear-gradient(135deg, #C9A84C, #F0D080, #B8973E);
+  .gradient-brand-text {
+    background: linear-gradient(135deg, #1246C8, #3B82F6, #1246C8);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+  .gradient-hero {
+    background: linear-gradient(135deg, #0A1628 0%, #0F2044 60%, #0F1D3B 100%);
+  }
+
+  /* Glass */
   .glass {
-    background: rgba(255,255,255,0.08);
+    background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.12);
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
   .glass-dark {
-    background: rgba(0,0,0,0.20);
+    background: rgba(0, 0, 0, 0.20);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
-  .luxury-shadow {
-    box-shadow: 0 4px 32px rgba(0,0,0,0.12), 0 1px 0 rgba(201,168,76,0.15);
+
+  /* Shadows */
+  .shadow-brand {
+    box-shadow: 0 4px 32px rgba(18, 70, 200, 0.12), 0 1px 0 rgba(18, 70, 200, 0.08);
   }
-  .gold-shadow {
-    box-shadow: 0 8px 32px rgba(201,168,76,0.25);
+  .shadow-brand-lg {
+    box-shadow: 0 8px 40px rgba(18, 70, 200, 0.20);
   }
+  .shadow-card {
+    box-shadow: 0 1px 3px rgba(15, 32, 68, 0.08), 0 1px 2px rgba(15, 32, 68, 0.04);
+  }
+  .shadow-card-hover {
+    box-shadow: 0 10px 40px rgba(15, 32, 68, 0.12), 0 2px 8px rgba(15, 32, 68, 0.06);
+  }
+
+  /* Utilities */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

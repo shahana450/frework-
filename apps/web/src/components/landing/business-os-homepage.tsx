@@ -15,19 +15,19 @@ const SUPPORT_PHONE = (process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 85908 74681
 const SUPPORT_WA = `918590874681`;
 
 const L = {
-  bg: "#FAFAF5",
-  bgAlt: "#F4EFE6",
+  bg: "#FFFFFF",
+  bgAlt: "#F8FAFC",
   bgCard: "#FFFFFF",
-  text: "#1A1208",
-  textSub: "#6B5B3E",
-  textMuted: "#9C8B70",
-  gold: "#B8903A",
-  goldLight: "#E8C97A",
-  goldDark: "#8C6A1E",
-  border: "rgba(184,144,58,0.18)",
-  borderLight: "rgba(184,144,58,0.1)",
-  shadow: "0 2px 20px rgba(139,108,50,0.07), 0 1px 3px rgba(139,108,50,0.05)",
-  shadowHover: "0 12px 48px rgba(139,108,50,0.14), 0 2px 8px rgba(139,108,50,0.08)",
+  text: "#0F172A",
+  textSub: "#475569",
+  textMuted: "#94A3B8",
+  gold: "#1E40AF",
+  goldLight: "#3B82F6",
+  goldDark: "#1E3A8A",
+  border: "rgba(15,32,68,0.1)",
+  borderLight: "rgba(15,32,68,0.06)",
+  shadow: "0 1px 3px rgba(15,32,68,0.08), 0 1px 2px rgba(15,32,68,0.04)",
+  shadowHover: "0 10px 40px rgba(15,32,68,0.12), 0 2px 8px rgba(15,32,68,0.06)",
 };
 
 const MODULES = [
@@ -167,7 +167,7 @@ const MODULES = [
   {
     id: "dashboard", label: "DASHBOARD", tagline: "Track Everything", emoji: "📊",
     desc: "Your compliance calendar, documents, renewals and status — all in one place.",
-    icon: LayoutDashboard, color: "#B8903A", href: "/dashboard", badge: "Early Access",
+    icon: LayoutDashboard, color: "#1E40AF", href: "/dashboard", badge: "Early Access",
     items: ["Compliance Calendar", "Document Vault", "Renewals", "Status Tracker"],
     detail: {
       heading: "Your business command center",
@@ -266,8 +266,8 @@ export function BusinessOSHomepage() {
         {/* ── Interactive scrolling service banners ── */}
         <div className="absolute top-[70px] inset-x-0 z-20 overflow-hidden">
           {/* Fade edges */}
-          <div className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(90deg,#FAFAF5,transparent)" }} />
-          <div className="absolute inset-y-0 right-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(270deg,#FAFAF5,transparent)" }} />
+          <div className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(90deg,#FFFFFF,transparent)" }} />
+          <div className="absolute inset-y-0 right-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(270deg,#FFFFFF,transparent)" }} />
 
           {/* Row 1 — scrolls left, pauses on hover */}
           {(() => {
@@ -275,7 +275,7 @@ export function BusinessOSHomepage() {
               { label:"GST Registration",    icon:"📋", color:"#2563EB", bg:"rgba(37,99,235,0.09)",   href:"/services/gst" },
               { label:"Income Tax Return",   icon:"🏛️", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/income-tax" },
               { label:"Company Registration",icon:"🏢", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
-              { label:"Virtual Accountant",  icon:"💼", color:"#B8903A", bg:"rgba(184,144,58,0.1)",  href:"/services/accounting" },
+              { label:"Virtual Accountant",  icon:"💼", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
               { label:"Find Freelancers",    icon:"👥", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/freelancers" },
               { label:"Coworking Spaces",    icon:"📍", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/coworking" },
               { label:"Business Audit",      icon:"🔍", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
@@ -319,7 +319,7 @@ export function BusinessOSHomepage() {
               { label:"Pitch Deck & DPR",       icon:"📈", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/services/dpr" },
               { label:"Startup Funding",         icon:"🚀", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/dpr" },
               { label:"GST Filing",              icon:"🧾", color:"#2563EB", bg:"rgba(37,99,235,0.09)",  href:"/services/gst" },
-              { label:"Payroll Management",      icon:"💰", color:"#B8903A", bg:"rgba(184,144,58,0.1)",  href:"/services/accounting" },
+              { label:"Payroll Management",      icon:"💰", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
               { label:"Business Restructuring",  icon:"🔄", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/services/restructuring" },
               { label:"Tax Audit",               icon:"🔎", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
               { label:"MSME Registration",       icon:"🏭", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
@@ -366,48 +366,47 @@ export function BusinessOSHomepage() {
             <div className="relative flex items-center justify-center mb-5" style={{ width:160, height:160 }}>
               {/* Outer orbiting ring */}
               <motion.div className="absolute inset-0 rounded-full"
-                style={{ border:"1.5px solid rgba(184,144,58,0.25)", borderTopColor:"#E8C97A", borderRightColor:"rgba(184,144,58,0.5)" }}
+                style={{ border:"1.5px solid rgba(18,70,200,0.2)", borderTopColor:"#3B82F6", borderRightColor:"rgba(18,70,200,0.4)" }}
                 animate={{ rotate:360 }} transition={{ duration:8, repeat:Infinity, ease:"linear" }}
               />
               {/* Inner counter-orbiting ring */}
               <motion.div className="absolute rounded-full"
-                style={{ inset:16, border:"1px dashed rgba(184,144,58,0.2)", borderBottomColor:"#B8903A" }}
+                style={{ inset:16, border:"1px dashed rgba(18,70,200,0.18)", borderBottomColor:"#1E40AF" }}
                 animate={{ rotate:-360 }} transition={{ duration:5, repeat:Infinity, ease:"linear" }}
               />
               {/* Glow pulse */}
               <motion.div className="absolute inset-0 rounded-full pointer-events-none"
-                style={{ background:"radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 65%)", filter:"blur(16px)" }}
+                style={{ background:"radial-gradient(circle, rgba(18,70,200,0.15) 0%, transparent 65%)", filter:"blur(16px)" }}
                 animate={{ scale:[1,1.2,1], opacity:[0.6,1,0.6] }}
                 transition={{ duration:3, repeat:Infinity, ease:"easeInOut" }}
               />
               {/* Logo box */}
               <motion.div whileHover={{ scale:1.08, rotate:3 }} transition={{ type:"spring", stiffness:300 }}
                 className="relative rounded-[22px] p-1.5 cursor-pointer"
-                style={{ background:"linear-gradient(135deg,rgba(184,144,58,0.35),rgba(124,58,237,0.25))", boxShadow:"0 16px 56px rgba(124,58,237,0.3),0 4px 20px rgba(184,144,58,0.25)" }}>
+                style={{ background:"linear-gradient(135deg,rgba(18,70,200,0.25),rgba(30,64,175,0.35))", boxShadow:"0 16px 56px rgba(18,70,200,0.25),0 4px 20px rgba(18,70,200,0.15)" }}>
                 <svg width="88" height="88" viewBox="0 0 38 38" fill="none">
                   <defs>
                     <linearGradient id="hw_bg" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stopColor="#7C3AED"/><stop offset="100%" stopColor="#A855F7"/>
+                      <stop offset="0%" stopColor="#0F2044"/><stop offset="100%" stopColor="#1E40AF"/>
                     </linearGradient>
-                    <filter id="hw_glow"><feGaussianBlur stdDeviation="1.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
                   </defs>
-                  <rect width="38" height="38" rx="10" fill="url(#hw_bg)"/>
-                  <g stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round">
-                    <line x1="19" y1="19" x2="19" y2="10"/>
-                    <line x1="19" y1="19" x2="27" y2="24"/>
-                    <line x1="19" y1="19" x2="11" y2="24"/>
+                  <rect width="38" height="38" rx="9" fill="url(#hw_bg)"/>
+                  <g stroke="rgba(255,255,255,0.85)" strokeWidth="1.7" strokeLinecap="round">
+                    <line x1="19" y1="19" x2="19" y2="11"/>
+                    <line x1="19" y1="19" x2="26.5" y2="24"/>
+                    <line x1="19" y1="19" x2="11.5" y2="24"/>
                   </g>
-                  <g fill="white" filter="url(#hw_glow)">
-                    <circle cx="19" cy="19" r="3.2"/><circle cx="19" cy="10" r="2.2"/>
-                    <circle cx="27" cy="24" r="2.2"/><circle cx="11" cy="24" r="2.2"/>
-                  </g>
+                  <circle cx="19" cy="19" r="3" fill="white"/>
+                  <circle cx="19" cy="11" r="2" fill="rgba(255,255,255,0.9)"/>
+                  <circle cx="26.5" cy="24" r="2" fill="rgba(255,255,255,0.9)"/>
+                  <circle cx="11.5" cy="24" r="2" fill="rgba(255,255,255,0.9)"/>
                 </svg>
               </motion.div>
 
               {/* Orbit dots */}
               {[0,120,240].map((deg,i) => (
                 <motion.div key={i} className="absolute w-2.5 h-2.5 rounded-full"
-                  style={{ background: i===0?"#E8C97A":i===1?"#7C3AED":"#059669", boxShadow:`0 0 8px ${i===0?"#E8C97A":i===1?"#7C3AED":"#059669"}` }}
+                  style={{ background: i===0?"#3B82F6":i===1?"#059669":"#8B5CF6", boxShadow:`0 0 8px ${i===0?"#3B82F6":i===1?"#059669":"#8B5CF6"}` }}
                   animate={{ rotate:[deg, deg+360] }}
                   transition={{ duration:8, repeat:Infinity, ease:"linear" }}
                   // position on ring radius ~72px
@@ -540,8 +539,8 @@ export function BusinessOSHomepage() {
                 { label: "Virtual Accountant",    color: "#059669", bg: "rgba(5,150,105,0.07)",  href: "/services/accounting" },
                 { label: "Virtual CFO",           color: "#059669", bg: "rgba(5,150,105,0.07)",  href: "/services/virtual-cfo" },
                 { label: "All Types of Audits",   color: "#7C3AED", bg: "rgba(124,58,237,0.07)", href: "/services/audit" },
-                { label: "Company Registration",  color: "#B8903A", bg: "rgba(184,144,58,0.07)", href: "/services/business-registration" },
-                { label: "Business Restructuring",color: "#B8903A", bg: "rgba(184,144,58,0.07)", href: "/services/restructuring" },
+                { label: "Company Registration",  color: "#1E40AF", bg: "rgba(18,70,200,0.06)", href: "/services/business-registration" },
+                { label: "Business Restructuring",color: "#1E40AF", bg: "rgba(18,70,200,0.06)", href: "/services/restructuring" },
                 { label: "Coworking Spaces",      color: "#EA580C", bg: "rgba(234,88,12,0.07)",  href: "/coworking" },
                 { label: "Find Freelancers",      color: "#EA580C", bg: "rgba(234,88,12,0.07)",  href: "/freelancers" },
               ].map(({ label, color, bg, href }) => (
@@ -554,7 +553,7 @@ export function BusinessOSHomepage() {
               ))}
               <Link href="/services"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black border transition-all hover:scale-[1.05]"
-                style={{ background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, color: "#1A1208", border: "none", boxShadow: "0 4px 16px rgba(184,144,58,0.3)" }}>
+                style={{ background: "linear-gradient(135deg, #1246C8, #2563EB)", color: "#fff", border: "none", boxShadow: "0 4px 16px rgba(18,70,200,0.28)" }}>
                 View All Services →
               </Link>
             </div>
@@ -988,7 +987,7 @@ export function BusinessOSHomepage() {
             {[
               { icon: Shield, c: "#059669", t: "Verified professionals only", d: "Every CA, CS, and expert on FreWork is manually verified before going live. No stock-photo profiles.", extra: "We check ICAI/ICSI membership, review past work samples, and conduct a background check before any professional is listed." },
               { icon: Clock, c: "#2563EB", t: "Never miss a deadline", d: "Built-in compliance calendar for GST, ITR, ROC, and TDS — with WhatsApp reminders before every due date.", extra: "You get automatic reminders 30 days, 7 days, and 1 day before every due date. Late filing penalties are a thing of the past." },
-              { icon: Star, c: "#B8903A", t: "Built for Indian business", d: "We understand Indian compliance, Indian languages, and the real challenges of SMEs and startups in India.", extra: "Our team includes practicing CAs, CS professionals, and former startup founders who have solved these problems themselves." },
+              { icon: Star, c: "#1E40AF", t: "Built for Indian business", d: "We understand Indian compliance, Indian languages, and the real challenges of SMEs and startups in India.", extra: "Our team includes practicing CAs, CS professionals, and former startup founders who have solved these problems themselves." },
             ].map((item, i) => {
               const Icon = item.icon;
               const [open, setOpen] = useState(false);
@@ -1053,7 +1052,7 @@ export function BusinessOSHomepage() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
             {[
-              { name: "Free", icon: Zap, price: 0, per: "forever", tagline: "Just getting started", accent: "#6B5B3E", border: L.borderLight, popular: false, features: ["Browse all listings", "1 active listing", "5 applications/mo", "Email support"], href: "/register" },
+              { name: "Free", icon: Zap, price: 0, per: "forever", tagline: "Just getting started", accent: "#475569", border: L.borderLight, popular: false, features: ["Browse all listings", "1 active listing", "5 applications/mo", "Email support"], href: "/register" },
               { name: "Professional", icon: Rocket, price: 999, per: "/month", tagline: "Freelancers & CAs", accent: L.goldDark, border: L.border, popular: true, features: ["Unlimited listings", "Verified Badge", "GST Registration", "Monthly GST filing", "Income Tax (ITR)"], href: "/register?plan=professional" },
               { name: "Growth", icon: TrendingUp, price: 2999, per: "/month", tagline: "SMEs & agencies", accent: "#2563EB", border: "rgba(37,99,235,0.15)", popular: false, features: ["5 team seats", "Bookkeeping", "ROC filing", "Client portal", "Revenue analytics"], href: "/register?plan=growth" },
               { name: "Business", icon: Building2, price: 4999, per: "/month", tagline: "Established firms", accent: "#7C3AED", border: "rgba(124,58,237,0.15)", popular: false, features: ["20 team seats", "Dedicated manager", "Internal audit", "Tax audit", "API access"], href: "/register?plan=business" },
@@ -1149,7 +1148,7 @@ export function BusinessOSHomepage() {
               { icon: Presentation, label: "Pitch Deck Design", href: "/services/pitch-decks", color: "#7C3AED" },
               { icon: GraduationCap, label: "Business Training", href: "/services/training", color: "#EA580C" },
               { icon: Users, label: "Hire a CA / CS", href: "/freelancers", color: "#4F46E5" },
-              { icon: MapPin, label: "Coworking Space", href: "/coworking", color: "#B8903A" },
+              { icon: MapPin, label: "Coworking Space", href: "/coworking", color: "#1E40AF" },
             ].map(s => {
               const Icon = s.icon;
               return (

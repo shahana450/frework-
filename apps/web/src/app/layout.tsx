@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins, Plus_Jakarta_Sans, Cormorant_Garamond } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import Script from "next/script";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { QueryProvider } from "@/components/shared/query-provider";
@@ -8,25 +8,17 @@ import "@/styles/globals.css";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
-const poppins = Poppins({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-poppins",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
   display: "swap",
 });
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["500", "700"],
+  weight: ["500", "600", "700", "800"],
   variable: "--font-plus-jakarta",
-  display: "swap",
-});
-
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
-  variable: "--font-cormorant",
   display: "swap",
 });
 
@@ -92,14 +84,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#B8903A",
+  themeColor: "#0F2044",
   width: "device-width",
   initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${poppins.variable} ${plusJakartaSans.variable} ${cormorant.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${plusJakartaSans.variable}`}>
       <head>
         {/* JSON-LD: LocalBusiness + Services structured data for Google */}
         <script
