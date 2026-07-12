@@ -64,11 +64,7 @@ export default function ContactPage() {
 
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-black tracking-[0.25em] uppercase mb-6"
-              style={{ background: "rgba(184,144,58,0.15)", color: "#E8C97A", border: "1px solid rgba(184,144,58,0.3)" }}>
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#E8C97A" }} />
-              Free Consultation — No Charges
-            </span>
+
 
             <h1 className="font-black mb-4 leading-tight"
               style={{ fontSize: "clamp(2.2rem, 5vw, 3.5rem)", color: "#FAFAF5", fontFamily: "var(--font-plus-jakarta), sans-serif" }}>
