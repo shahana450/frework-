@@ -356,7 +356,7 @@ export function BusinessOSHomepage() {
           })()}
         </div>
 
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
+        <div className="relative z-10 w-full max-w-4xl mx-auto text-center">
 
           {/* ── Hero Logo with orbiting ring ── */}
           <motion.div initial={{ opacity:0, scale:0.7 }} animate={{ opacity:1, scale:1 }}
@@ -428,52 +428,53 @@ export function BusinessOSHomepage() {
 
           {/* Badge row */}
           <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.15 }}
-            className="flex items-center justify-center gap-3 mb-7 flex-wrap">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border"
+            className="flex items-center justify-center gap-2 mb-7 flex-wrap px-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border"
               style={{ background:"rgba(5,150,105,0.07)", borderColor:"rgba(5,150,105,0.22)", color:"#065F46" }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/>Beta · Early Access Open
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/>Beta · Early Access
             </span>
-            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold border"
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold border"
               style={{ background:"rgba(184,144,58,0.07)", borderColor:"rgba(184,144,58,0.22)", color:L.goldDark }}>
               ⭐ 4.9/5 · 500+ clients
             </span>
-            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold border"
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold border"
               style={{ background:"rgba(37,99,235,0.06)", borderColor:"rgba(37,99,235,0.18)", color:"#1D4ED8" }}>
-              🏛️ CA/CS Qualified Experts
+              🏛️ CA/CS Experts
             </span>
           </motion.div>
 
           {/* Headline */}
           <motion.h1 initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}
-            className="font-black leading-[1.0] mb-5 tracking-tight"
-            style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.6rem,7.5vw,5.5rem)", color:L.text }}>
-            The Operating System<br/>
+            className="font-black leading-[1.05] mb-5 tracking-tight px-2"
+            style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(1.9rem,6vw,5.5rem)", color:L.text }}>
+            The Operating System
+            <br/>
             <span style={{ background:`linear-gradient(135deg,${L.goldLight} 0%,${L.gold} 45%,${L.goldDark} 100%)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
               for Indian Businesses
             </span>
           </motion.h1>
 
           <motion.p initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.28 }}
-            className="text-lg md:text-xl mb-8 max-w-xl mx-auto leading-relaxed" style={{ color:L.textSub }}>
+            className="text-base md:text-xl mb-8 max-w-xl mx-auto leading-relaxed px-4" style={{ color:L.textSub }}>
             Start, Run and Grow Your Business — All in One Place.
           </motion.p>
 
           {/* Floating mini stat cards */}
           <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.34 }}
-            className="flex flex-wrap justify-center gap-3 mb-8">
+            className="grid grid-cols-2 sm:flex sm:flex-wrap justify-center gap-2 mb-8 px-4">
             {[
-              { icon:"⚡", val:"2 hrs",    label:"Expert Response",   color:"rgba(234,88,12,0.1)",   border:"rgba(234,88,12,0.2)",   text:"#C2410C" },
-              { icon:"🏢", val:"500+",     label:"Businesses Served", color:"rgba(184,144,58,0.08)", border:"rgba(184,144,58,0.22)", text:L.goldDark },
-              { icon:"✅", val:"20+ Svcs", label:"Under One Roof",    color:"rgba(5,150,105,0.07)",  border:"rgba(5,150,105,0.2)",   text:"#065F46" },
-              { icon:"🔒", val:"CA/CS",    label:"Verified Experts",  color:"rgba(37,99,235,0.07)",  border:"rgba(37,99,235,0.18)",  text:"#1D4ED8" },
+              { icon:"⚡", val:"2 hrs",  label:"Expert Response",   color:"rgba(234,88,12,0.1)",   border:"rgba(234,88,12,0.2)",   text:"#C2410C" },
+              { icon:"🏢", val:"500+",   label:"Businesses Served", color:"rgba(184,144,58,0.08)", border:"rgba(184,144,58,0.22)", text:L.goldDark },
+              { icon:"✅", val:"20+",    label:"Services",          color:"rgba(5,150,105,0.07)",  border:"rgba(5,150,105,0.2)",   text:"#065F46" },
+              { icon:"🔒", val:"CA/CS",  label:"Verified Experts",  color:"rgba(37,99,235,0.07)",  border:"rgba(37,99,235,0.18)",  text:"#1D4ED8" },
             ].map(({ icon, val, label, color, border, text }) => (
               <motion.div key={label} whileHover={{ y:-4, scale:1.04 }}
-                className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl cursor-default"
+                className="flex items-center gap-2 px-3 py-2 rounded-2xl cursor-default"
                 style={{ background:color, border:`1px solid ${border}`, boxShadow:"0 2px 12px rgba(139,108,50,0.07)" }}>
-                <span className="text-lg">{icon}</span>
+                <span className="text-base">{icon}</span>
                 <div className="text-left">
                   <p className="text-sm font-black leading-none" style={{ color:text }}>{val}</p>
-                  <p className="text-[10px] font-semibold mt-0.5" style={{ color:L.textMuted }}>{label}</p>
+                  <p className="text-[10px] font-semibold mt-0.5 whitespace-nowrap" style={{ color:L.textMuted }}>{label}</p>
                 </div>
               </motion.div>
             ))}
