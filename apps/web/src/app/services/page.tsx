@@ -1,20 +1,11 @@
-import { PageLayout } from "@/components/layout/page-layout";
-import { ServicesGrid } from "@/components/landing/services-grid";
+import { ServicesPage } from "@/components/landing/services-page";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Business Services | FreWork",
-  description: "GST, Income Tax, Company Registration, Accounting, Audit and Compliance services for Indian businesses.",
+  title: "Services | FreWork — Business OS for India",
+  description: "GST Registration & Filing, Virtual Accountant, Audits, Business Restructuring, Coworking, Freelancers and more — all under one roof.",
 };
 
-export default function ServicesPage() {
-  return (
-    <PageLayout>
-      <div className="pt-8 pb-4 text-center">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">Our Services</h1>
-        <p className="text-lg text-gray-600 dark:text-gray-400">End-to-end business services by CA & CS professionals</p>
-      </div>
-      <ServicesGrid />
-    </PageLayout>
-  );
+export default function Page() {
+  return <ServicesPage />;
 }
