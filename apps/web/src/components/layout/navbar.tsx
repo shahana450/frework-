@@ -111,7 +111,7 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        "fixed top-9 left-0 right-0 z-50 transition-all duration-500",
+        "fixed top-14 left-0 right-0 z-50 transition-all duration-500",
         isScrolled
           ? "bg-[#FAFAF5]/95 backdrop-blur-xl border-b border-[#B8903A]/18 shadow-[0_2px_20px_rgba(139,108,50,0.09)]"
           : "bg-[#FAFAF5]/90 backdrop-blur-sm border-b border-[#B8903A]/10"
