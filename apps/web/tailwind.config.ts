@@ -96,6 +96,14 @@ const config: Config = {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%": { transform: "translateY(-10px)" },
         },
+        marquee: {
+          "0%": { transform: "translateX(0%)" },
+          "100%": { transform: "translateX(-33.333%)" },
+        },
+        "marquee-reverse": {
+          "0%": { transform: "translateX(-33.333%)" },
+          "100%": { transform: "translateX(0%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -104,6 +112,8 @@ const config: Config = {
         "slide-in": "slide-in 0.3s ease-out",
         shimmer: "shimmer 2s linear infinite",
         float: "float 3s ease-in-out infinite",
+        marquee: "marquee 25s linear infinite",
+        "marquee-reverse": "marquee-reverse 30s linear infinite",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",

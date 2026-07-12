@@ -263,6 +263,46 @@ export function BusinessOSHomepage() {
           />
         ))}
 
+        {/* ── Top floating marquee strips ── */}
+        <div className="absolute top-[70px] inset-x-0 z-10 pointer-events-none overflow-hidden">
+          {/* Row 1 — scrolls left */}
+          <div className="flex gap-3 mb-2.5 animate-marquee whitespace-nowrap" style={{ animationDuration:"22s" }}>
+            {[...Array(3)].flatMap(() => [
+              { label:"GST Registration", icon:"📋", color:"#2563EB", bg:"rgba(37,99,235,0.08)" },
+              { label:"Income Tax Return", icon:"🏛️", color:"#7C3AED", bg:"rgba(124,58,237,0.08)" },
+              { label:"Company Registration", icon:"🏢", color:"#059669", bg:"rgba(5,150,105,0.08)" },
+              { label:"Virtual Accountant", icon:"💼", color:"#B8903A", bg:"rgba(184,144,58,0.1)" },
+              { label:"Find Freelancers", icon:"👥", color:"#EA580C", bg:"rgba(234,88,12,0.08)" },
+              { label:"Coworking Spaces", icon:"📍", color:"#0891B2", bg:"rgba(8,145,178,0.08)" },
+              { label:"Business Audit", icon:"🔍", color:"#7C3AED", bg:"rgba(124,58,237,0.08)" },
+              { label:"Virtual CFO", icon:"📊", color:"#059669", bg:"rgba(5,150,105,0.08)" },
+            ]).map((t, i) => (
+              <span key={i} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold flex-shrink-0"
+                style={{ background:t.bg, color:t.color, border:`1px solid ${t.color}25` }}>
+                {t.icon} {t.label}
+              </span>
+            ))}
+          </div>
+          {/* Row 2 — scrolls right */}
+          <div className="flex gap-3 animate-marquee-reverse whitespace-nowrap" style={{ animationDuration:"28s" }}>
+            {[...Array(3)].flatMap(() => [
+              { label:"ROC Compliance", icon:"✅", color:"#059669", bg:"rgba(5,150,105,0.08)" },
+              { label:"Pitch Deck & DPR", icon:"📈", color:"#EA580C", bg:"rgba(234,88,12,0.08)" },
+              { label:"Startup Funding", icon:"🚀", color:"#7C3AED", bg:"rgba(124,58,237,0.08)" },
+              { label:"GST Filing", icon:"🧾", color:"#2563EB", bg:"rgba(37,99,235,0.08)" },
+              { label:"Payroll Management", icon:"💰", color:"#B8903A", bg:"rgba(184,144,58,0.1)" },
+              { label:"Business Restructuring", icon:"🔄", color:"#0891B2", bg:"rgba(8,145,178,0.08)" },
+              { label:"Tax Audit", icon:"🔎", color:"#7C3AED", bg:"rgba(124,58,237,0.08)" },
+              { label:"MSME Registration", icon:"🏭", color:"#059669", bg:"rgba(5,150,105,0.08)" },
+            ]).map((t, i) => (
+              <span key={i} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold flex-shrink-0"
+                style={{ background:t.bg, color:t.color, border:`1px solid ${t.color}25` }}>
+                {t.icon} {t.label}
+              </span>
+            ))}
+          </div>
+        </div>
+
         <div className="relative z-10 max-w-4xl mx-auto text-center">
 
           {/* ── Hero Logo with orbiting ring ── */}
