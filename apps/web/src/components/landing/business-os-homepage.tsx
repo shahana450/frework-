@@ -263,44 +263,97 @@ export function BusinessOSHomepage() {
           />
         ))}
 
-        {/* ── Top floating marquee strips ── */}
-        <div className="absolute top-[70px] inset-x-0 z-10 pointer-events-none overflow-hidden">
-          {/* Row 1 — scrolls left */}
-          <div className="flex gap-3 mb-2.5 animate-marquee whitespace-nowrap" style={{ animationDuration:"22s" }}>
-            {[...Array(3)].flatMap(() => [
-              { label:"GST Registration", icon:"📋", color:"#2563EB", bg:"rgba(37,99,235,0.08)" },
-              { label:"Income Tax Return", icon:"🏛️", color:"#7C3AED", bg:"rgba(124,58,237,0.08)" },
-              { label:"Company Registration", icon:"🏢", color:"#059669", bg:"rgba(5,150,105,0.08)" },
-              { label:"Virtual Accountant", icon:"💼", color:"#B8903A", bg:"rgba(184,144,58,0.1)" },
-              { label:"Find Freelancers", icon:"👥", color:"#EA580C", bg:"rgba(234,88,12,0.08)" },
-              { label:"Coworking Spaces", icon:"📍", color:"#0891B2", bg:"rgba(8,145,178,0.08)" },
-              { label:"Business Audit", icon:"🔍", color:"#7C3AED", bg:"rgba(124,58,237,0.08)" },
-              { label:"Virtual CFO", icon:"📊", color:"#059669", bg:"rgba(5,150,105,0.08)" },
-            ]).map((t, i) => (
-              <span key={i} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold flex-shrink-0"
-                style={{ background:t.bg, color:t.color, border:`1px solid ${t.color}25` }}>
-                {t.icon} {t.label}
-              </span>
-            ))}
-          </div>
-          {/* Row 2 — scrolls right */}
-          <div className="flex gap-3 animate-marquee-reverse whitespace-nowrap" style={{ animationDuration:"28s" }}>
-            {[...Array(3)].flatMap(() => [
-              { label:"ROC Compliance", icon:"✅", color:"#059669", bg:"rgba(5,150,105,0.08)" },
-              { label:"Pitch Deck & DPR", icon:"📈", color:"#EA580C", bg:"rgba(234,88,12,0.08)" },
-              { label:"Startup Funding", icon:"🚀", color:"#7C3AED", bg:"rgba(124,58,237,0.08)" },
-              { label:"GST Filing", icon:"🧾", color:"#2563EB", bg:"rgba(37,99,235,0.08)" },
-              { label:"Payroll Management", icon:"💰", color:"#B8903A", bg:"rgba(184,144,58,0.1)" },
-              { label:"Business Restructuring", icon:"🔄", color:"#0891B2", bg:"rgba(8,145,178,0.08)" },
-              { label:"Tax Audit", icon:"🔎", color:"#7C3AED", bg:"rgba(124,58,237,0.08)" },
-              { label:"MSME Registration", icon:"🏭", color:"#059669", bg:"rgba(5,150,105,0.08)" },
-            ]).map((t, i) => (
-              <span key={i} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold flex-shrink-0"
-                style={{ background:t.bg, color:t.color, border:`1px solid ${t.color}25` }}>
-                {t.icon} {t.label}
-              </span>
-            ))}
-          </div>
+        {/* ── Interactive scrolling service banners ── */}
+        <div className="absolute top-[70px] inset-x-0 z-20 overflow-hidden">
+          {/* Fade edges */}
+          <div className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(90deg,#FAFAF5,transparent)" }} />
+          <div className="absolute inset-y-0 right-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(270deg,#FAFAF5,transparent)" }} />
+
+          {/* Row 1 — scrolls left, pauses on hover */}
+          {(() => {
+            const row1 = [
+              { label:"GST Registration",    icon:"📋", color:"#2563EB", bg:"rgba(37,99,235,0.09)",   href:"/services/gst" },
+              { label:"Income Tax Return",   icon:"🏛️", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/income-tax" },
+              { label:"Company Registration",icon:"🏢", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
+              { label:"Virtual Accountant",  icon:"💼", color:"#B8903A", bg:"rgba(184,144,58,0.1)",  href:"/services/accounting" },
+              { label:"Find Freelancers",    icon:"👥", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/freelancers" },
+              { label:"Coworking Spaces",    icon:"📍", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/coworking" },
+              { label:"Business Audit",      icon:"🔍", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
+              { label:"Virtual CFO",         icon:"📊", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/virtual-cfo" },
+            ];
+            return (
+              <div className="group flex gap-3 mb-2.5 whitespace-nowrap"
+                style={{ animation:"marquee 22s linear infinite" }}
+                onMouseEnter={e => (e.currentTarget.style.animationPlayState="paused")}
+                onMouseLeave={e => (e.currentTarget.style.animationPlayState="running")}>
+                {[...Array(3)].flatMap((_, ri) => row1.map((t, i) => (
+                  <Link key={`${ri}-${i}`} href={t.href}
+                    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold flex-shrink-0 transition-all duration-200 cursor-pointer select-none"
+                    style={{ background:t.bg, color:t.color, border:`1px solid ${t.color}22` }}
+                    onMouseEnter={e => {
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.transform="scale(1.1) translateY(-2px)";
+                      el.style.boxShadow=`0 6px 20px ${t.color}30`;
+                      el.style.background=`${t.color}18`;
+                      el.style.borderColor=`${t.color}50`;
+                    }}
+                    onMouseLeave={e => {
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.transform="scale(1) translateY(0)";
+                      el.style.boxShadow="none";
+                      el.style.background=t.bg;
+                      el.style.borderColor=`${t.color}22`;
+                    }}>
+                    <span>{t.icon}</span> {t.label}
+                    <span className="text-[9px] opacity-50">→</span>
+                  </Link>
+                )))}
+              </div>
+            );
+          })()}
+
+          {/* Row 2 — scrolls right, pauses on hover */}
+          {(() => {
+            const row2 = [
+              { label:"ROC Compliance",         icon:"✅", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/roc-compliance" },
+              { label:"Pitch Deck & DPR",       icon:"📈", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/services/dpr" },
+              { label:"Startup Funding",         icon:"🚀", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/dpr" },
+              { label:"GST Filing",              icon:"🧾", color:"#2563EB", bg:"rgba(37,99,235,0.09)",  href:"/services/gst" },
+              { label:"Payroll Management",      icon:"💰", color:"#B8903A", bg:"rgba(184,144,58,0.1)",  href:"/services/accounting" },
+              { label:"Business Restructuring",  icon:"🔄", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/services/restructuring" },
+              { label:"Tax Audit",               icon:"🔎", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
+              { label:"MSME Registration",       icon:"🏭", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
+            ];
+            return (
+              <div className="flex gap-3 whitespace-nowrap"
+                style={{ animation:"marquee-reverse 28s linear infinite" }}
+                onMouseEnter={e => (e.currentTarget.style.animationPlayState="paused")}
+                onMouseLeave={e => (e.currentTarget.style.animationPlayState="running")}>
+                {[...Array(3)].flatMap((_, ri) => row2.map((t, i) => (
+                  <Link key={`${ri}-${i}`} href={t.href}
+                    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold flex-shrink-0 transition-all duration-200 cursor-pointer select-none"
+                    style={{ background:t.bg, color:t.color, border:`1px solid ${t.color}22` }}
+                    onMouseEnter={e => {
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.transform="scale(1.1) translateY(-2px)";
+                      el.style.boxShadow=`0 6px 20px ${t.color}30`;
+                      el.style.background=`${t.color}18`;
+                      el.style.borderColor=`${t.color}50`;
+                    }}
+                    onMouseLeave={e => {
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.transform="scale(1) translateY(0)";
+                      el.style.boxShadow="none";
+                      el.style.background=t.bg;
+                      el.style.borderColor=`${t.color}22`;
+                    }}>
+                    <span>{t.icon}</span> {t.label}
+                    <span className="text-[9px] opacity-50">→</span>
+                  </Link>
+                )))}
+              </div>
+            );
+          })()}
         </div>
 
         <div className="relative z-10 max-w-4xl mx-auto text-center">
