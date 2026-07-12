@@ -248,6 +248,68 @@ export function BusinessOSHomepage() {
         </div>
 
         <div className="relative z-10 max-w-4xl mx-auto text-center">
+
+          {/* ── Hero Logo ── */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col items-center mb-10"
+          >
+            {/* Outer glow ring */}
+            <div className="relative mb-4">
+              <div className="absolute inset-0 rounded-full blur-2xl opacity-40 scale-110"
+                style={{ background: "radial-gradient(circle, #B8903A 0%, #7C3AED 60%, transparent 100%)" }} />
+              {/* Gold shimmer ring */}
+              <div className="absolute -inset-2 rounded-[22px] opacity-50"
+                style={{ background: "linear-gradient(135deg, #E8C97A, transparent, #B8903A, transparent, #E8C97A)", padding: 1 }}>
+                <div className="w-full h-full rounded-[20px]" style={{ background: L.bg }} />
+              </div>
+              {/* Logo */}
+              <div className="relative rounded-[20px] p-1"
+                style={{ background: "linear-gradient(135deg, rgba(184,144,58,0.3), rgba(124,58,237,0.2))", boxShadow: "0 12px 48px rgba(124,58,237,0.25), 0 4px 16px rgba(184,144,58,0.2)" }}>
+                <svg width="80" height="80" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="hero_fw_bg" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#7C3AED"/>
+                      <stop offset="100%" stopColor="#A855F7"/>
+                    </linearGradient>
+                    <filter id="hero_fw_glow">
+                      <feGaussianBlur stdDeviation="1.2" result="blur"/>
+                      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                  </defs>
+                  <rect width="38" height="38" rx="10" fill="url(#hero_fw_bg)"/>
+                  <g stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round">
+                    <line x1="19" y1="19" x2="19" y2="10"/>
+                    <line x1="19" y1="19" x2="27" y2="24"/>
+                    <line x1="19" y1="19" x2="11" y2="24"/>
+                  </g>
+                  <g fill="white" filter="url(#hero_fw_glow)">
+                    <circle cx="19" cy="19" r="3.2"/>
+                    <circle cx="19" cy="10" r="2.2"/>
+                    <circle cx="27" cy="24" r="2.2"/>
+                    <circle cx="11" cy="24" r="2.2"/>
+                  </g>
+                </svg>
+              </div>
+            </div>
+
+            {/* Wordmark */}
+            <div className="flex items-baseline gap-1">
+              <span className="font-black tracking-tight" style={{ fontSize: "1.6rem", color: L.text, fontFamily: "var(--font-plus-jakarta), sans-serif" }}>
+                Fre
+              </span>
+              <span className="font-black tracking-tight" style={{ fontSize: "1.6rem", background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", fontFamily: "var(--font-plus-jakarta), sans-serif" }}>
+                Work
+              </span>
+              <span className="text-[10px] font-black tracking-[0.2em] uppercase ml-2 px-1.5 py-0.5 rounded"
+                style={{ color: L.gold, background: "rgba(184,144,58,0.1)", border: "1px solid rgba(184,144,58,0.25)", verticalAlign: "middle" }}>
+                BETA
+              </span>
+            </div>
+            <p className="text-[10px] font-black tracking-[0.35em] uppercase mt-1" style={{ color: L.textMuted }}>Business OS</p>
+          </motion.div>
+
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-center gap-3 mb-8 flex-wrap">
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest border"
               style={{ background: "rgba(184,144,58,0.08)", borderColor: "rgba(184,144,58,0.25)", color: L.goldDark }}>
