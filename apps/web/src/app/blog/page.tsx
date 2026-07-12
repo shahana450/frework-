@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,15 +9,17 @@ import { motion } from "framer-motion";
 import { Search, Clock, Eye, ArrowRight } from "lucide-react";
 
 const POSTS = [
-  { id: "1", title: "The Ultimate Guide to Freelancing in India in 2025", excerpt: "Everything you need to know about taxes, contracts, international payments, and building a sustainable freelance career in India.", category: "Guide", img: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=600", readTime: "12 min", views: 45000, author: "Rohan Mehta", authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60", date: "Jun 20, 2026", featured: true },
-  { id: "2", title: "How to Get Your First International Client as an Indian Developer", excerpt: "A step-by-step playbook to land your first $5K project from US, UK, or European clients — without an agency.", category: "Career", img: "https://images.unsplash.com/photo-1551434678-e076c223a692?w=600", readTime: "8 min", views: 28000, author: "Priya Nair", authorAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=60", date: "Jun 18, 2026", featured: false },
-  { id: "3", title: "Top 10 Coworking Spaces in Bangalore — 2025 Edition", excerpt: "Detailed review of Bangalore's best coworking spaces ranked by price, community, amenities, and internet speed.", category: "Coworking", img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600", readTime: "6 min", views: 19000, author: "Emma Wilson", authorAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60", date: "Jun 15, 2026", featured: false },
-  { id: "4", title: "AI Tools Every Freelancer Must Use in 2025", excerpt: "From proposal writing to invoicing, these 15 AI tools will save you 10+ hours a week and make you more competitive.", category: "AI & Tools", img: "https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=600", readTime: "10 min", views: 67000, author: "Carlos Rodriguez", authorAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60", date: "Jun 12, 2026", featured: false },
-  { id: "5", title: "From Employee to ₹1 Crore Freelancer: A 3-Year Journey", excerpt: "Kavita left her MNC job in 2022 with ₹2L savings. Today she earns ₹1Cr+ annually as a tax consultant. Her full story.", category: "Success Story", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600", readTime: "14 min", views: 89000, author: "Kavita Sharma", authorAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=60", date: "Jun 10, 2026", featured: false },
-  { id: "6", title: "How to Raise Seed Funding in India in 2025", excerpt: "A founder's guide to the Indian startup funding landscape: angels, VCs, SAFE notes, and how to craft the perfect pitch.", category: "Startups", img: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=600", readTime: "11 min", views: 33000, author: "Arjun Patel", authorAvatar: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=60", date: "Jun 8, 2026", featured: false },
+  { id: "gst-registration-guide", title: "GST Registration in India 2025: Complete Step-by-Step Guide", excerpt: "Who needs GST, documents required, online process, fees, GSTIN timeline and what to do after registration. CA-assisted from ₹499.", category: "Tax & Compliance", img: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600", readTime: "8 min", views: 52000, author: "FreWork CA Team", authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60", date: "Jul 1, 2025", featured: true, href: "/blog/gst-registration-guide" },
+  { id: "itr-filing-guide", title: "How to File Income Tax Return (ITR) Online in India 2025", excerpt: "Which ITR form to use, documents needed, last date, step-by-step portal process, e-verification and faster refund tips.", category: "Tax & Compliance", img: "https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=600", readTime: "10 min", views: 78000, author: "FreWork CA Team", authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60", date: "Jul 1, 2025", featured: false, href: "/blog/itr-filing-guide" },
+  { id: "company-registration-india", title: "How to Register a Company in India 2025 — Pvt Ltd, LLP, OPC", excerpt: "Complete guide to company registration — which structure to choose, documents, MCA SPICe+ process, fees and timeline.", category: "Business Setup", img: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600", readTime: "9 min", views: 41000, author: "FreWork CS Team", authorAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=60", date: "Jul 1, 2025", featured: false, href: "/blog/company-registration-india" },
+  { id: "1", title: "The Ultimate Guide to Freelancing in India in 2025", excerpt: "Everything you need to know about taxes, contracts, international payments, and building a sustainable freelance career in India.", category: "Guide", img: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=600", readTime: "12 min", views: 45000, author: "Rohan Mehta", authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60", date: "Jun 20, 2025", featured: false, href: null },
+  { id: "2", title: "How to Get Your First International Client as an Indian Developer", excerpt: "A step-by-step playbook to land your first $5K project from US, UK, or European clients — without an agency.", category: "Career", img: "https://images.unsplash.com/photo-1551434678-e076c223a692?w=600", readTime: "8 min", views: 28000, author: "Priya Nair", authorAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=60", date: "Jun 18, 2025", featured: false, href: null },
+  { id: "3", title: "Top 10 Coworking Spaces in Bangalore — 2025 Edition", excerpt: "Detailed review of Bangalore's best coworking spaces ranked by price, community, amenities, and internet speed.", category: "Coworking", img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600", readTime: "6 min", views: 19000, author: "Emma Wilson", authorAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60", date: "Jun 15, 2025", featured: false, href: null },
+  { id: "4", title: "AI Tools Every Freelancer Must Use in 2025", excerpt: "From proposal writing to invoicing, these 15 AI tools will save you 10+ hours a week and make you more competitive.", category: "AI & Tools", img: "https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=600", readTime: "10 min", views: 67000, author: "Carlos Rodriguez", authorAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60", date: "Jun 12, 2025", featured: false, href: null },
+  { id: "5", title: "How to Raise Seed Funding in India in 2025", excerpt: "A founder's guide to the Indian startup funding landscape: angels, VCs, SAFE notes, and how to craft the perfect pitch.", category: "Startups", img: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=600", readTime: "11 min", views: 33000, author: "Arjun Patel", authorAvatar: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=60", date: "Jun 8, 2025", featured: false, href: null },
 ];
 
-const CATEGORIES = ["All", "Guide", "Career", "Coworking", "AI & Tools", "Success Story", "Startups", "Finance"];
+const CATEGORIES = ["All", "Tax & Compliance", "Business Setup", "Guide", "Career", "Coworking", "AI & Tools", "Startups", "Finance"];
 
 export default function BlogPage() {
   const [category, setCategory] = useState("All");
@@ -44,7 +47,7 @@ export default function BlogPage() {
       <div className="container py-8">
         {/* Featured */}
         {featured && (
-          <div className="mb-12 group cursor-pointer">
+          <Link href={featured.href ?? "#"} className="mb-12 group cursor-pointer block">
             <div className="relative rounded-2xl overflow-hidden">
               <img src={featured.img} alt={featured.title} className="w-full h-80 object-cover group-hover:scale-[1.01] transition-transform duration-500" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
@@ -60,7 +63,7 @@ export default function BlogPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Link>
         )}
 
         {/* Categories */}
@@ -73,7 +76,8 @@ export default function BlogPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {rest.map((post, i) => (
             <motion.article key={post.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-              className="group bg-card border border-border rounded-2xl overflow-hidden hover:border-amber-400/40 hover:shadow-lg transition-all cursor-pointer">
+              className="group bg-card border border-border rounded-2xl overflow-hidden hover:border-amber-400/40 hover:shadow-lg transition-all cursor-pointer"
+              {...(post.href ? { onClick: () => window.location.href = post.href! } : {})}>
               <div className="overflow-hidden">
                 <img src={post.img} alt={post.title} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300" />
               </div>

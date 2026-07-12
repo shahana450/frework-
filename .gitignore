@@ -46,3 +46,6 @@ Thumbs.db
 .terraform
 *.tfstate
 *.tfstate.backup
+
+.vercel
+.env*
