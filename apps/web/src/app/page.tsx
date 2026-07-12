@@ -1,4 +1,5 @@
 import { BusinessOSHomepage } from "@/components/landing/business-os-homepage";
+import { TaxNewsSection } from "@/components/landing/tax-news-section";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <BusinessOSHomepage />;
+  return (
+    <>
+      <BusinessOSHomepage />
+      <TaxNewsSection />
+    </>
+  );
 }

@@ -9,7 +9,6 @@ import {
   Briefcase, BarChart3, Presentation, GraduationCap, Phone, Zap, Check, X,
   CalendarCheck, FileCheck, BadgeCheck, Banknote, Landmark, UserCheck,
   Coffee, Wifi, Car, Printer, AirVent, Lock,
-  Bell, ExternalLink, Tag, AlertCircle, TrendingDown, FileWarning,
 } from "lucide-react";
 
 const SUPPORT_PHONE = (process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 85908 74681").replace(/^﻿/, "");
@@ -195,51 +194,6 @@ const COWORK_PLANS = [
   { key: "virtual", emoji: "📬", label: "Virtual Office", price: "₹999", per: "/month", desc: "Premium business address, GST registration address, mail handling and call answering. Look professional without a physical office." },
 ];
 
-const TAX_NEWS = [
-  {
-    id: 1, category: "Income Tax", tag: "ITR Deadline", icon: FileText, color: "#2563EB", tagBg: "rgba(37,99,235,0.08)", tagColor: "#1D4ED8",
-    title: "ITR Filing Deadline for AY 2025-26: July 31, 2025",
-    summary: "The last date to file Income Tax Returns for individuals and non-audit cases for Assessment Year 2025-26 is 31 July 2025. Late filing attracts ₹5,000 penalty (₹1,000 for income below ₹5L).",
-    date: "Jun 2025", urgent: true,
-    source: "Income Tax Department",
-  },
-  {
-    id: 2, category: "GST", tag: "GSTR-3B", icon: Banknote, color: "#059669", tagBg: "rgba(5,150,105,0.08)", tagColor: "#065F46",
-    title: "GSTR-3B Due Dates: Monthly vs Quarterly Filers",
-    summary: "Monthly filers: GSTR-3B due on 20th of every month. QRMP scheme filers: due on 22nd/24th based on state. Ensure ITC reconciliation with GSTR-2B before filing to avoid mismatches.",
-    date: "Jul 2025", urgent: false,
-    source: "GST Council",
-  },
-  {
-    id: 3, category: "Income Tax", tag: "New Tax Regime", icon: TrendingDown, color: "#7C3AED", tagBg: "rgba(124,58,237,0.08)", tagColor: "#6D28D9",
-    title: "New Tax Regime is Default from FY 2024-25",
-    summary: "New Tax Regime is now the default for all taxpayers. To opt for Old Regime, you must submit Form 10-IEA before filing ITR. Rebate u/s 87A raised to ₹25,000 — zero tax up to ₹7L income.",
-    date: "Apr 2025", urgent: false,
-    source: "CBDT Circular",
-  },
-  {
-    id: 4, category: "GST", tag: "E-Invoice", icon: FileWarning, color: "#EA580C", tagBg: "rgba(234,88,12,0.08)", tagColor: "#C2410C",
-    title: "E-Invoicing Mandatory for Turnover Above ₹5 Crore",
-    summary: "GST E-Invoicing is mandatory for all registered businesses with aggregate annual turnover exceeding ₹5 crore. IRP-generated IRN is required for all B2B and export invoices.",
-    date: "Aug 2023", urgent: false,
-    source: "CBIC Notification",
-  },
-  {
-    id: 5, category: "Compliance", tag: "ROC / MCA", icon: Building2, color: "#B8903A", tagBg: "rgba(184,144,58,0.08)", tagColor: "#8C6A1E",
-    title: "MCA Annual Filing (AOC-4 & MGT-7): Due Oct–Nov 2025",
-    summary: "Private Limited companies must file AOC-4 (Financial Statements) within 30 days and MGT-7 (Annual Return) within 60 days of AGM. AGM must be held by September 30. Late fees: ₹100/day.",
-    date: "Jul 2025", urgent: false,
-    source: "MCA / ROC",
-  },
-  {
-    id: 6, category: "GST", tag: "ITC Rules", icon: AlertCircle, color: "#DC2626", tagBg: "rgba(220,38,38,0.08)", tagColor: "#B91C1C",
-    title: "ITC Reversal Rules Tightened: Rule 86B & Provisional ITC",
-    summary: "Businesses with taxable supply >₹50L must maintain ≥1% of output tax liability in cash ledger (Rule 86B). Provisional ITC restricted to 5% of eligible credit in GSTR-2B. Reconcile monthly.",
-    date: "Jun 2025", urgent: true,
-    source: "CBIC",
-  },
-];
-
 function GoldDivider() {
   return (
     <div className="flex items-center gap-3 justify-center my-4">
@@ -256,7 +210,6 @@ export function BusinessOSHomepage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStep, setActiveStep] = useState(0);
   const [billingYearly, setBillingYearly] = useState(false);
-  const [newsFilter, setNewsFilter] = useState<"All" | "Income Tax" | "GST" | "Compliance">("All");
   const moduleDetailRef = useRef<HTMLDivElement>(null);
 
   const handleModuleClick = (id: string) => {
@@ -973,118 +926,6 @@ export function BusinessOSHomepage() {
                 </Link>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── TAX & REGULATORY NEWS ─── */}
-      <section className="py-24 px-4" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
-        <div className="container max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest border mb-4"
-              style={{ background: "rgba(220,38,38,0.06)", borderColor: "rgba(220,38,38,0.2)", color: "#B91C1C" }}>
-              <Bell size={11} className="animate-pulse" />
-              TAX &amp; REGULATORY UPDATES
-            </div>
-            <h2 className="font-black mb-3 leading-tight"
-              style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)", color: L.text }}>
-              Stay ahead of deadlines &amp; rule changes
-            </h2>
-            <p className="text-base max-w-xl mx-auto" style={{ color: L.textSub }}>
-              Latest updates on Income Tax, GST, and compliance — curated for Indian businesses.
-            </p>
-          </div>
-
-          {/* Filter tabs */}
-          <div className="flex flex-wrap justify-center gap-2 mb-10">
-            {(["All", "Income Tax", "GST", "Compliance"] as const).map(f => (
-              <button key={f} onClick={() => setNewsFilter(f)}
-                className="px-5 py-2 rounded-full text-xs font-bold tracking-wide border transition-all duration-200"
-                style={{
-                  background: newsFilter === f ? L.gold : "transparent",
-                  borderColor: newsFilter === f ? L.gold : L.border,
-                  color: newsFilter === f ? "#fff" : L.textSub,
-                  boxShadow: newsFilter === f ? `0 4px 14px rgba(184,144,58,0.3)` : "none",
-                }}>
-                {f}
-              </button>
-            ))}
-          </div>
-
-          {/* News grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <AnimatePresence mode="popLayout">
-              {TAX_NEWS.filter(n => newsFilter === "All" || n.category === newsFilter).map(news => (
-                <motion.div key={news.id}
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.25 }}
-                  className="relative rounded-2xl border p-5 flex flex-col gap-3 group cursor-default"
-                  style={{
-                    background: L.bgCard,
-                    borderColor: news.urgent ? "rgba(220,38,38,0.25)" : L.border,
-                    boxShadow: news.urgent
-                      ? "0 2px 20px rgba(220,38,38,0.07), 0 1px 3px rgba(220,38,38,0.04)"
-                      : L.shadow,
-                    transition: "box-shadow 0.2s, border-color 0.2s",
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = L.shadowHover; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = news.urgent ? "0 2px 20px rgba(220,38,38,0.07)" : L.shadow; }}
-                >
-                  {/* Top bar */}
-                  {news.urgent && (
-                    <div className="absolute inset-x-0 top-0 h-[2.5px] rounded-t-2xl"
-                      style={{ background: "linear-gradient(90deg, #EF4444, #DC2626)" }} />
-                  )}
-
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border"
-                        style={{ background: news.tagBg, borderColor: "transparent", color: news.tagColor }}>
-                        <news.icon size={9} />
-                        {news.tag}
-                      </span>
-                      {news.urgent && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wider"
-                          style={{ background: "rgba(220,38,38,0.1)", color: "#DC2626" }}>
-                          ⚡ Urgent
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] whitespace-nowrap flex-shrink-0 font-medium" style={{ color: L.textMuted }}>{news.date}</span>
-                  </div>
-
-                  <h3 className="font-bold text-sm leading-snug" style={{ color: L.text }}>{news.title}</h3>
-
-                  <p className="text-xs leading-relaxed flex-1" style={{ color: L.textSub }}>{news.summary}</p>
-
-                  <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: L.borderLight }}>
-                    <span className="text-[10px] font-semibold flex items-center gap-1" style={{ color: L.textMuted }}>
-                      <Shield size={9} /> {news.source}
-                    </span>
-                    <Link href="/services/compliance"
-                      className="inline-flex items-center gap-1 text-[11px] font-bold transition-colors"
-                      style={{ color: news.color }}>
-                      Get help <ExternalLink size={9} />
-                    </Link>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-
-          {/* Bottom CTA strip */}
-          <div className="mt-10 rounded-2xl border p-6 flex flex-col sm:flex-row items-center justify-between gap-4"
-            style={{ background: L.bgAlt, borderColor: L.border }}>
-            <div>
-              <p className="font-bold text-sm" style={{ color: L.text }}>Never miss a tax deadline again</p>
-              <p className="text-xs mt-0.5" style={{ color: L.textSub }}>FreWork tracks all your GST, ITR &amp; ROC deadlines and sends WhatsApp reminders.</p>
-            </div>
-            <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20please%20set%20up%20tax%20deadline%20reminders%20for%20me`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all"
-              style={{ background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, color: "#fff", boxShadow: "0 4px 14px rgba(184,144,58,0.3)" }}>
-              <Bell size={14} /> Get Free Reminders
-            </a>
           </div>
         </div>
       </section>
