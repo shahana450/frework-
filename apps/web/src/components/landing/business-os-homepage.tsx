@@ -241,101 +241,150 @@ export function BusinessOSHomepage() {
 
       {/* ─── HERO ─── */}
       <section className="relative min-h-screen flex items-center justify-center px-4 pt-44 pb-20 overflow-hidden">
+        {/* Rich background */}
         <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 70% 55% at 50% -5%, rgba(184,144,58,0.12) 0%, transparent 60%)" }} />
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 50% 40% at 80% 80%, rgba(234,224,200,0.4) 0%, transparent 55%)" }} />
-          <div style={{ position: "absolute", inset: 0, opacity: 0.018, backgroundImage: "linear-gradient(rgba(139,108,50,1) 1px, transparent 1px), linear-gradient(90deg, rgba(139,108,50,1) 1px, transparent 1px)", backgroundSize: "72px 72px" }} />
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 80% 60% at 50% -10%, rgba(184,144,58,0.16) 0%, transparent 60%)" }} />
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 40% 50% at 10% 80%, rgba(124,58,237,0.07) 0%, transparent 55%)" }} />
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 40% 50% at 90% 70%, rgba(5,150,105,0.06) 0%, transparent 55%)" }} />
+          <div style={{ position:"absolute", inset:0, opacity:0.022, backgroundImage:"linear-gradient(rgba(139,108,50,1) 1px,transparent 1px),linear-gradient(90deg,rgba(139,108,50,1) 1px,transparent 1px)", backgroundSize:"64px 64px" }} />
         </div>
+
+        {/* Floating ambient orbs */}
+        {[
+          { w:180, h:180, top:"8%",  left:"3%",  color:"rgba(184,144,58,0.07)",  dur:8 },
+          { w:120, h:120, top:"60%", left:"88%", color:"rgba(124,58,237,0.06)",  dur:10 },
+          { w:90,  h:90,  top:"80%", left:"6%",  color:"rgba(5,150,105,0.07)",   dur:7 },
+          { w:60,  h:60,  top:"20%", left:"85%", color:"rgba(184,144,58,0.1)",   dur:6 },
+        ].map((o,i) => (
+          <motion.div key={i} className="absolute rounded-full pointer-events-none"
+            style={{ width:o.w, height:o.h, top:o.top, left:o.left, background:`radial-gradient(circle, ${o.color}, transparent)`, filter:"blur(30px)" }}
+            animate={{ scale:[1,1.15,1], opacity:[0.6,1,0.6] }}
+            transition={{ duration:o.dur, repeat:Infinity, ease:"easeInOut", delay:i*1.5 }}
+          />
+        ))}
 
         <div className="relative z-10 max-w-4xl mx-auto text-center">
 
-          {/* ── Hero Logo ── */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col items-center mb-10"
-          >
-            {/* Outer glow ring */}
-            <div className="relative mb-4">
-              <div className="absolute inset-0 rounded-full blur-2xl opacity-40 scale-110"
-                style={{ background: "radial-gradient(circle, #B8903A 0%, #7C3AED 60%, transparent 100%)" }} />
-              {/* Gold shimmer ring */}
-              <div className="absolute -inset-2 rounded-[22px] opacity-50"
-                style={{ background: "linear-gradient(135deg, #E8C97A, transparent, #B8903A, transparent, #E8C97A)", padding: 1 }}>
-                <div className="w-full h-full rounded-[20px]" style={{ background: L.bg }} />
-              </div>
-              {/* Logo */}
-              <div className="relative rounded-[20px] p-1"
-                style={{ background: "linear-gradient(135deg, rgba(184,144,58,0.3), rgba(124,58,237,0.2))", boxShadow: "0 12px 48px rgba(124,58,237,0.25), 0 4px 16px rgba(184,144,58,0.2)" }}>
-                <svg width="80" height="80" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* ── Hero Logo with orbiting ring ── */}
+          <motion.div initial={{ opacity:0, scale:0.7 }} animate={{ opacity:1, scale:1 }}
+            transition={{ duration:0.7, ease:[0.16,1,0.3,1] }}
+            className="flex flex-col items-center mb-8">
+
+            <div className="relative flex items-center justify-center mb-5" style={{ width:160, height:160 }}>
+              {/* Outer orbiting ring */}
+              <motion.div className="absolute inset-0 rounded-full"
+                style={{ border:"1.5px solid rgba(184,144,58,0.25)", borderTopColor:"#E8C97A", borderRightColor:"rgba(184,144,58,0.5)" }}
+                animate={{ rotate:360 }} transition={{ duration:8, repeat:Infinity, ease:"linear" }}
+              />
+              {/* Inner counter-orbiting ring */}
+              <motion.div className="absolute rounded-full"
+                style={{ inset:16, border:"1px dashed rgba(184,144,58,0.2)", borderBottomColor:"#B8903A" }}
+                animate={{ rotate:-360 }} transition={{ duration:5, repeat:Infinity, ease:"linear" }}
+              />
+              {/* Glow pulse */}
+              <motion.div className="absolute inset-0 rounded-full pointer-events-none"
+                style={{ background:"radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 65%)", filter:"blur(16px)" }}
+                animate={{ scale:[1,1.2,1], opacity:[0.6,1,0.6] }}
+                transition={{ duration:3, repeat:Infinity, ease:"easeInOut" }}
+              />
+              {/* Logo box */}
+              <motion.div whileHover={{ scale:1.08, rotate:3 }} transition={{ type:"spring", stiffness:300 }}
+                className="relative rounded-[22px] p-1.5 cursor-pointer"
+                style={{ background:"linear-gradient(135deg,rgba(184,144,58,0.35),rgba(124,58,237,0.25))", boxShadow:"0 16px 56px rgba(124,58,237,0.3),0 4px 20px rgba(184,144,58,0.25)" }}>
+                <svg width="88" height="88" viewBox="0 0 38 38" fill="none">
                   <defs>
-                    <linearGradient id="hero_fw_bg" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stopColor="#7C3AED"/>
-                      <stop offset="100%" stopColor="#A855F7"/>
+                    <linearGradient id="hw_bg" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#7C3AED"/><stop offset="100%" stopColor="#A855F7"/>
                     </linearGradient>
-                    <filter id="hero_fw_glow">
-                      <feGaussianBlur stdDeviation="1.2" result="blur"/>
-                      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                    </filter>
+                    <filter id="hw_glow"><feGaussianBlur stdDeviation="1.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
                   </defs>
-                  <rect width="38" height="38" rx="10" fill="url(#hero_fw_bg)"/>
+                  <rect width="38" height="38" rx="10" fill="url(#hw_bg)"/>
                   <g stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round">
                     <line x1="19" y1="19" x2="19" y2="10"/>
                     <line x1="19" y1="19" x2="27" y2="24"/>
                     <line x1="19" y1="19" x2="11" y2="24"/>
                   </g>
-                  <g fill="white" filter="url(#hero_fw_glow)">
-                    <circle cx="19" cy="19" r="3.2"/>
-                    <circle cx="19" cy="10" r="2.2"/>
-                    <circle cx="27" cy="24" r="2.2"/>
-                    <circle cx="11" cy="24" r="2.2"/>
+                  <g fill="white" filter="url(#hw_glow)">
+                    <circle cx="19" cy="19" r="3.2"/><circle cx="19" cy="10" r="2.2"/>
+                    <circle cx="27" cy="24" r="2.2"/><circle cx="11" cy="24" r="2.2"/>
                   </g>
                 </svg>
-              </div>
+              </motion.div>
+
+              {/* Orbit dots */}
+              {[0,120,240].map((deg,i) => (
+                <motion.div key={i} className="absolute w-2.5 h-2.5 rounded-full"
+                  style={{ background: i===0?"#E8C97A":i===1?"#7C3AED":"#059669", boxShadow:`0 0 8px ${i===0?"#E8C97A":i===1?"#7C3AED":"#059669"}` }}
+                  animate={{ rotate:[deg, deg+360] }}
+                  transition={{ duration:8, repeat:Infinity, ease:"linear" }}
+                  // position on ring radius ~72px
+                  initial={{ x: Math.cos((deg*Math.PI)/180)*72, y: Math.sin((deg*Math.PI)/180)*72 }}
+                />
+              ))}
             </div>
 
             {/* Wordmark */}
-            <div className="flex items-baseline gap-1">
-              <span className="font-black tracking-tight" style={{ fontSize: "1.6rem", color: L.text, fontFamily: "var(--font-plus-jakarta), sans-serif" }}>
-                Fre
-              </span>
-              <span className="font-black tracking-tight" style={{ fontSize: "1.6rem", background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", fontFamily: "var(--font-plus-jakarta), sans-serif" }}>
-                Work
-              </span>
+            <motion.div className="flex items-baseline gap-1" whileHover={{ scale:1.03 }}>
+              <span className="font-black tracking-tight" style={{ fontSize:"1.8rem", color:L.text, fontFamily:"var(--font-plus-jakarta),sans-serif" }}>Fre</span>
+              <span className="font-black tracking-tight" style={{ fontSize:"1.8rem", background:`linear-gradient(135deg,${L.goldLight},${L.gold})`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", fontFamily:"var(--font-plus-jakarta),sans-serif" }}>Work</span>
               <span className="text-[10px] font-black tracking-[0.2em] uppercase ml-2 px-1.5 py-0.5 rounded"
-                style={{ color: L.gold, background: "rgba(184,144,58,0.1)", border: "1px solid rgba(184,144,58,0.25)", verticalAlign: "middle" }}>
-                BETA
-              </span>
-            </div>
-            <p className="text-[10px] font-black tracking-[0.35em] uppercase mt-1" style={{ color: L.textMuted }}>Business OS</p>
+                style={{ color:L.gold, background:"rgba(184,144,58,0.1)", border:"1px solid rgba(184,144,58,0.25)", verticalAlign:"middle" }}>BETA</span>
+            </motion.div>
+            <p className="text-[10px] font-black tracking-[0.4em] uppercase mt-1" style={{ color:L.textMuted }}>Business OS · Made in India 🇮🇳</p>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-center gap-3 mb-8 flex-wrap">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest border"
-              style={{ background: "rgba(184,144,58,0.08)", borderColor: "rgba(184,144,58,0.25)", color: L.goldDark }}>
-              🇮🇳 Made in India
+          {/* Badge row */}
+          <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.15 }}
+            className="flex items-center justify-center gap-3 mb-7 flex-wrap">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border"
+              style={{ background:"rgba(5,150,105,0.07)", borderColor:"rgba(5,150,105,0.22)", color:"#065F46" }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/>Beta · Early Access Open
             </span>
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest border"
-              style={{ background: "rgba(5,150,105,0.06)", borderColor: "rgba(5,150,105,0.2)", color: "#065F46" }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Beta · Early Access Open
+            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold border"
+              style={{ background:"rgba(184,144,58,0.07)", borderColor:"rgba(184,144,58,0.22)", color:L.goldDark }}>
+              ⭐ 4.9/5 · 500+ clients
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold border"
+              style={{ background:"rgba(37,99,235,0.06)", borderColor:"rgba(37,99,235,0.18)", color:"#1D4ED8" }}>
+              🏛️ CA/CS Qualified Experts
             </span>
           </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="font-black leading-[1.0] mb-6 tracking-tight"
-            style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(2.8rem, 8vw, 6rem)", color: L.text }}>
-            The Operating System<br />
-            <span style={{ background: `linear-gradient(135deg, ${L.goldLight} 0%, ${L.gold} 40%, ${L.goldDark} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          {/* Headline */}
+          <motion.h1 initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}
+            className="font-black leading-[1.0] mb-5 tracking-tight"
+            style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.6rem,7.5vw,5.5rem)", color:L.text }}>
+            The Operating System<br/>
+            <span style={{ background:`linear-gradient(135deg,${L.goldLight} 0%,${L.gold} 45%,${L.goldDark} 100%)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
               for Indian Businesses
             </span>
           </motion.h1>
 
-          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
-            className="text-lg md:text-xl mb-10 max-w-xl mx-auto leading-relaxed" style={{ color: L.textSub }}>
+          <motion.p initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.28 }}
+            className="text-lg md:text-xl mb-8 max-w-xl mx-auto leading-relaxed" style={{ color:L.textSub }}>
             Start, Run and Grow Your Business — All in One Place.
           </motion.p>
+
+          {/* Floating mini stat cards */}
+          <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.34 }}
+            className="flex flex-wrap justify-center gap-3 mb-8">
+            {[
+              { icon:"⚡", val:"2 hrs",    label:"Expert Response",   color:"rgba(234,88,12,0.1)",   border:"rgba(234,88,12,0.2)",   text:"#C2410C" },
+              { icon:"🏢", val:"500+",     label:"Businesses Served", color:"rgba(184,144,58,0.08)", border:"rgba(184,144,58,0.22)", text:L.goldDark },
+              { icon:"✅", val:"20+ Svcs", label:"Under One Roof",    color:"rgba(5,150,105,0.07)",  border:"rgba(5,150,105,0.2)",   text:"#065F46" },
+              { icon:"🔒", val:"CA/CS",    label:"Verified Experts",  color:"rgba(37,99,235,0.07)",  border:"rgba(37,99,235,0.18)",  text:"#1D4ED8" },
+            ].map(({ icon, val, label, color, border, text }) => (
+              <motion.div key={label} whileHover={{ y:-4, scale:1.04 }}
+                className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl cursor-default"
+                style={{ background:color, border:`1px solid ${border}`, boxShadow:"0 2px 12px rgba(139,108,50,0.07)" }}>
+                <span className="text-lg">{icon}</span>
+                <div className="text-left">
+                  <p className="text-sm font-black leading-none" style={{ color:text }}>{val}</p>
+                  <p className="text-[10px] font-semibold mt-0.5" style={{ color:L.textMuted }}>{label}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
 
           {/* Search bar */}
           <motion.form initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}
