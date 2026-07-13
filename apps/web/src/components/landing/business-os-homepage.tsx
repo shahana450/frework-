@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -210,7 +211,18 @@ export function BusinessOSHomepage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStep, setActiveStep] = useState(0);
   const [billingYearly, setBillingYearly] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [userName, setUserName] = useState("");
   const moduleDetailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setLoggedIn(true);
+        setUserName(session.user.user_metadata?.full_name?.split(" ")[0] ?? session.user.email?.split("@")[0] ?? "");
+      }
+    });
+  }, []);
 
   const handleModuleClick = (id: string) => {
     if (expandedModule === id) {
@@ -473,18 +485,48 @@ export function BusinessOSHomepage() {
           {/* CTAs */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
             className="flex flex-wrap justify-center gap-3 mb-16">
-            <Link href="/register"
-              className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all hover:scale-[1.03] hover:opacity-90"
-              style={{ background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, color: "#fff", boxShadow: `0 4px 24px rgba(184,144,58,0.3)` }}>
-              Get Started Free <ChevronRight className="w-4 h-4" />
-            </Link>
-            <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%20want%20to%20know%20more.`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold border transition-all hover:scale-[1.03]"
-              style={{ borderColor: L.border, color: L.textSub, background: L.bgCard, boxShadow: L.shadow }}>
-              <MessageCircle className="w-4 h-4" style={{ color: "#25D366" }} />
-              Talk to an Expert
-            </a>
+
+            {loggedIn ? (
+              /* ── LOGGED IN: show Dashboard button prominently ── */
+              <>
+                <Link href="/dashboard"
+                  className="flex items-center gap-2.5 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all hover:scale-[1.03] hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg,#0F2044,#1E3A8A)", color: "#fff", boxShadow: "0 4px 24px rgba(15,32,68,0.35)" }}>
+                  <LayoutDashboard className="w-4 h-4" />
+                  {userName ? `${userName}'s Dashboard` : "Go to Dashboard"}
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+                <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%20want%20to%20know%20more.`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold border transition-all hover:scale-[1.03]"
+                  style={{ borderColor: L.border, color: L.textSub, background: L.bgCard, boxShadow: L.shadow }}>
+                  <MessageCircle className="w-4 h-4" style={{ color: "#25D366" }} />
+                  Talk to an Expert
+                </a>
+              </>
+            ) : (
+              /* ── NOT LOGGED IN: show Register + Login ── */
+              <>
+                <Link href="/register"
+                  className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all hover:scale-[1.03] hover:opacity-90"
+                  style={{ background: `linear-gradient(135deg,#1246C8,#2563EB)`, color: "#fff", boxShadow: "0 4px 24px rgba(18,70,200,0.3)" }}>
+                  Get Started Free <ChevronRight className="w-4 h-4" />
+                </Link>
+                <Link href="/login"
+                  className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold border transition-all hover:scale-[1.03]"
+                  style={{ borderColor: "#1246C8", color: "#1246C8", background: "rgba(18,70,200,0.06)", boxShadow: L.shadow }}>
+                  <LayoutDashboard className="w-4 h-4" />
+                  Login / Dashboard
+                </Link>
+                <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%20want%20to%20know%20more.`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold border transition-all hover:scale-[1.03]"
+                  style={{ borderColor: L.border, color: L.textSub, background: L.bgCard, boxShadow: L.shadow }}>
+                  <MessageCircle className="w-4 h-4" style={{ color: "#25D366" }} />
+                  Talk to an Expert
+                </a>
+              </>
+            )}
           </motion.div>
 
           {/* ── Services Quick-Link Strip ── */}
