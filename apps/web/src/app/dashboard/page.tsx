@@ -8,8 +8,30 @@ import {
   MessageSquare, CalendarClock, CheckSquare, Crown, LogOut,
   ArrowRight, FileText, TrendingUp, Building2, Briefcase,
   AlertCircle, Plus, Rocket, ChevronRight, Zap, Star,
-  ExternalLink, Edit3, Globe, MapPin, Users, GraduationCap, Wrench,
+  ExternalLink, Globe, MapPin, Users, GraduationCap, Wrench,
+  Calculator, ReceiptText, ClipboardList, BarChart3, BadgeCheck, Lock,
 } from "lucide-react";
+
+const PAID_SERVICES = [
+  {
+    icon: ReceiptText,   label: "GST Registration & Filing",   sub: "GSTIN in 3–5 days · Monthly GSTR-1 & 3B",   price: "₹499", href: "/services/gst",          color: "#2563EB", bg: "rgba(37,99,235,0.08)",  border: "rgba(37,99,235,0.2)",
+  },
+  {
+    icon: Calculator,    label: "Income Tax Return (ITR)",      sub: "ITR-1 to ITR-6 · Tax planning & refunds",   price: "₹799", href: "/services/income-tax",   color: "#059669", bg: "rgba(5,150,105,0.08)",  border: "rgba(5,150,105,0.2)",
+  },
+  {
+    icon: BarChart3,     label: "Accounting & Bookkeeping",     sub: "Monthly books · P&L · Balance sheet",        price: "₹1,499", href: "/services/accounting", color: "#D97706", bg: "rgba(217,119,6,0.08)",   border: "rgba(217,119,6,0.2)",
+  },
+  {
+    icon: Building2,     label: "Company Registration",         sub: "Pvt Ltd · LLP · OPC · Proprietorship",      price: "₹999",  href: "/services/business-registration", color: "#7C3AED", bg: "rgba(124,58,237,0.08)", border: "rgba(124,58,237,0.2)",
+  },
+  {
+    icon: ClipboardList, label: "GST Audit & Reconciliation",   sub: "GSTR-9C · ITC reconciliation · Notices",    price: "₹4,999", href: "/services/audit",      color: "#DC2626", bg: "rgba(220,38,38,0.08)",  border: "rgba(220,38,38,0.2)",
+  },
+  {
+    icon: BadgeCheck,    label: "ROC & Compliance",             sub: "Annual filing · MCA · Director KYC",         price: "₹1,999", href: "/services/roc-compliance", color: "#0891B2", bg: "rgba(8,145,178,0.08)", border: "rgba(8,145,178,0.2)",
+  },
+];
 
 interface UserProfile {
   id: string;
@@ -191,6 +213,58 @@ export default function DashboardPage() {
                 {subscription ? `${subscription.plan} Plan` : "Free Plan"}
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* ── CA SERVICES ── */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>
+                Get CA / CS Services
+              </h2>
+              <p className="text-xs text-white/30 mt-0.5">Expert-assisted · Paid · Delivered in days, not weeks</p>
+            </div>
+            <Link href="/services" className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors">
+              All services <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {PAID_SERVICES.map(({ icon: Icon, label, sub, price, href, color, bg, border }) => (
+              <Link key={label} href={href}
+                className="group flex items-center gap-3 p-4 rounded-2xl border transition-all hover:scale-[1.01]"
+                style={{ background: bg, borderColor: border }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border"
+                  style={{ background: `${bg}`, borderColor: border }}>
+                  <Icon className="w-5 h-5" style={{ color }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{label}</p>
+                  <p className="text-[10px] text-white/40 truncate mt-0.5">{sub}</p>
+                </div>
+                <div className="flex flex-col items-end flex-shrink-0">
+                  <span className="text-xs font-black" style={{ color }}>{price}</span>
+                  <span className="text-[9px] text-white/30 flex items-center gap-0.5 mt-0.5">
+                    <Lock className="w-2.5 h-2.5" /> Paid
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Free services note */}
+          <div className="mt-3 flex flex-wrap gap-3">
+            {[
+              { label: "Browse Freelancers — Free", href: "/freelancers", color: "#059669" },
+              { label: "Find Coworking Spaces — Free", href: "/coworking", color: "#0891B2" },
+              { label: "Explore Startups — Free", href: "/startups", color: "#7C3AED" },
+            ].map(({ label, href, color }) => (
+              <Link key={label} href={href}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all hover:opacity-80"
+                style={{ borderColor: `${color}30`, color, background: `${color}0D` }}>
+                {label} <ArrowRight className="w-3 h-3" />
+              </Link>
+            ))}
           </div>
         </div>
 
@@ -517,27 +591,24 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* FreWork services promo */}
-            <div className="rounded-2xl border border-white/6 bg-[#070D1A]/80 backdrop-blur-sm p-5">
+            {/* Quick service links */}
+            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/4 p-5">
               <div className="flex items-center gap-2 mb-3">
-                <Star className="w-4 h-4 text-[#C9A84C]" />
-                <h3 className="text-sm font-semibold text-white">GROW your business</h3>
+                <Star className="w-4 h-4 text-blue-400" />
+                <h3 className="text-sm font-semibold text-white">Popular Services</h3>
               </div>
-              <p className="text-xs text-white/35 leading-relaxed mb-4">
-                CA/CS experts for GST, Income Tax, Company Registration, Pitch Decks and more.
-              </p>
               <div className="space-y-2">
-                {[
-                  { label: "Compliance & Tax", href: "/services/compliance" },
-                  { label: "Pitch Deck", href: "/services/pitch-decks" },
-                  { label: "DPR / Business Plan", href: "/services/dpr" },
-                ].map(s => (
+                {PAID_SERVICES.slice(0, 4).map(s => (
                   <Link key={s.label} href={s.href}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg border border-white/6 hover:border-[#C9A84C]/20 hover:bg-[#C9A84C]/4 transition-colors group">
-                    <span className="text-xs text-white/45 group-hover:text-white/70 transition-colors">{s.label}</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-white/20 group-hover:text-[#C9A84C] transition-colors" />
+                    className="flex items-center justify-between px-3 py-2 rounded-lg border border-white/6 hover:bg-white/4 transition-colors group">
+                    <span className="text-xs text-white/55 group-hover:text-white/80 transition-colors truncate">{s.label}</span>
+                    <span className="text-[10px] font-bold ml-2 flex-shrink-0" style={{ color: s.color }}>{s.price}</span>
                   </Link>
                 ))}
+                <Link href="/services"
+                  className="flex items-center justify-center gap-1.5 py-2 rounded-lg border border-blue-500/20 text-blue-400 text-xs hover:bg-blue-500/8 transition-colors mt-1">
+                  View all services <ChevronRight className="w-3 h-3" />
+                </Link>
               </div>
             </div>
 
