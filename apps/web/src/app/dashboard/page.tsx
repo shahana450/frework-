@@ -10,6 +10,7 @@ import {
   AlertCircle, Plus, Rocket, ChevronRight, Zap, Star,
   ExternalLink, Globe, MapPin, Users, GraduationCap, Wrench,
   Calculator, ReceiptText, ClipboardList, BarChart3, BadgeCheck, Lock,
+  CheckCircle, Clock,
 } from "lucide-react";
 
 const PAID_SERVICES = [
@@ -57,6 +58,17 @@ interface Subscription {
   started_at: string;
 }
 
+interface MySpace {
+  id: string;
+  name: string;
+  city: string;
+  type: string;
+  price_per_day: number | null;
+  price_per_month: number | null;
+  status: string;
+  created_at: string;
+}
+
 function EmptyState({ icon: Icon, title, desc, cta, href }: {
   icon: React.ElementType; title: string; desc: string; cta: string; href: string;
 }) {
@@ -80,6 +92,8 @@ export default function DashboardPage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [startups, setStartups] = useState<Startup[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [mySpaces, setMySpaces] = useState<MySpace[]>([]);
+  const [userRole, setUserRole] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -92,12 +106,16 @@ export default function DashboardPage() {
         name: u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email?.split("@")[0] ?? "User",
         avatar: u.user_metadata?.avatar_url,
       });
-      const [{ data: startupData }, { data: subData }] = await Promise.all([
+      const [{ data: startupData }, { data: subData }, { data: fwUser }, { data: spacesData }] = await Promise.all([
         supabase.from("fw_startups").select("id, slug, name, tagline, sector, stage, status").eq("user_id", u.id).order("created_at", { ascending: false }),
         supabase.from("fw_subscriptions").select("plan, billing, status, started_at").eq("user_id", u.id).maybeSingle(),
+        supabase.from("fw_users").select("role").eq("id", u.id).maybeSingle(),
+        supabase.from("fw_workspaces").select("id, name, city, type, price_per_day, price_per_month, status, created_at").eq("user_id", u.id).order("created_at", { ascending: false }),
       ]);
       setStartups(startupData ?? []);
       setSubscription(subData);
+      setUserRole(fwUser?.role ?? "client");
+      setMySpaces(spacesData ?? []);
       setLoading(false);
     });
   }, [router]);
@@ -273,6 +291,109 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+
+        {/* ── SPACE OWNER SECTION ── */}
+        {(userRole === "space_owner" || mySpaces.length > 0) && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-blue-600" /> My Listed Spaces
+                </h2>
+                <p className="text-sm text-slate-500 mt-0.5">Manage your coworking spaces · Approved listings go live publicly</p>
+              </div>
+              <Link href="/dashboard/workspace/submit"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
+                <Plus className="w-4 h-4" /> Add New Space
+              </Link>
+            </div>
+
+            {mySpaces.length === 0 ? (
+              /* Empty state */
+              <div className="rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/50 p-10 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center mx-auto mb-4">
+                  <Building2 className="w-7 h-7 text-blue-500" />
+                </div>
+                <h3 className="font-bold text-slate-900 mb-1">No spaces listed yet</h3>
+                <p className="text-slate-500 text-sm mb-5 max-w-sm mx-auto">
+                  Add your coworking space or office for free. Once approved it appears publicly on frework.online/coworking for thousands of professionals to discover.
+                </p>
+                <Link href="/dashboard/workspace/submit"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white"
+                  style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
+                  <Plus className="w-4 h-4" /> List Your First Space — Free
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {mySpaces.map(space => {
+                  const isApproved = space.status === "approved";
+                  const isPending  = space.status === "pending";
+                  return (
+                    <div key={space.id}
+                      className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-all flex flex-col gap-3">
+                      {/* Name + status */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0">
+                          <Building2 className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border flex-shrink-0 ${
+                          isApproved ? "text-emerald-700 bg-emerald-50 border-emerald-200" :
+                          isPending  ? "text-amber-700 bg-amber-50 border-amber-200" :
+                          "text-slate-400 bg-slate-50 border-slate-200"
+                        }`}>
+                          {isApproved ? "● Live" : isPending ? "⏳ Under Review" : space.status}
+                        </span>
+                      </div>
+
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm leading-snug">{space.name}</p>
+                        <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />{space.city} · {space.type}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs text-slate-400">
+                        {space.price_per_day && (
+                          <span className="font-semibold text-slate-700">₹{space.price_per_day.toLocaleString("en-IN")}/day</span>
+                        )}
+                        {space.price_per_month && (
+                          <span className="font-semibold text-slate-700">₹{space.price_per_month.toLocaleString("en-IN")}/mo</span>
+                        )}
+                        <span className="flex items-center gap-1 ml-auto">
+                          <Clock className="w-3 h-3" />
+                          {new Date(space.created_at).toLocaleDateString("en-IN", { day:"numeric", month:"short" })}
+                        </span>
+                      </div>
+
+                      {isApproved && (
+                        <Link href="/coworking"
+                          className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+                          <ExternalLink className="w-3 h-3" /> View on FreWork
+                        </Link>
+                      )}
+                      {isPending && (
+                        <p className="text-center text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-xl py-2 font-medium">
+                          Reviewing — goes live within 24 hrs
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Add another card */}
+                <Link href="/dashboard/workspace/submit"
+                  className="rounded-2xl border-2 border-dashed border-slate-200 p-5 hover:border-blue-300 hover:bg-blue-50/30 transition-all flex flex-col items-center justify-center gap-2 text-center min-h-[160px]">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                    <Plus className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-500">Add Another Space</p>
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── STATS + CONTENT ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

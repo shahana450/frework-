@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { PageLayout } from "@/components/layout/page-layout";
 import { motion } from "framer-motion";
 import {
@@ -116,14 +117,57 @@ const SPACES = [
     desc:"Professional meeting rooms and training spaces in Indore's fastest-growing tech zone.", phone:"+918590874681" },
 ];
 
+interface SpaceEntry {
+  id: string; name: string; city: string; area: string; type: string;
+  price: number; per: string; monthlyPrice: number;
+  rating: number; reviews: number; capacity: number;
+  badge: string | null; badgeColor: string; verified: boolean;
+  amenities: string[]; desc: string; phone: string;
+  isUserListing?: boolean;
+}
+
 export default function CoworkingPage() {
   const [city,   setCity]   = useState("All Cities");
   const [type,   setType]   = useState("All Types");
   const [budget, setBudget] = useState("Any Budget");
   const [query,  setQuery]  = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [userSpaces, setUserSpaces] = useState<SpaceEntry[]>([]);
 
-  const filtered = useMemo(() => SPACES.filter(s => {
+  useEffect(() => {
+    supabase
+      .from("fw_workspaces")
+      .select("id, name, city, address, type, price_per_day, price_per_month, capacity, amenities, description, contact_phone, status")
+      .eq("status", "approved")
+      .then(({ data }) => {
+        if (!data) return;
+        const mapped: SpaceEntry[] = data.map(s => ({
+          id: "user-" + s.id,
+          name: s.name ?? "Unnamed Space",
+          city: s.city ?? "India",
+          area: s.address ?? "",
+          type: s.type ?? "Hot Desk",
+          price: s.price_per_day ?? s.price_per_month ?? 0,
+          per: s.price_per_day ? "day" : "month",
+          monthlyPrice: s.price_per_month ?? 0,
+          rating: 0,
+          reviews: 0,
+          capacity: s.capacity ?? 0,
+          badge: "New Listing",
+          badgeColor: "#059669",
+          verified: false,
+          amenities: s.amenities ?? [],
+          desc: s.description ?? "",
+          phone: s.contact_phone ?? "+918590874681",
+          isUserListing: true,
+        }));
+        setUserSpaces(mapped);
+      });
+  }, []);
+
+  const allSpaces = useMemo(() => [...userSpaces, ...SPACES], [userSpaces]);
+
+  const filtered = useMemo(() => allSpaces.filter(s => {
     if (city   !== "All Cities" && s.city !== city) return false;
     if (type   !== "All Types"  && s.type !== type)  return false;
     if (budget !== "Any Budget") {
@@ -135,7 +179,7 @@ export default function CoworkingPage() {
     }
     const q = query.toLowerCase();
     return !q || s.name.toLowerCase().includes(q) || s.city.toLowerCase().includes(q) || s.area.toLowerCase().includes(q) || s.type.toLowerCase().includes(q);
-  }), [city, type, budget, query]);
+  }), [city, type, budget, query, allSpaces]);
 
   return (
     <PageLayout>
@@ -167,7 +211,7 @@ export default function CoworkingPage() {
             </button>
           </div>
           <div className="flex flex-wrap gap-6 mt-10">
-            {[[String(SPACES.length)+"+","Listed Spaces"],["14","Cities"],["₹250/day","Starting from"],["Verified","Every space"]].map(([v,l]) => (
+            {[[String(allSpaces.length)+"+","Listed Spaces"],["14","Cities"],["₹250/day","Starting from"],["Verified","Every space"]].map(([v,l]) => (
               <div key={l}><p className="text-xl font-black text-white">{v}</p><p className="text-blue-300 text-xs">{l}</p></div>
             ))}
           </div>
@@ -261,11 +305,15 @@ export default function CoworkingPage() {
                 <div className="p-5 flex flex-col flex-1">
                   <div className="flex items-start justify-between mb-1">
                     <h3 className="font-bold text-slate-900 text-base leading-tight">{space.name}</h3>
-                    <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                      <span className="text-sm font-bold text-slate-800">{space.rating}</span>
-                      <span className="text-xs text-slate-400">({space.reviews})</span>
-                    </div>
+                    {space.rating > 0 ? (
+                      <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                        <span className="text-sm font-bold text-slate-800">{space.rating}</span>
+                        <span className="text-xs text-slate-400">({space.reviews})</span>
+                      </div>
+                    ) : (space as SpaceEntry).isUserListing ? (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold ml-2 flex-shrink-0">New</span>
+                    ) : null}
                   </div>
                   <p className="flex items-center gap-1 text-xs text-slate-500 mb-2">
                     <MapPin className="w-3 h-3 flex-shrink-0" /> {space.area}, {space.city}
