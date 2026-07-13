@@ -91,7 +91,7 @@ const MODULES = [
   {
     id: "professionals", label: "FIND PEOPLE", tagline: "Hire Talent", emoji: "👥",
     desc: "Verified CAs, developers, designers and consultants for your business.",
-    icon: Users, color: "#D97706", href: "/freelancers", badge: "Launching Soon",
+    icon: Users, color: "#D97706", href: "/freelancers", badge: "Live",
     items: ["CA / CS / Lawyers", "Developers", "Designers", "Consultants"],
     detail: {
       heading: "Hire verified professionals",
@@ -129,7 +129,7 @@ const MODULES = [
   {
     id: "workspace", label: "WORKSPACE", tagline: "Find Your Office", emoji: "🏛️",
     desc: "Premium verified coworking spaces across India — by the day, month or hour.",
-    icon: MapPin, color: "#EA580C", href: "/coworking", badge: "Launching Soon",
+    icon: MapPin, color: "#EA580C", href: "/coworking", badge: "Live",
     items: ["Coworking Desks", "Private Cabins", "Meeting Rooms", "Virtual Office"],
     detail: {
       heading: "Your office, your way",
@@ -552,9 +552,9 @@ export function BusinessOSHomepage() {
             {/* Left */}
             <div>
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase mb-6 border"
-                style={{ background: "rgba(234,88,12,0.06)", borderColor: "rgba(234,88,12,0.2)", color: "#C2410C" }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                Launching Soon
+                style={{ background: "rgba(18,70,200,0.06)", borderColor: "rgba(18,70,200,0.2)", color: "#1246C8" }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                Now Live
               </span>
 
               <h2 className="font-black leading-[1.05] mb-5"
@@ -566,7 +566,7 @@ export function BusinessOSHomepage() {
               </h2>
 
               <p className="text-base leading-relaxed mb-8" style={{ color: L.textSub }}>
-                Day desk or private cabin, by the hour or by the month. FreWork is building India&apos;s most trusted coworking directory — every space personally verified before listing.
+                Day desk or private cabin, by the hour or by the month. Browse India&apos;s most trusted coworking directory — every space personally verified before listing.
               </p>
 
               {/* Amenity tiles */}
@@ -585,7 +585,7 @@ export function BusinessOSHomepage() {
               </div>
 
               {/* Cities */}
-              <p className="text-[10px] font-black tracking-[0.25em] uppercase mb-3" style={{ color: L.gold }}>Launching in</p>
+              <p className="text-[10px] font-black tracking-[0.25em] uppercase mb-3" style={{ color: L.gold }}>Available in</p>
               <div className="flex flex-wrap gap-2 mb-8">
                 {["Mumbai", "Bangalore", "Delhi NCR", "Hyderabad", "Pune", "Chennai", "Kolkata", "Ahmedabad"].map(city => (
                   <span key={city} className="px-3 py-1 rounded-full text-xs border font-medium"
@@ -678,9 +678,9 @@ export function BusinessOSHomepage() {
 
               <div className="absolute -bottom-3 -left-3 px-4 py-2.5 rounded-xl border shadow-xl"
                 style={{ background: L.bgCard, borderColor: "rgba(234,88,12,0.2)", boxShadow: "0 8px 32px rgba(139,108,50,0.12)" }}>
-                <p className="text-[10px] font-black tracking-widest uppercase" style={{ color: "#C2410C" }}>Coming to 8 cities</p>
+                <p className="text-[10px] font-black tracking-widest uppercase" style={{ color: "#1246C8" }}>Live in 8 cities</p>
                 <p className="text-xs mt-0.5" style={{ color: L.textMuted }}>
-                  <Link href="/coworking" style={{ color: "#EA580C" }}>Get notified</Link> when we launch near you
+                  <Link href="/coworking" style={{ color: "#2563EB" }}>Browse spaces</Link> near you
                 </p>
               </div>
             </div>
