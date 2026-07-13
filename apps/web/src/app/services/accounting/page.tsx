@@ -76,6 +76,7 @@ export default function Page() {
           price="₹1,499"
           priceNote="Per month. Volume discounts available."
           color="orange"
+          isPaid
         />
       </PageLayout>
     </>

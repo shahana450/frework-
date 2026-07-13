@@ -59,6 +59,7 @@ export default function Page() {
           price="₹4,999"
           priceNote="Starting price. Depends on business size."
           color="purple"
+          isPaid
         />
       </PageLayout>
     </>

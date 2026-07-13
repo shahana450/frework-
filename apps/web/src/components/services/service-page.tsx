@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Lock, Crown } from "lucide-react";
 
 const colorMap: Record<string, string> = {
   violet: "from-violet-500 to-purple-600",
@@ -23,18 +23,26 @@ interface ServicePageProps {
   price: string;
   priceNote: string;
   color: string;
+  isPaid?: boolean;
 }
 
-export function ServicePage({ title, subtitle, description, features, price, priceNote, color }: ServicePageProps) {
+export function ServicePage({ title, subtitle, description, features, price, priceNote, color, isPaid = false }: ServicePageProps) {
   const gradient = colorMap[color] ?? colorMap.violet;
 
   return (
     <div className="py-16 px-4 max-w-5xl mx-auto">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold text-white bg-gradient-to-r ${gradient} mb-4`}>
-            FreWork Services
-          </span>
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold text-white bg-gradient-to-r ${gradient}`}>
+              FreWork Services
+            </span>
+            {isPaid && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                <Crown className="w-3 h-3" /> Paid Service
+              </span>
+            )}
+          </div>
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">{title}</h1>
           <p className="text-lg text-gray-500 dark:text-gray-400 mb-6">{subtitle}</p>
           <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-8">{description}</p>
@@ -46,9 +54,21 @@ export function ServicePage({ title, subtitle, description, features, price, pri
               </li>
             ))}
           </ul>
-          <Button asChild size="lg" className={`bg-gradient-to-r ${gradient} text-white rounded-xl px-8 shadow-lg`}>
-            <Link href="/contact">Book Free Consultation</Link>
-          </Button>
+          {isPaid ? (
+            <div className="flex flex-col gap-3">
+              <Button asChild size="lg" className={`bg-gradient-to-r ${gradient} text-white rounded-xl px-8 shadow-lg`}>
+                <Link href="/register?role=client">Create Account &amp; Get Started</Link>
+              </Button>
+              <p className="text-sm text-gray-500 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5" />
+                Login required · Paid plan from {price}
+              </p>
+            </div>
+          ) : (
+            <Button asChild size="lg" className={`bg-gradient-to-r ${gradient} text-white rounded-xl px-8 shadow-lg`}>
+              <Link href="/contact">Book Free Consultation</Link>
+            </Button>
+          )}
         </motion.div>
 
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
@@ -57,7 +77,7 @@ export function ServicePage({ title, subtitle, description, features, price, pri
             <div className="text-6xl font-bold mb-1">{price}</div>
             <p className="text-white/70 text-sm mb-8">{priceNote}</p>
             <div className="bg-white/10 rounded-2xl p-5 space-y-3 mb-6">
-              <p className="text-white font-semibold">What's included</p>
+              <p className="text-white font-semibold">What&apos;s included</p>
               {features.slice(0, 4).map((f) => (
                 <div key={f} className="flex items-center gap-2 text-white/90 text-sm">
                   <CheckCircle className="w-4 h-4 text-white/70 flex-shrink-0" />
@@ -65,10 +85,18 @@ export function ServicePage({ title, subtitle, description, features, price, pri
                 </div>
               ))}
             </div>
-            <Button asChild size="lg" className="w-full bg-white text-gray-900 hover:bg-gray-50 font-semibold rounded-xl">
-              <Link href="/contact">Get Started Today</Link>
-            </Button>
-            <p className="text-white/60 text-xs text-center mt-3">Free consultation · No commitment</p>
+            {isPaid ? (
+              <Button asChild size="lg" className="w-full bg-white text-gray-900 hover:bg-gray-50 font-semibold rounded-xl">
+                <Link href="/register?role=client">Login / Sign Up to Start</Link>
+              </Button>
+            ) : (
+              <Button asChild size="lg" className="w-full bg-white text-gray-900 hover:bg-gray-50 font-semibold rounded-xl">
+                <Link href="/contact">Get Started Today</Link>
+              </Button>
+            )}
+            <p className="text-white/60 text-xs text-center mt-3">
+              {isPaid ? "Create account · Pay securely online" : "Free consultation · No commitment"}
+            </p>
           </div>
         </motion.div>
       </div>

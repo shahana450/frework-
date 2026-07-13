@@ -81,6 +81,7 @@ export default function Page() {
           price="₹799"
           priceNote="Per return (individual). Businesses from ₹2,999."
           color="green"
+          isPaid
         />
       </PageLayout>
     </>

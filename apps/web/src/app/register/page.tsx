@@ -7,11 +7,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-type Step = "method" | "details" | "mobile" | "done";
+type Step = "role" | "method" | "details" | "mobile" | "done";
+type UserRole = "client" | "freelancer" | "space_owner";
+
+const ROLES: { key: UserRole; emoji: string; label: string; desc: string; color: string }[] = [
+  { key: "client",      emoji: "💼", label: "I need services",    desc: "GST, ITR, Accounting, CA support", color: "#1E40AF" },
+  { key: "freelancer",  emoji: "🧑‍💻", label: "I'm a Freelancer",   desc: "Offer skills, get hired by businesses", color: "#059669" },
+  { key: "space_owner", emoji: "🏢", label: "I own a Space",      desc: "List coworking spaces for free", color: "#7C3AED" },
+];
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("method");
+  const [step, setStep] = useState<Step>("role");
+  const [role, setRole] = useState<UserRole>("client");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -53,12 +61,13 @@ export default function RegisterPage() {
       if (err) throw err;
       if (!data.user) throw new Error("Sign-up failed. Please try again.");
 
-      // Also save to fw_users table
+      // Also save to fw_users table with role
       await supabase.from("fw_users").upsert({
         id: data.user.id,
         email,
         name,
         method: "email",
+        role,
       }, { onConflict: "id" });
 
       setDisplayName(name);
@@ -87,8 +96,8 @@ export default function RegisterPage() {
     }
   };
 
-  const steps = ["Account", "Mobile", "Done"];
-  const currentStepIdx = step === "method" || step === "details" ? 0 : step === "mobile" ? 1 : 2;
+  const steps = ["Role", "Account", "Mobile", "Done"];
+  const currentStepIdx = step === "role" ? 0 : (step === "method" || step === "details") ? 1 : step === "mobile" ? 2 : 3;
 
   return (
     <div className="min-h-screen flex bg-[#060C18]">
@@ -126,7 +135,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-md">
 
           {/* Progress */}
-          {step !== "method" && (
+          {step !== "role" && (
             <div className="flex items-center gap-2 mb-8">
               {steps.map((s, i) => (
                 <div key={s} className="flex items-center gap-2">
@@ -141,6 +150,67 @@ export default function RegisterPage() {
           )}
 
           <AnimatePresence mode="wait">
+
+            {step === "role" && (
+              <motion.div key="role" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}>
+                <div className="lg:hidden flex items-center gap-2 mb-8">
+                  <svg width="30" height="30" viewBox="0 0 38 38" fill="none"><rect width="38" height="38" rx="9" fill="#1246C8"/><g stroke="white" strokeWidth="1.8" strokeLinecap="round"><line x1="19" y1="19" x2="19" y2="10"/><line x1="19" y1="19" x2="27" y2="24"/><line x1="19" y1="19" x2="11" y2="24"/></g><g fill="white"><circle cx="19" cy="19" r="3.2"/><circle cx="19" cy="10" r="2.2"/><circle cx="27" cy="24" r="2.2"/><circle cx="11" cy="24" r="2.2"/></g></svg>
+                  <span className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif" }}>FreWork</span>
+                </div>
+                <h1 className="text-3xl font-bold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif" }}>I want to…</h1>
+                <p className="text-white/40 mb-8 text-sm">Choose your account type. You can change this later.</p>
+                <div className="space-y-3 mb-8">
+                  {ROLES.map(r => (
+                    <button key={r.key} onClick={() => setRole(r.key)}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl border text-left transition-all"
+                      style={role === r.key
+                        ? { borderColor: r.color, background: `${r.color}14`, boxShadow: `0 0 0 2px ${r.color}30` }
+                        : { borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}>
+                      <span className="text-2xl">{r.emoji}</span>
+                      <div className="flex-1">
+                        <p className="font-bold text-white text-sm">{r.label}</p>
+                        <p className="text-white/40 text-xs mt-0.5">{r.desc}</p>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all`}
+                        style={role === r.key ? { borderColor: r.color, background: r.color } : { borderColor: "rgba(255,255,255,0.2)" }}>
+                        {role === r.key && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Paid note for clients */}
+                {role === "client" && (
+                  <div className="bg-amber-500/8 border border-amber-500/20 rounded-2xl px-4 py-3 text-xs text-amber-400/80 mb-6 flex items-start gap-2">
+                    <span>💡</span>
+                    <span>GST, ITR, and Accounting services are <strong className="text-amber-400">paid plans</strong>. Browsing freelancers and coworking spaces is always free.</span>
+                  </div>
+                )}
+                {role === "freelancer" && (
+                  <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-2xl px-4 py-3 text-xs text-emerald-400/80 mb-6 flex items-start gap-2">
+                    <span>✅</span>
+                    <span>Creating a freelancer profile and getting hired is <strong className="text-emerald-400">completely free</strong> on FreWork.</span>
+                  </div>
+                )}
+                {role === "space_owner" && (
+                  <div className="bg-violet-500/8 border border-violet-500/20 rounded-2xl px-4 py-3 text-xs text-violet-400/80 mb-6 flex items-start gap-2">
+                    <span>🏢</span>
+                    <span>Listing your coworking space is <strong className="text-violet-400">free</strong>. We'll help you reach thousands of professionals.</span>
+                  </div>
+                )}
+
+                <button onClick={() => setStep("method")}
+                  className="w-full h-12 rounded-2xl font-semibold text-[#0B1120] flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+                  style={{ background: "linear-gradient(135deg,#E8C97A,#C9A84C,#B8973E)" }}>
+                  Continue <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <p className="text-center text-sm text-white/35 mt-6">
+                  Already have an account?{" "}
+                  <Link href="/login" className="text-[#C9A84C] font-semibold hover:underline">Sign in</Link>
+                </p>
+              </motion.div>
+            )}
 
             {step === "method" && (
               <motion.div key="method" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}>
@@ -270,11 +340,30 @@ export default function RegisterPage() {
                 <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: "var(--font-cormorant), serif" }}>Account created!</h1>
                 <p className="text-white/40 mb-2 text-sm">Welcome to FreWork, {displayName || "there"}!</p>
                 <p className="text-white/25 text-xs mb-8">Our team will reach out within 24 hours for your free consultation.</p>
-                <div className="flex gap-3 justify-center">
-                  <button onClick={() => router.push("/dashboard")}
-                    className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl font-semibold text-[#0B1120]"
-                    style={{ background: "linear-gradient(135deg,#E8C97A,#C9A84C,#B8973E)" }}>
-                    Go to Dashboard <ArrowRight className="w-4 h-4" />
+                <div className="flex flex-col gap-3 items-center">
+                  {role === "freelancer" && (
+                    <button onClick={() => router.push("/dashboard/freelancer/submit")}
+                      className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl font-semibold text-[#0B1120]"
+                      style={{ background: "linear-gradient(135deg,#E8C97A,#C9A84C,#B8973E)" }}>
+                      Add My Skills & Profile <ArrowRight className="w-4 h-4" />
+                    </button>
+                  )}
+                  {role === "space_owner" && (
+                    <button onClick={() => router.push("/dashboard/workspace/submit")}
+                      className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl font-semibold text-[#0B1120]"
+                      style={{ background: "linear-gradient(135deg,#E8C97A,#C9A84C,#B8973E)" }}>
+                      List My Space <ArrowRight className="w-4 h-4" />
+                    </button>
+                  )}
+                  {role === "client" && (
+                    <button onClick={() => router.push("/services")}
+                      className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl font-semibold text-[#0B1120]"
+                      style={{ background: "linear-gradient(135deg,#E8C97A,#C9A84C,#B8973E)" }}>
+                      View Services <ArrowRight className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button onClick={() => router.push("/dashboard")} className="text-sm text-white/35 hover:text-white/60 transition-colors">
+                    Go to Dashboard
                   </button>
                 </div>
               </motion.div>

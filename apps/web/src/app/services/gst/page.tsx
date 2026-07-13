@@ -80,6 +80,7 @@ export default function Page() {
           price="₹499"
           priceNote="Registration. Monthly filing from ₹999."
           color="blue"
+          isPaid
         />
       </PageLayout>
     </>
