@@ -300,18 +300,36 @@ export function Navbar() {
             <span>+91 85908 74681</span>
           </a>
           {user ? (
-            <>
+            <div className="flex items-center gap-2">
+              {/* Avatar chip */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200">
+                {user.user_metadata?.avatar_url ? (
+                  <img src={user.user_metadata.avatar_url} alt="avatar" className="w-6 h-6 rounded-full border border-slate-200" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-black">
+                    {(user.user_metadata?.full_name ?? user.email ?? "U")[0].toUpperCase()}
+                  </div>
+                )}
+                <span className="text-xs font-semibold text-slate-700 hidden sm:block max-w-[90px] truncate">
+                  {user.user_metadata?.full_name?.split(" ")[0] ?? user.email?.split("@")[0]}
+                </span>
+              </div>
+
+              {/* Go to Dashboard — styled CTA */}
               <Link href="/dashboard"
-                className="flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors px-4 py-2 rounded-lg hover:bg-slate-100">
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 hover:scale-[1.02] group"
+                style={{ background: "linear-gradient(135deg, #0F2044, #1E3A8A)", color: "#fff", boxShadow: "0 2px 12px rgba(15,32,68,0.25)" }}>
                 <LayoutDashboard className="w-4 h-4" />
-                Dashboard
+                My Dashboard
+                <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform opacity-70" />
               </Link>
+
               <button onClick={handleSignOut}
-                className="flex items-center gap-2 text-sm font-medium text-slate-400 transition-colors px-3 py-2 rounded-lg hover:bg-red-50 hover:text-red-500">
-                <LogOut className="w-4 h-4" />
-                Sign out
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-400 transition-colors px-2.5 py-2 rounded-lg hover:bg-red-50 hover:text-red-500"
+                title="Sign out">
+                <LogOut className="w-3.5 h-3.5" />
               </button>
-            </>
+            </div>
           ) : (
             <>
               <Link href="/login"
