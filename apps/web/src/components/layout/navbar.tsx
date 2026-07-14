@@ -114,23 +114,37 @@ export function Navbar() {
     >
       <div className="container flex h-[68px] items-center justify-between">
 
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0 min-w-0">
-          <div className="flex-shrink-0">
-            <FreWorkLogo size={36} />
-          </div>
-          <div className="flex-shrink-0">
-            <span
-              className="font-bold tracking-[-0.025em] transition-colors duration-300 block whitespace-nowrap"
-              style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "1.18rem", lineHeight: 1.1, color: "#0F2044" }}
-            >
-              FreWork
-            </span>
-            <span className="text-[9px] tracking-[0.12em] uppercase block mt-0.5 whitespace-nowrap" style={{ color: "#94A3B8" }}>
-              Business OS
-            </span>
-          </div>
-        </Link>
+        {/* Logo + Workplace link */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 group min-w-0">
+            <div className="flex-shrink-0">
+              <FreWorkLogo size={36} />
+            </div>
+            <div className="flex-shrink-0">
+              <span
+                className="font-bold tracking-[-0.025em] transition-colors duration-300 block whitespace-nowrap"
+                style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "1.18rem", lineHeight: 1.1, color: "#0F2044" }}
+              >
+                FreWork
+              </span>
+              <span className="text-[9px] tracking-[0.12em] uppercase block mt-0.5 whitespace-nowrap" style={{ color: "#94A3B8" }}>
+                Business OS
+              </span>
+            </div>
+          </Link>
+
+          {/* FreWork Workplace shortcut */}
+          <a
+            href="https://freworkplace.onrender.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:shadow-sm"
+            style={{ background: "rgba(18,70,200,0.06)", borderColor: "rgba(18,70,200,0.2)", color: "#1246C8" }}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            Workplace
+          </a>
+        </div>
 
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-1">
