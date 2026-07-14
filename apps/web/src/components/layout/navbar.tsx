@@ -138,11 +138,11 @@ export function Navbar() {
             href="https://freworkplace.onrender.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:shadow-sm"
-            style={{ background: "rgba(18,70,200,0.06)", borderColor: "rgba(18,70,200,0.2)", color: "#1246C8" }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-white transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(135deg,#1246C8,#2563EB)" }}
           >
             <Building2 className="w-3.5 h-3.5" />
-            Workplace
+            Workplace ↗
           </a>
         </div>
 
