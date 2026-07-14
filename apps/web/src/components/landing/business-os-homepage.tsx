@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { Navbar } from "@/components/layout/navbar";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, FileText, IndianRupee, Users, TrendingUp, MapPin, Rocket, LayoutDashboard,
@@ -250,6 +251,7 @@ export function BusinessOSHomepage() {
 
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ background: L.bg, color: L.text }}>
+      <Navbar />
 
       {/* ─── HERO ─── */}
       <section className="relative min-h-screen flex items-center justify-center px-4 pt-44 pb-20 overflow-hidden">
