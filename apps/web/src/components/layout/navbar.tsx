@@ -133,17 +133,6 @@ export function Navbar() {
             </div>
           </Link>
 
-          {/* FreWork Workplace shortcut */}
-          <a
-            href="https://freworkplace.onrender.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-white transition-all hover:opacity-90"
-            style={{ background: "linear-gradient(135deg,#1246C8,#2563EB)" }}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            Workplace ↗
-          </a>
         </div>
 
         {/* Desktop Nav */}

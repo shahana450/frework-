@@ -60,7 +60,7 @@ export function AnnouncementTicker() {
 
   return (
     <div
-      className="relative z-[70] w-full select-none"
+      className="fixed top-0 inset-x-0 z-[70] w-full select-none"
       style={{
         background: "linear-gradient(135deg, #1A1208 0%, #2C1F0A 50%, #1A1208 100%)",
         borderBottom: "1px solid rgba(184,144,58,0.3)",
