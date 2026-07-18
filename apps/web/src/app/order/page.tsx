@@ -90,7 +90,7 @@ function OrderForm() {
       const { orderId, amount, currency } = await res.json();
 
       const rzp = new window.Razorpay({
-        key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "",
         amount,
         currency,
         name:        "FreWork",
