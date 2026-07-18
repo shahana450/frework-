@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
@@ -14,7 +14,7 @@ import Link from "next/link";
 
 const CITIES = ["All Cities","Mumbai","Delhi","Bangalore","Hyderabad","Pune","Chennai","Gurgaon","Noida","Kolkata","Ahmedabad","Jaipur","Kochi","Chandigarh","Indore"];
 const TYPES  = ["All Types","Hot Desk","Dedicated Desk","Private Cabin","Meeting Room","Virtual Office","Event Space","Training Room","Day Pass"];
-const BUDGETS = ["Any Budget","Under ₹500/day","₹500–₹1000/day","₹1000–₹2000/day","₹2000+/day"];
+const BUDGETS = ["Any Budget","Under â‚¹500/day","â‚¹500â€“â‚¹1000/day","â‚¹1000â€“â‚¹2000/day","â‚¹2000+/day"];
 
 const AMENITY_ICONS: Record<string, React.ElementType> = {
   "High-Speed Wi-Fi": Wifi, "Coffee & Tea": Coffee, "AC": AirVent,
@@ -26,96 +26,7 @@ const AMENITY_ICONS: Record<string, React.ElementType> = {
   "Outdoor Terrace": Zap, "Event Hall": Users, "Creche": Users, "Smoking Zone": Zap,
 };
 
-const SPACES = [
-  // Mumbai
-  { id:"1",  name:"Awfis — Andheri West",          city:"Mumbai",    area:"Andheri West",         type:"Hot Desk",       price:399,  per:"day", monthlyPrice:7500,  rating:4.7, reviews:128, capacity:120, badge:"Most Popular", badgeColor:"#1E40AF", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Parking","Meeting Rooms","24/7 Access","Phone Booths","Power Backup","CCTV","Reception","Lockers"],
-    desc:"Modern coworking space in the heart of Andheri with 120 seats. Ideal for freelancers and startups.", phone:"+918590874681" },
-  { id:"2",  name:"WeWork — BKC",                  city:"Mumbai",    area:"Bandra Kurla Complex",  type:"Private Cabin",  price:1200, per:"day", monthlyPrice:22000, rating:4.9, reviews:341, capacity:500, badge:"Premium",      badgeColor:"#7C3AED", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Parking","Meeting Rooms","24/7 Access","Gym","Cafeteria","Phone Booths","Video Conf","Outdoor Terrace","Lockers","Reception"],
-    desc:"World-class workspace in BKC, Mumbai's premier business district. Enterprise-grade amenities.", phone:"+918590874681" },
-  { id:"3",  name:"Regus — Nariman Point",          city:"Mumbai",    area:"Nariman Point",         type:"Virtual Office", price:1500, per:"month", monthlyPrice:1500, rating:4.6, reviews:112, capacity:60,  badge:"Virtual",      badgeColor:"#0891B2", verified:true,
-    amenities:["Business Address","Mail Handling","Meeting Rooms","Reception","CCTV","Phone Booths"],
-    desc:"Prestigious business address at Nariman Point with mail handling and meeting room access.", phone:"+918590874681" },
-  { id:"4",  name:"GoWork — Powai",                 city:"Mumbai",    area:"Powai",                 type:"Dedicated Desk", price:599,  per:"day", monthlyPrice:11000, rating:4.5, reviews:89,  capacity:200, badge:null, badgeColor:"", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Meeting Rooms","24/7 Access","Power Backup","Lockers","CCTV"],
-    desc:"Spacious coworking in Powai's tech hub, close to IIT and top IT companies.", phone:"+918590874681" },
-
-  // Bangalore
-  { id:"5",  name:"91springboard — Koramangala",    city:"Bangalore", area:"Koramangala",           type:"Dedicated Desk", price:499,  per:"day", monthlyPrice:9000,  rating:4.8, reviews:214, capacity:200, badge:"Top Rated",    badgeColor:"#059669", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Lounge Area","Meeting Rooms","24/7 Access","Video Conf","Phone Booths","Power Backup","Cafeteria"],
-    desc:"Vibrant coworking community in Koramangala with startup culture. Best for tech teams.", phone:"+918590874681" },
-  { id:"6",  name:"IndiQube — Marathahalli",        city:"Bangalore", area:"Marathahalli",          type:"Hot Desk",       price:299,  per:"day", monthlyPrice:5500,  rating:4.4, reviews:88,  capacity:180, badge:"Best Value",   badgeColor:"#D97706", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Meeting Rooms","Power Backup","CCTV"],
-    desc:"Affordable hot desks near Marathahalli and Whitefield IT corridor.", phone:"+918590874681" },
-  { id:"7",  name:"CoWrks — RMZ Ecoworld",         city:"Bangalore", area:"Bellandur",             type:"Private Cabin",  price:950,  per:"day", monthlyPrice:17000, rating:4.7, reviews:160, capacity:400, badge:"Premium",      badgeColor:"#7C3AED", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Parking","Meeting Rooms","24/7 Access","Cafeteria","Gym","Video Conf","Phone Booths","Outdoor Terrace","Lockers"],
-    desc:"Enterprise-grade space at RMZ Ecoworld, Bangalore's most sought-after IT campus.", phone:"+918590874681" },
-  { id:"8",  name:"Bhive — HSR Layout",             city:"Bangalore", area:"HSR Layout",            type:"Day Pass",       price:250,  per:"day", monthlyPrice:4500,  rating:4.6, reviews:310, capacity:150, badge:"Affordable",   badgeColor:"#059669", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Meeting Rooms","Power Backup"],
-    desc:"India's most affordable coworking chain with vibrant community events.", phone:"+918590874681" },
-
-  // Delhi
-  { id:"9",  name:"Regus — Connaught Place",        city:"Delhi",     area:"Connaught Place",       type:"Virtual Office", price:1800, per:"month", monthlyPrice:1800, rating:4.6, reviews:97,  capacity:60,  badge:"Virtual",      badgeColor:"#0891B2", verified:true,
-    amenities:["Business Address","Mail Handling","Meeting Rooms","Reception","CCTV","High-Speed Wi-Fi"],
-    desc:"Prime business address at Connaught Place for GST registration and mail handling.", phone:"+918590874681" },
-  { id:"10", name:"Awfis — Saket",                  city:"Delhi",     area:"Saket",                 type:"Hot Desk",       price:349,  per:"day", monthlyPrice:6500,  rating:4.5, reviews:143, capacity:100, badge:null, badgeColor:"", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Meeting Rooms","Power Backup","CCTV","Lockers"],
-    desc:"Convenient coworking in Saket, close to South Delhi malls and Metro.", phone:"+918590874681" },
-  { id:"11", name:"WeWork — DLF Cyber City",        city:"Gurgaon",   area:"DLF Cyber City",        type:"Dedicated Desk", price:699,  per:"day", monthlyPrice:12000, rating:4.8, reviews:275, capacity:600, badge:"Top Rated",    badgeColor:"#059669", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Parking","Meeting Rooms","24/7 Access","Gym","Cafeteria","Video Conf","Phone Booths","Lockers","Reception"],
-    desc:"Iconic WeWork in DLF Cyber City — Gurgaon's prime corporate hub.", phone:"+918590874681" },
-  { id:"12", name:"Innov8 — Cyber City",            city:"Gurgaon",   area:"Cyber City",            type:"Private Cabin",  price:899,  per:"day", monthlyPrice:16000, rating:4.6, reviews:97,  capacity:80,  badge:"Premium",      badgeColor:"#7C3AED", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Parking","24/7 Access","Phone Booths","Power Backup","Video Conf"],
-    desc:"Boutique premium cabins in Cyber City with round-the-clock access.", phone:"+918590874681" },
-  { id:"13", name:"SpaceWork — Sector 18 Noida",   city:"Noida",     area:"Sector 18",             type:"Hot Desk",       price:299,  per:"day", monthlyPrice:5000,  rating:4.3, reviews:54,  capacity:90,  badge:null, badgeColor:"", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Meeting Rooms","CCTV"],
-    desc:"Budget-friendly coworking near Noida City Centre Metro station.", phone:"+918590874681" },
-
-  // Hyderabad
-  { id:"14", name:"Smartworks — Hitech City",       city:"Hyderabad", area:"Hitech City",           type:"Dedicated Desk", price:449,  per:"day", monthlyPrice:8000,  rating:4.7, reviews:156, capacity:300, badge:"Best Value",   badgeColor:"#D97706", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Parking","Meeting Rooms","Cafeteria","24/7 Access","Power Backup","CCTV","Lockers"],
-    desc:"Largest managed workspace in Hitech City with 300+ seats and full enterprise suite.", phone:"+918590874681" },
-  { id:"15", name:"T-Hub — Raidurgam",              city:"Hyderabad", area:"Raidurgam",             type:"Event Space",    price:2500, per:"day", monthlyPrice:45000, rating:4.9, reviews:88,  capacity:800, badge:"Gov. Backed",  badgeColor:"#DC2626", verified:true,
-    amenities:["High-Speed Wi-Fi","AC","Video Conf","Parking","Cafeteria","Meeting Rooms","24/7 Access","Event Hall","Power Backup","Reception"],
-    desc:"India's largest startup incubator backed by Telangana Govt. Ideal for events and product launches.", phone:"+918590874681" },
-
-  // Pune
-  { id:"16", name:"WorkEZ — Baner",                 city:"Pune",      area:"Baner",                 type:"Dedicated Desk", price:380,  per:"day", monthlyPrice:7000,  rating:4.5, reviews:61,  capacity:90,  badge:null, badgeColor:"", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Parking","Printer/Scanner","Power Backup","CCTV"],
-    desc:"Quiet, productive workspace in Baner's growing IT corridor.", phone:"+918590874681" },
-  { id:"17", name:"Ideaspace — Kothrud",            city:"Pune",      area:"Kothrud",               type:"Hot Desk",       price:250,  per:"day", monthlyPrice:4500,  rating:4.4, reviews:77,  capacity:70,  badge:"Affordable",   badgeColor:"#059669", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Meeting Rooms"],
-    desc:"Friendly community coworking in Kothrud, near FC Road and Deccan Gymkhana.", phone:"+918590874681" },
-
-  // Chennai
-  { id:"18", name:"CoWrks — RMZ Millenia",          city:"Chennai",   area:"Perungudi",             type:"Hot Desk",       price:350,  per:"day", monthlyPrice:6500,  rating:4.5, reviews:73,  capacity:150, badge:null, badgeColor:"", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Lounge Area","Power Backup"],
-    desc:"Stylish coworking at RMZ Millenia, Chennai's top office destination.", phone:"+918590874681" },
-  { id:"19", name:"The Hive — T Nagar",             city:"Chennai",   area:"T Nagar",               type:"Private Cabin",  price:750,  per:"day", monthlyPrice:13000, rating:4.6, reviews:42,  capacity:60,  badge:null, badgeColor:"", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Parking","Meeting Rooms","24/7 Access","Video Conf"],
-    desc:"Exclusive private cabins in T Nagar, the commercial heart of Chennai.", phone:"+918590874681" },
-
-  // Others
-  { id:"20", name:"Awfis — Salt Lake",              city:"Kolkata",   area:"Salt Lake Sector V",    type:"Dedicated Desk", price:350,  per:"day", monthlyPrice:6500,  rating:4.4, reviews:55,  capacity:130, badge:null, badgeColor:"", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Meeting Rooms","Power Backup","CCTV"],
-    desc:"Professional coworking in Kolkata's IT hub, Sector V.", phone:"+918590874681" },
-  { id:"21", name:"AltF — SG Highway",              city:"Ahmedabad", area:"SG Highway",            type:"Hot Desk",       price:299,  per:"day", monthlyPrice:5500,  rating:4.5, reviews:68,  capacity:120, badge:"Trending",     badgeColor:"#D97706", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Meeting Rooms","Parking","Power Backup"],
-    desc:"Rapidly growing coworking brand on Ahmedabad's prestigious SG Highway.", phone:"+918590874681" },
-  { id:"22", name:"91springboard — C Scheme",       city:"Jaipur",    area:"C Scheme",              type:"Dedicated Desk", price:320,  per:"day", monthlyPrice:6000,  rating:4.6, reviews:49,  capacity:100, badge:"Top Rated",    badgeColor:"#059669", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Lounge Area","Meeting Rooms","Power Backup"],
-    desc:"Jaipur's most popular coworking space in the upscale C Scheme locality.", phone:"+918590874681" },
-  { id:"23", name:"Launchpad — Marine Drive",       city:"Kochi",     area:"Marine Drive",          type:"Hot Desk",       price:280,  per:"day", monthlyPrice:5000,  rating:4.5, reviews:38,  capacity:80,  badge:"New",          badgeColor:"#0891B2", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Meeting Rooms","Outdoor Terrace"],
-    desc:"Scenic coworking overlooking Kochi's marine drive, perfect for remote workers.", phone:"+918590874681" },
-  { id:"24", name:"StartHub — Sector 35",           city:"Chandigarh",area:"Sector 35",             type:"Private Cabin",  price:600,  per:"day", monthlyPrice:10000, rating:4.4, reviews:31,  capacity:50,  badge:null, badgeColor:"", verified:true,
-    amenities:["High-Speed Wi-Fi","Coffee & Tea","AC","Printer/Scanner","Parking","Meeting Rooms","24/7 Access"],
-    desc:"Modern private cabins in Chandigarh's planned Sector 35 business district.", phone:"+918590874681" },
-  { id:"25", name:"WorkVista — Vijay Nagar",        city:"Indore",    area:"Vijay Nagar",           type:"Meeting Room",   price:800,  per:"day", monthlyPrice:12000, rating:4.3, reviews:27,  capacity:40,  badge:"New",          badgeColor:"#0891B2", verified:true,
-    amenities:["High-Speed Wi-Fi","AC","Video Conf","Printer/Scanner","Coffee & Tea","Power Backup"],
-    desc:"Professional meeting rooms and training spaces in Indore's fastest-growing tech zone.", phone:"+918590874681" },
-];
+const SPACES: SpaceEntry[] = [];
 
 interface SpaceEntry {
   id: string; name: string; city: string; area: string; type: string;
@@ -172,10 +83,10 @@ export default function CoworkingPage() {
     if (type   !== "All Types"  && s.type !== type)  return false;
     if (budget !== "Any Budget") {
       const p = s.price;
-      if (budget === "Under ₹500/day"    && (s.per !== "day" || p >= 500))  return false;
-      if (budget === "₹500–₹1000/day"   && (s.per !== "day" || p < 500 || p > 1000)) return false;
-      if (budget === "₹1000–₹2000/day"  && (s.per !== "day" || p < 1000 || p > 2000)) return false;
-      if (budget === "₹2000+/day"        && (s.per !== "day" || p < 2000)) return false;
+      if (budget === "Under â‚¹500/day"    && (s.per !== "day" || p >= 500))  return false;
+      if (budget === "â‚¹500â€“â‚¹1000/day"   && (s.per !== "day" || p < 500 || p > 1000)) return false;
+      if (budget === "â‚¹1000â€“â‚¹2000/day"  && (s.per !== "day" || p < 1000 || p > 2000)) return false;
+      if (budget === "â‚¹2000+/day"        && (s.per !== "day" || p < 2000)) return false;
     }
     const q = query.toLowerCase();
     return !q || s.name.toLowerCase().includes(q) || s.city.toLowerCase().includes(q) || s.area.toLowerCase().includes(q) || s.type.toLowerCase().includes(q);
@@ -196,7 +107,7 @@ export default function CoworkingPage() {
             </span>
           </h1>
           <p className="text-blue-200 text-lg mb-8 max-w-xl">
-            Hot desks, private cabins, virtual offices, meeting rooms — across 14 cities. Day pass to annual plans available.
+            Hot desks, private cabins, virtual offices, meeting rooms â€” across 14 cities. Day pass to annual plans available.
           </p>
           <div className="flex gap-2 max-w-2xl">
             <div className="flex-1 flex items-center gap-3 bg-white rounded-xl px-4 h-12">
@@ -211,7 +122,7 @@ export default function CoworkingPage() {
             </button>
           </div>
           <div className="flex flex-wrap gap-6 mt-10">
-            {[[String(allSpaces.length)+"+","Listed Spaces"],["14","Cities"],["₹250/day","Starting from"],["Verified","Every space"]].map(([v,l]) => (
+            {[[String(allSpaces.length)+"+","Listed Spaces"],["14","Cities"],["â‚¹250/day","Starting from"],["Verified","Every space"]].map(([v,l]) => (
               <div key={l}><p className="text-xl font-black text-white">{v}</p><p className="text-blue-300 text-xs">{l}</p></div>
             ))}
           </div>
@@ -348,14 +259,14 @@ export default function CoworkingPage() {
                   <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
                     <div>
                       <p className="text-lg font-black text-slate-900">
-                        ₹{space.price.toLocaleString("en-IN")}
+                        â‚¹{space.price.toLocaleString("en-IN")}
                         <span className="text-xs font-normal text-slate-500">/{space.per}</span>
                       </p>
                       {space.per === "day" && (
-                        <p className="text-[11px] text-slate-400">₹{space.monthlyPrice.toLocaleString("en-IN")}/mo</p>
+                        <p className="text-[11px] text-slate-400">â‚¹{space.monthlyPrice.toLocaleString("en-IN")}/mo</p>
                       )}
                     </div>
-                    <a href={`https://wa.me/${space.phone.replace(/\D/g,"")}?text=${encodeURIComponent(`Hi FreWork, I'm interested in ${space.name} (${space.type}) at ${space.area}, ${space.city}. Starting price ₹${space.price}/${space.per}. Please share details.`)}`}
+                    <a href={`https://wa.me/${space.phone.replace(/\D/g,"")}?text=${encodeURIComponent(`Hi FreWork, I'm interested in ${space.name} (${space.type}) at ${space.area}, ${space.city}. Starting price â‚¹${space.price}/${space.per}. Please share details.`)}`}
                       target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 hover:scale-[1.02]"
                       style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
@@ -369,11 +280,21 @@ export default function CoworkingPage() {
         </div>
 
         {filtered.length === 0 && (
-          <div className="text-center py-20">
-            <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 font-medium">No spaces found for your filters.</p>
-            <button onClick={() => { setCity("All Cities"); setType("All Types"); setBudget("Any Budget"); setQuery(""); }}
-              className="mt-3 text-blue-600 text-sm font-semibold hover:underline">Clear filters</button>
+          <div className="text-center py-20 max-w-lg mx-auto">
+            <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-5">
+              <Building2 className="w-7 h-7 text-blue-400" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">Verified spaces coming soon</h3>
+            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+              We are onboarding and personally verifying coworking spaces across India.<br />
+              Every space is visited and confirmed before listing — no fake listings, ever.
+            </p>
+            <p className="text-xs text-slate-400 mb-5">Own a coworking space? Be the first to list — free forever for early partners.</p>
+            <Link href="/dashboard/workspace/submit"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white"
+              style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
+              List Your Space — Free <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         )}
 
@@ -384,7 +305,7 @@ export default function CoworkingPage() {
           <Link href="/dashboard/workspace/submit"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white"
             style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
-            List Your Space — Free <ArrowRight className="w-4 h-4" />
+            List Your Space â€” Free <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </div>
