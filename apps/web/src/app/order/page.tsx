@@ -9,11 +9,6 @@ import {
   Phone, Mail, User, Building2, MessageSquare, Loader2, ChevronRight,
 } from "lucide-react";
 
-declare global {
-  interface Window {
-    Razorpay: new (opts: Record<string, unknown>) => { open(): void };
-  }
-}
 
 const SERVICE_META: Record<string, { name: string; price: number; color: string; grad: string; desc: string }> = {
   "gst-registration":  { name: "GST Registration & Filing",   price: 999,   color: "#2563EB", grad: "linear-gradient(135deg,#1D4ED8,#2563EB)", desc: "GSTIN in 3–5 days · Monthly GSTR-1 & 3B filing by expert CA" },
