@@ -2,13 +2,14 @@
 
 import { useState, useMemo } from "react";
 import { PageLayout } from "@/components/layout/page-layout";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Star, MapPin, CheckCircle, ArrowRight, Phone,
   Code2, Palette, TrendingUp, Calculator, GraduationCap,
   Wrench, Zap, ChefHat, Shield, Clock, Briefcase,
   Camera, Music2, Heart, Home, Scale, Megaphone,
   Languages, Dumbbell, Truck, Scissors, FlowerIcon as Flower,
+  X, Loader2, User, Mail,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -129,11 +130,17 @@ const FREELANCERS: Freelancer[] = [
   { id:"39", name:"Pandit Vikas Joshi",   title:"Vastu Consultant & Astrologer",      category:"Vastu & Astrology",     city:"Jaipur",    rating:4.6, reviews:115, rate:2000, rateUnit:"session",experience:"20 yrs", expYears:20, skills:["Home Vastu","Office Vastu","Kundli","Numerology","Gemstone","Muhurta","Online Consult"],              badge:"Verified Pandit",badgeColor:"#D97706",available:true,  completedJobs:1500, phone:"918590874681", about:"Experienced Vastu and Jyotish consultant providing remedies for home, office, and personal life through online and in-person sessions." },
 ];
 
+interface HireTarget { name: string; title: string; city: string; rate: number; rateUnit: string; }
+
 export default function FreelancersPage() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [city,           setCity]           = useState("All Cities");
   const [expLevel,       setExpLevel]       = useState("All Levels");
   const [query,          setQuery]          = useState("");
+  const [hireTarget,     setHireTarget]     = useState<HireTarget | null>(null);
+  const [hireForm,       setHireForm]       = useState({ name: "", phone: "", email: "", message: "" });
+  const [hireLoading,    setHireLoading]    = useState(false);
+  const [hireDone,       setHireDone]       = useState(false);
 
   const filtered = useMemo(() => FREELANCERS.filter(f => {
     if (activeCategory !== "All"       && f.category !== activeCategory) return false;
@@ -149,8 +156,90 @@ export default function FreelancersPage() {
               || f.category.toLowerCase().includes(q) || f.skills.some(s => s.toLowerCase().includes(q));
   }), [activeCategory, city, expLevel, query]);
 
+  const submitHire = async () => {
+    if (!hireTarget || !hireForm.name || !hireForm.phone) return;
+    setHireLoading(true);
+    await fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "freelancer_inquiry",
+        name: hireForm.name, phone: hireForm.phone, email: hireForm.email,
+        message: hireForm.message,
+        meta: { freelancer: hireTarget.name, title: hireTarget.title, city: hireTarget.city, rate: hireTarget.rate },
+      }),
+    });
+    setHireLoading(false);
+    setHireDone(true);
+  };
+
+  const closeModal = () => { setHireTarget(null); setHireForm({ name:"", phone:"", email:"", message:"" }); setHireDone(false); };
+
   return (
     <PageLayout>
+      {/* ── Hire Modal ── */}
+      <AnimatePresence>
+        {hireTarget && (
+          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            style={{ background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)" }}
+            onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
+            <motion.div initial={{ scale:0.95, y:16 }} animate={{ scale:1, y:0 }} exit={{ scale:0.95, y:16 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7 relative">
+              <button onClick={closeModal} className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 transition-colors">
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+              {hireDone ? (
+                <div className="text-center py-6">
+                  <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-7 h-7 text-emerald-600" />
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900 mb-2">Inquiry Sent!</h3>
+                  <p className="text-sm text-slate-500 mb-4">Our team will connect you with <strong>{hireTarget.name}</strong> within 2 hours on WhatsApp.</p>
+                  <button onClick={closeModal} className="px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors">Done</button>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-5">
+                    <p className="text-xs font-bold text-blue-600 tracking-wider uppercase mb-1">Hiring Request</p>
+                    <h3 className="text-xl font-black text-slate-900">{hireTarget.name}</h3>
+                    <p className="text-sm text-slate-500">{hireTarget.title} · {hireTarget.city} · ₹{hireTarget.rate.toLocaleString("en-IN")}/{hireTarget.rateUnit}</p>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input type="text" placeholder="Your Name *" value={hireForm.name}
+                        onChange={e => setHireForm(f => ({ ...f, name: e.target.value }))}
+                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400" />
+                    </div>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input type="tel" placeholder="Mobile Number *" value={hireForm.phone}
+                        onChange={e => setHireForm(f => ({ ...f, phone: e.target.value.replace(/\D/g,"").slice(0,10) }))}
+                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400" />
+                    </div>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input type="email" placeholder="Email (optional)" value={hireForm.email}
+                        onChange={e => setHireForm(f => ({ ...f, email: e.target.value }))}
+                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400" />
+                    </div>
+                    <textarea rows={3} placeholder="Describe your requirement..." value={hireForm.message}
+                      onChange={e => setHireForm(f => ({ ...f, message: e.target.value }))}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400 resize-none" />
+                    <button onClick={submitHire} disabled={hireLoading || !hireForm.name || !hireForm.phone}
+                      className="w-full py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:opacity-90"
+                      style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
+                      {hireLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : "Send Hiring Request"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Hero */}
       <div style={{ background:"linear-gradient(135deg,#0F2044 0%,#1E3A8A 100%)" }} className="border-b border-blue-900">
         <div className="container py-14">
@@ -319,12 +408,12 @@ export default function FreelancersPage() {
                     </p>
                     <p className="text-[10px] text-slate-400">Starting rate</p>
                   </div>
-                  <a href={`https://wa.me/${f.phone}?text=${encodeURIComponent(`Hi FreWork, I'd like to hire ${f.name} (${f.title}) in ${f.city}. Starting rate ₹${f.rate}/${f.rateUnit}. Please connect me.`)}`}
-                    target="_blank" rel="noopener noreferrer"
+                  <button
+                    onClick={() => { setHireTarget({ name:f.name, title:f.title, city:f.city, rate:f.rate, rateUnit:f.rateUnit }); setHireDone(false); }}
                     className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 hover:scale-[1.02]"
                     style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
                     <Phone className="w-3.5 h-3.5" /> Hire Now
-                  </a>
+                  </button>
                 </div>
               </div>
             </motion.div>
