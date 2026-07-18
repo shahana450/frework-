@@ -49,86 +49,7 @@ interface Freelancer {
   about: string;
 }
 
-const FREELANCERS: Freelancer[] = [
-  // CA & CS
-  { id:"1",  name:"Priya Sharma",         title:"Chartered Accountant (CA)",          category:"CA & CS",               city:"Mumbai",    rating:4.9, reviews:87,  rate:1500, rateUnit:"hr",    experience:"8 yrs",  expYears:8,  skills:["GST Filing","ITR","Tax Planning","ROC Audit","Company Reg.","TDS"],                            badge:"Top CA",        badgeColor:"#1E40AF", available:true,  completedJobs:340,  phone:"918590874681", about:"CA with 8 years experience in GST, income tax, and statutory audit for SMEs and startups across India." },
-  { id:"2",  name:"Vikram CS Associates", title:"Company Secretary (CS)",              category:"CA & CS",               city:"Gurgaon",   rating:4.7, reviews:54,  rate:2500, rateUnit:"hr",    experience:"9 yrs",  expYears:9,  skills:["Company Reg.","ROC Filing","MCA","FEMA","Share Transfer","Board Meeting"],                       badge:null,            badgeColor:"",        available:false, completedJobs:98,   phone:"918590874681", about:"CS with expertise in MCA filings, annual returns, and FEMA compliance for private limited and LLP entities." },
-  { id:"3",  name:"Anil CPA Services",    title:"Tax Consultant & CPA",               category:"CA & CS",               city:"Hyderabad", rating:4.8, reviews:143, rate:1200, rateUnit:"hr",    experience:"12 yrs", expYears:12, skills:["Income Tax","GST","Tax Audit","Notice Reply","MSME","Transfer Pricing"],                           badge:"Expert",        badgeColor:"#059669", available:true,  completedJobs:510,  phone:"918590874681", about:"Seasoned tax consultant handling complex tax cases, audit notices, and transfer pricing for MNCs and startups." },
-  { id:"4",  name:"Meena Iyer CA",        title:"GST & Compliance Specialist",        category:"CA & CS",               city:"Chennai",   rating:4.6, reviews:61,  rate:900,  rateUnit:"hr",    experience:"6 yrs",  expYears:6,  skills:["GST Registration","GSTR-1","GSTR-3B","GSTR-9","ITC Reconciliation","E-way Bill"],                 badge:null,            badgeColor:"",        available:true,  completedJobs:220,  phone:"918590874681", about:"Dedicated GST specialist for e-commerce sellers, traders, and exporters across India." },
-
-  // Legal
-  { id:"5",  name:"Adv. Rajesh Nair",     title:"Corporate & Contract Lawyer",        category:"Legal",                 city:"Mumbai",    rating:4.8, reviews:72,  rate:3000, rateUnit:"hr",    experience:"11 yrs", expYears:11, skills:["Contract Drafting","NDA","Employment Law","Mergers","NCLT","Arbitration"],                         badge:"Senior Advocate",badgeColor:"#7C3AED", available:true,  completedJobs:180,  phone:"918590874681", about:"Corporate lawyer specialising in M&A, startup agreements, and commercial dispute resolution." },
-  { id:"6",  name:"Sneha Kulkarni",        title:"IP & Trademark Lawyer",              category:"Legal",                 city:"Pune",      rating:4.7, reviews:38,  rate:2000, rateUnit:"hr",    experience:"7 yrs",  expYears:7,  skills:["Trademark Filing","Patent Search","Copyright","Design Registration","IP Litigation","Brand Audit"],  badge:null,            badgeColor:"",        available:true,  completedJobs:95,   phone:"918590874681", about:"IP lawyer helping startups and brands protect trademarks, patents, and copyrights across India and globally." },
-
-  // Tech & Dev
-  { id:"7",  name:"Rahul Verma",          title:"Full-Stack Developer",               category:"Tech & Dev",            city:"Bangalore", rating:4.8, reviews:124, rate:2000, rateUnit:"hr",    experience:"6 yrs",  expYears:6,  skills:["React","Node.js","Next.js","AWS","PostgreSQL","Docker","TypeScript"],                               badge:"Top Rated",     badgeColor:"#0891B2", available:true,  completedJobs:218,  phone:"918590874681", about:"Full-stack developer building scalable SaaS products, e-commerce platforms, and REST APIs." },
-  { id:"8",  name:"Kiran Dev Studio",     title:"Mobile App Developer (Flutter)",     category:"Tech & Dev",            city:"Hyderabad", rating:4.7, reviews:89,  rate:1800, rateUnit:"hr",    experience:"5 yrs",  expYears:5,  skills:["Flutter","Dart","Firebase","iOS","Android","REST APIs","Push Notifications"],                        badge:null,            badgeColor:"",        available:true,  completedJobs:142,  phone:"918590874681", about:"Flutter developer delivering high-quality cross-platform mobile apps for startups and enterprises." },
-  { id:"9",  name:"DataFlow Analytics",   title:"Data Scientist & ML Engineer",       category:"Tech & Dev",            city:"Bangalore", rating:4.9, reviews:63,  rate:3500, rateUnit:"hr",    experience:"8 yrs",  expYears:8,  skills:["Python","Machine Learning","TensorFlow","Power BI","SQL","Data Viz","NLP"],                          badge:"AI Expert",     badgeColor:"#0891B2", available:true,  completedJobs:87,   phone:"918590874681", about:"ML engineer building AI-powered dashboards, recommendation systems, and NLP tools for businesses." },
-  { id:"10", name:"WebCraft Solutions",   title:"WordPress & E-commerce Developer",   category:"Tech & Dev",            city:"Delhi",     rating:4.5, reviews:212, rate:800,  rateUnit:"hr",    experience:"7 yrs",  expYears:7,  skills:["WordPress","WooCommerce","Shopify","SEO","Speed Optimisation","PHP","MySQL"],                         badge:"Popular",       badgeColor:"#D97706", available:true,  completedJobs:680,  phone:"918590874681", about:"Affordable WordPress specialist for business websites, online stores, and blog setups." },
-  { id:"11", name:"Cloud Ops India",      title:"DevOps & Cloud Engineer",            category:"Tech & Dev",            city:"Pune",      rating:4.7, reviews:48,  rate:2500, rateUnit:"hr",    experience:"6 yrs",  expYears:6,  skills:["AWS","Azure","Kubernetes","CI/CD","Terraform","Linux","Docker","Ansible"],                           badge:null,            badgeColor:"",        available:false, completedJobs:74,   phone:"918590874681", about:"DevOps engineer setting up automated pipelines, cloud infrastructure, and monitoring systems." },
-
-  // Design & Creative
-  { id:"12", name:"Ananya Krishnan",      title:"UI/UX Designer",                     category:"Design & Creative",     city:"Hyderabad", rating:4.9, reviews:96,  rate:1800, rateUnit:"hr",    experience:"5 yrs",  expYears:5,  skills:["Figma","Adobe XD","Branding","Web Design","Mobile UI","Prototyping","User Research"],               badge:"Designer Pro",  badgeColor:"#EC4899", available:true,  completedJobs:175,  phone:"918590874681", about:"UI/UX designer creating user-centred mobile apps, SaaS dashboards, and brand identities." },
-  { id:"13", name:"PixelCraft Studio",    title:"Graphic Designer & Brand Expert",    category:"Design & Creative",     city:"Mumbai",    rating:4.8, reviews:187, rate:1200, rateUnit:"hr",    experience:"9 yrs",  expYears:9,  skills:["Illustrator","Photoshop","Logo Design","Brochure","Packaging","Social Media Graphics","Canva"],      badge:"Top Studio",    badgeColor:"#EC4899", available:true,  completedJobs:490,  phone:"918590874681", about:"Award-winning graphic design studio specialising in brand identity, packaging, and marketing collateral." },
-  { id:"14", name:"Motionworks India",    title:"Video Editor & Motion Designer",     category:"Design & Creative",     city:"Bangalore", rating:4.7, reviews:55,  rate:1500, rateUnit:"hr",    experience:"4 yrs",  expYears:4,  skills:["After Effects","Premiere Pro","Reels","YouTube","2D Animation","Explainer Videos","Color Grading"],  badge:null,            badgeColor:"",        available:true,  completedJobs:113,  phone:"918590874681", about:"Video editor and motion designer creating engaging reels, ads, explainer videos, and corporate films." },
-
-  // Digital Marketing
-  { id:"15", name:"Arjun Mehta",          title:"Digital Marketing Expert",           category:"Digital Marketing",     city:"Delhi",     rating:4.7, reviews:63,  rate:1200, rateUnit:"hr",    experience:"7 yrs",  expYears:7,  skills:["SEO","Google Ads","Meta Ads","Content Strategy","Email Marketing","Analytics","LinkedIn Ads"],        badge:null,            badgeColor:"",        available:true,  completedJobs:142,  phone:"918590874681", about:"360° digital marketer helping brands grow organically and through paid campaigns on Google and Meta." },
-  { id:"16", name:"GrowthHack Labs",      title:"Performance Marketing Specialist",   category:"Digital Marketing",     city:"Bangalore", rating:4.8, reviews:91,  rate:2000, rateUnit:"hr",    experience:"6 yrs",  expYears:6,  skills:["Facebook Ads","Google Ads","CRO","Funnel Building","Klaviyo","ROAS Optimisation","A/B Testing"],    badge:"Top Marketer",  badgeColor:"#059669", available:true,  completedJobs:203,  phone:"918590874681", about:"Performance marketer scaling e-commerce and D2C brands with data-driven paid media strategies." },
-
-  // Content & Copywriting
-  { id:"17", name:"WordSmith Priya",      title:"Content Writer & SEO Copywriter",    category:"Content & Copywriting", city:"Kolkata",   rating:4.8, reviews:134, rate:500,  rateUnit:"hr",    experience:"5 yrs",  expYears:5,  skills:["Blog Writing","SEO Articles","Website Copy","Email Sequences","Social Media","Press Release"],         badge:"Top Writer",    badgeColor:"#D97706", available:true,  completedJobs:420,  phone:"918590874681", about:"SEO content writer creating high-ranking articles, product descriptions, and email campaigns for brands." },
-  { id:"18", name:"TechWrite India",      title:"Technical Writer & Documentation",   category:"Content & Copywriting", city:"Pune",      rating:4.6, reviews:47,  rate:800,  rateUnit:"hr",    experience:"6 yrs",  expYears:6,  skills:["API Docs","User Manuals","SOP Writing","White Papers","Case Studies","Confluence"],                   badge:null,            badgeColor:"",        available:true,  completedJobs:88,   phone:"918590874681", about:"Technical writer creating API documentation, SOPs, and user guides for SaaS products and IT companies." },
-
-  // Photography & Video
-  { id:"19", name:"Lens & Life Studio",   title:"Wedding & Event Photographer",       category:"Photography & Video",   city:"Mumbai",    rating:4.9, reviews:310, rate:15000,rateUnit:"event", experience:"10 yrs", expYears:10, skills:["Wedding Photography","Portrait","Pre-wedding","Drone","Editing","Videography","Live Streaming"],    badge:"Top Studio",    badgeColor:"#DC2626", available:true,  completedJobs:650,  phone:"918590874681", about:"Premium wedding photographer capturing memories with cinematic storytelling and drone shots." },
-  { id:"20", name:"Product Shots India",  title:"Product & E-commerce Photographer", category:"Photography & Video",   city:"Delhi",     rating:4.7, reviews:88,  rate:3000, rateUnit:"day",   experience:"5 yrs",  expYears:5,  skills:["Product Photography","White Background","360° View","Amazon/Flipkart","Food Photography","Editing"],  badge:null,            badgeColor:"",        available:true,  completedJobs:340,  phone:"918590874681", about:"E-commerce product photographer creating catalogue-ready images for Amazon, Flipkart, and D2C brands." },
-
-  // Teaching & Tutoring
-  { id:"21", name:"Deepa Nair",           title:"CBSE Maths & Science Tutor",         category:"Teaching & Tutoring",   city:"Pune",      rating:4.9, reviews:211, rate:600,  rateUnit:"hr",    experience:"10 yrs", expYears:10, skills:["Class 9–12","JEE Prep","CBSE","ICSE","Maths","Physics","Chemistry","Online Classes"],                 badge:"Expert Tutor",  badgeColor:"#D97706", available:true,  completedJobs:890,  phone:"918590874681", about:"Experienced CBSE tutor with a 95%+ student success rate in JEE Main and Board exams." },
-  { id:"22", name:"EnglishPro Academy",   title:"English Language & IELTS Trainer",   category:"Teaching & Tutoring",   city:"Bangalore", rating:4.8, reviews:143, rate:800,  rateUnit:"hr",    experience:"8 yrs",  expYears:8,  skills:["Spoken English","IELTS","TOEFL","Business English","Grammar","Communication Skills","Pronunciation"],  badge:null,            badgeColor:"",        available:true,  completedJobs:470,  phone:"918590874681", about:"IELTS trainer helping students score 7+ bands with structured coaching and mock tests." },
-  { id:"23", name:"CodeKids Tutor",       title:"Coding & Robotics Instructor (Kids)",category:"Teaching & Tutoring",   city:"Hyderabad", rating:4.9, reviews:78,  rate:700,  rateUnit:"hr",    experience:"4 yrs",  expYears:4,  skills:["Python for Kids","Scratch","Arduino","Robotics","Game Dev","Math+Coding"],                            badge:"Popular",       badgeColor:"#0891B2", available:true,  completedJobs:210,  phone:"918590874681", about:"Certified coding instructor teaching Python, Scratch, and robotics to children aged 6–16." },
-
-  // Electrician
-  { id:"24", name:"Suresh Electricals",   title:"Licensed Electrician",               category:"Electrician",           city:"Chennai",   rating:4.8, reviews:178, rate:400,  rateUnit:"visit", experience:"12 yrs", expYears:12, skills:["Wiring","AC Installation","Solar Panel","CCTV","DB Board","Inverter","Short Circuit Fix"],             badge:"Govt. Licensed", badgeColor:"#DC2626", available:true, completedJobs:630,  phone:"918590874681", about:"Licensed electrician handling home wiring, AC installation, solar panels, and emergency repairs." },
-  { id:"25", name:"PowerFix Pro",         title:"Industrial & Commercial Electrician",category:"Electrician",           city:"Pune",      rating:4.7, reviews:92,  rate:700,  rateUnit:"visit", experience:"15 yrs", expYears:15, skills:["3-Phase Wiring","Generator","AMF Panel","Transformer","Industrial Maintenance","UPS","Safety Audit"],  badge:null,            badgeColor:"",        available:true,  completedJobs:410,  phone:"918590874681", about:"Industrial electrician for factories, warehouses, and commercial buildings with 15 years of field experience." },
-
-  // Plumber & Carpenter
-  { id:"26", name:"Ravi Plumbing Works",  title:"Plumber & Sanitation Expert",        category:"Plumber & Carpenter",   city:"Mumbai",    rating:4.6, reviews:147, rate:350,  rateUnit:"visit", experience:"15 yrs", expYears:15, skills:["Leakage Fix","Bathroom Fitting","Pipe Work","Water Tank","Drainage","Motor Repair","CPVC/PVC"],        badge:null,            badgeColor:"",        available:true,  completedJobs:560,  phone:"918590874681", about:"Experienced plumber for residential and commercial plumbing, bathroom renovation, and emergency leakage repair." },
-  { id:"27", name:"WoodCraft Interiors",  title:"Carpenter & Furniture Maker",        category:"Plumber & Carpenter",   city:"Bangalore", rating:4.8, reviews:109, rate:500,  rateUnit:"day",   experience:"12 yrs", expYears:12, skills:["Modular Furniture","Wardrobe","Kitchen Cabinet","Bed Design","Polish","Door Frame","Custom Woodwork"],  badge:"Top Carpenter", badgeColor:"#B45309", available:true,  completedJobs:380,  phone:"918590874681", about:"Custom furniture carpenter specialising in modular kitchens, wardrobes, and wooden interiors for homes." },
-
-  // Cook & Catering
-  { id:"28", name:"Meena Homefoods",      title:"Home Cook & Catering",               category:"Cook & Catering",       city:"Bangalore", rating:4.9, reviews:302, rate:800,  rateUnit:"day",   experience:"8 yrs",  expYears:8,  skills:["South Indian","North Indian","Event Catering","Tiffin Service","Sweets","Biryani","Corporate Lunch"],  badge:"Popular",       badgeColor:"#BE185D", available:true,  completedJobs:1200, phone:"918590874681", about:"Professional home cook providing tiffin services, event catering, and bulk meal orders across Bangalore." },
-  { id:"29", name:"Chef Arora Events",    title:"Corporate & Wedding Chef",           category:"Cook & Catering",       city:"Delhi",     rating:4.8, reviews:145, rate:5000, rateUnit:"event", experience:"14 yrs", expYears:14, skills:["Buffet Setup","Live Counter","Multi-cuisine","Hygiene Cert.","200–1000 pax","Bar & Snacks"],         badge:"Pro Chef",      badgeColor:"#BE185D", available:true,  completedJobs:430,  phone:"918590874681", about:"Certified chef managing full-service catering for corporate events, weddings, and private parties in Delhi NCR." },
-
-  // Security
-  { id:"30", name:"SecureGuard Services", title:"Security Guard & Supervisor",        category:"Security",              city:"Mumbai",    rating:4.5, reviews:67,  rate:600,  rateUnit:"day",   experience:"10 yrs", expYears:10, skills:["24/7 Guard","CCTV Monitor","Access Control","Event Security","Bouncer","First Aid","Report Writing"], badge:"Verified",      badgeColor:"#374151", available:true,  completedJobs:720,  phone:"918590874681", about:"Trained security professionals for residential societies, offices, retail stores, and event venues." },
-
-  // Healthcare & Wellness
-  { id:"31", name:"Dr. Kavita Physiotherapy",title:"Physiotherapist (Home Visit)",    category:"Healthcare & Wellness", city:"Hyderabad", rating:4.9, reviews:189, rate:800,  rateUnit:"session",experience:"9 yrs",  expYears:9,  skills:["Back Pain","Sports Injury","Stroke Rehab","Post-Surgery","Knee Pain","Dry Needling","Home Visit"],     badge:"AIIMS Trained", badgeColor:"#DC2626", available:true,  completedJobs:310,  phone:"918590874681", about:"Certified physiotherapist offering home visit sessions for back pain, sports injuries, and post-operative rehab." },
-  { id:"32", name:"NutriLife Dietician",  title:"Dietician & Nutrition Coach",        category:"Healthcare & Wellness", city:"Pune",      rating:4.8, reviews:134, rate:700,  rateUnit:"session",experience:"7 yrs",  expYears:7,  skills:["Weight Loss","PCOD Diet","Diabetic Diet","Sports Nutrition","Thyroid","Pregnancy Diet","Online Consult"],badge:null,            badgeColor:"",        available:true,  completedJobs:280,  phone:"918590874681", about:"Registered dietician creating personalised diet plans for weight loss, diabetes management, and sports performance." },
-
-  // Interior Design
-  { id:"33", name:"SpaceStudio Design",   title:"Interior Designer",                  category:"Interior Design",       city:"Mumbai",    rating:4.8, reviews:76,  rate:2000, rateUnit:"hr",    experience:"8 yrs",  expYears:8,  skills:["Residential Design","Office Interiors","3D Rendering","Space Planning","Vastu","Modular Kitchen","Budget Planning"],badge:"Architect",    badgeColor:"#7C3AED", available:true,  completedJobs:140,  phone:"918590874681", about:"Interior architect transforming homes and offices with functional, aesthetic, and Vastu-compliant designs." },
-
-  // Translation
-  { id:"34", name:"LinguaIndia Services", title:"Translator & Interpreter",           category:"Translation",           city:"Kolkata",   rating:4.7, reviews:58,  rate:600,  rateUnit:"hr",    experience:"10 yrs", expYears:10, skills:["Hindi–English","Bengali–English","Legal Translation","Medical Translation","Certified Notary","Subtitling"],badge:null,           badgeColor:"",        available:true,  completedJobs:330,  phone:"918590874681", about:"Certified translator for legal, medical, and corporate documents across 8 Indian languages." },
-
-  // Fitness & Yoga
-  { id:"35", name:"YogaWithRita",         title:"Yoga Instructor & Wellness Coach",   category:"Fitness & Yoga",        city:"Bangalore", rating:4.9, reviews:241, rate:500,  rateUnit:"session",experience:"12 yrs", expYears:12, skills:["Hatha Yoga","Prenatal Yoga","Meditation","Pranayama","Stress Relief","Corporate Wellness","Online Classes"],badge:"Certified",    badgeColor:"#D97706", available:true,  completedJobs:900,  phone:"918590874681", about:"RYT-500 certified yoga teacher offering group classes, corporate wellness sessions, and prenatal yoga online." },
-
-  // Logistics
-  { id:"36", name:"FastMove Logistics",   title:"Goods Transport & Delivery Driver",  category:"Logistics & Driver",    city:"Chennai",   rating:4.5, reviews:203, rate:1200, rateUnit:"day",   experience:"8 yrs",  expYears:8,  skills:["Tempo/Van","Intra-city Delivery","E-commerce Pickup","House Shifting","LCV/HCV","Time-bound Delivery"],badge:null,           badgeColor:"",        available:true,  completedJobs:510,  phone:"918590874681", about:"Reliable transport driver for intra-city goods delivery, house shifting, and last-mile e-commerce logistics." },
-
-  // Salon & Beauty
-  { id:"37", name:"GlowUp Beauty",        title:"Home-Visit Makeup Artist",           category:"Salon & Beauty",        city:"Delhi",     rating:4.8, reviews:178, rate:3000, rateUnit:"event", experience:"7 yrs",  expYears:7,  skills:["Bridal Makeup","HD Makeup","Party Makeup","Saree Draping","Airbrush","Hair Styling","At-home Facial"],  badge:"Bridal Pro",    badgeColor:"#BE185D", available:true,  completedJobs:340,  phone:"918590874681", about:"Celebrity-trained makeup artist specialising in bridal and party looks with home-visit convenience." },
-
-  // Music & Events
-  { id:"38", name:"BeatMaster Events",    title:"DJ & Event Coordinator",             category:"Music & Events",        city:"Mumbai",    rating:4.7, reviews:96,  rate:8000, rateUnit:"event", experience:"9 yrs",  expYears:9,  skills:["DJ (EDM/Bollywood)","MC/Anchor","Sound System","LED Setup","Corporate Events","Wedding DJ","Live Streaming"], badge:null,          badgeColor:"",        available:true,  completedJobs:280,  phone:"918590874681", about:"Professional DJ and event coordinator managing music, sound, and full event production for weddings and corporate events." },
-
-  // Vastu & Astrology
-  { id:"39", name:"Pandit Vikas Joshi",   title:"Vastu Consultant & Astrologer",      category:"Vastu & Astrology",     city:"Jaipur",    rating:4.6, reviews:115, rate:2000, rateUnit:"session",experience:"20 yrs", expYears:20, skills:["Home Vastu","Office Vastu","Kundli","Numerology","Gemstone","Muhurta","Online Consult"],              badge:"Verified Pandit",badgeColor:"#D97706",available:true,  completedJobs:1500, phone:"918590874681", about:"Experienced Vastu and Jyotish consultant providing remedies for home, office, and personal life through online and in-person sessions." },
-];
+const FREELANCERS: Freelancer[] = [];
 
 interface HireTarget { name: string; title: string; city: string; rate: number; rateUnit: string; }
 
@@ -244,7 +165,7 @@ export default function FreelancersPage() {
       <div style={{ background:"linear-gradient(135deg,#0F2044 0%,#1E3A8A 100%)" }} className="border-b border-blue-900">
         <div className="container py-14">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white/80 text-xs font-bold tracking-widest uppercase mb-5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {FREELANCERS.length}+ Verified Professionals
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" /> Coming Soon — Accepting Applications
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight">
             Hire Verified<br />
@@ -268,7 +189,7 @@ export default function FreelancersPage() {
             </button>
           </div>
           <div className="flex flex-wrap gap-6 mt-10">
-            {[[String(FREELANCERS.length)+"+","Verified Experts"],[String(CATEGORIES.length),"Categories"],["4.8★","Avg Rating"],["Free","To Post a Job"]].map(([v,l]) => (
+            {[[String(CATEGORIES.length),"Categories"],["16","Cities"],["Free","To List Your Profile"],["Verified","Professionals Only"]].map(([v,l]) => (
               <div key={l}><p className="text-xl font-black text-white">{v}</p><p className="text-blue-300 text-xs">{l}</p></div>
             ))}
           </div>
@@ -421,10 +342,21 @@ export default function FreelancersPage() {
         </div>
 
         {filtered.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-slate-500 font-medium">No professionals found for your filters.</p>
-            <button onClick={() => { setActiveCategory("All"); setCity("All Cities"); setExpLevel("All Levels"); setQuery(""); }}
-              className="mt-3 text-blue-600 text-sm font-semibold hover:underline">Clear filters</button>
+          <div className="text-center py-20 max-w-lg mx-auto">
+            <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-5">
+              <CheckCircle className="w-7 h-7 text-blue-400" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">Verified professionals coming soon</h3>
+            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+              We are currently onboarding and verifying CAs, lawyers, developers, and other experts.<br />
+              All profiles go through manual verification before they go live.
+            </p>
+            <p className="text-xs text-slate-400 mb-5">Are you a professional? Be among the first to list — free forever for early members.</p>
+            <Link href="/dashboard/freelancer/submit"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white"
+              style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
+              Apply to List Your Profile <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         )}
 
