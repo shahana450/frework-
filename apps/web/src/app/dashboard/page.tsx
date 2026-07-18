@@ -15,7 +15,7 @@ import {
 
 const PAID_SERVICES = [
   {
-    icon: ReceiptText,   label: "GST Registration & Filing",  sub: "GSTIN in 3–5 days · Monthly GSTR-1 & 3B",  price: "₹499",   href: "/services/gst",                   waMsg: "Hi FreWork, I want to pay for GST Registration & Filing service (₹499). Please guide me.",  color: "#2563EB", grad: "linear-gradient(135deg,#1D4ED8,#2563EB)", bg: "rgba(37,99,235,0.07)",  border: "rgba(37,99,235,0.18)",
+    icon: ReceiptText,   label: "GST Registration & Filing",  sub: "GSTIN in 3–5 days · Monthly GSTR-1 & 3B",  price: "₹999",   href: "/services/gst",                   waMsg: "Hi FreWork, I want to pay for GST Registration & Filing service (₹999). Please guide me.",  color: "#2563EB", grad: "linear-gradient(135deg,#1D4ED8,#2563EB)", bg: "rgba(37,99,235,0.07)",  border: "rgba(37,99,235,0.18)",
   },
   {
     icon: Calculator,    label: "Income Tax Return (ITR)",    sub: "ITR-1 to ITR-6 · Tax planning & refunds",   price: "₹799",   href: "/services/income-tax",            waMsg: "Hi FreWork, I want to pay for Income Tax Return (ITR) service (₹799). Please guide me.",   color: "#059669", grad: "linear-gradient(135deg,#047857,#059669)", bg: "rgba(5,150,105,0.07)",  border: "rgba(5,150,105,0.18)",
