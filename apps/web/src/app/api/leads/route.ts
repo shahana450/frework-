@@ -10,8 +10,13 @@ export async function POST(req: NextRequest) {
   try {
     const { type, name, phone, email, message, meta } = await req.json();
     const { error } = await supabaseAdmin.from("fw_leads").insert({
-      type, name, phone, email, message, meta: meta ?? {},
-      created_at: new Date().toISOString(),
+      name,
+      mobile:  phone,
+      email,
+      service: meta?.freelancer ?? meta?.title ?? type,
+      source:  "website",
+      notes:   message ?? null,
+      status:  "new",
     });
     if (error) throw error;
     return NextResponse.json({ success: true });
