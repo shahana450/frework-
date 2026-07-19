@@ -1031,110 +1031,170 @@ export function BusinessOSHomepage() {
       </section>
 
       {/* ─── PRICING ─── */}
-      <section className="py-28 px-4 relative" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>
-        <div className="container max-w-5xl mx-auto relative z-10">
-          <div className="text-center mb-10">
-            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>Simple pricing</p>
-            <GoldDivider />
-            <h2 className="font-black mb-4 mt-4" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: L.text }}>
+      <section className="py-28 px-4 relative overflow-hidden" style={{ background: "#0A0F1E" }}>
+        {/* Background glow */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full opacity-20"
+            style={{ background: "radial-gradient(ellipse, #3B82F6 0%, transparent 70%)", filter: "blur(60px)" }} />
+        </div>
+
+        <div className="container max-w-6xl mx-auto relative z-10">
+          {/* Header */}
+          <div className="text-center mb-14">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-bold tracking-widest uppercase mb-5"
+              style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", color: "#60A5FA" }}>
+              Simple Pricing
+            </span>
+            <h2 className="font-black mb-4" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(2rem, 4vw, 3rem)", color: "#F8FAFC" }}>
               Pay only for what you need
             </h2>
+            <p className="text-sm max-w-md mx-auto mb-8" style={{ color: "#64748B" }}>
+              Start free. Upgrade when you grow. No hidden charges.
+            </p>
 
             {/* Billing toggle */}
-            <div className="inline-flex items-center gap-3 p-1 rounded-full border mb-4"
-              style={{ background: L.bgCard, borderColor: L.borderLight }}>
+            <div className="inline-flex items-center gap-1 p-1 rounded-full"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
               <button onClick={() => setBillingYearly(false)}
-                className="px-4 py-1.5 rounded-full text-xs font-bold transition-all"
-                style={!billingYearly ? { background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, color: "#fff" } : { color: L.textMuted }}>
+                className="px-5 py-2 rounded-full text-xs font-bold transition-all"
+                style={!billingYearly ? { background: "#1E40AF", color: "#fff", boxShadow: "0 2px 12px rgba(30,64,175,0.5)" } : { color: "#64748B" }}>
                 Monthly
               </button>
               <button onClick={() => setBillingYearly(true)}
-                className="px-4 py-1.5 rounded-full text-xs font-bold transition-all"
-                style={billingYearly ? { background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, color: "#fff" } : { color: L.textMuted }}>
-                Yearly <span className="ml-1 text-[10px]" style={{ color: billingYearly ? "rgba(255,255,255,0.75)" : "#059669" }}>Save 20%</span>
+                className="px-5 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2"
+                style={billingYearly ? { background: "#1E40AF", color: "#fff", boxShadow: "0 2px 12px rgba(30,64,175,0.5)" } : { color: "#64748B" }}>
+                Yearly
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-black" style={{ background: "rgba(5,150,105,0.2)", color: "#34D399" }}>–20%</span>
               </button>
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+          {/* Cards */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10 items-stretch">
             {[
-              { name: "Free", icon: Zap, price: 0, per: "forever", tagline: "Just getting started", accent: "#475569", border: L.borderLight, popular: false, features: ["Browse all listings", "1 active listing", "5 applications/mo", "Email support"], href: "/register" },
-              { name: "Professional", icon: Rocket, price: 999, per: "/month", tagline: "Freelancers & CAs", accent: L.goldDark, border: L.border, popular: true, features: ["Unlimited listings", "Verified Badge", "GST Registration", "Monthly GST filing", "Income Tax (ITR)"], href: "/register?plan=professional" },
-              { name: "Growth", icon: TrendingUp, price: 2999, per: "/month", tagline: "SMEs & agencies", accent: "#2563EB", border: "rgba(37,99,235,0.15)", popular: false, features: ["5 team seats", "Bookkeeping", "ROC filing", "Client portal", "Revenue analytics"], href: "/register?plan=growth" },
-              { name: "Business", icon: Building2, price: 4999, per: "/month", tagline: "Established firms", accent: "#7C3AED", border: "rgba(124,58,237,0.15)", popular: false, features: ["20 team seats", "Dedicated manager", "Internal audit", "Tax audit", "API access"], href: "/register?plan=business" },
+              {
+                name: "Free", icon: Zap, price: 0, tagline: "Just getting started",
+                accent: "#94A3B8", accentBg: "rgba(148,163,184,0.08)", border: "rgba(255,255,255,0.08)",
+                popular: false, dark: false,
+                features: ["Browse all listings", "1 active listing", "5 applications/mo", "Email support"],
+                href: "/register", cta: "Get Started Free",
+              },
+              {
+                name: "Professional", icon: Rocket, price: 999, tagline: "Freelancers & CAs",
+                accent: "#60A5FA", accentBg: "rgba(59,130,246,0.1)", border: "rgba(59,130,246,0.4)",
+                popular: true, dark: true,
+                features: ["Unlimited listings", "Verified Badge", "GST Registration", "Monthly GST filing", "Income Tax (ITR)"],
+                href: "/register?plan=professional", cta: "Start Free Trial",
+              },
+              {
+                name: "Growth", icon: TrendingUp, price: 2999, tagline: "SMEs & agencies",
+                accent: "#818CF8", accentBg: "rgba(129,140,248,0.08)", border: "rgba(129,140,248,0.2)",
+                popular: false, dark: false,
+                features: ["5 team seats", "Bookkeeping", "ROC filing", "Client portal", "Revenue analytics"],
+                href: "/register?plan=growth", cta: "Start Trial",
+              },
+              {
+                name: "Business", icon: Building2, price: 4999, tagline: "Established firms",
+                accent: "#A78BFA", accentBg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.2)",
+                popular: false, dark: false,
+                features: ["20 team seats", "Dedicated manager", "Internal audit", "Tax audit", "API access"],
+                href: "/register?plan=business", cta: "Start Trial",
+              },
             ].map((plan, i) => {
               const Icon = plan.icon;
-              const displayPrice = plan.price === 0 ? "₹0" : billingYearly ? `₹${Math.round(plan.price * 0.8).toLocaleString("en-IN")}` : `₹${plan.price.toLocaleString("en-IN")}`;
+              const displayPrice = plan.price === 0 ? "₹0" : billingYearly
+                ? `₹${Math.round(plan.price * 0.8).toLocaleString("en-IN")}`
+                : `₹${plan.price.toLocaleString("en-IN")}`;
               return (
                 <motion.div key={plan.name}
                   initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                  className="relative flex flex-col rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1"
-                  style={{ background: L.bgCard, borderColor: plan.border, boxShadow: plan.popular ? `0 8px 40px rgba(184,144,58,0.15)` : L.shadow }}>
+                  className="relative flex flex-col rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+                  style={{
+                    background: plan.popular
+                      ? "linear-gradient(160deg, #0F1F5C 0%, #0A0F1E 60%)"
+                      : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${plan.border}`,
+                    boxShadow: plan.popular ? "0 0 0 1px rgba(59,130,246,0.5), 0 20px 60px rgba(30,64,175,0.3)" : "none",
+                  }}>
+
+                  {/* Popular badge */}
                   {plan.popular && (
-                    <>
-                      <div className="absolute inset-x-0 top-0 h-[3px] rounded-t-2xl"
-                        style={{ background: `linear-gradient(90deg, ${L.goldLight}, ${L.gold}, ${L.goldDark})` }} />
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <span className="px-3 py-0.5 rounded-full text-[10px] font-black tracking-wide"
-                          style={{ background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, color: "#fff" }}>
-                          Most Popular
-                        </span>
-                      </div>
-                    </>
+                    <div className="absolute -top-px left-0 right-0 h-[2px] rounded-t-2xl"
+                      style={{ background: "linear-gradient(90deg, #3B82F6, #60A5FA, #93C5FD)" }} />
+                  )}
+                  {plan.popular && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                      <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wide text-white"
+                        style={{ background: "linear-gradient(135deg,#2563EB,#1E40AF)", boxShadow: "0 4px 12px rgba(30,64,175,0.5)" }}>
+                        ⚡ Most Popular
+                      </span>
+                    </div>
                   )}
 
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 mt-2"
-                    style={{ background: `${plan.accent}10`, border: `1px solid ${plan.accent}20` }}>
-                    <Icon className="w-4 h-4" style={{ color: plan.accent }} />
+                  {/* Icon */}
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-5 mt-2"
+                    style={{ background: plan.accentBg, border: `1px solid ${plan.accent}25` }}>
+                    <Icon className="w-5 h-5" style={{ color: plan.accent }} />
                   </div>
 
-                  <p className="text-[9px] font-black tracking-[0.25em] uppercase mb-0.5" style={{ color: plan.accent }}>{plan.name}</p>
-                  <p className="text-[11px] mb-4" style={{ color: L.textMuted }}>{plan.tagline}</p>
+                  {/* Name + tagline */}
+                  <p className="text-[10px] font-black tracking-[0.22em] uppercase mb-1" style={{ color: plan.accent }}>{plan.name}</p>
+                  <p className="text-xs mb-5" style={{ color: "#475569" }}>{plan.tagline}</p>
 
-                  <div className="flex items-end gap-1 mb-1">
+                  {/* Price */}
+                  <div className="mb-1">
                     <AnimatePresence mode="wait">
                       <motion.span key={displayPrice}
-                        initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-                        className="text-3xl font-black" style={{ color: L.text, fontFamily: "var(--font-plus-jakarta), sans-serif" }}>
+                        initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                        className="text-4xl font-black" style={{ color: "#F1F5F9", fontFamily: "var(--font-plus-jakarta), sans-serif", letterSpacing: "-0.02em" }}>
                         {displayPrice}
                       </motion.span>
                     </AnimatePresence>
-                    <span className="text-xs pb-0.5" style={{ color: L.textMuted }}>{plan.price === 0 ? "forever" : billingYearly ? "/month (billed yearly)" : "/month"}</span>
+                    <span className="text-xs ml-1" style={{ color: "#475569" }}>
+                      {plan.price === 0 ? "forever" : "/month"}
+                    </span>
                   </div>
 
-                  {billingYearly && plan.price > 0 && (
-                    <p className="text-[10px] mb-4" style={{ color: "#059669" }}>
-                      You save ₹{Math.round(plan.price * 0.2 * 12).toLocaleString("en-IN")}/year
+                  {billingYearly && plan.price > 0 ? (
+                    <p className="text-[10px] mb-5 font-semibold" style={{ color: "#34D399" }}>
+                      Save ₹{Math.round(plan.price * 0.2 * 12).toLocaleString("en-IN")} per year
                     </p>
-                  )}
-                  {(!billingYearly || plan.price === 0) && <div className="mb-4" />}
+                  ) : <div className="mb-5" />}
 
-                  <ul className="space-y-2 mb-6 flex-1">
+                  {/* Divider */}
+                  <div className="mb-5 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+
+                  {/* Features */}
+                  <ul className="space-y-3 flex-1 mb-7">
                     {plan.features.map(f => (
-                      <li key={f} className="flex items-start gap-2">
-                        <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                          style={{ background: `${plan.accent}10` }}>
+                      <li key={f} className="flex items-center gap-2.5">
+                        <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ background: `${plan.accent}18` }}>
                           <Check className="w-2.5 h-2.5" style={{ color: plan.accent }} />
                         </div>
-                        <span className="text-[11px]" style={{ color: L.textSub }}>{f}</span>
+                        <span className="text-xs" style={{ color: "#94A3B8" }}>{f}</span>
                       </li>
                     ))}
                   </ul>
 
+                  {/* CTA */}
                   <Link href={plan.href}
-                    className="w-full py-2.5 rounded-xl text-xs font-bold text-center block transition-all hover:scale-[1.02]"
+                    className="w-full py-3 rounded-xl text-xs font-bold text-center block transition-all hover:scale-[1.02] hover:shadow-lg"
                     style={plan.popular
-                      ? { background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, color: "#fff" }
-                      : { border: `1px solid ${plan.border}`, color: plan.accent, background: "transparent" }}>
-                    {plan.popular ? "Start Free Trial" : plan.price === 0 ? "Get Started Free" : "Start Trial"}
+                      ? { background: "linear-gradient(135deg,#2563EB,#1D4ED8)", color: "#fff", boxShadow: "0 4px 20px rgba(37,99,235,0.4)" }
+                      : { background: "rgba(255,255,255,0.05)", color: plan.accent, border: `1px solid ${plan.border}` }}>
+                    {plan.cta}
                   </Link>
                 </motion.div>
               );
             })}
           </div>
 
+          {/* Bottom CTA */}
           <div className="text-center">
-            <Link href="/pricing" className="inline-flex items-center gap-2 text-sm font-semibold transition-all hover:gap-3" style={{ color: L.gold }}>
+            <Link href="/pricing"
+              className="inline-flex items-center gap-2 text-sm font-semibold transition-all hover:gap-3"
+              style={{ color: "#60A5FA" }}>
               View full plan comparison & Enterprise pricing <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
