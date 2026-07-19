@@ -22,6 +22,7 @@ import {
   LayoutDashboard,
   LogOut,
   Phone,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -273,15 +274,45 @@ export function Navbar() {
           {/* Divider */}
           <div className="w-px h-5 bg-slate-200 mx-1" />
 
-          {/* Other links */}
-          {([["Pricing", "/pricing"], ["About", "/about"]] as [string,string][]).map(([label, href]) => (
-            <Link key={label} href={href} className={cn(
-              "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-              pathname === href ? "text-blue-600 font-semibold" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            )}>
-              {label}
-            </Link>
-          ))}
+          {/* Pricing — styled pill */}
+          <Link href="/pricing"
+            className={cn(
+              "relative inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 hover:scale-[1.04]",
+              pathname === "/pricing"
+                ? "text-white shadow-lg"
+                : "text-blue-700 hover:text-white hover:shadow-lg group"
+            )}
+            style={pathname === "/pricing"
+              ? { background: "linear-gradient(135deg,#1246C8,#2563EB)", boxShadow: "0 4px 16px rgba(37,99,235,0.35)" }
+              : { background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.2)" }
+            }
+            onMouseEnter={e => {
+              if (pathname !== "/pricing") {
+                (e.currentTarget as HTMLAnchorElement).style.background = "linear-gradient(135deg,#1246C8,#2563EB)";
+                (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 4px 16px rgba(37,99,235,0.35)";
+                (e.currentTarget as HTMLAnchorElement).style.color = "#fff";
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = "transparent";
+              }
+            }}
+            onMouseLeave={e => {
+              if (pathname !== "/pricing") {
+                (e.currentTarget as HTMLAnchorElement).style.background = "rgba(37,99,235,0.08)";
+                (e.currentTarget as HTMLAnchorElement).style.boxShadow = "none";
+                (e.currentTarget as HTMLAnchorElement).style.color = "";
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(37,99,235,0.2)";
+              }
+            }}>
+            <Sparkles className="w-3.5 h-3.5" />
+            Pricing
+          </Link>
+
+          {/* About */}
+          <Link href="/about" className={cn(
+            "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
+            pathname === "/about" ? "text-blue-600 font-semibold" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          )}>
+            About
+          </Link>
         </nav>
 
         {/* CTA — always visible on sm+ */}
@@ -390,6 +421,19 @@ export function Navbar() {
                   <span className="text-sm font-medium text-slate-800">{item.title}</span>
                 </Link>
               ))}
+
+              <div className="border-t border-slate-100 my-3" />
+              <Link href="/pricing" onClick={() => setIsMobileOpen(false)}
+                className="flex items-center gap-3 p-3 rounded-xl transition-colors"
+                style={{ background: "rgba(37,99,235,0.07)", border: "1px solid rgba(37,99,235,0.15)" }}>
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: "linear-gradient(135deg,#1246C8,#2563EB)" }}>
+                  <Sparkles className="w-3.5 h-3.5 text-white" />
+                </div>
+                <span className="text-sm font-bold text-blue-700">Pricing</span>
+                <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
+                  style={{ background: "linear-gradient(135deg,#1246C8,#2563EB)" }}>View Plans</span>
+              </Link>
 
               <div className="border-t border-slate-100 pt-4 mt-2 flex flex-col gap-2">
                 {user ? (
