@@ -29,6 +29,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/coworking`,                       lastModified: now, changeFrequency: "weekly",  priority: 0.72 },
     { url: `${BASE_URL}/jobs`,                            lastModified: now, changeFrequency: "weekly",  priority: 0.70 },
     { url: `${BASE_URL}/about`,                           lastModified: now, changeFrequency: "monthly", priority: 0.65 },
-    { url: `${BASE_URL}/register`,                        lastModified: now, changeFrequency: "yearly",  priority: 0.50 },
+    { url: `${BASE_URL}/register`,                        lastModified: now, changeFrequency: "monthly", priority: 0.60 },
+    { url: `${BASE_URL}/login`,                           lastModified: now, changeFrequency: "monthly", priority: 0.40 },
+    { url: `${BASE_URL}/terms`,                           lastModified: now, changeFrequency: "yearly",  priority: 0.20 },
+    { url: `${BASE_URL}/privacy`,                         lastModified: now, changeFrequency: "yearly",  priority: 0.20 },
   ];
 }
