@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, LogIn, UserPlus, X, ChevronRight, Bell } from "lucide-react";
+import { Zap, LogIn, UserPlus, X, ChevronRight, Bell, Sparkles } from "lucide-react";
 import type { TaxNewsItem } from "@/app/api/tax-news/route";
 
 // Fallback headlines if API hasn't loaded yet
@@ -134,6 +134,19 @@ export function AnnouncementTicker() {
 
         {/* Auth buttons */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
+          {/* Pricing link */}
+          <Link href="/pricing"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12px] font-black tracking-wide transition-all hover:scale-[1.05]"
+            style={{
+              background: "linear-gradient(135deg, rgba(59,130,246,0.25), rgba(30,64,175,0.35))",
+              color: "#93C5FD",
+              border: "1px solid rgba(59,130,246,0.35)",
+              boxShadow: "0 0 12px rgba(59,130,246,0.15)",
+            }}>
+            <Sparkles size={11} />
+            Pricing
+          </Link>
+
           <Link href="/login"
             className="hidden sm:inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all hover:bg-white/10"
             style={{ color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.15)" }}>
