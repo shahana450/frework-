@@ -41,9 +41,9 @@ const MODULES = [
     detail: {
       heading: "Everything to start your business",
       why: "Starting a business in India involves multiple government registrations. FreWork handles all of them end-to-end, so you can focus on building your product.",
-      steps: ["Fill a simple online form", "Upload your documents", "Our experts file with the government", "Get your certificates in 3â€“7 days"],
+      steps: ["Fill a simple online form", "Upload your documents", "Our experts file with the government", "Get your certificates in 3â€”7 days"],
       pricing: "Starting â‚¹1,499",
-      time: "3â€“7 working days",
+      time: "3â€”7 working days",
       features: [
         { icon: Building2, text: "Private Limited, LLP, OPC, Sole Prop, Partnership" },
         { icon: FileCheck, text: "GST registration included with company setup" },
@@ -62,7 +62,7 @@ const MODULES = [
       why: "Penalties for missed GST or ITR filings can be severe. FreWork tracks every deadline for you and files returns accurately and on time.",
       steps: ["Share your data or grant portal access", "We reconcile and prepare returns", "You approve before filing", "Acknowledgement delivered instantly"],
       pricing: "Starting â‚¹499/filing",
-      time: "24â€“48 hrs turnaround",
+      time: "24â€”48 hrs turnaround",
       features: [
         { icon: FileText, text: "GSTR-1, GSTR-3B, Annual Return" },
         { icon: Landmark, text: "ITR-1 to ITR-6 for all business types" },
@@ -72,7 +72,7 @@ const MODULES = [
     },
   },
   {
-    id: "finance", label: "FINANCE", tagline: "Manage Money", emoji: "ðŸ’°",
+    id: "finance", label: "FINANCE", tagline: "Manage Money", emoji: "ðŸ'°",
     desc: "Invoicing, payroll, bookkeeping â€” keep your finances clean and audit-ready.",
     icon: IndianRupee, color: "#7C3AED", href: "/pricing", badge: "Coming Soon",
     items: ["Invoicing", "Payroll", "Bookkeeping", "Reports"],
@@ -91,7 +91,7 @@ const MODULES = [
     },
   },
   {
-    id: "professionals", label: "FIND PEOPLE", tagline: "Hire Talent", emoji: "ðŸ‘¥",
+    id: "professionals", label: "FIND PEOPLE", tagline: "Hire Talent", emoji: "ðŸ'¥",
     desc: "Verified CAs, developers, designers and consultants for your business.",
     icon: Users, color: "#D97706", href: "/freelancers", badge: "Live",
     items: ["CA / CS / Lawyers", "Developers", "Designers", "Consultants"],
@@ -119,11 +119,11 @@ const MODULES = [
       why: "Banks and investors need specific documents before they fund you. Our experts create DPRs, pitch decks and business plans that meet institutional standards.",
       steps: ["Share your business idea & financials", "Our expert team drafts the document", "Review and revise together", "Final document delivered in PDF & PPT"],
       pricing: "Starting â‚¹4,999",
-      time: "5â€“10 working days",
+      time: "5â€”10 working days",
       features: [
         { icon: FileText, text: "Bank-grade Detailed Project Report (DPR)" },
         { icon: Presentation, text: "Investor pitch decks with financial models" },
-        { icon: BarChart3, text: "3â€“5 year business plans with projections" },
+        { icon: BarChart3, text: "3â€”5 year business plans with projections" },
         { icon: Building2, text: "Restructuring & turnaround advisory" },
       ],
     },
@@ -190,8 +190,8 @@ const MODULES = [
 const TRUST_TICKER = ["Company Registration", "GST Filing", "Income Tax Returns", "Coworking Spaces", "Hire Professionals", "Pitch Decks", "Startup Funding", "Business Plans", "MSME Registration", "ROC Compliance"];
 
 const COWORK_PLANS = [
-  { key: "hotdesk", emoji: "ðŸ’º", label: "Hot Desk", price: "â‚¹350", per: "/day", desc: "Open seating in a vibrant coworking hall. Perfect for freelancers and remote workers who need a productive space with all amenities." },
-  { key: "cabin", emoji: "ðŸ”’", label: "Private Cabin", price: "â‚¹8,000", per: "/month", desc: "Dedicated private cabin with lockable door. Ideal for small teams of 2â€“6 people who need focus and confidentiality." },
+  { key: "hotdesk", emoji: "ðŸ'º", label: "Hot Desk", price: "â‚¹350", per: "/day", desc: "Open seating in a vibrant coworking hall. Perfect for freelancers and remote workers who need a productive space with all amenities." },
+  { key: "cabin", emoji: "ðŸ“'", label: "Private Cabin", price: "â‚¹8,000", per: "/month", desc: "Dedicated private cabin with lockable door. Ideal for small teams of 2â€”6 people who need focus and confidentiality." },
   { key: "meeting", emoji: "ðŸ“½ï¸", label: "Meeting Room", price: "â‚¹500", per: "/hour", desc: "Fully equipped meeting room with projector, whiteboard and video conferencing. Book by the hour for client presentations." },
   { key: "virtual", emoji: "ðŸ“¬", label: "Virtual Office", price: "â‚¹999", per: "/month", desc: "Premium business address, GST registration address, mail handling and call answering. Look professional without a physical office." },
 ];
@@ -255,27 +255,14 @@ export function BusinessOSHomepage() {
 
       {/* â”€â”€â”€ HERO â”€â”€â”€ */}
       <section className="relative min-h-screen flex items-center justify-center px-4 pt-44 pb-20 overflow-hidden">
-        {/* Rich background */}
+        {/* Clean professional background */}
         <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 80% 60% at 50% -10%, rgba(184,144,58,0.16) 0%, transparent 60%)" }} />
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 40% 50% at 10% 80%, rgba(124,58,237,0.07) 0%, transparent 55%)" }} />
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 40% 50% at 90% 70%, rgba(5,150,105,0.06) 0%, transparent 55%)" }} />
-          <div style={{ position:"absolute", inset:0, opacity:0.022, backgroundImage:"linear-gradient(rgba(139,108,50,1) 1px,transparent 1px),linear-gradient(90deg,rgba(139,108,50,1) 1px,transparent 1px)", backgroundSize:"64px 64px" }} />
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 70% 50% at 50% -5%, rgba(37,99,235,0.08) 0%, transparent 65%)" }} />
+          <div style={{ position:"absolute", inset:0, opacity:0.018, backgroundImage:"linear-gradient(rgba(37,99,235,1) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,1) 1px,transparent 1px)", backgroundSize:"64px 64px" }} />
         </div>
 
-        {/* Floating ambient orbs */}
-        {[
-          { w:180, h:180, top:"8%",  left:"3%",  color:"rgba(184,144,58,0.07)",  dur:8 },
-          { w:120, h:120, top:"60%", left:"88%", color:"rgba(124,58,237,0.06)",  dur:10 },
-          { w:90,  h:90,  top:"80%", left:"6%",  color:"rgba(5,150,105,0.07)",   dur:7 },
-          { w:60,  h:60,  top:"20%", left:"85%", color:"rgba(184,144,58,0.1)",   dur:6 },
-        ].map((o,i) => (
-          <motion.div key={i} className="absolute rounded-full pointer-events-none"
-            style={{ width:o.w, height:o.h, top:o.top, left:o.left, background:`radial-gradient(circle, ${o.color}, transparent)`, filter:"blur(30px)" }}
-            animate={{ scale:[1,1.15,1], opacity:[0.6,1,0.6] }}
-            transition={{ duration:o.dur, repeat:Infinity, ease:"easeInOut", delay:i*1.5 }}
-          />
-        ))}
+        {/* Subtle ambient glow - single centered */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background:"radial-gradient(ellipse 60% 40% at 50% 0%, rgba(37,99,235,0.06) 0%, transparent 70%)" }} />
 
         {/* â”€â”€ Interactive scrolling service banners â”€â”€ */}
         <div className="absolute top-[70px] inset-x-0 z-20 overflow-hidden">
@@ -289,10 +276,10 @@ export function BusinessOSHomepage() {
               { label:"GST Registration",    icon:"ðŸ“‹", color:"#2563EB", bg:"rgba(37,99,235,0.09)",   href:"/services/gst" },
               { label:"Income Tax Return",   icon:"ðŸ›ï¸", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/income-tax" },
               { label:"Company Registration",icon:"ðŸ¢", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
-              { label:"Virtual Accountant",  icon:"ðŸ’¼", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
-              { label:"Find Freelancers",    icon:"ðŸ‘¥", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/freelancers" },
+              { label:"Virtual Accountant",  icon:"ðŸ'¼", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
+              { label:"Find Freelancers",    icon:"ðŸ'¥", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/freelancers" },
               { label:"Coworking Spaces",    icon:"ðŸ“", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/coworking" },
-              { label:"Business Audit",      icon:"ðŸ”", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
+              { label:"Business Audit",      icon:"ðŸ“", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
               { label:"Virtual CFO",         icon:"ðŸ“Š", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/virtual-cfo" },
             ];
             return (
@@ -319,7 +306,7 @@ export function BusinessOSHomepage() {
                       el.style.borderColor=`${t.color}22`;
                     }}>
                     <span>{t.icon}</span> {t.label}
-                    <span className="text-[9px] opacity-50">â†’</span>
+                    <span className="text-[9px] opacity-50">â†'</span>
                   </Link>
                 )))}
               </div>
@@ -333,9 +320,9 @@ export function BusinessOSHomepage() {
               { label:"Pitch Deck & DPR",       icon:"ðŸ“ˆ", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/services/dpr" },
               { label:"Startup Funding",         icon:"ðŸš€", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/dpr" },
               { label:"GST Filing",              icon:"ðŸ§¾", color:"#2563EB", bg:"rgba(37,99,235,0.09)",  href:"/services/gst" },
-              { label:"Payroll Management",      icon:"ðŸ’°", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
-              { label:"Business Restructuring",  icon:"ðŸ”„", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/services/restructuring" },
-              { label:"Tax Audit",               icon:"ðŸ”Ž", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
+              { label:"Payroll Management",      icon:"ðŸ'°", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
+              { label:"Business Restructuring",  icon:"ðŸ“„", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/services/restructuring" },
+              { label:"Tax Audit",               icon:"ðŸ“Ž", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
               { label:"MSME Registration",       icon:"ðŸ­", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
             ];
             return (
@@ -362,7 +349,7 @@ export function BusinessOSHomepage() {
                       el.style.borderColor=`${t.color}22`;
                     }}>
                     <span>{t.icon}</span> {t.label}
-                    <span className="text-[9px] opacity-50">â†’</span>
+                    <span className="text-[9px] opacity-50">â†'</span>
                   </Link>
                 )))}
               </div>
@@ -377,28 +364,12 @@ export function BusinessOSHomepage() {
             transition={{ duration:0.7, ease:[0.16,1,0.3,1] }}
             className="flex flex-col items-center mb-8">
 
-            <div className="relative flex items-center justify-center mb-5" style={{ width:160, height:160 }}>
-              {/* Outer orbiting ring */}
-              <motion.div className="absolute inset-0 rounded-full"
-                style={{ border:"1.5px solid rgba(18,70,200,0.2)", borderTopColor:"#3B82F6", borderRightColor:"rgba(18,70,200,0.4)" }}
-                animate={{ rotate:360 }} transition={{ duration:8, repeat:Infinity, ease:"linear" }}
-              />
-              {/* Inner counter-orbiting ring */}
-              <motion.div className="absolute rounded-full"
-                style={{ inset:16, border:"1px dashed rgba(18,70,200,0.18)", borderBottomColor:"#1E40AF" }}
-                animate={{ rotate:-360 }} transition={{ duration:5, repeat:Infinity, ease:"linear" }}
-              />
-              {/* Glow pulse */}
-              <motion.div className="absolute inset-0 rounded-full pointer-events-none"
-                style={{ background:"radial-gradient(circle, rgba(18,70,200,0.15) 0%, transparent 65%)", filter:"blur(16px)" }}
-                animate={{ scale:[1,1.2,1], opacity:[0.6,1,0.6] }}
-                transition={{ duration:3, repeat:Infinity, ease:"easeInOut" }}
-              />
-              {/* Logo box */}
-              <motion.div whileHover={{ scale:1.08, rotate:3 }} transition={{ type:"spring", stiffness:300 }}
-                className="relative rounded-[22px] p-1.5 cursor-pointer"
-                style={{ background:"linear-gradient(135deg,rgba(18,70,200,0.25),rgba(30,64,175,0.35))", boxShadow:"0 16px 56px rgba(18,70,200,0.25),0 4px 20px rgba(18,70,200,0.15)" }}>
-                <svg width="88" height="88" viewBox="0 0 38 38" fill="none">
+            <div className="relative flex items-center justify-center mb-5">
+              {/* Clean professional logo box */}
+              <motion.div whileHover={{ scale:1.05 }} transition={{ type:"spring", stiffness:300 }}
+                className="relative rounded-[24px] p-2 cursor-pointer"
+                style={{ background:"linear-gradient(135deg,#0F2044,#1E40AF)", boxShadow:"0 8px 40px rgba(18,70,200,0.28),0 2px 8px rgba(18,70,200,0.12)" }}>
+                <svg width="72" height="72" viewBox="0 0 38 38" fill="none">
                   <defs>
                     <linearGradient id="hw_bg" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
                       <stop offset="0%" stopColor="#0F2044"/><stop offset="100%" stopColor="#1E40AF"/>
@@ -416,43 +387,31 @@ export function BusinessOSHomepage() {
                   <circle cx="11.5" cy="24" r="2" fill="rgba(255,255,255,0.9)"/>
                 </svg>
               </motion.div>
-
-              {/* Orbit dots */}
-              {[0,120,240].map((deg,i) => (
-                <motion.div key={i} className="absolute w-2.5 h-2.5 rounded-full"
-                  style={{ background: i===0?"#3B82F6":i===1?"#059669":"#8B5CF6", boxShadow:`0 0 8px ${i===0?"#3B82F6":i===1?"#059669":"#8B5CF6"}` }}
-                  animate={{ rotate:[deg, deg+360] }}
-                  transition={{ duration:8, repeat:Infinity, ease:"linear" }}
-                  // position on ring radius ~72px
-                  initial={{ x: Math.cos((deg*Math.PI)/180)*72, y: Math.sin((deg*Math.PI)/180)*72 }}
-                />
-              ))}
             </div>
 
             {/* Wordmark */}
             <motion.div className="flex items-baseline gap-1" whileHover={{ scale:1.03 }}>
               <span className="font-black tracking-tight" style={{ fontSize:"1.8rem", color:L.text, fontFamily:"var(--font-plus-jakarta),sans-serif" }}>Fre</span>
-              <span className="font-black tracking-tight" style={{ fontSize:"1.8rem", background:`linear-gradient(135deg,${L.goldLight},${L.gold})`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", fontFamily:"var(--font-plus-jakarta),sans-serif" }}>Work</span>
-              <span className="text-[10px] font-black tracking-[0.2em] uppercase ml-2 px-1.5 py-0.5 rounded"
-                style={{ color:L.gold, background:"rgba(184,144,58,0.1)", border:"1px solid rgba(184,144,58,0.25)", verticalAlign:"middle" }}>BETA</span>
+              <span className="font-black tracking-tight" style={{ fontSize:"1.8rem", background:`linear-gradient(135deg,#2563EB,#1E40AF)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", fontFamily:"var(--font-plus-jakarta),sans-serif" }}>Work</span>
             </motion.div>
-            <p className="text-[10px] font-black tracking-[0.4em] uppercase mt-1" style={{ color:L.textMuted }}>Business OS Â· Made in India ðŸ‡®ðŸ‡³</p>
+            <p className="text-[10px] font-semibold tracking-[0.3em] uppercase mt-1" style={{ color:L.textMuted }}>CA Services | Made in India</p>
           </motion.div>
 
           {/* Headline */}
           <motion.h1 initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}
-            className="font-black leading-[1.05] mb-5 tracking-tight px-2"
-            style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(1.9rem,6vw,5.5rem)", color:L.text }}>
-            The Operating System
+            className="font-black leading-[1.08] mb-5 tracking-tight px-2"
+            style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(1.9rem,5.5vw,4.8rem)", color:L.text }}>
+            GST, ITR &amp; Compliance
             <br/>
-            <span style={{ background:`linear-gradient(135deg,${L.goldLight} 0%,${L.gold} 45%,${L.goldDark} 100%)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
-              for Indian Businesses
+            <span style={{ background:`linear-gradient(135deg,#2563EB 0%,#1E40AF 100%)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+              Handled by Expert CAs.
             </span>
           </motion.h1>
 
           <motion.p initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.28 }}
-            className="text-base md:text-xl mb-8 max-w-xl mx-auto leading-relaxed px-4" style={{ color:L.textSub }}>
-            Start, Run and Grow Your Business â€” All in One Place.
+            className="text-base md:text-lg mb-8 max-w-xl mx-auto leading-relaxed px-4" style={{ color:L.textSub }}>
+            Affordable, fast and fully online. Register your business, file returns, hire a CA. Starting at{" "}
+            <strong style={{color:L.text}}>{"₹"}499</strong>.
           </motion.p>
 
           {/* Search bar */}
@@ -531,6 +490,23 @@ export function BusinessOSHomepage() {
             )}
           </motion.div>
 
+          {/* â”€â”€ Trust bar â”€â”€ */}
+          <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35 }}
+            className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 mb-10 pb-10 border-b"
+            style={{ borderColor: L.borderLight }}>
+            {[
+              { icon: Shield, label: "CA-Verified Services" },
+              { icon: BadgeCheck, label: "ICAI Registered Partners" },
+              { icon: Clock, label: "3-7 Day Delivery" },
+              { icon: Lock, label: "100% Secure & Confidential" },
+            ].map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: L.textSub }}>
+                <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#059669" }} />
+                {label}
+              </div>
+            ))}
+          </motion.div>
+
           {/* â”€â”€ Services Quick-Link Strip â”€â”€ */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
             className="mb-12">
@@ -560,7 +536,7 @@ export function BusinessOSHomepage() {
               <Link href="/services"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black border transition-all hover:scale-[1.05]"
                 style={{ background: "linear-gradient(135deg, #1246C8, #2563EB)", color: "#fff", border: "none", boxShadow: "0 4px 16px rgba(18,70,200,0.28)" }}>
-                View All Services â†’
+                View All Services â†'
               </Link>
             </div>
           </motion.div>
@@ -715,7 +691,7 @@ export function BusinessOSHomepage() {
                   <Link href="/coworking"
                     className="w-full py-3 rounded-2xl text-sm font-bold text-center block transition-all hover:opacity-90 hover:scale-[1.01]"
                     style={{ background: "linear-gradient(135deg, #F97316, #C2410C)", color: "#fff" }}>
-                    Book a visit â†’
+                    Book a visit â†'
                   </Link>
                 </div>
               </div>
@@ -746,7 +722,7 @@ export function BusinessOSHomepage() {
               From day one of registration to raising your Series A
             </p>
             <p className="text-xs font-semibold" style={{ color: L.textMuted }}>
-              ðŸ‘† Click any module to learn more
+              ðŸ'† Click any module to learn more
             </p>
           </div>
 
@@ -788,7 +764,7 @@ export function BusinessOSHomepage() {
 
                       <div className="flex items-center justify-between mt-auto">
                         <span className="text-[11px] font-bold" style={{ color: isExpanded ? mod.color : L.textMuted }}>
-                          {isExpanded ? "Close â†‘" : "Learn more"}
+                          {isExpanded ? "Close â†'" : "Learn more"}
                         </span>
                         <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
                           <ChevronDown className="w-4 h-4" style={{ color: isExpanded ? mod.color : L.textMuted }} />
@@ -951,7 +927,7 @@ export function BusinessOSHomepage() {
 
                       <div className="flex justify-center">
                         <span className="text-xs font-semibold" style={{ color: L.gold }}>
-                          {isActive ? "Click to collapse â†‘" : "Click to learn more â†“"}
+                          {isActive ? "Click to collapse â†'" : "Click to learn more â†“"}
                         </span>
                       </div>
 
@@ -1009,7 +985,7 @@ export function BusinessOSHomepage() {
                       </div>
                       <h3 className="font-bold mb-2.5 text-base" style={{ color: L.text }}>{item.t}</h3>
                       <p className="text-sm leading-relaxed mb-3" style={{ color: L.textSub }}>{item.d}</p>
-                      <span className="text-xs font-semibold" style={{ color: item.c }}>{open ? "Show less â†‘" : "Read more â†“"}</span>
+                      <span className="text-xs font-semibold" style={{ color: item.c }}>{open ? "Show less â†'" : "Read more â†“"}</span>
                       <AnimatePresence>
                         {open && (
                           <motion.p
