@@ -42,7 +42,7 @@ const MODULES = [
       heading: "Everything to start your business",
       why: "Starting a business in India involves multiple government registrations. FreWork handles all of them end-to-end, so you can focus on building your product.",
       steps: ["Fill a simple online form", "Upload your documents", "Our experts file with the government", "Get your certificates in 3–7 days"],
-      pricing: "Starting â‚¹1,499",
+      pricing: "Starting ₹1,499",
       time: "3–7 working days",
       features: [
         { icon: Building2, text: "Private Limited, LLP, OPC, Sole Prop, Partnership" },
@@ -61,7 +61,7 @@ const MODULES = [
       heading: "Never miss a compliance deadline",
       why: "Penalties for missed GST or ITR filings can be severe. FreWork tracks every deadline for you and files returns accurately and on time.",
       steps: ["Share your data or grant portal access", "We reconcile and prepare returns", "You approve before filing", "Acknowledgement delivered instantly"],
-      pricing: "Starting â‚¹499/filing",
+      pricing: "Starting ₹499/filing",
       time: "24–48 hrs turnaround",
       features: [
         { icon: FileText, text: "GSTR-1, GSTR-3B, Annual Return" },
@@ -80,7 +80,7 @@ const MODULES = [
       heading: "Your finance team, built in",
       why: "Most SMEs lose money due to poor bookkeeping and late invoicing. FreWork gives you professional-grade finance tools without hiring a full-time accountant.",
       steps: ["Connect your bank account", "Auto-categorize transactions", "Generate GST-ready invoices", "Get monthly P&L reports"],
-      pricing: "Coming soon – â‚¹999/mo",
+      pricing: "Coming soon – ₹999/mo",
       time: "Real-time updates",
       features: [
         { icon: FileText, text: "GST-compliant invoicing in seconds" },
@@ -118,7 +118,7 @@ const MODULES = [
       heading: "Documents that open doors",
       why: "Banks and investors need specific documents before they fund you. Our experts create DPRs, pitch decks and business plans that meet institutional standards.",
       steps: ["Share your business idea & financials", "Our expert team drafts the document", "Review and revise together", "Final document delivered in PDF & PPT"],
-      pricing: "Starting â‚¹4,999",
+      pricing: "Starting ₹4,999",
       time: "5–10 working days",
       features: [
         { icon: FileText, text: "Bank-grade Detailed Project Report (DPR)" },
@@ -137,11 +137,11 @@ const MODULES = [
       heading: "Your office, your way",
       why: "We're building India's most trusted coworking directory. Every space is personally verified by our team before it's listed – no surprises when you arrive.",
       steps: ["Browse verified spaces near you", "Choose your plan (day/month/hour)", "Book online instantly", "Walk in – your workspace is ready"],
-      pricing: "From â‚¹350/day",
+      pricing: "From ₹350/day",
       time: "Instant booking",
       features: [
         { icon: Wifi, text: "High-speed internet guaranteed" },
-        { icon: Coffee, text: "CafÃ© & refreshment facilities" },
+        { icon: Coffee, text: "Café & refreshment facilities" },
         { icon: Car, text: "Parking included at most locations" },
         { icon: Lock, text: "24/7 access with security" },
       ],
@@ -190,10 +190,10 @@ const MODULES = [
 const TRUST_TICKER = ["Company Registration", "GST Filing", "Income Tax Returns", "Coworking Spaces", "Hire Professionals", "Pitch Decks", "Startup Funding", "Business Plans", "MSME Registration", "ROC Compliance"];
 
 const COWORK_PLANS = [
-  { key: "hotdesk", emoji: "📊", label: "Hot Desk", price: "â‚¹350", per: "/day", desc: "Open seating in a vibrant coworking hall. Perfect for freelancers and remote workers who need a productive space with all amenities." },
-  { key: "cabin", emoji: "📊", label: "Private Cabin", price: "â‚¹8,000", per: "/month", desc: "Dedicated private cabin with lockable door. Ideal for small teams of 2–6 people who need focus and confidentiality." },
-  { key: "meeting", emoji: "📊", label: "Meeting Room", price: "â‚¹500", per: "/hour", desc: "Fully equipped meeting room with projector, whiteboard and video conferencing. Book by the hour for client presentations." },
-  { key: "virtual", emoji: "📊", label: "Virtual Office", price: "â‚¹999", per: "/month", desc: "Premium business address, GST registration address, mail handling and call answering. Look professional without a physical office." },
+  { key: "hotdesk", emoji: "💻", label: "Hot Desk", price: "₹350", per: "/day", desc: "Open seating in a vibrant coworking hall. Perfect for freelancers and remote workers who need a productive space with all amenities." },
+  { key: "cabin", emoji: "🚪", label: "Private Cabin", price: "₹8,000", per: "/month", desc: "Dedicated private cabin with lockable door. Ideal for small teams of 2–6 people who need focus and confidentiality." },
+  { key: "meeting", emoji: "📅", label: "Meeting Room", price: "₹500", per: "/hour", desc: "Fully equipped meeting room with projector, whiteboard and video conferencing. Book by the hour for client presentations." },
+  { key: "virtual", emoji: "🌐", label: "Virtual Office", price: "₹999", per: "/month", desc: "Premium business address, GST registration address, mail handling and call answering. Look professional without a physical office." },
 ];
 
 function GoldDivider() {
@@ -552,9 +552,9 @@ export function BusinessOSHomepage() {
       </section>
 
       {/* --- COWORKING SPOTLIGHT --- */}
-      <section className="py-28 px-4 relative overflow-hidden" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>
+      <section className="py-28 px-4 relative overflow-hidden" style={{ background: "linear-gradient(160deg, #F8FAFF 0%, #FFFFFF 50%, #F0F4FF 100%)", borderTop: "1px solid rgba(37,99,235,0.08)" }}>
         <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position: "absolute", right: "-10%", top: "-20%", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(234,172,92,0.07) 0%, transparent 65%)", filter: "blur(40px)" }} />
+          <div style={{ position: "absolute", right: "-10%", top: "-20%", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 65%)", filter: "blur(40px)" }} />
         </div>
 
         <div className="container max-w-6xl mx-auto relative z-10">
@@ -576,7 +576,7 @@ export function BusinessOSHomepage() {
               <h2 className="font-black leading-[1.05] mb-5"
                 style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(2rem, 4vw, 3.2rem)", color: L.text }}>
                 Your perfect office,<br />
-                <span style={{ background: "linear-gradient(135deg, #F97316, #C2410C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                <span style={{ background: "linear-gradient(135deg, #2563EB 0%, #4F46E5 50%, #0EA5E9 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                   wherever you work.
                 </span>
               </h2>
@@ -588,7 +588,7 @@ export function BusinessOSHomepage() {
               {/* Amenity tiles */}
               <div className="grid grid-cols-3 gap-2.5 mb-8">
                 {[
-                  { icon: Wifi, l: "High-speed WiFi" }, { icon: Coffee, l: "CafÃ© & Cafeteria" },
+                  { icon: Wifi, l: "High-speed WiFi" }, { icon: Coffee, l: "Café & Cafeteria" },
                   { icon: Car, l: "Parking" }, { icon: Printer, l: "Printer & Scanner" },
                   { icon: AirVent, l: "Climate Control" }, { icon: Lock, l: "24/7 Access" },
                 ].map(f => (
@@ -606,20 +606,22 @@ export function BusinessOSHomepage() {
                 {["Mumbai", "Bangalore", "Delhi NCR", "Hyderabad", "Pune", "Chennai", "Kolkata", "Ahmedabad"].map(city => (
                   <span key={city} className="px-3 py-1 rounded-full text-xs border font-medium"
                     style={{ background: L.bgCard, borderColor: L.borderLight, color: L.textMuted, boxShadow: L.shadow }}>
-                    ðŸ" {city}
+                    📍 {city}
                   </span>
                 ))}
               </div>
 
+              <div className="flex items-center gap-0 mb-8 rounded-2xl overflow-hidden border" style={{ borderColor: "rgba(37,99,235,0.12)", background: "rgba(37,99,235,0.03)" }}>{[{n:"200+",l:"Spaces"},{n:"8",l:"Cities"},{n:"₹350",l:"From /day"}].map((s,idx) => (<div key={s.l} className="flex-1 text-center py-3 px-2" style={{ borderRight: idx<2 ? "1px solid rgba(37,99,235,0.1)" : "none" }}><p className="text-base font-black" style={{ color: "#2563EB" }}>{s.n}</p><p className="text-[10px] font-semibold" style={{ color: L.textMuted }}>{s.l}</p></div>))}</div>
+
               <div className="flex gap-3 flex-wrap">
                 <Link href="/coworking"
                   className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all hover:scale-[1.03] hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, #F97316, #C2410C)", color: "#fff", boxShadow: "0 4px 20px rgba(234,88,12,0.25)" }}>
+                  style={{ background: "linear-gradient(135deg, #2563EB, #1E40AF)", color: "#fff", boxShadow: "0 4px 20px rgba(37,99,235,0.28)" }}>
                   Explore Spaces <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link href="/coworking"
                   className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold border transition-all hover:scale-[1.03]"
-                  style={{ borderColor: "rgba(234,88,12,0.25)", color: "#C2410C", background: L.bgCard, boxShadow: L.shadow }}>
+                  style={{ borderColor: "rgba(37,99,235,0.2)", color: "#1E40AF", background: L.bgCard, boxShadow: L.shadow }}>
                   List your space – Free
                 </Link>
               </div>
@@ -628,16 +630,16 @@ export function BusinessOSHomepage() {
             {/* Right – Interactive plan card */}
             <div className="relative">
               <div className="rounded-3xl overflow-hidden border"
-                style={{ background: L.bgCard, borderColor: "rgba(234,88,12,0.15)", boxShadow: "0 20px 60px rgba(139,108,50,0.1)" }}>
-                <div className="h-[3px]" style={{ background: "linear-gradient(90deg, #F97316, #C2410C, #F97316)" }} />
+                style={{ background: L.bgCard, borderColor: "rgba(37,99,235,0.12)", boxShadow: "0 24px 64px rgba(37,99,235,0.1), 0 4px 16px rgba(0,0,0,0.04)" }}>
+                <div className="h-[3px]" style={{ background: "linear-gradient(90deg, #2563EB, #4F46E5, #0EA5E9)" }} />
 
-                <div className="px-6 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(234,88,12,0.08)" }}>
+                <div className="px-6 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(37,99,235,0.08)" }}>
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg border"
-                      style={{ background: "rgba(234,88,12,0.06)", borderColor: "rgba(234,88,12,0.12)" }}>ðŸ¢</div>
+                      style={{ background: "rgba(37,99,235,0.07)", borderColor: "rgba(37,99,235,0.14)" }}>🏢</div>
                     <div>
                       <p className="text-sm font-bold" style={{ color: L.text }}>FreWork Coworking</p>
-                      <p className="text-[10px]" style={{ color: L.textMuted }}>Verified Â· Bangalore, Indiranagar</p>
+                      <p className="text-[10px]" style={{ color: L.textMuted }}>Verified · Bangalore, Indiranagar</p>
                     </div>
                   </div>
                   <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border"
@@ -663,8 +665,8 @@ export function BusinessOSHomepage() {
                           borderColor: L.borderLight, background: L.bgAlt
                         }}>
                         <p className="text-xl mb-1">{plan.emoji}</p>
-                        <p className="text-[11px] font-bold mb-0.5" style={{ color: selectedPlan === plan.key ? "#C2410C" : L.textSub }}>{plan.label}</p>
-                        <p className="text-xs font-black" style={{ color: selectedPlan === plan.key ? "#EA580C" : L.textMuted }}>
+                        <p className="text-[11px] font-bold mb-0.5" style={{ color: selectedPlan === plan.key ? "#1E40AF" : L.textSub }}>{plan.label}</p>
+                        <p className="text-xs font-black" style={{ color: selectedPlan === plan.key ? "#2563EB" : L.textMuted }}>
                           {plan.price}<span className="font-normal text-[10px]">{plan.per}</span>
                         </p>
                       </button>
@@ -677,7 +679,7 @@ export function BusinessOSHomepage() {
                       initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
                       transition={{ duration: 0.18 }}
                       className="rounded-xl p-4 mb-4 border"
-                      style={{ background: "rgba(234,88,12,0.03)", borderColor: "rgba(234,88,12,0.1)" }}>
+                      style={{ background: "rgba(37,99,235,0.03)", borderColor: "rgba(37,99,235,0.1)" }}>
                       <p className="text-xs leading-relaxed" style={{ color: L.textSub }}>
                         {selectedCoworkPlan.desc}
                       </p>
@@ -686,8 +688,8 @@ export function BusinessOSHomepage() {
 
                   <Link href="/coworking"
                     className="w-full py-3 rounded-2xl text-sm font-bold text-center block transition-all hover:opacity-90 hover:scale-[1.01]"
-                    style={{ background: "linear-gradient(135deg, #F97316, #C2410C)", color: "#fff" }}>
-                    Book a visit â†'
+                    style={{ background: "linear-gradient(135deg, #2563EB, #1E40AF)", color: "#fff", boxShadow: "0 4px 20px rgba(37,99,235,0.3)" }}>
+                    Book a Visit â†'
                   </Link>
                 </div>
               </div>
@@ -708,7 +710,7 @@ export function BusinessOSHomepage() {
       <section className="py-28 px-4 relative" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-6">
-            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>8 Modules Â· One Platform</p>
+            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>8 Modules · One Platform</p>
             <GoldDivider />
             <h2 className="font-black mb-3 leading-tight mt-4"
               style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 3rem)", color: L.text }}>
@@ -718,7 +720,7 @@ export function BusinessOSHomepage() {
               From day one of registration to raising your Series A
             </p>
             <p className="text-xs font-semibold" style={{ color: L.textMuted }}>
-              ðŸ'† Click any module to learn more
+              👆 Click any module to learn more
             </p>
           </div>
 
