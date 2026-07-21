@@ -35,15 +35,15 @@ const L = {
 const MODULES = [
   {
     id: "start", label: "START", tagline: "Register & Set Up", emoji: "🏢",
-    desc: "Get your business legally incorporated in India â€” fast, affordable, and fully online.",
+    desc: "Get your business legally incorporated in India – fast, affordable, and fully online.",
     icon: Building2, color: "#059669", href: "/services/compliance", badge: "Most Popular",
     items: ["Company Registration", "GST Registration", "PAN & TAN", "MSME / Udyam"],
     detail: {
       heading: "Everything to start your business",
       why: "Starting a business in India involves multiple government registrations. FreWork handles all of them end-to-end, so you can focus on building your product.",
-      steps: ["Fill a simple online form", "Upload your documents", "Our experts file with the government", "Get your certificates in 3â€”7 days"],
+      steps: ["Fill a simple online form", "Upload your documents", "Our experts file with the government", "Get your certificates in 3–7 days"],
       pricing: "Starting â‚¹1,499",
-      time: "3â€”7 working days",
+      time: "3–7 working days",
       features: [
         { icon: Building2, text: "Private Limited, LLP, OPC, Sole Prop, Partnership" },
         { icon: FileCheck, text: "GST registration included with company setup" },
@@ -54,7 +54,7 @@ const MODULES = [
   },
   {
     id: "comply", label: "COMPLY", tagline: "Stay Compliant", emoji: "📋",
-    desc: "Income Tax, GST filing, ROC â€” never miss a deadline with our compliance calendar.",
+    desc: "Income Tax, GST filing, ROC – never miss a deadline with our compliance calendar.",
     icon: FileText, color: "#2563EB", href: "/services/compliance", badge: null,
     items: ["Income Tax (ITR)", "GST Filing", "ROC / MCA", "TDS Filing"],
     detail: {
@@ -62,7 +62,7 @@ const MODULES = [
       why: "Penalties for missed GST or ITR filings can be severe. FreWork tracks every deadline for you and files returns accurately and on time.",
       steps: ["Share your data or grant portal access", "We reconcile and prepare returns", "You approve before filing", "Acknowledgement delivered instantly"],
       pricing: "Starting â‚¹499/filing",
-      time: "24â€”48 hrs turnaround",
+      time: "24–48 hrs turnaround",
       features: [
         { icon: FileText, text: "GSTR-1, GSTR-3B, Annual Return" },
         { icon: Landmark, text: "ITR-1 to ITR-6 for all business types" },
@@ -73,14 +73,14 @@ const MODULES = [
   },
   {
     id: "finance", label: "FINANCE", tagline: "Manage Money", emoji: "💰",
-    desc: "Invoicing, payroll, bookkeeping â€” keep your finances clean and audit-ready.",
+    desc: "Invoicing, payroll, bookkeeping – keep your finances clean and audit-ready.",
     icon: IndianRupee, color: "#7C3AED", href: "/pricing", badge: "Coming Soon",
     items: ["Invoicing", "Payroll", "Bookkeeping", "Reports"],
     detail: {
       heading: "Your finance team, built in",
       why: "Most SMEs lose money due to poor bookkeeping and late invoicing. FreWork gives you professional-grade finance tools without hiring a full-time accountant.",
       steps: ["Connect your bank account", "Auto-categorize transactions", "Generate GST-ready invoices", "Get monthly P&L reports"],
-      pricing: "Coming soon â€” â‚¹999/mo",
+      pricing: "Coming soon – â‚¹999/mo",
       time: "Real-time updates",
       features: [
         { icon: FileText, text: "GST-compliant invoicing in seconds" },
@@ -111,7 +111,7 @@ const MODULES = [
   },
   {
     id: "grow", label: "GROW", tagline: "Scale Up", emoji: "📈",
-    desc: "Business plans, DPRs, pitch decks â€” the documents you need to raise money and scale.",
+    desc: "Business plans, DPRs, pitch decks – the documents you need to raise money and scale.",
     icon: TrendingUp, color: "#DC2626", href: "/services/dpr", badge: null,
     items: ["DPR", "Pitch Deck", "Business Plan", "Restructuring"],
     detail: {
@@ -119,24 +119,24 @@ const MODULES = [
       why: "Banks and investors need specific documents before they fund you. Our experts create DPRs, pitch decks and business plans that meet institutional standards.",
       steps: ["Share your business idea & financials", "Our expert team drafts the document", "Review and revise together", "Final document delivered in PDF & PPT"],
       pricing: "Starting â‚¹4,999",
-      time: "5â€”10 working days",
+      time: "5–10 working days",
       features: [
         { icon: FileText, text: "Bank-grade Detailed Project Report (DPR)" },
         { icon: Presentation, text: "Investor pitch decks with financial models" },
-        { icon: BarChart3, text: "3â€”5 year business plans with projections" },
+        { icon: BarChart3, text: "3–5 year business plans with projections" },
         { icon: Building2, text: "Restructuring & turnaround advisory" },
       ],
     },
   },
   {
     id: "workspace", label: "WORKSPACE", tagline: "Find Your Office", emoji: "🏛️",
-    desc: "Premium verified coworking spaces across India â€” by the day, month or hour.",
+    desc: "Premium verified coworking spaces across India – by the day, month or hour.",
     icon: MapPin, color: "#EA580C", href: "/coworking", badge: "Live",
     items: ["Coworking Desks", "Private Cabins", "Meeting Rooms", "Virtual Office"],
     detail: {
       heading: "Your office, your way",
-      why: "We're building India's most trusted coworking directory. Every space is personally verified by our team before it's listed â€” no surprises when you arrive.",
-      steps: ["Browse verified spaces near you", "Choose your plan (day/month/hour)", "Book online instantly", "Walk in â€” your workspace is ready"],
+      why: "We're building India's most trusted coworking directory. Every space is personally verified by our team before it's listed – no surprises when you arrive.",
+      steps: ["Browse verified spaces near you", "Choose your plan (day/month/hour)", "Book online instantly", "Walk in – your workspace is ready"],
       pricing: "From â‚¹350/day",
       time: "Instant booking",
       features: [
@@ -168,7 +168,7 @@ const MODULES = [
   },
   {
     id: "dashboard", label: "DASHBOARD", tagline: "Track Everything", emoji: "📊",
-    desc: "Your compliance calendar, documents, renewals and status â€” all in one place.",
+    desc: "Your compliance calendar, documents, renewals and status – all in one place.",
     icon: LayoutDashboard, color: "#1E40AF", href: "/dashboard", badge: "Early Access",
     items: ["Compliance Calendar", "Document Vault", "Renewals", "Status Tracker"],
     detail: {
@@ -179,7 +179,7 @@ const MODULES = [
       time: "Real-time sync",
       features: [
         { icon: CalendarCheck, text: "GST, ITR, ROC deadlines auto-tracked" },
-        { icon: FileCheck, text: "Secure document vault â€” always accessible" },
+        { icon: FileCheck, text: "Secure document vault – always accessible" },
         { icon: MessageCircle, text: "WhatsApp alerts before every due date" },
         { icon: UserCheck, text: "Team access & CA collaboration portal" },
       ],
@@ -191,7 +191,7 @@ const TRUST_TICKER = ["Company Registration", "GST Filing", "Income Tax Returns"
 
 const COWORK_PLANS = [
   { key: "hotdesk", emoji: "📊", label: "Hot Desk", price: "â‚¹350", per: "/day", desc: "Open seating in a vibrant coworking hall. Perfect for freelancers and remote workers who need a productive space with all amenities." },
-  { key: "cabin", emoji: "📊", label: "Private Cabin", price: "â‚¹8,000", per: "/month", desc: "Dedicated private cabin with lockable door. Ideal for small teams of 2â€”6 people who need focus and confidentiality." },
+  { key: "cabin", emoji: "📊", label: "Private Cabin", price: "â‚¹8,000", per: "/month", desc: "Dedicated private cabin with lockable door. Ideal for small teams of 2–6 people who need focus and confidentiality." },
   { key: "meeting", emoji: "📊", label: "Meeting Room", price: "â‚¹500", per: "/hour", desc: "Fully equipped meeting room with projector, whiteboard and video conferencing. Book by the hour for client presentations." },
   { key: "virtual", emoji: "📊", label: "Virtual Office", price: "â‚¹999", per: "/month", desc: "Premium business address, GST registration address, mail handling and call answering. Look professional without a physical office." },
 ];
@@ -253,24 +253,29 @@ export function BusinessOSHomepage() {
     <div className="min-h-screen overflow-x-hidden" style={{ background: L.bg, color: L.text }}>
       <AnnouncementTicker />
 
-      {/* â”€â”€â”€ HERO â”€â”€â”€ */}
+      {/* --- HERO --- */}
       <section className="relative min-h-screen flex items-center justify-center px-4 pt-44 pb-20 overflow-hidden">
-        {/* Clean professional background */}
+        {/* Premium layered background */}
         <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 70% 50% at 50% -5%, rgba(37,99,235,0.08) 0%, transparent 65%)" }} />
-          <div style={{ position:"absolute", inset:0, opacity:0.018, backgroundImage:"linear-gradient(rgba(37,99,235,1) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,1) 1px,transparent 1px)", backgroundSize:"64px 64px" }} />
+          {/* Base gradient */}
+          <div style={{ position:"absolute", inset:0, background:"linear-gradient(160deg, #F0F4FF 0%, #FFFFFF 45%, #F8FAFF 100%)" }} />
+          {/* Top blue glow */}
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 80% 55% at 50% -10%, rgba(37,99,235,0.12) 0%, transparent 65%)" }} />
+          {/* Left accent */}
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 35% 50% at -5% 60%, rgba(99,102,241,0.07) 0%, transparent 60%)" }} />
+          {/* Right accent */}
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 35% 50% at 105% 40%, rgba(16,185,129,0.05) 0%, transparent 60%)" }} />
+          {/* Subtle dot grid */}
+          <div style={{ position:"absolute", inset:0, opacity:0.025, backgroundImage:"radial-gradient(rgba(37,99,235,1) 1px, transparent 1px)", backgroundSize:"28px 28px" }} />
         </div>
 
-        {/* Subtle ambient glow - single centered */}
-        <div className="absolute inset-0 pointer-events-none" style={{ background:"radial-gradient(ellipse 60% 40% at 50% 0%, rgba(37,99,235,0.06) 0%, transparent 70%)" }} />
-
-        {/* â”€â”€ Interactive scrolling service banners â”€â”€ */}
+        {/* -- Interactive scrolling service banners -- */}
         <div className="absolute top-[70px] inset-x-0 z-20 overflow-hidden">
           {/* Fade edges */}
           <div className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(90deg,#FFFFFF,transparent)" }} />
           <div className="absolute inset-y-0 right-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(270deg,#FFFFFF,transparent)" }} />
 
-          {/* Row 1 â€” scrolls left, pauses on hover */}
+          {/* Row 1 – scrolls left, pauses on hover */}
           {(() => {
             const row1 = [
               { label:"GST Registration",    icon:"📋", color:"#2563EB", bg:"rgba(37,99,235,0.09)",   href:"/services/gst" },
@@ -313,7 +318,7 @@ export function BusinessOSHomepage() {
             );
           })()}
 
-          {/* Row 2 â€” scrolls right, pauses on hover */}
+          {/* Row 2 – scrolls right, pauses on hover */}
           {(() => {
             const row2 = [
               { label:"ROC Compliance",         icon:"✅", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/roc-compliance" },
@@ -359,7 +364,7 @@ export function BusinessOSHomepage() {
 
         <div className="relative z-10 w-full max-w-4xl mx-auto text-center">
 
-          {/* â”€â”€ Hero Logo with orbiting ring â”€â”€ */}
+          {/* -- Hero Logo with orbiting ring -- */}
           <motion.div initial={{ opacity:0, scale:0.7 }} animate={{ opacity:1, scale:1 }}
             transition={{ duration:0.7, ease:[0.16,1,0.3,1] }}
             className="flex flex-col items-center mb-8">
@@ -394,38 +399,45 @@ export function BusinessOSHomepage() {
               <span className="font-black tracking-tight" style={{ fontSize:"1.8rem", color:L.text, fontFamily:"var(--font-plus-jakarta),sans-serif" }}>Fre</span>
               <span className="font-black tracking-tight" style={{ fontSize:"1.8rem", background:`linear-gradient(135deg,#2563EB,#1E40AF)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", fontFamily:"var(--font-plus-jakarta),sans-serif" }}>Work</span>
             </motion.div>
-            <p className="text-[10px] font-semibold tracking-[0.3em] uppercase mt-1" style={{ color:L.textMuted }}>CA Services | Made in India</p>
+          </motion.div>
+
+          {/* Premium pill badge */}
+          <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-xs font-bold tracking-wide uppercase"
+            style={{ background:"linear-gradient(135deg,rgba(37,99,235,0.08),rgba(99,102,241,0.1))", border:"1px solid rgba(37,99,235,0.18)", color:"#2563EB", backdropFilter:"blur(8px)" }}>
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse inline-block" />
+            Trusted by 500+ Businesses Across India
           </motion.div>
 
           {/* Headline */}
           <motion.h1 initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}
-            className="font-black leading-[1.05] mb-5 tracking-tight px-2"
-            style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(1.9rem,6vw,5.5rem)", color:L.text }}>
+            className="font-black leading-[1.04] mb-6 tracking-tight px-2"
+            style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2rem,6.5vw,5.8rem)", color:L.text, letterSpacing:"-0.02em" }}>
             The Operating System
             <br/>
-            <span style={{ background:`linear-gradient(135deg,${L.goldLight} 0%,${L.gold} 45%,${L.goldDark} 100%)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+            <span style={{ background:`linear-gradient(135deg,#2563EB 0%,#4F46E5 40%,#1E40AF 100%)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
               for Indian Businesses
             </span>
           </motion.h1>
 
           <motion.p initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.28 }}
-            className="text-base md:text-xl mb-8 max-w-xl mx-auto leading-relaxed px-4" style={{ color:L.textSub }}>
-            Start, Run and Grow Your Business — All in One Place.
+            className="text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed px-4 font-medium" style={{ color:L.textSub }}>
+            Start, run and grow your business — GST, compliance, talent and workspaces, all in one platform.
           </motion.p>
 
           {/* Search bar */}
           <motion.form initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}
             onSubmit={handleSearch}
-            className="flex gap-2 max-w-lg mx-auto mb-8 p-1.5 rounded-2xl border shadow-lg"
-            style={{ background: L.bgCard, borderColor: L.border, boxShadow: "0 4px 24px rgba(139,108,50,0.1)" }}>
+            className="flex gap-2 max-w-xl mx-auto mb-8 p-1.5 rounded-2xl"
+            style={{ background:"#FFFFFF", border:"1px solid rgba(37,99,235,0.15)", boxShadow:"0 4px 32px rgba(37,99,235,0.1), 0 1px 4px rgba(0,0,0,0.06)" }}>
             <div className="flex-1 flex items-center gap-3 px-4">
               <Search className="w-4 h-4 flex-shrink-0" style={{ color: L.textMuted }} />
               <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 placeholder="What does your business need today?"
-                className="flex-1 bg-transparent outline-none text-sm py-2" style={{ color: L.text }} />
+                className="flex-1 bg-transparent outline-none text-sm py-2.5 font-medium" style={{ color: L.text }} />
             </div>
-            <button type="submit" className="px-5 py-2.5 rounded-xl text-sm font-bold flex-shrink-0 transition-all hover:opacity-90"
-              style={{ background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, color: "#fff" }}>
+            <button type="submit" className="px-6 py-2.5 rounded-xl text-sm font-bold flex-shrink-0 transition-all hover:opacity-90 active:scale-95"
+              style={{ background:`linear-gradient(135deg,#2563EB,#1E40AF)`, color:"#fff", boxShadow:"0 4px 14px rgba(37,99,235,0.35)" }}>
               Search
             </button>
           </motion.form>
@@ -447,7 +459,7 @@ export function BusinessOSHomepage() {
             className="flex flex-wrap justify-center gap-3 mb-16">
 
             {loggedIn ? (
-              /* â”€â”€ LOGGED IN: show Dashboard button prominently â”€â”€ */
+              /* -- LOGGED IN: show Dashboard button prominently -- */
               <>
                 <Link href="/dashboard"
                   className="flex items-center gap-2.5 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all hover:scale-[1.03] hover:opacity-90"
@@ -465,7 +477,7 @@ export function BusinessOSHomepage() {
                 </a>
               </>
             ) : (
-              /* â”€â”€ NOT LOGGED IN: show Register + Login â”€â”€ */
+              /* -- NOT LOGGED IN: show Register + Login -- */
               <>
                 <Link href="/register"
                   className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all hover:scale-[1.03] hover:opacity-90"
@@ -491,7 +503,7 @@ export function BusinessOSHomepage() {
 
 
 
-          {/* â”€â”€ Services Quick-Link Strip â”€â”€ */}
+          {/* -- Services Quick-Link Strip -- */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
             className="mb-12">
             <p className="text-[10px] font-black tracking-[0.3em] uppercase mb-4" style={{ color: L.textMuted }}>
@@ -539,7 +551,7 @@ export function BusinessOSHomepage() {
         </div>
       </section>
 
-      {/* â”€â”€â”€ COWORKING SPOTLIGHT â”€â”€â”€ */}
+      {/* --- COWORKING SPOTLIGHT --- */}
       <section className="py-28 px-4 relative overflow-hidden" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="absolute inset-0 pointer-events-none">
           <div style={{ position: "absolute", right: "-10%", top: "-20%", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(234,172,92,0.07) 0%, transparent 65%)", filter: "blur(40px)" }} />
@@ -570,7 +582,7 @@ export function BusinessOSHomepage() {
               </h2>
 
               <p className="text-base leading-relaxed mb-8" style={{ color: L.textSub }}>
-                Day desk or private cabin, by the hour or by the month. Browse India&apos;s most trusted coworking directory â€” every space personally verified before listing.
+                Day desk or private cabin, by the hour or by the month. Browse India&apos;s most trusted coworking directory – every space personally verified before listing.
               </p>
 
               {/* Amenity tiles */}
@@ -594,7 +606,7 @@ export function BusinessOSHomepage() {
                 {["Mumbai", "Bangalore", "Delhi NCR", "Hyderabad", "Pune", "Chennai", "Kolkata", "Ahmedabad"].map(city => (
                   <span key={city} className="px-3 py-1 rounded-full text-xs border font-medium"
                     style={{ background: L.bgCard, borderColor: L.borderLight, color: L.textMuted, boxShadow: L.shadow }}>
-                    ðŸ“ {city}
+                    ðŸ" {city}
                   </span>
                 ))}
               </div>
@@ -608,12 +620,12 @@ export function BusinessOSHomepage() {
                 <Link href="/coworking"
                   className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold border transition-all hover:scale-[1.03]"
                   style={{ borderColor: "rgba(234,88,12,0.25)", color: "#C2410C", background: L.bgCard, boxShadow: L.shadow }}>
-                  List your space â€” Free
+                  List your space – Free
                 </Link>
               </div>
             </div>
 
-            {/* Right â€” Interactive plan card */}
+            {/* Right – Interactive plan card */}
             <div className="relative">
               <div className="rounded-3xl overflow-hidden border"
                 style={{ background: L.bgCard, borderColor: "rgba(234,88,12,0.15)", boxShadow: "0 20px 60px rgba(139,108,50,0.1)" }}>
@@ -638,7 +650,7 @@ export function BusinessOSHomepage() {
                 {/* Plan selector tabs */}
                 <div className="p-6">
                   <p className="text-[10px] font-black tracking-[0.2em] uppercase mb-3" style={{ color: L.textMuted }}>
-                    Select a plan â€” tap to learn more
+                    Select a plan – tap to learn more
                   </p>
                   <div className="grid grid-cols-2 gap-2.5 mb-5">
                     {COWORK_PLANS.map((plan) => (
@@ -692,7 +704,7 @@ export function BusinessOSHomepage() {
         </div>
       </section>
 
-      {/* â”€â”€â”€ 8 MODULES (interactive click-to-expand) â”€â”€â”€ */}
+      {/* --- 8 MODULES (interactive click-to-expand) --- */}
       <section className="py-28 px-4 relative" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-6">
@@ -830,7 +842,7 @@ export function BusinessOSHomepage() {
                       </div>
                     </div>
 
-                    {/* Right â€” How it works steps */}
+                    {/* Right – How it works steps */}
                     <div>
                       <p className="text-[10px] font-black tracking-[0.25em] uppercase mb-5" style={{ color: L.textMuted }}>
                         How it works
@@ -872,14 +884,14 @@ export function BusinessOSHomepage() {
         </div>
       </section>
 
-      {/* â”€â”€â”€ HOW IT WORKS (interactive steps) â”€â”€â”€ */}
+      {/* --- HOW IT WORKS (interactive steps) --- */}
       <section className="py-28 px-4" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>How it works</p>
             <GoldDivider />
             <h2 className="font-black mt-4" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: L.text }}>
-              Simple as 1 â€” 2 â€” 3
+              Simple as 1 – 2 – 3
             </h2>
           </div>
 
@@ -887,7 +899,7 @@ export function BusinessOSHomepage() {
             {[
               { n: "01", t: "Tell us what you need", d: "Choose a service or describe your business challenge. Our experts understand Indian business inside-out.", icon: Search, detail: "Browse our 8 modules or simply search. You can also WhatsApp us directly and we'll guide you to the right service within minutes." },
               { n: "02", t: "Get matched & supported", d: "We connect you with the right verified professional and track your service end-to-end via your dashboard.", icon: UserCheck, detail: "A dedicated expert is assigned to your case. You can track progress in real-time on your dashboard and get WhatsApp updates at every step." },
-              { n: "03", t: "Run your business", d: "Stay on top of deadlines, documents, and renewals â€” all in one place. No more missed filings.", icon: CalendarCheck, detail: "Your compliance calendar tracks every due date automatically. You get reminders 30 days, 7 days and 1 day before each deadline." },
+              { n: "03", t: "Run your business", d: "Stay on top of deadlines, documents, and renewals – all in one place. No more missed filings.", icon: CalendarCheck, detail: "Your compliance calendar tracks every due date automatically. You get reminders 30 days, 7 days and 1 day before each deadline." },
             ].map((step, i) => {
               const Icon = step.icon;
               const isActive = activeStep === i;
@@ -911,7 +923,7 @@ export function BusinessOSHomepage() {
 
                       <div className="flex justify-center">
                         <span className="text-xs font-semibold" style={{ color: L.gold }}>
-                          {isActive ? "Click to collapse â†'" : "Click to learn more â†“"}
+                          {isActive ? "Click to collapse â†'" : "Click to learn more ↓"}
                         </span>
                       </div>
 
@@ -935,7 +947,7 @@ export function BusinessOSHomepage() {
         </div>
       </section>
 
-      {/* â”€â”€â”€ WHY FREWORK â”€â”€â”€ */}
+      {/* --- WHY FREWORK --- */}
       <section className="py-28 px-4" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
           <div className="text-center mb-16">
@@ -952,7 +964,7 @@ export function BusinessOSHomepage() {
           <div className="grid md:grid-cols-3 gap-5">
             {[
               { icon: Shield, c: "#059669", t: "Verified professionals only", d: "Every professional and expert on FreWork is manually verified before going live. No stock-photo profiles.", extra: "We check professional membership, review past work samples, and conduct a background check before any professional is listed." },
-              { icon: Clock, c: "#2563EB", t: "Never miss a deadline", d: "Built-in compliance calendar for GST, ITR, ROC, and TDS â€” with WhatsApp reminders before every due date.", extra: "You get automatic reminders 30 days, 7 days, and 1 day before every due date. Late filing penalties are a thing of the past." },
+              { icon: Clock, c: "#2563EB", t: "Never miss a deadline", d: "Built-in compliance calendar for GST, ITR, ROC, and TDS – with WhatsApp reminders before every due date.", extra: "You get automatic reminders 30 days, 7 days, and 1 day before every due date. Late filing penalties are a thing of the past." },
               { icon: Star, c: "#1E40AF", t: "Built for Indian business", d: "We understand Indian compliance, Indian languages, and the real challenges of SMEs and startups in India.", extra: "Our team includes practicing CAs, expert professionals, and former startup founders who have solved these problems themselves." },
             ].map((item, i) => {
               const Icon = item.icon;
@@ -969,7 +981,7 @@ export function BusinessOSHomepage() {
                       </div>
                       <h3 className="font-bold mb-2.5 text-base" style={{ color: L.text }}>{item.t}</h3>
                       <p className="text-sm leading-relaxed mb-3" style={{ color: L.textSub }}>{item.d}</p>
-                      <span className="text-xs font-semibold" style={{ color: item.c }}>{open ? "Show less â†'" : "Read more â†“"}</span>
+                      <span className="text-xs font-semibold" style={{ color: item.c }}>{open ? "Show less â†'" : "Read more ↓"}</span>
                       <AnimatePresence>
                         {open && (
                           <motion.p
@@ -990,7 +1002,7 @@ export function BusinessOSHomepage() {
         </div>
       </section>
 
-      {/* â”€â”€â”€ QUICK SERVICES â”€â”€â”€ */}
+      {/* --- QUICK SERVICES --- */}
       <section className="py-20 px-4" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
           <p className="text-center text-[10px] font-black tracking-[0.35em] uppercase mb-10" style={{ color: L.textMuted }}>Most searched</p>
@@ -1023,7 +1035,7 @@ export function BusinessOSHomepage() {
         </div>
       </section>
 
-      {/* â”€â”€â”€ CTA â”€â”€â”€ */}
+      {/* --- CTA --- */}
       <section className="py-24 px-4" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-3xl mx-auto text-center">
           <div className="relative rounded-3xl p-12 overflow-hidden border"
@@ -1059,7 +1071,7 @@ export function BusinessOSHomepage() {
       </section>
 
       <div className="py-8 text-center text-xs border-t" style={{ color: L.textMuted, borderColor: L.borderLight, background: L.bg }}>
-        FreWork is in Beta â€” growing and improving every day. Thank you for being an early supporter.
+        FreWork is in Beta – growing and improving every day. Thank you for being an early supporter.
       </div>
 
       <style jsx global>{`
