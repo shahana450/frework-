@@ -34,7 +34,7 @@ const L = {
 
 const MODULES = [
   {
-    id: "start", label: "START", tagline: "Register & Set Up", emoji: "ðŸ¢",
+    id: "start", label: "START", tagline: "Register & Set Up", emoji: "🏢",
     desc: "Get your business legally incorporated in India â€” fast, affordable, and fully online.",
     icon: Building2, color: "#059669", href: "/services/compliance", badge: "Most Popular",
     items: ["Company Registration", "GST Registration", "PAN & TAN", "MSME / Udyam"],
@@ -53,7 +53,7 @@ const MODULES = [
     },
   },
   {
-    id: "comply", label: "COMPLY", tagline: "Stay Compliant", emoji: "ðŸ“‹",
+    id: "comply", label: "COMPLY", tagline: "Stay Compliant", emoji: "📋",
     desc: "Income Tax, GST filing, ROC â€” never miss a deadline with our compliance calendar.",
     icon: FileText, color: "#2563EB", href: "/services/compliance", badge: null,
     items: ["Income Tax (ITR)", "GST Filing", "ROC / MCA", "TDS Filing"],
@@ -72,7 +72,7 @@ const MODULES = [
     },
   },
   {
-    id: "finance", label: "FINANCE", tagline: "Manage Money", emoji: "ðŸ'°",
+    id: "finance", label: "FINANCE", tagline: "Manage Money", emoji: "💰",
     desc: "Invoicing, payroll, bookkeeping â€” keep your finances clean and audit-ready.",
     icon: IndianRupee, color: "#7C3AED", href: "/pricing", badge: "Coming Soon",
     items: ["Invoicing", "Payroll", "Bookkeeping", "Reports"],
@@ -91,7 +91,7 @@ const MODULES = [
     },
   },
   {
-    id: "professionals", label: "FIND PEOPLE", tagline: "Hire Talent", emoji: "ðŸ'¥",
+    id: "professionals", label: "FIND PEOPLE", tagline: "Hire Talent", emoji: "👥",
     desc: "Verified CAs, developers, designers and consultants for your business.",
     icon: Users, color: "#D97706", href: "/freelancers", badge: "Live",
     items: ["CA / CS / Lawyers", "Developers", "Designers", "Consultants"],
@@ -110,7 +110,7 @@ const MODULES = [
     },
   },
   {
-    id: "grow", label: "GROW", tagline: "Scale Up", emoji: "ðŸ“ˆ",
+    id: "grow", label: "GROW", tagline: "Scale Up", emoji: "📈",
     desc: "Business plans, DPRs, pitch decks â€” the documents you need to raise money and scale.",
     icon: TrendingUp, color: "#DC2626", href: "/services/dpr", badge: null,
     items: ["DPR", "Pitch Deck", "Business Plan", "Restructuring"],
@@ -129,7 +129,7 @@ const MODULES = [
     },
   },
   {
-    id: "workspace", label: "WORKSPACE", tagline: "Find Your Office", emoji: "ðŸ›ï¸",
+    id: "workspace", label: "WORKSPACE", tagline: "Find Your Office", emoji: "🏛️",
     desc: "Premium verified coworking spaces across India â€” by the day, month or hour.",
     icon: MapPin, color: "#EA580C", href: "/coworking", badge: "Live",
     items: ["Coworking Desks", "Private Cabins", "Meeting Rooms", "Virtual Office"],
@@ -148,7 +148,7 @@ const MODULES = [
     },
   },
   {
-    id: "launch", label: "LAUNCH", tagline: "Raise Funding", emoji: "ðŸš€",
+    id: "launch", label: "LAUNCH", tagline: "Raise Funding", emoji: "🚀",
     desc: "List your startup, connect with investors and accelerators across India.",
     icon: Rocket, color: "#4F46E5", href: "/startups", badge: "Launching Soon",
     items: ["Startup Listing", "Investor Connect", "Pitch Events", "Mentorship"],
@@ -167,7 +167,7 @@ const MODULES = [
     },
   },
   {
-    id: "dashboard", label: "DASHBOARD", tagline: "Track Everything", emoji: "ðŸ“Š",
+    id: "dashboard", label: "DASHBOARD", tagline: "Track Everything", emoji: "📊",
     desc: "Your compliance calendar, documents, renewals and status â€” all in one place.",
     icon: LayoutDashboard, color: "#1E40AF", href: "/dashboard", badge: "Early Access",
     items: ["Compliance Calendar", "Document Vault", "Renewals", "Status Tracker"],
@@ -190,10 +190,10 @@ const MODULES = [
 const TRUST_TICKER = ["Company Registration", "GST Filing", "Income Tax Returns", "Coworking Spaces", "Hire Professionals", "Pitch Decks", "Startup Funding", "Business Plans", "MSME Registration", "ROC Compliance"];
 
 const COWORK_PLANS = [
-  { key: "hotdesk", emoji: "ðŸ'º", label: "Hot Desk", price: "â‚¹350", per: "/day", desc: "Open seating in a vibrant coworking hall. Perfect for freelancers and remote workers who need a productive space with all amenities." },
-  { key: "cabin", emoji: "ðŸ“'", label: "Private Cabin", price: "â‚¹8,000", per: "/month", desc: "Dedicated private cabin with lockable door. Ideal for small teams of 2â€”6 people who need focus and confidentiality." },
-  { key: "meeting", emoji: "ðŸ“½ï¸", label: "Meeting Room", price: "â‚¹500", per: "/hour", desc: "Fully equipped meeting room with projector, whiteboard and video conferencing. Book by the hour for client presentations." },
-  { key: "virtual", emoji: "ðŸ“¬", label: "Virtual Office", price: "â‚¹999", per: "/month", desc: "Premium business address, GST registration address, mail handling and call answering. Look professional without a physical office." },
+  { key: "hotdesk", emoji: "📊", label: "Hot Desk", price: "â‚¹350", per: "/day", desc: "Open seating in a vibrant coworking hall. Perfect for freelancers and remote workers who need a productive space with all amenities." },
+  { key: "cabin", emoji: "📊", label: "Private Cabin", price: "â‚¹8,000", per: "/month", desc: "Dedicated private cabin with lockable door. Ideal for small teams of 2â€”6 people who need focus and confidentiality." },
+  { key: "meeting", emoji: "📊", label: "Meeting Room", price: "â‚¹500", per: "/hour", desc: "Fully equipped meeting room with projector, whiteboard and video conferencing. Book by the hour for client presentations." },
+  { key: "virtual", emoji: "📊", label: "Virtual Office", price: "â‚¹999", per: "/month", desc: "Premium business address, GST registration address, mail handling and call answering. Look professional without a physical office." },
 ];
 
 function GoldDivider() {
@@ -273,14 +273,14 @@ export function BusinessOSHomepage() {
           {/* Row 1 â€” scrolls left, pauses on hover */}
           {(() => {
             const row1 = [
-              { label:"GST Registration",    icon:"ðŸ“‹", color:"#2563EB", bg:"rgba(37,99,235,0.09)",   href:"/services/gst" },
-              { label:"Income Tax Return",   icon:"ðŸ›ï¸", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/income-tax" },
-              { label:"Company Registration",icon:"ðŸ¢", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
-              { label:"Virtual Accountant",  icon:"ðŸ'¼", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
-              { label:"Find Freelancers",    icon:"ðŸ'¥", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/freelancers" },
-              { label:"Coworking Spaces",    icon:"ðŸ“", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/coworking" },
-              { label:"Business Audit",      icon:"ðŸ“", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
-              { label:"Virtual CFO",         icon:"ðŸ“Š", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/virtual-cfo" },
+              { label:"GST Registration",    icon:"📋", color:"#2563EB", bg:"rgba(37,99,235,0.09)",   href:"/services/gst" },
+              { label:"Income Tax Return",   icon:"🏛️", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/income-tax" },
+              { label:"Company Registration",icon:"🏢", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
+              { label:"Virtual Accountant",  icon:"💼", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
+              { label:"Find Freelancers",    icon:"👥", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/freelancers" },
+              { label:"Coworking Spaces",    icon:"📍", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/coworking" },
+              { label:"Business Audit",      icon:"🔍", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
+              { label:"Virtual CFO",         icon:"📊", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/virtual-cfo" },
             ];
             return (
               <div className="group flex gap-3 mb-2.5 whitespace-nowrap"
@@ -306,7 +306,7 @@ export function BusinessOSHomepage() {
                       el.style.borderColor=`${t.color}22`;
                     }}>
                     <span>{t.icon}</span> {t.label}
-                    <span className="text-[9px] opacity-50">â†'</span>
+                    <span className="text-[9px] opacity-50">&rarr;</span>
                   </Link>
                 )))}
               </div>
@@ -316,14 +316,14 @@ export function BusinessOSHomepage() {
           {/* Row 2 â€” scrolls right, pauses on hover */}
           {(() => {
             const row2 = [
-              { label:"ROC Compliance",         icon:"âœ…", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/roc-compliance" },
-              { label:"Pitch Deck & DPR",       icon:"ðŸ“ˆ", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/services/dpr" },
-              { label:"Startup Funding",         icon:"ðŸš€", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/dpr" },
-              { label:"GST Filing",              icon:"ðŸ§¾", color:"#2563EB", bg:"rgba(37,99,235,0.09)",  href:"/services/gst" },
-              { label:"Payroll Management",      icon:"ðŸ'°", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
-              { label:"Business Restructuring",  icon:"ðŸ“„", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/services/restructuring" },
-              { label:"Tax Audit",               icon:"ðŸ“Ž", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
-              { label:"MSME Registration",       icon:"ðŸ­", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
+              { label:"ROC Compliance",         icon:"✅", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/roc-compliance" },
+              { label:"Pitch Deck & DPR",       icon:"📈", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/services/dpr" },
+              { label:"Startup Funding",         icon:"🚀", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/dpr" },
+              { label:"GST Filing",              icon:"🧾", color:"#2563EB", bg:"rgba(37,99,235,0.09)",  href:"/services/gst" },
+              { label:"Payroll Management",      icon:"💰", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
+              { label:"Business Restructuring",  icon:"🔄", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/services/restructuring" },
+              { label:"Tax Audit",               icon:"🔎", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
+              { label:"MSME Registration",       icon:"🏭", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
             ];
             return (
               <div className="flex gap-3 whitespace-nowrap"
@@ -349,7 +349,7 @@ export function BusinessOSHomepage() {
                       el.style.borderColor=`${t.color}22`;
                     }}>
                     <span>{t.icon}</span> {t.label}
-                    <span className="text-[9px] opacity-50">â†'</span>
+                    <span className="text-[9px] opacity-50">&rarr;</span>
                   </Link>
                 )))}
               </div>
