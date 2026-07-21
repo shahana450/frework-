@@ -399,19 +399,18 @@ export function BusinessOSHomepage() {
 
           {/* Headline */}
           <motion.h1 initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}
-            className="font-black leading-[1.08] mb-5 tracking-tight px-2"
-            style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(1.9rem,5.5vw,4.8rem)", color:L.text }}>
-            GST, ITR &amp; Compliance
+            className="font-black leading-[1.05] mb-5 tracking-tight px-2"
+            style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(1.9rem,6vw,5.5rem)", color:L.text }}>
+            The Operating System
             <br/>
-            <span style={{ background:`linear-gradient(135deg,#2563EB 0%,#1E40AF 100%)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
-              Handled by Expert CAs.
+            <span style={{ background:`linear-gradient(135deg,${L.goldLight} 0%,${L.gold} 45%,${L.goldDark} 100%)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+              for Indian Businesses
             </span>
           </motion.h1>
 
           <motion.p initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.28 }}
-            className="text-base md:text-lg mb-8 max-w-xl mx-auto leading-relaxed px-4" style={{ color:L.textSub }}>
-            Affordable, fast and fully online. Register your business, file returns, hire a CA. Starting at{" "}
-            <strong style={{color:L.text}}>{"₹"}499</strong>.
+            className="text-base md:text-xl mb-8 max-w-xl mx-auto leading-relaxed px-4" style={{ color:L.textSub }}>
+            Start, Run and Grow Your Business — All in One Place.
           </motion.p>
 
           {/* Search bar */}
