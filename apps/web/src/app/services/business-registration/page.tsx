@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Company Registration Online India — Pvt Ltd, LLP, OPC | FreWork",
   description:
-    "Online company registration in India — Private Limited, LLP, OPC, Sole Proprietorship, Partnership. Expert CA/CS filing. GST & MSME registration included. Starting ₹1,499. Nationwide service.",
+    "Online company registration in India — Private Limited, LLP, OPC, Sole Proprietorship, Partnership. Expert Professional filing. GST & MSME registration included. Starting ₹1,499. Nationwide service.",
   keywords: [
     "company registration India",
     "private limited company registration India",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Company Registration Online India — Pvt Ltd, LLP, OPC | FreWork",
-    description: "Register your company online in India. Private Limited, LLP, OPC. CA/CS assisted. GST included. From ₹1,499.",
+    description: "Register your company online in India. Private Limited, LLP, OPC. professional assisted. GST included. From ₹1,499.",
     url: "https://frework.online/services/business-registration",
   },
   alternates: { canonical: "https://frework.online/services/business-registration" },
@@ -59,7 +59,7 @@ export default function Page() {
         <ServicePage
           title="Company Registration"
           subtitle="Start legal. Start fast."
-          description="Register your company online in India — Private Limited, LLP, OPC, Sole Proprietorship or Partnership. CA/CS-assisted filing with GST and MSME registration included."
+          description="Register your company online in India — Private Limited, LLP, OPC, Sole Proprietorship or Partnership. professional-assisted filing with GST and MSME registration included."
           features={[
             "Private Limited Company registration",
             "LLP (Limited Liability Partnership)",

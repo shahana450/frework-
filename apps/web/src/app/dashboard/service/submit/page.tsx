@@ -6,7 +6,7 @@ import Link from "next/link";
 import { TrendingUp, ArrowLeft, CheckCircle, Phone, Mail, Globe, IndianRupee } from "lucide-react";
 import { Suspense } from "react";
 
-const SERVICE_TYPES = ["CA/CS & Compliance","GST Filing & Advisory","Income Tax & Audit","Company Registration","DPR & Business Plan","Pitch Deck & Presentation","Business Restructuring","M&A Advisory","Corporate Training","MSME Advisory","Other"];
+const SERVICE_TYPES = ["professional & Compliance","GST Filing & Advisory","Income Tax & Audit","Company Registration","DPR & Business Plan","Pitch Deck & Presentation","Business Restructuring","M&A Advisory","Corporate Training","MSME Advisory","Other"];
 
 function ServiceForm() {
   const router = useRouter();
@@ -60,14 +60,14 @@ function ServiceForm() {
           <div className="w-12 h-12 rounded-2xl bg-[#C9A84C]/15 border border-[#C9A84C]/25 flex items-center justify-center"><TrendingUp className="w-6 h-6 text-[#C9A84C]" /></div>
           <div>
             <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>Offer a GROW Service</h1>
-            <p className="text-white/35 text-sm">CA/CS, tax, compliance, training or consulting service</p>
+            <p className="text-white/35 text-sm">professional, tax, compliance, training or consulting service</p>
           </div>
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <Card>
             <div className="grid grid-cols-2 gap-3">
               <F label="Your Name / Firm *" value={form.provider_name} onChange={set("provider_name")} required />
-              <F label="Qualifications" value={form.qualification} onChange={set("qualification")} placeholder="CA, CS, MBA, B.Com…" />
+              <F label="Qualifications" value={form.qualification} onChange={set("qualification")} placeholder="CA, MBA, B.Com…" />
             </div>
             <Sel label="Service Type *" value={form.service_type} onChange={set("service_type")} options={SERVICE_TYPES} required />
             <TA label="Service Description *" value={form.description} onChange={set("description")} placeholder="Describe exactly what you offer, your process, deliverables, and who it's for…" required />

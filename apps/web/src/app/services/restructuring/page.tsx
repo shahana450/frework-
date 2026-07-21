@@ -5,7 +5,7 @@ import { Building2, CheckCircle2, ArrowRight, RefreshCcw, GitMerge, TrendingDown
 
 export const metadata: Metadata = {
   title: "Business Restructuring — FreWork GROW",
-  description: "Entity conversion, M&A advisory, turnaround planning and strategic restructuring by CA & CS professionals.",
+  description: "Entity conversion, M&A advisory, turnaround planning and strategic restructuring by expert professionals.",
 };
 
 const services = [
@@ -39,7 +39,7 @@ export default function RestructuringPage() {
             Business Restructuring
           </h1>
           <p className="text-white/50 text-lg leading-relaxed max-w-2xl mx-auto mb-10">
-            Strategy, M&A advisory, entity conversion and turnaround planning — executed by experienced CA & CS professionals who understand both the law and the business.
+            Strategy, M&A advisory, entity conversion and turnaround planning — executed by experienced expert professionals who understand both the law and the business.
           </p>
           <Link href="/contact" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-[#0B1120]"
             style={{ background: "linear-gradient(135deg, #E8C97A, #C9A84C, #B8973E)" }}>

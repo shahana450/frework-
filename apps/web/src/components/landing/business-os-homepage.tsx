@@ -94,15 +94,15 @@ const MODULES = [
     id: "professionals", label: "FIND PEOPLE", tagline: "Hire Talent", emoji: "👥",
     desc: "Verified CAs, developers, designers and consultants for your business.",
     icon: Users, color: "#D97706", href: "/freelancers", badge: "Live",
-    items: ["CA / CS / Lawyers", "Developers", "Designers", "Consultants"],
+    items: ["Professionals & Lawyers", "Developers", "Designers", "Consultants"],
     detail: {
       heading: "Hire verified professionals",
-      why: "Finding reliable freelance professionals in India is hard. FreWork manually verifies every CA, CS, developer and designer before they join the platform.",
+      why: "Finding reliable freelance professionals in India is hard. FreWork manually verifies every professional, developer and designer before they join the platform.",
       steps: ["Post your requirement for free", "Get matched with verified profiles", "Interview and shortlist", "Hire & pay securely on platform"],
       pricing: "Free to post",
       time: "Match in 24 hrs",
       features: [
-        { icon: BadgeCheck, text: "All CAs & CS manually verified with ICAI/ICSI" },
+        { icon: BadgeCheck, text: "All professionals manually verified before listing" },
         { icon: UserCheck, text: "Developers & designers with portfolio review" },
         { icon: Shield, text: "Secure payments with escrow protection" },
         { icon: Star, text: "Reviews & ratings from real clients" },
@@ -966,9 +966,9 @@ export function BusinessOSHomepage() {
 
           <div className="grid md:grid-cols-3 gap-5">
             {[
-              { icon: Shield, c: "#059669", t: "Verified professionals only", d: "Every CA, CS, and expert on FreWork is manually verified before going live. No stock-photo profiles.", extra: "We check ICAI/ICSI membership, review past work samples, and conduct a background check before any professional is listed." },
+              { icon: Shield, c: "#059669", t: "Verified professionals only", d: "Every professional and expert on FreWork is manually verified before going live. No stock-photo profiles.", extra: "We check professional membership, review past work samples, and conduct a background check before any professional is listed." },
               { icon: Clock, c: "#2563EB", t: "Never miss a deadline", d: "Built-in compliance calendar for GST, ITR, ROC, and TDS â€” with WhatsApp reminders before every due date.", extra: "You get automatic reminders 30 days, 7 days, and 1 day before every due date. Late filing penalties are a thing of the past." },
-              { icon: Star, c: "#1E40AF", t: "Built for Indian business", d: "We understand Indian compliance, Indian languages, and the real challenges of SMEs and startups in India.", extra: "Our team includes practicing CAs, CS professionals, and former startup founders who have solved these problems themselves." },
+              { icon: Star, c: "#1E40AF", t: "Built for Indian business", d: "We understand Indian compliance, Indian languages, and the real challenges of SMEs and startups in India.", extra: "Our team includes practicing CAs, expert professionals, and former startup founders who have solved these problems themselves." },
             ].map((item, i) => {
               const Icon = item.icon;
               const [open, setOpen] = useState(false);
@@ -1017,7 +1017,7 @@ export function BusinessOSHomepage() {
               { icon: BarChart3, label: "Detailed Project Report", href: "/services/dpr", color: "#DC2626" },
               { icon: Presentation, label: "Pitch Deck Design", href: "/services/pitch-decks", color: "#7C3AED" },
               { icon: GraduationCap, label: "Business Training", href: "/services/training", color: "#EA580C" },
-              { icon: Users, label: "Hire a CA / CS", href: "/freelancers", color: "#4F46E5" },
+              { icon: Users, label: "Hire a professional", href: "/freelancers", color: "#4F46E5" },
               { icon: MapPin, label: "Coworking Space", href: "/coworking", color: "#1E40AF" },
             ].map(s => {
               const Icon = s.icon;

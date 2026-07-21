@@ -115,9 +115,9 @@ function LoginForm() {
           <h2 className="text-4xl font-bold mb-4 leading-tight" style={{ fontFamily: "var(--font-cormorant), serif" }}>
             One platform.<br />Two doors.
           </h2>
-          <p className="text-white/45 text-sm mb-10 leading-relaxed">Find workspaces, freelancers & jobs — or grow your business with expert CA & CS services.</p>
+          <p className="text-white/45 text-sm mb-10 leading-relaxed">Find workspaces, freelancers & jobs — or grow your business with expert Professional Services.</p>
           <div className="space-y-3">
-            {[["500+", "Businesses served"], ["CA & CS", "Qualified experts"], ["₹999", "Starting per month"]].map(([v, l]) => (
+            {[["500+", "Businesses served"], ["expert professionals", "Qualified experts"], ["₹999", "Starting per month"]].map(([v, l]) => (
               <div key={l} className="flex items-center gap-4 bg-white/4 border border-white/6 rounded-2xl px-4 py-3">
                 <span className="text-lg font-bold w-20 text-[#E8C97A]" style={{ fontFamily: "var(--font-cormorant), serif" }}>{v}</span>
                 <span className="text-white/50 text-sm">{l}</span>

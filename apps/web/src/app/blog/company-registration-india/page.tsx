@@ -138,7 +138,7 @@ export default function Page() {
           <p className="text-gray-700 mb-4">With complete documents, a Pvt Ltd company can be incorporated in <strong>7–10 working days</strong>. LLPs take 5–7 days. Delays usually happen due to name rejection or document defects.</p>
 
           <div className="mt-12 p-6 rounded-2xl border-2 border-purple-200 bg-purple-50">
-            <h3 className="text-xl font-black mb-2" style={{ color: "#1A1208" }}>Register your company with CA/CS experts</h3>
+            <h3 className="text-xl font-black mb-2" style={{ color: "#1A1208" }}>Register your company with expert professionals</h3>
             <p className="text-gray-600 mb-4">FreWork handles the entire company registration process — DSC, name reservation, SPICe+ filing, COI, GST and MSME. All-inclusive from ₹1,499.</p>
             <Link href="/services/business-registration" className="inline-block bg-purple-700 text-white font-bold px-6 py-3 rounded-xl hover:bg-purple-800 transition-colors">
               Register Your Company — ₹1,499 →

@@ -16,7 +16,7 @@ import Link from "next/link";
 const CITIES = ["All Cities","Mumbai","Delhi","Bangalore","Hyderabad","Pune","Chennai","Gurgaon","Noida","Kolkata","Ahmedabad","Jaipur","Kochi","Chandigarh","Indore","Surat"];
 
 const CATEGORIES = [
-  { icon: Calculator,    label: "CA & CS",               color: "#1E40AF", bg: "rgba(30,64,175,0.08)" },
+  { icon: Calculator,    label: "expert professionals",               color: "#1E40AF", bg: "rgba(30,64,175,0.08)" },
   { icon: Scale,         label: "Legal",                 color: "#7C3AED", bg: "rgba(124,58,237,0.08)" },
   { icon: Code2,         label: "Tech & Dev",            color: "#0891B2", bg: "rgba(8,145,178,0.08)" },
   { icon: Palette,       label: "Design & Creative",     color: "#EC4899", bg: "rgba(236,72,153,0.08)" },

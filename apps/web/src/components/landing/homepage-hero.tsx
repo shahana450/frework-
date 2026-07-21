@@ -68,7 +68,7 @@ export function HomepageHero() {
             className="text-center text-white/45 text-base md:text-lg mb-16 max-w-xl mx-auto leading-relaxed"
             style={{ fontFamily: "var(--font-poppins), sans-serif" }}
           >
-            Search workspaces, freelancers & jobs — grow with CA & CS services — or launch your startup in front of investors.
+            Search workspaces, freelancers & jobs — grow with Professional Services — or launch your startup in front of investors.
           </motion.p>
 
           {/* TWO DOOR CARDS */}
@@ -144,7 +144,7 @@ export function HomepageHero() {
                 </div>
 
                 <p className="text-white/45 text-sm mb-7 leading-relaxed">
-                  Professional services — get a quote and let our CA & CS team handle it.
+                  Professional services — get a quote and let our expert team handle it.
                 </p>
 
                 {/* Links */}
@@ -233,7 +233,7 @@ export function HomepageHero() {
               <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/6">
                 {[
                   { num: "500+", label: "Businesses Served", sub: "across India", color: "text-[#C9A84C]" },
-                  { num: "CA & CS", label: "Qualified Experts", sub: "on your team", color: "text-blue-400" },
+                  { num: "expert professionals", label: "Qualified Experts", sub: "on your team", color: "text-blue-400" },
                   { num: "24 hrs", label: "Response Time", sub: "guaranteed", color: "text-emerald-400" },
                   { num: "₹999", label: "Starting / month", sub: "no hidden fees", color: "text-purple-400" },
                 ].map(({ num, label, sub, color }) => (

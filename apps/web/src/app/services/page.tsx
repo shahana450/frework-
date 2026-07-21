@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "GST Registration, IT Filing, Accounting & CA Services Online India",
   description:
-    "FreWork offers GST registration, GST return filing, income tax (ITR) filing, company registration, virtual accountant, statutory audit, tax audit, TDS filing, ROC compliance and more. Expert CA/CS services online across India. Starting ₹499.",
+    "FreWork offers GST registration, GST return filing, income tax (ITR) filing, company registration, virtual accountant, statutory audit, tax audit, TDS filing, ROC compliance and more. Expert Professional Services online across India. Starting ₹499.",
   keywords: [
     "GST registration online India",
     "GST filing online",

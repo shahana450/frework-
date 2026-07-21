@@ -10,7 +10,7 @@ const included = [
   "Income Tax Return (ITR) filing",
   "Monthly bookkeeping & MIS report",
   "ROC Annual Filing",
-  "Dedicated CA / CS manager",
+  "Dedicated professional manager",
 ];
 
 export function PromoOffer() {

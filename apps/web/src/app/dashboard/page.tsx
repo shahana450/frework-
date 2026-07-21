@@ -207,11 +207,11 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── CA / CS SERVICES ── */}
+        {/* ── professional SERVICES ── */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">Get CA / CS Services</h2>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">Get Professional Services</h2>
               <p className="text-sm text-slate-500 mt-0.5">Expert-assisted · Paid · Delivered in days, not weeks</p>
             </div>
             <Link href="/services" className="text-sm text-blue-600 font-semibold hover:underline flex items-center gap-1">
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                     </div>
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border"
                       style={{ color, background: bg, borderColor: border }}>
-                      Expert CA/CS
+                      Expert Professional
                     </span>
                   </div>
 
@@ -433,7 +433,7 @@ export default function DashboardPage() {
                   <FileText className="w-5 h-5 text-blue-400" />
                 </div>
                 <p className="text-sm font-semibold text-slate-600 mb-1">No queries yet</p>
-                <p className="text-xs text-slate-400 mb-4 max-w-[220px] mx-auto">Submit a query and our CA & CS team will respond within 2 hours.</p>
+                <p className="text-xs text-slate-400 mb-4 max-w-[220px] mx-auto">Submit a query and our expert team will respond within 2 hours.</p>
                 <Link href="/contact"
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
                   style={{ background: "linear-gradient(135deg,#1246C8,#2563EB)" }}>
@@ -452,7 +452,7 @@ export default function DashboardPage() {
                   <h2 className="font-bold text-slate-900 text-sm">Pending Tasks</h2>
                 </div>
                 <div className="px-5 py-8 text-center">
-                  <p className="text-xs text-slate-400">Tasks from your CA/CS team appear here once a service starts.</p>
+                  <p className="text-xs text-slate-400">Tasks from your expert team appear here once a service starts.</p>
                 </div>
               </div>
 
@@ -464,7 +464,7 @@ export default function DashboardPage() {
                   <h2 className="font-bold text-slate-900 text-sm">Meetings</h2>
                 </div>
                 <div className="px-5 py-6 text-center">
-                  <p className="text-xs text-slate-400 mb-3">Book a free 30-min call with our CA/CS expert.</p>
+                  <p className="text-xs text-slate-400 mb-3">Book a free 30-min call with our expert professional.</p>
                   <Link href="/contact"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors">
                     Schedule a call <ArrowRight className="w-3 h-3" />

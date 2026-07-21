@@ -25,7 +25,7 @@ export default function TermsPage() {
             <h2 className="text-lg font-semibold text-white mb-3">2. Services Provided</h2>
             <p>FreWork is a professional services marketplace that connects individuals and businesses with:</p>
             <ul className="list-disc list-inside mt-3 space-y-1.5 text-white/50">
-              <li>ICAI-registered Chartered Accountants and Company Secretaries</li>
+              <li>ICAI-registered qualified expert professionals</li>
               <li>Verified freelancers and skilled professionals</li>
               <li>Coworking and workspace listings</li>
               <li>Startup and investor networking</li>
@@ -49,7 +49,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-white mb-3">5. Professional Advice Disclaimer</h2>
-            <p>CA/CS professionals on FreWork are independent practitioners. FreWork provides a platform to connect you with them. FreWork is not responsible for specific professional advice given by CAs or CSs on the platform. Always verify credentials and obtain independent advice for major financial or legal decisions.</p>
+            <p>expert professionals on FreWork are independent practitioners. FreWork provides a platform to connect you with them. FreWork is not responsible for specific professional advice given by CAs or CSs on the platform. Always verify credentials and obtain independent advice for major financial or legal decisions.</p>
           </section>
 
           <section>

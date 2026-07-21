@@ -119,9 +119,9 @@ export default function RegisterPage() {
           <h2 className="text-4xl font-bold mb-4 leading-tight" style={{ fontFamily: "var(--font-cormorant), serif" }}>
             Join 500+<br />growing businesses
           </h2>
-          <p className="text-white/45 text-sm mb-10 leading-relaxed">Expert CA & CS services, coworking spaces, and freelancers — all in one place.</p>
+          <p className="text-white/45 text-sm mb-10 leading-relaxed">Expert Professional Services, coworking spaces, and freelancers — all in one place.</p>
           <div className="space-y-3">
-            {[["✅", "CA & CS qualified experts"], ["⚡", "24-hour turnaround"], ["🔒", "100% data privacy"], ["📞", "Dedicated account manager"]].map(([icon, text]) => (
+            {[["✅", "verified expert professionals"], ["⚡", "24-hour turnaround"], ["🔒", "100% data privacy"], ["📞", "Dedicated account manager"]].map(([icon, text]) => (
               <div key={text} className="flex items-center gap-3 text-white/70 text-sm">
                 <span>{icon}</span><span>{text}</span>
               </div>

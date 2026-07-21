@@ -5,7 +5,7 @@ import { BarChart3, CheckCircle2, ArrowRight, Landmark, PieChart, FileSpreadshee
 
 export const metadata: Metadata = {
   title: "Detailed Project Reports (DPR) — FreWork GROW",
-  description: "Bank-ready, investor-ready DPRs for manufacturing, service, agri and infrastructure projects — prepared by CA & CS professionals.",
+  description: "Bank-ready, investor-ready DPRs for manufacturing, service, agri and infrastructure projects — prepared by expert professionals.",
 };
 
 const includes = [

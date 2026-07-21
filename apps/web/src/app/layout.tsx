@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     url: "https://frework.online",
     title: "FreWork – GST Registration, IT Filing & CA Services Online India",
     description:
-      "Online GST registration, GST filing, ITR filing, company registration, accounting, audit and CA services across India. Expert CAs & CSs at your fingertips.",
+      "Online GST registration, GST filing, ITR filing, company registration, accounting, audit and CA services across India. Expert expert professionals at your fingertips.",
     siteName: "FreWork",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
@@ -106,7 +106,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 "alternateName": "FreWork India",
                 "url": "https://frework.online",
                 "logo": "https://frework.online/logo.png",
-                "description": "FreWork provides GST registration, GST filing, income tax (ITR) filing, company registration, accounting, virtual accountant, audit, and CA/CS services online across India.",
+                "description": "FreWork provides GST registration, GST filing, income tax (ITR) filing, company registration, accounting, virtual accountant, audit, and Professional Services online across India.",
                 "areaServed": { "@type": "Country", "name": "India" },
                 "priceRange": "₹₹",
                 "currenciesAccepted": "INR",

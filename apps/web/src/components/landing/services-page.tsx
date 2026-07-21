@@ -102,7 +102,7 @@ const CATEGORIES = [
     icon: Search,
     services: [
       { icon: MapPin,     title: "Coworking Spaces",   desc: "Search verified coworking spaces, private cabins and meeting rooms across India — book by hour or month.", href: "/coworking",   tag: "Launching Soon" },
-      { icon: UserCheck,  title: "Find Freelancers",   desc: "Hire verified CA, CS, accountants, designers and developers. View portfolios, rates and reviews.",          href: "/freelancers", tag: null },
+      { icon: UserCheck,  title: "Find Freelancers",   desc: "Hire verified professionals, accountants, designers and developers. View portfolios, rates and reviews.",          href: "/freelancers", tag: null },
       { icon: Briefcase,  title: "Job Board",          desc: "Finance, accounting and business roles from trusted Indian companies. Post or apply — completely free.",     href: "/jobs",        tag: null },
       { icon: Users,      title: "Business Community", desc: "Connect with founders, CAs and business owners. Ask questions, share knowledge and grow together.",         href: "/community",   tag: null },
     ],
@@ -215,7 +215,7 @@ export function ServicesPage() {
               {[
                 { value: "20+", label: "Services" },
                 { value: "500+", label: "Clients Served" },
-                { value: "CA/CS", label: "Qualified Experts" },
+                { value: "professional", label: "Qualified Experts" },
                 { value: "2 hrs", label: "Response Time" },
               ].map(({ value, label }) => (
                 <div key={label} className="text-center">

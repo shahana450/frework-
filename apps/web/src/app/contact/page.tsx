@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Talk to a CA Expert — Free Consultation | FreWork India",
     description:
-      "Free consultation with CA/CS experts for GST, income tax, company registration and accounting. Get expert help now.",
+      "Free consultation with expert professionals for GST, income tax, company registration and accounting. Get expert help now.",
     url: "https://frework.online/contact",
   },
 };

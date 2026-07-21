@@ -109,7 +109,7 @@ export function HorizontalHomepage() {
               {[
                 { navIdx: 1, img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80", label: "FIND", sub: "Coworking · Teachers · Skilled Workers · Jobs", tint: "rgba(30,64,175,0.5)", accent: "#60a5fa", accentBg: "rgba(59,130,246,0.22)", accentBorder: "rgba(96,165,250,0.4)", glow: "rgba(59,130,246,0.3)", Icon: Search,
                   items: ["Coworking Spaces — Launching Soon", "Teachers & Tutors — CBSE · JEE · Music", "Skilled Workers — Electrician · Plumber · Cook", "Jobs & Freelancers — Verified talent"] },
-                { navIdx: 2, img: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=80", label: "GROW", sub: "CA · CS · Tax · Compliance · DPR", tint: "rgba(120,83,10,0.5)", accent: "#fbbf24", accentBg: "rgba(201,168,76,0.22)", accentBorder: "rgba(251,191,36,0.4)", glow: "rgba(201,168,76,0.3)", Icon: TrendingUp,
+                { navIdx: 2, img: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=80", label: "GROW", sub: "Tax · Compliance · DPR", tint: "rgba(120,83,10,0.5)", accent: "#fbbf24", accentBg: "rgba(201,168,76,0.22)", accentBorder: "rgba(251,191,36,0.4)", glow: "rgba(201,168,76,0.3)", Icon: TrendingUp,
                   items: ["GST & Income Tax — Returns & audits", "DPR & Projections — Project reports", "Pitch Decks — Investor-ready decks", "Business Restructuring — M&A & strategy"] },
                 { navIdx: 3, img: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=600&q=80", label: "LAUNCH", sub: "Startups · Investors · Partners", tint: "rgba(76,29,149,0.5)", accent: "#a78bfa", accentBg: "rgba(139,92,246,0.22)", accentBorder: "rgba(167,139,250,0.4)", glow: "rgba(139,92,246,0.3)", Icon: Rocket,
                   items: ["List Your Startup — Free listing", "Browse Startups — Discover ventures", "Connect with Investors — Angels & VCs", "CA-Verified Financials — Build trust"] },
@@ -172,8 +172,8 @@ export function HorizontalHomepage() {
                 {
                   idx: 1, navIdx: 2,
                   img: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900&q=85",
-                  label: "GROW", sub: "CA · CS · Tax · Compliance",
-                  desc: "CA & CS qualified experts for your business.",
+                  label: "GROW", sub: "Tax · Compliance",
+                  desc: "verified expert professionals for your business.",
                   tint: ["rgba(120,83,10,0.55)", "rgba(161,110,14,0.18)", "rgba(201,168,76,0.08)"],
                   accent: "#fbbf24", accentDim: "rgba(251,191,36,0.75)", accentBg: "rgba(201,168,76,0.22)", accentBorder: "rgba(251,191,36,0.4)",
                   glowColor: "rgba(201,168,76,0.32)", borderActive: "rgba(251,191,36,0.6)", borderIdle: "rgba(201,168,76,0.28)",
@@ -348,7 +348,7 @@ export function HorizontalHomepage() {
                 <h2 className="text-5xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>GROW</h2>
               </div>
             </div>
-            <p className="text-white/40 text-lg mb-10 max-w-md">CA & CS qualified experts handle your compliance, finances and growth — so you can focus on building.</p>
+            <p className="text-white/40 text-lg mb-10 max-w-md">verified expert professionals handle your compliance, finances and growth — so you can focus on building.</p>
 
             <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-3">
               {[
@@ -453,7 +453,7 @@ export function HorizontalHomepage() {
               <span className="text-[#C9A84C]">great together.</span>
             </h2>
             <p className="text-white/40 text-lg max-w-lg mb-12">
-              Talk to our CA & CS experts for free. No commitment. We'll tell you exactly what your business needs.
+              Talk to our expert professionals for free. No commitment. We'll tell you exactly what your business needs.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-14">

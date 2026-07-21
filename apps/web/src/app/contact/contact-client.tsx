@@ -113,7 +113,7 @@ export default function ContactClient() {
             </h1>
 
             <p className="text-lg max-w-xl mx-auto mb-10 leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>
-              30-minute session with a CA/CS qualified professional —{" "}
+              30-minute session with a qualified expert professional —{" "}
               <span style={{ color: "rgba(232,201,122,0.85)" }}>completely free</span>, no obligation, no hidden charges.
             </p>
 
@@ -139,7 +139,7 @@ export default function ContactClient() {
             {/* Trust badges */}
             <div className="flex flex-wrap justify-center gap-3">
               {[
-                { icon: Shield, label: "CA/CS Qualified",  sub: "Verified experts",      color: "#7C3AED" },
+                { icon: Shield, label: "expert-qualified",  sub: "Verified experts",      color: "#7C3AED" },
                 { icon: Zap,    label: "2-Hour Response",  sub: "Guaranteed callback",   color: "#059669" },
                 { icon: Star,   label: "4.9/5 Rating",     sub: "500+ happy clients",    color: "#B8903A" },
               ].map(({ icon: Icon, label, sub, color }) => (

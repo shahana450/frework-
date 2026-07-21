@@ -5,7 +5,7 @@ import { ShieldCheck, Clock, MapPin, Users } from "lucide-react";
 const badges = [
   { icon: MapPin, label: "Coworking Spaces Listed" },
   { icon: Users, label: "Freelancers on Platform" },
-  { icon: ShieldCheck, label: "CA & CS Qualified Experts" },
+  { icon: ShieldCheck, label: "verified expert professionals" },
   { icon: Clock, label: "24-Hour Response Time" },
 ];
 

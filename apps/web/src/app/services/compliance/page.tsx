@@ -5,7 +5,7 @@ import { FileText, Calculator, BookOpen, BarChart3, CheckCircle2, ArrowRight, Cl
 
 export const metadata: Metadata = {
   title: "Compliance Services — FreWork GROW",
-  description: "Income Tax, GST, Accounts & Bookkeeping and ROC Compliance handled by CA & CS qualified professionals.",
+  description: "Income Tax, GST, Accounts & Bookkeeping and ROC Compliance handled by expert-qualified professionals.",
 };
 
 const services = [
@@ -52,7 +52,7 @@ export default function CompliancePage() {
             Compliance
           </h1>
           <p className="text-white/50 text-lg leading-relaxed max-w-2xl mx-auto mb-10">
-            Income Tax, GST, Accounts & ROC filings — handled end-to-end by Chartered Accountants and Company Secretaries so you never miss a deadline.
+            Income Tax, GST, Accounts & ROC filings — handled end-to-end by qualified expert professionals so you never miss a deadline.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link href="/contact" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-[#0B1120]"
@@ -72,7 +72,7 @@ export default function CompliancePage() {
           <div className="flex flex-wrap justify-center gap-10 md:gap-20">
             {[
               [ShieldCheck, "100% Deadline Guarantee"],
-              [Users, "CA & CS Qualified"],
+              [Users, "expert-qualified"],
               [Clock, "24-hr Response"],
             ].map(([Icon, label]: any) => (
               <div key={label} className="flex items-center gap-2.5">

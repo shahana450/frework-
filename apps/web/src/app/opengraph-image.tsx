@@ -50,7 +50,7 @@ export default function OGImage() {
 
         {/* Badges */}
         <div style={{ display: "flex", gap: "16px" }}>
-          {["⭐ 4.9/5 Rating", "✅ 500+ Businesses", "🏛️ CA/CS Qualified", "🇮🇳 Pan India Service"].map((b) => (
+          {["⭐ 4.9/5 Rating", "✅ 500+ Businesses", "🏛️ expert-qualified", "🇮🇳 Pan India Service"].map((b) => (
             <div key={b} style={{ background: "rgba(184,144,58,0.12)", border: "1px solid rgba(184,144,58,0.3)", color: "#E8C97A", fontSize: "15px", fontWeight: "700", padding: "8px 18px", borderRadius: "30px", display: "flex" }}>
               {b}
             </div>

@@ -42,7 +42,7 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-semibold text-white mb-3">3. Data Sharing</h2>
             <p>We <strong className="text-white">never sell your personal data</strong>. We share your data only with:</p>
             <ul className="list-disc list-inside mt-3 space-y-1.5 text-white/50">
-              <li>Our CA/CS team (to deliver your requested service)</li>
+              <li>Our expert team (to deliver your requested service)</li>
               <li>Supabase (secure cloud database, hosted in the EU)</li>
               <li>Meta / Google (ad measurement only — via Pixel events, no PII sent)</li>
             </ul>

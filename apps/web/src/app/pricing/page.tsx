@@ -55,7 +55,7 @@ const PLANS: Plan[] = [
         ],
       },
     ],
-    notIncluded: ["Verified Badge", "Priority Search", "Analytics", "CA/CS Services", "Team Seats", "API Access"],
+    notIncluded: ["Verified Badge", "Priority Search", "Analytics", "Professional Services", "Team Seats", "API Access"],
     cta: "Get Started — Free",
   },
   {
@@ -90,7 +90,7 @@ const PLANS: Plan[] = [
         ],
       },
       {
-        heading: "CA/CS Services",
+        heading: "Professional Services",
         icon: FileText,
         items: [
           { text: "GST Registration", note: "One-time" },
@@ -232,7 +232,7 @@ const PLANS: Plan[] = [
 const FAQS = [
   { q: "Can I switch plans anytime?", a: "Yes — upgrade or downgrade instantly. Upgrades are prorated; downgrades take effect at the next billing cycle." },
   { q: "Is there really a 14-day free trial?", a: "Yes. Professional, Growth, and Business plans include a full 14-day trial with no credit card required. You won't be charged until the trial ends." },
-  { q: "What CA/CS services are included?", a: "GST filing, ITR filing, bookkeeping, internal audit, and annual audit are performed by our qualified CA/CS team — not automated tools. Scope varies by plan." },
+  { q: "What Professional Services are included?", a: "GST filing, ITR filing, bookkeeping, internal audit, and annual audit are performed by our qualified expert team — not automated tools. Scope varies by plan." },
   { q: "What payment methods do you accept?", a: "UPI, all major credit/debit cards (Visa, Mastercard, RuPay), Net Banking, EMI, and bank transfer for annual plans — via Razorpay." },
   { q: "How does the yearly billing discount work?", a: "Choosing yearly billing saves you up to 35% compared to monthly. You're billed for 12 months upfront at the discounted monthly rate." },
   { q: "Can I get a custom quote for my firm?", a: "Enterprise plans are fully customisable. Contact us and our team responds within 1 business day with a tailored proposal." },
@@ -292,7 +292,7 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="text-white/45 text-lg mb-10 leading-relaxed">
-            CA/CS services, workspace, talent, and compliance —<br className="hidden sm:block" /> all in one platform. Cancel anytime.
+            Professional Services, workspace, talent, and compliance —<br className="hidden sm:block" /> all in one platform. Cancel anytime.
           </p>
 
           {/* Trust pills */}

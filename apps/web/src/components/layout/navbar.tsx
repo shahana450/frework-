@@ -38,7 +38,7 @@ const servicesItems = [
 ];
 
 const findItems = [
-  { title: "Hire Professionals", href: "/freelancers", icon: Users, description: "CA, CS, developers, designers" },
+  { title: "Hire Professionals", href: "/freelancers", icon: Users, description: "professional, developers, designers" },
   { title: "Coworking Spaces", href: "/coworking", icon: MapPin, description: "Premium offices across India" },
   { title: "Job Board", href: "/jobs", icon: Briefcase, description: "Full-time, remote, freelance" },
   { title: "Startup Launchpad", href: "/startups", icon: Rocket, description: "Funding & investor connect" },

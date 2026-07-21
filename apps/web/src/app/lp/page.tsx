@@ -91,7 +91,7 @@ function LandingInner() {
         <h2 className="text-4xl font-bold text-white mb-3" style={{ fontFamily: "var(--font-cormorant), serif" }}>
           We&apos;ll call you back!
         </h2>
-        <p className="text-white/50 text-base mb-2">Our CA/CS expert will reach you within <span className="text-white font-semibold">2 hours</span>.</p>
+        <p className="text-white/50 text-base mb-2">Our expert professional will reach you within <span className="text-white font-semibold">2 hours</span>.</p>
         <p className="text-white/30 text-sm mb-10">Check WhatsApp for a confirmation message.</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a href="/" className="px-6 py-3 rounded-xl border border-white/15 text-white/60 text-sm font-semibold hover:border-white/30 hover:text-white transition-all">

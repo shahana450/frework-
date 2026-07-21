@@ -5,7 +5,7 @@ import { GraduationCap, CheckCircle2, ArrowRight, Users, Video, BookOpen, Award 
 
 export const metadata: Metadata = {
   title: "Training — FreWork GROW",
-  description: "GST, accounting, startup finance and business workshops for teams and founders, delivered by CA & CS professionals.",
+  description: "GST, accounting, startup finance and business workshops for teams and founders, delivered by expert professionals.",
 };
 
 const programmes = [
