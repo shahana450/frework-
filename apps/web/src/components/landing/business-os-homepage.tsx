@@ -489,22 +489,7 @@ export function BusinessOSHomepage() {
             )}
           </motion.div>
 
-          {/* â”€â”€ Trust bar â”€â”€ */}
-          <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35 }}
-            className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 mb-10 pb-10 border-b"
-            style={{ borderColor: L.borderLight }}>
-            {[
-              { icon: Shield, label: "CA-Verified Services" },
-              { icon: BadgeCheck, label: "ICAI Registered Partners" },
-              { icon: Clock, label: "3-7 Day Delivery" },
-              { icon: Lock, label: "100% Secure & Confidential" },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: L.textSub }}>
-                <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#059669" }} />
-                {label}
-              </div>
-            ))}
-          </motion.div>
+
 
           {/* â”€â”€ Services Quick-Link Strip â”€â”€ */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
