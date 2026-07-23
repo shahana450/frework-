@@ -3,20 +3,23 @@ import { TaxNewsSection } from "@/components/landing/tax-news-section";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "FreWork – GST Registration, IT Filing & CA Services Online India",
+  title: "FreWork — GST Registration, ITR Filing & Business Services Online India",
   description:
-    "FreWork: Online GST registration, GST return filing, income tax (ITR) filing, company registration, accounting, virtual accountant, audit and CA services across India. Expert expert professionals. Starting ₹499.",
+    "FreWork: India's all-in-one business platform. GST registration, ITR filing, company registration, coworking spaces and expert professionals — all online. Starting ₹499.",
   keywords: [
+    "FreWork",
+    "frework.online",
+    "FreWork India",
     "GST registration India",
     "GST filing online",
     "income tax filing India",
     "ITR filing online",
-    "CA services online India",
+    "business services online India",
     "company registration India",
     "accounting services India",
-    "virtual accountant",
-    "online accountant India",
-    "FreWork",
+    "virtual accountant India",
+    "coworking space India",
+    "freelance professionals India",
   ],
   alternates: { canonical: "https://frework.online" },
 };
