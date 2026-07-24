@@ -258,15 +258,17 @@ export function BusinessOSHomepage() {
         {/* Premium layered background */}
         <div className="absolute inset-0 pointer-events-none">
           {/* Base gradient */}
-          <div style={{ position:"absolute", inset:0, background:"linear-gradient(160deg, #F0F4FF 0%, #FFFFFF 45%, #F8FAFF 100%)" }} />
+          <div style={{ position:"absolute", inset:0, background:"linear-gradient(160deg, #EEF2FF 0%, #FFFFFF 50%, #FFF7F0 100%)" }} />
           {/* Top blue glow */}
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 80% 55% at 50% -10%, rgba(37,99,235,0.12) 0%, transparent 65%)" }} />
-          {/* Left accent */}
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 35% 50% at -5% 60%, rgba(99,102,241,0.07) 0%, transparent 60%)" }} />
-          {/* Right accent */}
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 35% 50% at 105% 40%, rgba(16,185,129,0.05) 0%, transparent 60%)" }} />
-          {/* Subtle dot grid */}
-          <div style={{ position:"absolute", inset:0, opacity:0.025, backgroundImage:"radial-gradient(rgba(37,99,235,1) 1px, transparent 1px)", backgroundSize:"28px 28px" }} />
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 90% 60% at 50% -5%, rgba(37,99,235,0.2) 0%, transparent 65%)" }} />
+          {/* Left violet accent */}
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 40% 55% at -5% 55%, rgba(99,102,241,0.11) 0%, transparent 60%)" }} />
+          {/* Right orange – India warmth */}
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 45% 50% at 108% 72%, rgba(234,88,12,0.09) 0%, transparent 60%)" }} />
+          {/* Bottom emerald glow */}
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 50% 35% at 20% 110%, rgba(16,185,129,0.07) 0%, transparent 60%)" }} />
+          {/* Dot grid */}
+          <div style={{ position:"absolute", inset:0, opacity:0.035, backgroundImage:"radial-gradient(rgba(37,99,235,1) 1px, transparent 1px)", backgroundSize:"28px 28px" }} />
         </div>
 
         {/* -- Interactive scrolling service banners -- */}
@@ -503,6 +505,18 @@ export function BusinessOSHomepage() {
 
 
 
+          {/* Stats strip */}
+          <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.34 }}
+            className="flex items-stretch justify-center gap-0 mb-8 max-w-lg mx-auto rounded-2xl overflow-hidden border"
+            style={{ borderColor:"rgba(37,99,235,0.12)", background:"linear-gradient(90deg,rgba(37,99,235,0.04),rgba(99,102,241,0.05))" }}>
+            {[["500+","Businesses"],["200+","Spaces"],["8","Cities"],["₹499","From"]].map(([n,l],i,arr) => (
+              <div key={l} className="flex-1 text-center py-4 px-2" style={{ borderRight:i<arr.length-1?"1px solid rgba(37,99,235,0.1)":"none" }}>
+                <p className="text-lg font-black leading-none mb-0.5" style={{ color:"#0F2044" }}>{n}</p>
+                <p className="text-[10px] font-semibold" style={{ color:"#94A3B8" }}>{l}</p>
+              </div>
+            ))}
+          </motion.div>
+
           {/* -- Services Quick-Link Strip -- */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
             className="mb-12">
@@ -553,37 +567,51 @@ export function BusinessOSHomepage() {
 
 
       {/* --- PLATFORM OVERVIEW --- */}
-      <section className="py-16 px-4 relative" style={{ background: "linear-gradient(180deg, #F0F4FF 0%, #FFFFFF 100%)" }}>
-        <div className="container max-w-6xl mx-auto">
-          <div className="text-center mb-10">
-            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: "#2563EB" }}>One Platform · Five Business Essentials</p>
-            <h2 className="font-black leading-tight" style={{ fontFamily: "var(--font-plus-jakarta),sans-serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", color: "#0F2044" }}>
-              Not just tax. Everything your<br/>
-              <span style={{ background: "linear-gradient(135deg,#2563EB,#4F46E5)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>business needs.</span>
+      <section className="py-20 px-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #08112A 0%, #0F2044 55%, #0D1040 100%)" }}>
+        <div className="absolute inset-0 pointer-events-none">
+          <div style={{ position:"absolute", left:"-5%", top:"-20%", width:600, height:600, borderRadius:"50%", background:"radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 60%)", filter:"blur(80px)" }} />
+          <div style={{ position:"absolute", right:"-5%", bottom:"-20%", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle, rgba(124,58,237,0.14) 0%, transparent 60%)", filter:"blur(80px)" }} />
+          <div style={{ position:"absolute", left:"40%", top:"30%", width:300, height:300, borderRadius:"50%", background:"radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 60%)", filter:"blur(60px)" }} />
+          <div style={{ position:"absolute", inset:0, opacity:0.03, backgroundImage:"radial-gradient(rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize:"24px 24px" }} />
+        </div>
+
+        <div className="container max-w-6xl mx-auto relative z-10">
+          <div className="text-center mb-12">
+            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: "#60A5FA" }}>One Platform · Five Business Essentials</p>
+            <h2 className="font-black leading-tight" style={{ fontFamily: "var(--font-plus-jakarta),sans-serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", color: "#FFFFFF" }}>
+              Not just tax. Everything your
+              <br/>
+              <span style={{ background: "linear-gradient(135deg,#60A5FA 0%,#A78BFA 50%,#34D399 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>business needs.</span>
             </h2>
-            <p className="mt-3 text-sm max-w-lg mx-auto" style={{ color: "#64748B" }}>
+            <p className="mt-3 text-sm max-w-lg mx-auto" style={{ color: "rgba(148,163,184,0.85)" }}>
               FreWork is India&apos;s complete business platform — from day 1 incorporation to ongoing compliance, hiring, workspace and funding.
             </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {([
-              { emoji: "🏢", title: "Start", sub: "Register & Set Up", items: ["Company Registration", "GST Number", "MSME Certificate"], color: "#059669", bg: "rgba(5,150,105,0.06)", href: "/services/business-registration" },
-              { emoji: "✅", title: "Comply", sub: "Tax & Compliance", items: ["GST Filing", "ITR Filing", "ROC / MCA"], color: "#2563EB", bg: "rgba(37,99,235,0.06)", href: "/services/compliance" },
-              { emoji: "👥", title: "Hire", sub: "Talent & Experts", items: ["Tax Consultants", "Developers", "Designers"], color: "#7C3AED", bg: "rgba(124,58,237,0.06)", href: "/freelancers" },
-              { emoji: "🏛️", title: "Work", sub: "Coworking Spaces", items: ["Hot Desks", "Private Cabins", "8 Cities"], color: "#EA580C", bg: "rgba(234,88,12,0.06)", href: "/coworking" },
-              { emoji: "🚀", title: "Grow", sub: "Funding & Scale", items: ["Pitch Decks", "DPR / Business Plan", "Investor Connect"], color: "#D97706", bg: "rgba(217,119,6,0.06)", href: "/services/dpr" },
-            ] as const).map(p => (
+            {[
+              { emoji: "🏢", title: "Start", sub: "Register & Set Up", stat: "7-day", statLabel: "setup", items: ["Company Registration", "GST Number", "MSME Certificate"], color: "#34D399", border: "rgba(52,211,153,0.22)", bg: "rgba(52,211,153,0.07)", href: "/services/business-registration" },
+              { emoji: "✅", title: "Comply", sub: "Tax & Compliance", stat: "₹499", statLabel: "from", items: ["GST Filing", "ITR Filing", "ROC / MCA"], color: "#60A5FA", border: "rgba(96,165,250,0.22)", bg: "rgba(96,165,250,0.07)", href: "/services/compliance" },
+              { emoji: "👥", title: "Hire", sub: "Talent & Experts", stat: "24hr", statLabel: "match", items: ["Professionals", "Developers", "Designers"], color: "#C084FC", border: "rgba(192,132,252,0.22)", bg: "rgba(192,132,252,0.07)", href: "/freelancers" },
+              { emoji: "🏛️", title: "Work", sub: "Coworking Spaces", stat: "200+", statLabel: "spaces", items: ["Hot Desks", "Private Cabins", "8 Cities"], color: "#FB923C", border: "rgba(251,146,60,0.22)", bg: "rgba(251,146,60,0.07)", href: "/coworking" },
+              { emoji: "🚀", title: "Grow", sub: "Funding & Scale", stat: "500+", statLabel: "clients", items: ["Pitch Decks", "DPR / Business Plan", "Investor Connect"], color: "#FCD34D", border: "rgba(252,211,77,0.22)", bg: "rgba(252,211,77,0.07)", href: "/services/dpr" },
+            ].map(p => (
               <Link key={p.title} href={p.href}
                 className="group relative rounded-2xl p-5 border transition-all duration-200 hover:scale-[1.03] hover:-translate-y-1 cursor-pointer block"
-                style={{ background: p.bg, borderColor: p.color + "22", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
-                <div className="text-3xl mb-3">{p.emoji}</div>
+                style={{ background: p.bg, borderColor: p.border, boxShadow: "0 4px 24px rgba(0,0,0,0.25)" }}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="text-3xl">{p.emoji}</div>
+                  <div className="text-right">
+                    <p className="text-sm font-black leading-none" style={{ color: p.color }}>{p.stat}</p>
+                    <p className="text-[9px] font-medium" style={{ color: "rgba(148,163,184,0.55)" }}>{p.statLabel}</p>
+                  </div>
+                </div>
                 <p className="font-black text-base mb-0.5" style={{ color: p.color }}>{p.title}</p>
-                <p className="text-[11px] font-semibold mb-3" style={{ color: "#64748B" }}>{p.sub}</p>
+                <p className="text-[11px] font-semibold mb-3" style={{ color: "rgba(148,163,184,0.7)" }}>{p.sub}</p>
                 <ul className="space-y-1">
                   {p.items.map(item => (
-                    <li key={item} className="text-[11px] flex items-center gap-1.5" style={{ color: "#64748B" }}>
-                      <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: p.color }} />
+                    <li key={item} className="text-[11px] flex items-center gap-1.5" style={{ color: "rgba(203,213,225,0.6)" }}>
+                      <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: p.color, opacity: 0.7 }} />
                       {item}
                     </li>
                   ))}
@@ -999,7 +1027,7 @@ export function BusinessOSHomepage() {
       <section className="py-28 px-4" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>Why choose us</p>
+            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>Why FreWork</p>
             <GoldDivider />
             <h2 className="font-black mt-4" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: L.text }}>
               Your complete business platform, <span style={{ color: L.gold }}>all in one place</span>
@@ -1021,8 +1049,9 @@ export function BusinessOSHomepage() {
                 <motion.div key={item.t}
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
                   <button className="w-full text-left" onClick={() => setOpen(!open)}>
-                    <div className="p-7 rounded-2xl border transition-all duration-300"
+                    <div className="p-7 rounded-2xl border transition-all duration-300 relative overflow-hidden"
                       style={{ background: L.bgCard, borderColor: open ? `${item.c}30` : L.borderLight, boxShadow: open ? L.shadowHover : L.shadow, transform: open ? "translateY(-2px)" : "none" }}>
+                      <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: `linear-gradient(90deg, ${item.c}, ${item.c}50)` }} />
                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
                         style={{ background: `${item.c}08`, border: `1px solid ${item.c}20` }}>
                         <Icon className="w-6 h-6" style={{ color: item.c }} />
@@ -1050,6 +1079,42 @@ export function BusinessOSHomepage() {
         </div>
       </section>
 
+      {/* --- TESTIMONIALS --- */}
+      <section className="py-20 px-4" style={{ background: "#F8FAFC", borderTop: "1px solid rgba(15,32,68,0.06)" }}>
+        <div className="container max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: "#2563EB" }}>What our clients say</p>
+            <h2 className="font-black" style={{ fontFamily: "var(--font-plus-jakarta),sans-serif", fontSize: "clamp(1.5rem,3.5vw,2.2rem)", color: "#0F172A" }}>
+              Trusted by growing businesses
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-5">
+            {[
+              { quote: "FreWork registered my company and GST in 6 days. I was expecting it to take a month. The process was completely seamless.", name: "Rahul Sharma", role: "Founder, TechStart Pune", color: "#059669" },
+              { quote: "Booked a hot desk through FreWork and it was perfectly set up. Every space is personally verified — you get exactly what you see.", name: "Priya Menon", role: "Freelance Designer, Bangalore", color: "#7C3AED" },
+              { quote: "Our CA through FreWork filed 3 years of pending ITR in 4 days. Affordable, fast, and genuinely professional service.", name: "Anil Gupta", role: "SME Owner, Delhi NCR", color: "#2563EB" },
+            ].map((item) => (
+              <div key={item.name} className="rounded-2xl p-6 border" style={{ background: "#FFFFFF", borderColor: `${item.color}18`, boxShadow: "0 2px 16px rgba(15,32,68,0.06)" }}>
+                <div className="flex gap-0.5 mb-4">
+                  {[1,2,3,4,5].map(i => <span key={i} style={{ color: "#FBBF24", fontSize: "14px" }}>★</span>)}
+                </div>
+                <p className="text-sm leading-relaxed mb-5" style={{ color: "#475569" }}>&ldquo;{item.quote}&rdquo;</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0"
+                    style={{ background: `${item.color}12`, color: item.color, border: `1px solid ${item.color}20` }}>
+                    {item.name[0]}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold" style={{ color: "#0F172A" }}>{item.name}</p>
+                    <p className="text-[11px]" style={{ color: "#94A3B8" }}>{item.role}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* --- QUICK SERVICES --- */}
       <section className="py-20 px-4" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
@@ -1068,8 +1133,9 @@ export function BusinessOSHomepage() {
               const Icon = s.icon;
               return (
                 <Link key={s.label} href={s.href}
-                  className="flex items-center gap-3 p-3.5 rounded-xl border transition-all group hover:scale-[1.03] hover:-translate-y-0.5"
-                  style={{ background: L.bgCard, borderColor: L.borderLight, boxShadow: L.shadow }}>
+                  className="flex items-center gap-3 p-3.5 rounded-xl border transition-all group hover:scale-[1.03] hover:-translate-y-0.5 relative overflow-hidden"
+                  style={{ background: `${s.color}04`, borderColor: `${s.color}1A`, boxShadow: L.shadow }}>
+                  <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: `linear-gradient(90deg, ${s.color}, ${s.color}40)` }} />
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{ background: `${s.color}08`, border: `1px solid ${s.color}18` }}>
                     <Icon className="w-4 h-4" style={{ color: s.color }} />
@@ -1084,42 +1150,48 @@ export function BusinessOSHomepage() {
       </section>
 
       {/* --- CTA --- */}
-      <section className="py-24 px-4" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>
-        <div className="container max-w-3xl mx-auto text-center">
-          <div className="relative rounded-3xl p-12 overflow-hidden border"
-            style={{ background: L.bgCard, borderColor: L.border, boxShadow: "0 20px 60px rgba(139,108,50,0.1)" }}>
-            <div className="absolute inset-x-0 top-0 h-[3px] rounded-t-3xl"
-              style={{ background: `linear-gradient(90deg, ${L.goldLight}, ${L.gold}, ${L.goldDark})` }} />
-            <div className="absolute inset-0 pointer-events-none"
-              style={{ background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(184,144,58,0.05) 0%, transparent 60%)" }} />
-
-            <p className="relative z-10 text-[10px] font-black tracking-[0.3em] uppercase mb-3" style={{ color: L.gold }}>Ready to start?</p>
-            <GoldDivider />
-            <h2 className="relative z-10 font-black mb-4 leading-tight mt-4"
-              style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: L.text }}>
-              Start your business journey today
-            </h2>
-            <p className="relative z-10 text-base mb-8 max-w-md mx-auto" style={{ color: L.textSub }}>
-              Join founders, SMEs, and professionals building their business with FreWork.
-            </p>
-            <div className="relative z-10 flex flex-wrap gap-3 justify-center">
-              <Link href="/register"
-                className="flex items-center gap-2 px-8 py-3.5 rounded-2xl font-bold text-sm transition-all hover:scale-[1.03] hover:opacity-90"
-                style={{ background: `linear-gradient(135deg, ${L.goldLight}, ${L.gold})`, color: "#fff", boxShadow: `0 4px 24px rgba(184,144,58,0.25)` }}>
-                Get Started Free <ChevronRight className="w-4 h-4" />
-              </Link>
-              <a href={`tel:${SUPPORT_PHONE}`}
-                className="flex items-center gap-2 px-8 py-3.5 rounded-2xl font-bold text-sm border transition-all hover:scale-[1.03]"
-                style={{ borderColor: L.border, color: L.textSub, background: L.bgAlt, boxShadow: L.shadow }}>
-                <Phone className="w-4 h-4" style={{ color: L.gold }} /> {SUPPORT_PHONE}
-              </a>
-            </div>
+      <section className="py-28 px-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #08112A 0%, #0F2044 55%, #1A0A3D 100%)" }}>
+        <div className="absolute inset-0 pointer-events-none">
+          <div style={{ position:"absolute", left:"10%", top:"-30%", width:700, height:700, borderRadius:"50%", background:"radial-gradient(circle, rgba(37,99,235,0.2) 0%, transparent 60%)", filter:"blur(80px)" }} />
+          <div style={{ position:"absolute", right:"5%", bottom:"-20%", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 60%)", filter:"blur(70px)" }} />
+          <div style={{ position:"absolute", inset:0, opacity:0.025, backgroundImage:"radial-gradient(rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize:"24px 24px" }} />
+        </div>
+        <div className="container max-w-3xl mx-auto text-center relative z-10">
+          <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-5" style={{ color: "#60A5FA" }}>Ready to start?</p>
+          <h2 className="font-black mb-5 leading-tight"
+            style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#FFFFFF" }}>
+            India&apos;s complete<br/>
+            <span style={{ background: "linear-gradient(135deg, #60A5FA, #A78BFA, #34D399)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              business platform.
+            </span>
+          </h2>
+          <p className="text-base mb-10 max-w-md mx-auto" style={{ color: "rgba(148,163,184,0.9)" }}>
+            Join founders, SMEs, and professionals building their business with FreWork.
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center mb-10">
+            <Link href="/register"
+              className="flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-sm transition-all hover:scale-[1.03]"
+              style={{ background: "linear-gradient(135deg, #2563EB, #4F46E5)", color: "#fff", boxShadow: "0 8px 32px rgba(37,99,235,0.45)" }}>
+              Get Started Free <ChevronRight className="w-4 h-4" />
+            </Link>
+            <a href={`tel:${SUPPORT_PHONE}`}
+              className="flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-sm border transition-all hover:scale-[1.03]"
+              style={{ borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)", background: "rgba(255,255,255,0.06)" }}>
+              <Phone className="w-4 h-4" style={{ color: "#34D399" }} /> {SUPPORT_PHONE}
+            </a>
+          </div>
+          <div className="flex items-center justify-center gap-6 flex-wrap">
+            {["Company Registration", "GST Filing", "Coworking", "Hire Talent", "Pitch Decks"].map(s => (
+              <span key={s} className="flex items-center gap-1.5 text-xs" style={{ color: "rgba(148,163,184,0.5)" }}>
+                <span className="w-1 h-1 rounded-full" style={{ background: "#34D399" }} />{s}
+              </span>
+            ))}
           </div>
         </div>
       </section>
 
-      <div className="py-8 text-center text-xs border-t" style={{ color: L.textMuted, borderColor: L.borderLight, background: L.bg }}>
-        FreWork is in Beta – growing and improving every day. Thank you for being an early supporter.
+      <div className="py-6 text-center text-xs border-t" style={{ borderColor: "rgba(37,99,235,0.12)", background: "#08112A", color: "rgba(148,163,184,0.4)" }}>
+        &copy; {new Date().getFullYear()} FreWork — India&apos;s Business Platform &nbsp;·&nbsp; <Link href="/terms" className="hover:opacity-70 transition-opacity" style={{ color: "rgba(96,165,250,0.6)" }}>Terms</Link> &nbsp;·&nbsp; <Link href="/privacy" className="hover:opacity-70 transition-opacity" style={{ color: "rgba(96,165,250,0.6)" }}>Privacy</Link>
       </div>
 
       <style jsx global>{`
