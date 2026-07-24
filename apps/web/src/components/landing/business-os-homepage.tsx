@@ -406,7 +406,7 @@ export function BusinessOSHomepage() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-xs font-bold tracking-wide uppercase"
             style={{ background:"linear-gradient(135deg,rgba(37,99,235,0.08),rgba(99,102,241,0.1))", border:"1px solid rgba(37,99,235,0.18)", color:"#2563EB", backdropFilter:"blur(8px)" }}>
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse inline-block" />
-            Trusted by 500+ Businesses Across India
+            Register · Comply · Hire · Work · Grow
           </motion.div>
 
           {/* Headline */}
@@ -445,7 +445,7 @@ export function BusinessOSHomepage() {
           {/* Quick search chips */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.32 }}
             className="flex flex-wrap justify-center gap-2 mb-10">
-            {["Company Registration", "GST Filing", "Hire a CA", "Coworking"].map(chip => (
+            {["Register a Company", "Find Coworking Space", "Hire Talent", "GST Filing", "Get Funding"].map(chip => (
               <button key={chip} onClick={() => { setSearchQuery(chip); }}
                 className="px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all hover:scale-[1.04]"
                 style={{ background: L.bgCard, borderColor: L.borderLight, color: L.textSub, boxShadow: L.shadow }}>
@@ -507,20 +507,20 @@ export function BusinessOSHomepage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
             className="mb-12">
             <p className="text-[10px] font-black tracking-[0.3em] uppercase mb-4" style={{ color: L.textMuted }}>
-              What we do
+              Everything Your Business Needs
             </p>
             <div className="flex flex-wrap justify-center gap-2.5">
               {[
-                { label: "GST Registration",     color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/gst" },
-                { label: "GST Filing",            color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/gst" },
-                { label: "Income Tax Return",     color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/income-tax" },
-                { label: "Virtual Accountant",    color: "#059669", bg: "rgba(5,150,105,0.07)",  href: "/services/accounting" },
-                { label: "Virtual CFO",           color: "#059669", bg: "rgba(5,150,105,0.07)",  href: "/services/virtual-cfo" },
-                { label: "All Types of Audits",   color: "#7C3AED", bg: "rgba(124,58,237,0.07)", href: "/services/audit" },
-                { label: "Company Registration",  color: "#1E40AF", bg: "rgba(18,70,200,0.06)", href: "/services/business-registration" },
-                { label: "Business Restructuring",color: "#1E40AF", bg: "rgba(18,70,200,0.06)", href: "/services/restructuring" },
+                { label: "Company Registration",  color: "#059669", bg: "rgba(5,150,105,0.07)",  href: "/services/business-registration" },
                 { label: "Coworking Spaces",      color: "#EA580C", bg: "rgba(234,88,12,0.07)",  href: "/coworking" },
-                { label: "Find Freelancers",      color: "#EA580C", bg: "rgba(234,88,12,0.07)",  href: "/freelancers" },
+                { label: "Find Freelancers",      color: "#7C3AED", bg: "rgba(124,58,237,0.07)", href: "/freelancers" },
+                { label: "Pitch Deck & DPR",      color: "#D97706", bg: "rgba(217,119,6,0.07)",  href: "/services/dpr" },
+                { label: "Business Training",     color: "#1E40AF", bg: "rgba(18,70,200,0.07)",  href: "/services/training" },
+                { label: "GST Registration",      color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/compliance" },
+                { label: "GST Filing",            color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/compliance" },
+                { label: "Income Tax Return",     color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/compliance" },
+                { label: "Virtual Accountant",    color: "#059669", bg: "rgba(5,150,105,0.07)",  href: "/services/accounting" },
+                { label: "Business Restructuring",color: "#0891B2", bg: "rgba(8,145,178,0.07)",  href: "/services/restructuring" },
               ].map(({ label, color, bg, href }) => (
                 <Link key={label} href={href}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all hover:scale-[1.05] hover:shadow-md"
@@ -548,6 +548,52 @@ export function BusinessOSHomepage() {
               ))}
             </div>
           </motion.div>
+        </div>
+      </section>
+
+
+      {/* --- PLATFORM OVERVIEW --- */}
+      <section className="py-16 px-4 relative" style={{ background: "linear-gradient(180deg, #F0F4FF 0%, #FFFFFF 100%)" }}>
+        <div className="container max-w-6xl mx-auto">
+          <div className="text-center mb-10">
+            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: "#2563EB" }}>One Platform · Five Business Essentials</p>
+            <h2 className="font-black leading-tight" style={{ fontFamily: "var(--font-plus-jakarta),sans-serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", color: "#0F2044" }}>
+              Not just tax. Everything your<br/>
+              <span style={{ background: "linear-gradient(135deg,#2563EB,#4F46E5)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>business needs.</span>
+            </h2>
+            <p className="mt-3 text-sm max-w-lg mx-auto" style={{ color: "#64748B" }}>
+              FreWork is India&apos;s complete business platform — from day 1 incorporation to ongoing compliance, hiring, workspace and funding.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {([
+              { emoji: "🏢", title: "Start", sub: "Register & Set Up", items: ["Company Registration", "GST Number", "MSME Certificate"], color: "#059669", bg: "rgba(5,150,105,0.06)", href: "/services/business-registration" },
+              { emoji: "✅", title: "Comply", sub: "Tax & Compliance", items: ["GST Filing", "ITR Filing", "ROC / MCA"], color: "#2563EB", bg: "rgba(37,99,235,0.06)", href: "/services/compliance" },
+              { emoji: "👥", title: "Hire", sub: "Talent & Experts", items: ["Tax Consultants", "Developers", "Designers"], color: "#7C3AED", bg: "rgba(124,58,237,0.06)", href: "/freelancers" },
+              { emoji: "🏛️", title: "Work", sub: "Coworking Spaces", items: ["Hot Desks", "Private Cabins", "8 Cities"], color: "#EA580C", bg: "rgba(234,88,12,0.06)", href: "/coworking" },
+              { emoji: "🚀", title: "Grow", sub: "Funding & Scale", items: ["Pitch Decks", "DPR / Business Plan", "Investor Connect"], color: "#D97706", bg: "rgba(217,119,6,0.06)", href: "/services/dpr" },
+            ] as const).map(p => (
+              <Link key={p.title} href={p.href}
+                className="group relative rounded-2xl p-5 border transition-all duration-200 hover:scale-[1.03] hover:-translate-y-1 cursor-pointer block"
+                style={{ background: p.bg, borderColor: p.color + "22", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
+                <div className="text-3xl mb-3">{p.emoji}</div>
+                <p className="font-black text-base mb-0.5" style={{ color: p.color }}>{p.title}</p>
+                <p className="text-[11px] font-semibold mb-3" style={{ color: "#64748B" }}>{p.sub}</p>
+                <ul className="space-y-1">
+                  {p.items.map(item => (
+                    <li key={item} className="text-[11px] flex items-center gap-1.5" style={{ color: "#64748B" }}>
+                      <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: p.color }} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ChevronRight className="w-4 h-4" style={{ color: p.color }} />
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -956,18 +1002,18 @@ export function BusinessOSHomepage() {
             <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>Why choose us</p>
             <GoldDivider />
             <h2 className="font-black mt-4" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: L.text }}>
-              Built for Indian business, <span style={{ color: L.gold }}>honestly</span>
+              Your complete business platform, <span style={{ color: L.gold }}>all in one place</span>
             </h2>
             <p className="mt-3 text-sm max-w-sm mx-auto" style={{ color: L.textSub }}>
-              No fake metrics. No inflated claims. Just real tools for real businesses.
+              From incorporation to GST, hiring to workspace — everything a growing Indian business needs, handled.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-5">
             {[
-              { icon: Shield, c: "#059669", t: "Verified professionals only", d: "Every professional and expert on FreWork is manually verified before going live. No stock-photo profiles.", extra: "We check professional membership, review past work samples, and conduct a background check before any professional is listed." },
-              { icon: Clock, c: "#2563EB", t: "Never miss a deadline", d: "Built-in compliance calendar for GST, ITR, ROC, and TDS – with WhatsApp reminders before every due date.", extra: "You get automatic reminders 30 days, 7 days, and 1 day before every due date. Late filing penalties are a thing of the past." },
-              { icon: Star, c: "#1E40AF", t: "Built for Indian business", d: "We understand Indian compliance, Indian languages, and the real challenges of SMEs and startups in India.", extra: "Our team includes practicing CAs, expert professionals, and former startup founders who have solved these problems themselves." },
+              { icon: Shield, c: "#059669", t: "One account, everything done", d: "Company registration, GST filing, ITR, coworking space booking and hiring — all from one account, one dashboard.", extra: "No more juggling 10 different portals. FreWork handles company formation, all tax filings, workspace booking and professional hiring in one place." },
+              { icon: Clock, c: "#2563EB", t: "From day 1 to growth", d: "Register your company, get GST, hire your team, find a workspace, raise funding — FreWork covers every stage of your business journey.", extra: "Whether you are just starting out or scaling up, FreWork has the tools and experts you need. Our platform grows with your business." },
+              { icon: Star, c: "#1E40AF", t: "Built for Indian business", d: "Indian compliance, Indian cities, Indian pricing. We understand the real challenges of SMEs, startups and solo founders in India.", extra: "Our platform is built by a team that includes practicing CAs, former startup founders and operations experts — people who have faced the same problems." },
             ].map((item, i) => {
               const Icon = item.icon;
               const [open, setOpen] = useState(false);
@@ -1007,17 +1053,17 @@ export function BusinessOSHomepage() {
       {/* --- QUICK SERVICES --- */}
       <section className="py-20 px-4" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
-          <p className="text-center text-[10px] font-black tracking-[0.35em] uppercase mb-10" style={{ color: L.textMuted }}>Most searched</p>
+          <p className="text-center text-[10px] font-black tracking-[0.35em] uppercase mb-10" style={{ color: L.textMuted }}>Popular on FreWork</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { icon: Building2, label: "Company Registration", href: "/services/compliance", color: "#059669" },
+              { icon: Building2, label: "Company Registration", href: "/services/business-registration", color: "#059669" },
+              { icon: MapPin, label: "Find Coworking Space", href: "/coworking", color: "#EA580C" },
+              { icon: Users, label: "Hire Talent", href: "/freelancers", color: "#7C3AED" },
+              { icon: Presentation, label: "Pitch Deck & DPR", href: "/services/dpr", color: "#D97706" },
+              { icon: GraduationCap, label: "Business Training", href: "/services/training", color: "#1E40AF" },
               { icon: FileText, label: "GST Registration", href: "/services/compliance", color: "#2563EB" },
-              { icon: Briefcase, label: "Income Tax (ITR)", href: "/services/compliance", color: "#D97706" },
-              { icon: BarChart3, label: "Detailed Project Report", href: "/services/dpr", color: "#DC2626" },
-              { icon: Presentation, label: "Pitch Deck Design", href: "/services/pitch-decks", color: "#7C3AED" },
-              { icon: GraduationCap, label: "Business Training", href: "/services/training", color: "#EA580C" },
-              { icon: Users, label: "Hire a professional", href: "/freelancers", color: "#4F46E5" },
-              { icon: MapPin, label: "Coworking Space", href: "/coworking", color: "#1E40AF" },
+              { icon: Briefcase, label: "Income Tax (ITR)", href: "/services/compliance", color: "#2563EB" },
+              { icon: BarChart3, label: "Virtual Accountant", href: "/services/accounting", color: "#059669" },
             ].map(s => {
               const Icon = s.icon;
               return (
