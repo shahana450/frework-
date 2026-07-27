@@ -14,7 +14,7 @@ const faqs = [
   },
   {
     q: "What payment methods are supported?",
-    a: "We support Stripe, PayPal, Razorpay, and Wise. Payments are held in escrow and released to freelancers only after client approval. We support 50+ currencies and automatic tax invoice generation.",
+    a: "We support Stripe, PayPal, PhonePe, and Wise. Payments are held in escrow and released to freelancers only after client approval. We support 50+ currencies and automatic tax invoice generation.",
   },
   {
     q: "How does the escrow system work?",

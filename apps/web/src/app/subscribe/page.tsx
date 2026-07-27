@@ -3,9 +3,9 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { useRazorpay } from "@/hooks/use-razorpay";
+import { usePhonePe } from "@/hooks/use-phonepe";
 import { Navbar } from "@/components/layout/navbar";
-import { Check, Zap, Rocket, Users, Building2, Crown, ArrowLeft, Loader2, ShieldCheck, CheckCircle } from "lucide-react";
+import { Check, Zap, Rocket, Users, Building2, Crown, ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 const PLANS = {
@@ -36,7 +36,7 @@ type PlanKey = keyof typeof PLANS;
 function SubscribeInner() {
   const params = useSearchParams();
   const router = useRouter();
-  const { pay } = useRazorpay();
+  const { loading, error: ppError, initiateSubscriptionPayment } = usePhonePe();
 
   const planKey = (params.get("plan") ?? "professional") as PlanKey;
   const plan = PLANS[planKey] ?? PLANS.professional;
@@ -44,9 +44,6 @@ function SubscribeInner() {
 
   const [yearly, setYearly] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string; name: string; phone: string } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [paid, setPaid] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -57,61 +54,17 @@ function SubscribeInner() {
     });
   }, [router]);
 
-  const handlePay = async () => {
+  const handlePay = () => {
     if (!user) return;
-    setLoading(true);
-    setError("");
-    try {
-      await pay({
-        plan: planKey,
-        amount: yearly ? plan.yearly * 100 : plan.price * 100,
-        userId: user.id,
-        billing: yearly ? "yearly" : "monthly",
-        userName: user.name,
-        userEmail: user.email,
-        userPhone: user.phone,
-        onSuccess: async (paymentId, orderId) => {
-          await supabase.from("fw_subscriptions").upsert({
-            user_id: user.id,
-            plan: planKey,
-            billing: yearly ? "yearly" : "monthly",
-            amount: yearly ? plan.yearly : plan.price,
-            razorpay_payment_id: paymentId,
-            razorpay_order_id: orderId,
-            status: "active",
-            started_at: new Date().toISOString(),
-          }, { onConflict: "user_id" });
-          setPaid(true);
-        },
-        onDismiss: () => setLoading(false),
-      });
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Payment failed. Try again.");
-      setLoading(false);
-    }
+    initiateSubscriptionPayment({
+      plan: planKey,
+      billing: yearly ? "yearly" : "monthly",
+      userId: user.id,
+    });
   };
 
-  if (paid) return (
-    <div className="min-h-screen bg-[#060C18] flex items-center justify-center px-4">
-      <div className="text-center max-w-md">
-        <div className="w-24 h-24 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-6">
-          <CheckCircle className="w-12 h-12 text-emerald-400" />
-        </div>
-        <h2 className="text-4xl font-bold text-white mb-3" style={{ fontFamily: "var(--font-cormorant), serif" }}>
-          You&apos;re subscribed!
-        </h2>
-        <p className="text-white/40 text-sm mb-2">Welcome to FreWork <span className="text-white/70 font-semibold">{plan.name}</span></p>
-        <p className="text-white/25 text-xs mb-10">Payment confirmed · Your plan is now active</p>
-        <Link href="/dashboard"
-          className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl font-bold text-[#0B1120] text-sm"
-          style={{ background: "linear-gradient(135deg,#E8C97A,#C9A84C)" }}>
-          Go to Dashboard →
-        </Link>
-      </div>
-    </div>
-  );
-
   const displayPrice = yearly ? plan.yearly : plan.price;
+  const totalDue = yearly ? plan.yearly * 12 : displayPrice;
 
   return (
     <div className="min-h-screen bg-[#060C18]">
@@ -170,7 +123,7 @@ function SubscribeInner() {
           {/* Payment panel */}
           <div className="rounded-3xl border border-white/8 bg-[#070D1A] p-7 flex flex-col">
             <h3 className="text-lg font-bold text-white mb-1">Payment summary</h3>
-            <p className="text-xs text-white/30 mb-6">Secured by Razorpay · UPI · Cards · Net Banking</p>
+            <p className="text-xs text-white/30 mb-6">Secured by PhonePe · UPI · Cards · Net Banking</p>
 
             {/* Order summary */}
             <div className="rounded-2xl bg-white/3 border border-white/6 p-4 mb-6 space-y-2.5">
@@ -186,7 +139,7 @@ function SubscribeInner() {
               )}
               <div className="border-t border-white/6 pt-2.5 flex justify-between">
                 <span className="text-sm font-semibold text-white">Total due today</span>
-                <span className="text-lg font-bold text-[#E8C97A]">₹{(yearly ? plan.yearly * 12 : displayPrice).toLocaleString("en-IN")}</span>
+                <span className="text-lg font-bold text-[#E8C97A]">₹{totalDue.toLocaleString("en-IN")}</span>
               </div>
             </div>
 
@@ -199,15 +152,15 @@ function SubscribeInner() {
               </div>
             )}
 
-            {error && (
-              <div className="border border-red-500/30 bg-red-500/8 text-red-400 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>
+            {ppError && (
+              <div className="border border-red-500/30 bg-red-500/8 text-red-400 rounded-xl px-4 py-3 text-sm mb-4">{ppError}</div>
             )}
 
             <button onClick={handlePay} disabled={loading || !user}
               className="w-full py-4 rounded-2xl font-bold text-[#0B1120] text-sm flex items-center justify-center gap-2 disabled:opacity-60 transition-all hover:scale-[1.01] active:scale-[0.99] mt-auto"
               style={{ background: "linear-gradient(135deg,#E8C97A,#C9A84C,#B8973E)" }}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-              {loading ? "Processing…" : `Pay ₹${(yearly ? plan.yearly * 12 : displayPrice).toLocaleString("en-IN")} with Razorpay`}
+              {loading ? "Redirecting to PhonePe…" : `Pay ₹${totalDue.toLocaleString("en-IN")} via PhonePe`}
             </button>
 
             <div className="flex items-center justify-center gap-2 mt-4">

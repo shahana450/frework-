@@ -233,7 +233,7 @@ const FAQS = [
   { q: "Can I switch plans anytime?", a: "Yes — upgrade or downgrade instantly. Upgrades are prorated; downgrades take effect at the next billing cycle." },
   { q: "Is there really a 14-day free trial?", a: "Yes. Professional, Growth, and Business plans include a full 14-day trial with no credit card required. You won't be charged until the trial ends." },
   { q: "What Professional Services are included?", a: "GST filing, ITR filing, bookkeeping, internal audit, and annual audit are performed by our qualified expert team — not automated tools. Scope varies by plan." },
-  { q: "What payment methods do you accept?", a: "UPI, all major credit/debit cards (Visa, Mastercard, RuPay), Net Banking, EMI, and bank transfer for annual plans — via Razorpay." },
+  { q: "What payment methods do you accept?", a: "UPI, all major credit/debit cards (Visa, Mastercard, RuPay), Net Banking, EMI, and bank transfer for annual plans — via PhonePe." },
   { q: "How does the yearly billing discount work?", a: "Choosing yearly billing saves you up to 35% compared to monthly. You're billed for 12 months upfront at the discounted monthly rate." },
   { q: "Can I get a custom quote for my firm?", a: "Enterprise plans are fully customisable. Contact us and our team responds within 1 business day with a tailored proposal." },
 ];

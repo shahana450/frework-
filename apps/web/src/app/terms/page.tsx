@@ -44,7 +44,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-white mb-3">4. Payments and Subscriptions</h2>
-            <p>Subscription payments are processed securely via Razorpay. Plans are billed monthly or annually as selected. Refunds are available within 7 days of purchase if no services have been consumed. Contact <a href="mailto:billing@frework.online" className="text-[#C9A84C] hover:underline">billing@frework.online</a> for billing disputes.</p>
+            <p>Subscription payments are processed securely via PhonePe. Plans are billed monthly or annually as selected. Refunds are available within 7 days of purchase if no services have been consumed. Contact <a href="mailto:billing@frework.online" className="text-[#C9A84C] hover:underline">billing@frework.online</a> for billing disputes.</p>
           </section>
 
           <section>
