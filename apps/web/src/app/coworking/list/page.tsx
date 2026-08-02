@@ -1,8 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+
+function FreWorkLogo({ size = 32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="fw_bg_list" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#0F2044"/>
+          <stop offset="100%" stopColor="#1E40AF"/>
+        </linearGradient>
+      </defs>
+      <rect width="38" height="38" rx="9" fill="url(#fw_bg_list)"/>
+      <g stroke="rgba(255,255,255,0.85)" strokeWidth="1.7" strokeLinecap="round">
+        <line x1="19" y1="19" x2="19" y2="11"/>
+        <line x1="19" y1="19" x2="26.5" y2="24"/>
+        <line x1="19" y1="19" x2="11.5" y2="24"/>
+      </g>
+      <circle cx="19" cy="19" r="3" fill="white"/>
+      <circle cx="19" cy="11" r="2" fill="rgba(255,255,255,0.9)"/>
+      <circle cx="26.5" cy="24" r="2" fill="rgba(255,255,255,0.9)"/>
+      <circle cx="11.5" cy="24" r="2" fill="rgba(255,255,255,0.9)"/>
+    </svg>
+  );
+}
 
 const CITIES = ["Mumbai", "Bangalore", "Delhi NCR", "Hyderabad", "Pune", "Chennai", "Kolkata", "Ahmedabad", "Jaipur", "Surat", "Other"];
 const SPACE_TYPES = ["Hot Desk", "Private Cabin", "Meeting Room", "Event Space", "Virtual Office", "Dedicated Desk"];
@@ -20,6 +43,28 @@ export default function ListCoworkingPage() {
     description: "", opening_hours: "", website: "",
     contact_name: "", contact_email: "", contact_phone: "", contact_whatsapp: "",
   });
+
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [videos, setVideos] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const photoRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).slice(0, 8);
+    setPhotos(files);
+    setPhotoPreviews(files.map(f => URL.createObjectURL(f)));
+  };
+
+  const removePhoto = (i: number) => {
+    setPhotos(p => p.filter((_, idx) => idx !== i));
+    setPhotoPreviews(p => p.filter((_, idx) => idx !== i));
+  };
+
+  const handleVideos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).slice(0, 2);
+    setVideos(files);
+  };
 
   const toggle = (key: "space_types" | "amenities", val: string) => {
     setForm(f => ({
@@ -64,7 +109,7 @@ export default function ListCoworkingPage() {
       <div className="border-b" style={{ borderColor: "rgba(201,168,76,0.1)", background: "rgba(7,12,26,0.95)" }}>
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-sm" style={{ background: "linear-gradient(135deg,#0F2044,#1E40AF)" }}>F</div>
+            <FreWorkLogo size={32} />
             <span className="font-bold" style={{ color: "#EDE8DC" }}>FreWork</span>
           </Link>
           <Link href="/coworking" className="text-xs font-semibold" style={{ color: "rgba(201,168,76,0.7)" }}>← Back</Link>
@@ -231,6 +276,64 @@ export default function ListCoworkingPage() {
                     value={form.contact_whatsapp} onChange={e => setForm(f => ({ ...f, contact_whatsapp: e.target.value }))} />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Section 6: Photos & Videos */}
+          <div className="rounded-2xl border p-6" style={{ background: "#0C1428", borderColor: "rgba(201,168,76,0.1)" }}>
+            <h2 className="text-sm font-black tracking-[0.15em] uppercase mb-1" style={{ color: "#C9A84C" }}>6. Photos & Videos</h2>
+            <p className="text-xs mb-5" style={{ color: "#4A5A72" }}>Good photos get 3× more enquiries. Upload up to 8 photos and 2 videos.</p>
+
+            {/* Photos */}
+            <div className="mb-5">
+              <label className="block text-xs font-bold mb-2" style={{ color: "#8A9BB8" }}>Photos (up to 8)</label>
+              <input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotos} />
+              {photoPreviews.length === 0 ? (
+                <button type="button" onClick={() => photoRef.current?.click()}
+                  className="w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all hover:opacity-80"
+                  style={{ borderColor: "rgba(201,168,76,0.2)", background: "rgba(201,168,76,0.03)" }}>
+                  <span className="text-3xl">📷</span>
+                  <span className="text-xs font-bold" style={{ color: "#C9A84C" }}>Click to upload photos</span>
+                  <span className="text-[10px]" style={{ color: "#4A5A72" }}>JPG, PNG, WEBP · Max 8 photos</span>
+                </button>
+              ) : (
+                <div>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    {photoPreviews.map((src, i) => (
+                      <div key={i} className="relative rounded-xl overflow-hidden aspect-square">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" className="w-full h-full object-cover" />
+                        <button type="button" onClick={() => removePhoto(i)}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black"
+                          style={{ background: "rgba(0,0,0,0.7)", color: "#fff" }}>✕</button>
+                      </div>
+                    ))}
+                    {photoPreviews.length < 8 && (
+                      <button type="button" onClick={() => photoRef.current?.click()}
+                        className="aspect-square rounded-xl border-2 border-dashed flex items-center justify-center text-2xl transition-all hover:opacity-70"
+                        style={{ borderColor: "rgba(201,168,76,0.2)" }}>+</button>
+                    )}
+                  </div>
+                  <p className="text-[10px]" style={{ color: "#4A5A72" }}>{photoPreviews.length} photo{photoPreviews.length !== 1 ? "s" : ""} selected</p>
+                </div>
+              )}
+            </div>
+
+            {/* Videos */}
+            <div>
+              <label className="block text-xs font-bold mb-2" style={{ color: "#8A9BB8" }}>Videos (up to 2)</label>
+              <input ref={videoRef} type="file" accept="video/*" multiple className="hidden" onChange={handleVideos} />
+              <button type="button" onClick={() => videoRef.current?.click()}
+                className="w-full flex items-center justify-center gap-3 py-4 rounded-xl border-2 border-dashed transition-all hover:opacity-80"
+                style={{ borderColor: "rgba(201,168,76,0.15)", background: "rgba(201,168,76,0.03)" }}>
+                <span className="text-xl">🎥</span>
+                <div className="text-left">
+                  <p className="text-xs font-bold" style={{ color: "#C9A84C" }}>
+                    {videos.length > 0 ? `${videos.length} video${videos.length > 1 ? "s" : ""} selected` : "Click to upload videos"}
+                  </p>
+                  <p className="text-[10px]" style={{ color: "#4A5A72" }}>MP4, MOV · Max 2 videos · Tour or walkthrough</p>
+                </div>
+              </button>
             </div>
           </div>
 
