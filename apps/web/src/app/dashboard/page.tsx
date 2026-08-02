@@ -96,6 +96,8 @@ export default function DashboardPage() {
   const [mySpaces, setMySpaces] = useState<MySpace[]>([]);
   const [userRole, setUserRole] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [hasCoworkingListing, setHasCoworkingListing] = useState(false);
+  const [showPurpose, setShowPurpose] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -107,16 +109,23 @@ export default function DashboardPage() {
         name: u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email?.split("@")[0] ?? "User",
         avatar: u.user_metadata?.avatar_url,
       });
-      const [{ data: startupData }, { data: subData }, { data: fwUser }, { data: spacesData }] = await Promise.all([
+      const [{ data: startupData }, { data: subData }, { data: fwUser }, { data: spacesData }, { data: coworkData }] = await Promise.all([
         supabase.from("fw_startups").select("id, slug, name, tagline, sector, stage, status").eq("user_id", u.id).order("created_at", { ascending: false }),
         supabase.from("fw_subscriptions").select("plan, billing, status, started_at").eq("user_id", u.id).maybeSingle(),
         supabase.from("fw_users").select("role").eq("id", u.id).maybeSingle(),
         supabase.from("fw_workspaces").select("id, name, city, type, price_per_day, price_per_month, status, created_at").eq("user_id", u.id).order("created_at", { ascending: false }),
+        supabase.from("coworking_spaces").select("id").eq("owner_id", u.id).limit(1).maybeSingle(),
       ]);
       setStartups(startupData ?? []);
       setSubscription(subData);
       setUserRole(fwUser?.role ?? "client");
       setMySpaces(spacesData ?? []);
+      setHasCoworkingListing(!!coworkData);
+      // Show purpose selector only for non-admin users on fresh login
+      const adminEmails = ["admin.frework@gmail.com", "auditmanagercswa@gmail.com"];
+      if (!adminEmails.includes(u.email ?? "")) {
+        setShowPurpose(true);
+      }
       setLoading(false);
     });
   }, [router]);
@@ -133,6 +142,86 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (showPurpose && !isAdmin) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: "#070C1A" }}>
+        {/* Header */}
+        <div className="flex items-center gap-2.5 mb-12">
+          <FreWorkLogo size={36} />
+          <div>
+            <p className="font-black text-base" style={{ color: "#EDE8DC" }}>FreWork</p>
+            <p className="text-[10px] tracking-widest uppercase" style={{ color: "#4A5A72" }}>Business OS</p>
+          </div>
+        </div>
+
+        <div className="max-w-lg w-full">
+          <h1 className="text-2xl font-black text-center mb-2" style={{ color: "#EDE8DC" }}>
+            Welcome, {user?.name?.split(" ")[0]} 👋
+          </h1>
+          <p className="text-sm text-center mb-10" style={{ color: "#8A9BB8" }}>
+            What would you like to do today?
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Coworking option */}
+            <button
+              onClick={() => router.push(hasCoworkingListing ? "/coworking/my-space" : "/coworking/list")}
+              className="group flex flex-col items-start gap-4 p-6 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:shadow-2xl"
+              style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.1),rgba(201,168,76,0.04))", borderColor: "rgba(201,168,76,0.25)" }}
+            >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
+                style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)", boxShadow: "0 4px 20px rgba(201,168,76,0.4)" }}>
+                🏛️
+              </div>
+              <div>
+                <p className="font-black text-base mb-1" style={{ color: "#E8C97A" }}>
+                  {hasCoworkingListing ? "Manage My Space" : "List My Coworking Space"}
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: "#8A9BB8" }}>
+                  {hasCoworkingListing
+                    ? "View enquiries, edit details, track your listing status"
+                    : "List your space free · Zero commission · Leads straight to your WhatsApp"}
+                </p>
+              </div>
+              <span className="text-xs font-black px-3 py-1.5 rounded-lg mt-auto"
+                style={{ background: "rgba(201,168,76,0.15)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.25)" }}>
+                {hasCoworkingListing ? "Open Dashboard →" : "List Free →"}
+              </span>
+            </button>
+
+            {/* Services option */}
+            <button
+              onClick={() => setShowPurpose(false)}
+              className="group flex flex-col items-start gap-4 p-6 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:shadow-2xl"
+              style={{ background: "linear-gradient(135deg,rgba(37,99,235,0.1),rgba(37,99,235,0.04))", borderColor: "rgba(37,99,235,0.2)" }}
+            >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
+                style={{ background: "linear-gradient(135deg,#1246C8,#2563EB)", boxShadow: "0 4px 20px rgba(37,99,235,0.4)" }}>
+                📋
+              </div>
+              <div>
+                <p className="font-black text-base mb-1" style={{ color: "#93C5FD" }}>
+                  Business Services
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: "#8A9BB8" }}>
+                  GST filing, ITR, company registration, compliance — manage all your orders here
+                </p>
+              </div>
+              <span className="text-xs font-black px-3 py-1.5 rounded-lg mt-auto"
+                style={{ background: "rgba(37,99,235,0.12)", color: "#60A5FA", border: "1px solid rgba(37,99,235,0.2)" }}>
+                Go to Dashboard →
+              </span>
+            </button>
+          </div>
+
+          <button onClick={handleSignOut} className="mt-10 text-xs text-center w-full transition-colors hover:opacity-80" style={{ color: "#4A5A72" }}>
+            Sign out
+          </button>
+        </div>
       </div>
     );
   }
