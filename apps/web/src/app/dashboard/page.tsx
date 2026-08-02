@@ -298,11 +298,18 @@ export default function DashboardPage() {
                 </h2>
                 <p className="text-sm text-slate-500 mt-0.5">Manage your coworking spaces · Approved listings go live publicly</p>
               </div>
-              <Link href="/dashboard/workspace/submit"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-                style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
-                <Plus className="w-4 h-4" /> Add New Space
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link href="/dashboard/coworking"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 border"
+                  style={{ borderColor:"rgba(201,168,76,0.35)", color:"#92742A", background:"rgba(201,168,76,0.08)" }}>
+                  <CheckCircle className="w-4 h-4" /> Review Submissions
+                </Link>
+                <Link href="/dashboard/workspace/submit"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                  style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
+                  <Plus className="w-4 h-4" /> Add New Space
+                </Link>
+              </div>
             </div>
 
             {mySpaces.length === 0 ? (

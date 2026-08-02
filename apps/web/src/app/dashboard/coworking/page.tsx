@@ -42,7 +42,8 @@ export default function CoworkingAdminPage() {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) { router.push("/login"); return; }
       // allow only the owner email
-      if (data.user.email !== "admin.frework@gmail.com") {
+      const adminEmails = ["admin.frework@gmail.com", "auditmanagercswa@gmail.com"];
+      if (!adminEmails.includes(data.user.email ?? "")) {
         router.push("/dashboard");
         return;
       }
