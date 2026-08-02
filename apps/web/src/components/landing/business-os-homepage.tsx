@@ -357,7 +357,7 @@ export function BusinessOSHomepage() {
         </div>
 
         {/* Main hero content */}
-        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-16 pb-14">
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-36 pb-14">
 
           {/* Brand headline */}
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
