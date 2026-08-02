@@ -442,6 +442,23 @@ export function BusinessOSHomepage() {
               <div className="relative rounded-3xl overflow-hidden h-full transition-all hover:scale-[1.01] hover:shadow-2xl"
                 style={{ background:"linear-gradient(160deg,#100D02 0%,#1C1600 100%)", border:"1px solid rgba(201,168,76,0.28)", boxShadow:"0 8px 48px rgba(201,168,76,0.1)" }}>
                 <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#C9A84C,#E8C97A,#C9A84C)" }} />
+                {/* List Your Space — top banner */}
+                <Link href="/coworking/list"
+                  className="flex items-center justify-between gap-3 px-5 py-3 group transition-all hover:brightness-110"
+                  style={{ background:"linear-gradient(90deg,rgba(201,168,76,0.18),rgba(201,168,76,0.08))", borderBottom:"1px solid rgba(201,168,76,0.2)" }}>
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
+                      style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff" }}>+</span>
+                    <div>
+                      <p className="text-xs font-black leading-none" style={{ color:"#E8C97A" }}>Own a coworking space?</p>
+                      <p className="text-[10px] mt-0.5" style={{ color:"rgba(201,168,76,0.55)" }}>List it free · No commission · Direct leads to your WhatsApp</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black px-3 py-1.5 rounded-full flex-shrink-0 transition-all group-hover:scale-105"
+                    style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff", boxShadow:"0 2px 12px rgba(201,168,76,0.4)" }}>
+                    List Free →
+                  </span>
+                </Link>
                 <div className="p-7 md:p-8">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
@@ -487,13 +504,6 @@ export function BusinessOSHomepage() {
                       Book Visit
                     </a>
                   </div>
-                  <Link href="/coworking/list"
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-xs font-bold border transition-all hover:opacity-90 group"
-                    style={{ borderColor:"rgba(201,168,76,0.25)", color:"#C9A84C", background:"rgba(201,168,76,0.05)" }}>
-                    <span className="w-4 h-4 rounded-full border flex items-center justify-center text-[10px] font-black transition-all group-hover:bg-amber-500/20"
-                      style={{ borderColor:"rgba(201,168,76,0.4)" }}>+</span>
-                    Own a space? List it free — no commission
-                  </Link>
                 </div>
               </div>
             </motion.div>
