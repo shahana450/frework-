@@ -12,9 +12,25 @@ const AMENITIES = ["High-Speed WiFi", "Coffee & Tea", "Parking", "Printer & Scan
 
 export default function ListCoworkingPage() {
   const router = useRouter();
+
+  // --- ALL hooks at the top ---
   const [authChecked, setAuthChecked] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string; avatar?: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    space_name: "", city: "", address: "", pincode: "",
+    space_types: [] as string[],
+    price_per_day: "", price_per_month: "", total_seats: "",
+    amenities: [] as string[],
+    description: "", opening_hours: "", website: "",
+    contact_name: "", contact_email: "", contact_phone: "", contact_whatsapp: "",
+  });
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [videos, setVideos] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const photoRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -25,34 +41,18 @@ export default function ListCoworkingPage() {
       setUser({
         name: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? session.user.email?.split("@")[0] ?? "User",
         email: session.user.email ?? "",
-        avatar: session.user.user_metadata?.avatar_url,
       });
       setAuthChecked(true);
     });
   }, [router]);
 
-  if (!authChecked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#070C1A" }}>
-        <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(201,168,76,0.2)", borderTopColor: "#C9A84C" }} />
-      </div>
-    );
-  }
-  const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    space_name: "", city: "", address: "", pincode: "",
-    space_types: [] as string[],
-    price_per_day: "", price_per_month: "", total_seats: "",
-    amenities: [] as string[],
-    description: "", opening_hours: "", website: "",
-    contact_name: "", contact_email: "", contact_phone: "", contact_whatsapp: "",
-  });
-
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [videos, setVideos] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
-  const photoRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLInputElement>(null);
+  // --- Handlers ---
+  const toggle = (key: "space_types" | "amenities", val: string) => {
+    setForm(f => ({
+      ...f,
+      [key]: f[key].includes(val) ? f[key].filter(x => x !== val) : [...f[key], val],
+    }));
+  };
 
   const handlePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).slice(0, 8);
@@ -66,15 +66,7 @@ export default function ListCoworkingPage() {
   };
 
   const handleVideos = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).slice(0, 2);
-    setVideos(files);
-  };
-
-  const toggle = (key: "space_types" | "amenities", val: string) => {
-    setForm(f => ({
-      ...f,
-      [key]: f[key].includes(val) ? f[key].filter(x => x !== val) : [...f[key], val],
-    }));
+    setVideos(Array.from(e.target.files || []).slice(0, 2));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,6 +96,15 @@ export default function ListCoworkingPage() {
     }
   };
 
+  // --- Conditional renders AFTER all hooks ---
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#070C1A" }}>
+        <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(201,168,76,0.2)", borderTopColor: "#C9A84C" }} />
+      </div>
+    );
+  }
+
   const inp = "w-full px-4 py-3 rounded-xl border text-sm font-medium outline-none transition-all focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10";
   const inpStyle = { background: "#101D35", borderColor: "rgba(201,168,76,0.15)", color: "#EDE8DC" };
 
@@ -132,10 +133,9 @@ export default function ListCoworkingPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-12">
-
         {/* Hero */}
         <div className="text-center mb-10">
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.25em] uppercase border mb-5 inline-block"
+          <span className="inline-block px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.25em] uppercase border mb-5"
             style={{ borderColor: "rgba(201,168,76,0.25)", color: "#C9A84C", background: "rgba(201,168,76,0.07)" }}>
             Free Listing · No Commission
           </span>
@@ -149,7 +149,7 @@ export default function ListCoworkingPage() {
 
         <form onSubmit={handleSubmit} className="space-y-8">
 
-          {/* Section 1: Space Info */}
+          {/* 1. Space Details */}
           <div className="rounded-2xl border p-6" style={{ background: "#0C1428", borderColor: "rgba(201,168,76,0.1)" }}>
             <h2 className="text-sm font-black tracking-[0.15em] uppercase mb-5" style={{ color: "#C9A84C" }}>1. Space Details</h2>
             <div className="space-y-4">
@@ -199,7 +199,7 @@ export default function ListCoworkingPage() {
             </div>
           </div>
 
-          {/* Section 2: Space Types */}
+          {/* 2. Space Types */}
           <div className="rounded-2xl border p-6" style={{ background: "#0C1428", borderColor: "rgba(201,168,76,0.1)" }}>
             <h2 className="text-sm font-black tracking-[0.15em] uppercase mb-5" style={{ color: "#C9A84C" }}>2. Space Types *</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -218,7 +218,7 @@ export default function ListCoworkingPage() {
             </div>
           </div>
 
-          {/* Section 3: Pricing */}
+          {/* 3. Pricing */}
           <div className="rounded-2xl border p-6" style={{ background: "#0C1428", borderColor: "rgba(201,168,76,0.1)" }}>
             <h2 className="text-sm font-black tracking-[0.15em] uppercase mb-5" style={{ color: "#C9A84C" }}>3. Pricing & Capacity</h2>
             <div className="grid grid-cols-3 gap-4">
@@ -240,7 +240,7 @@ export default function ListCoworkingPage() {
             </div>
           </div>
 
-          {/* Section 4: Amenities */}
+          {/* 4. Amenities */}
           <div className="rounded-2xl border p-6" style={{ background: "#0C1428", borderColor: "rgba(201,168,76,0.1)" }}>
             <h2 className="text-sm font-black tracking-[0.15em] uppercase mb-5" style={{ color: "#C9A84C" }}>4. Amenities</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -263,7 +263,7 @@ export default function ListCoworkingPage() {
             </div>
           </div>
 
-          {/* Section 5: Contact */}
+          {/* 5. Contact */}
           <div className="rounded-2xl border p-6" style={{ background: "#0C1428", borderColor: "rgba(201,168,76,0.1)" }}>
             <h2 className="text-sm font-black tracking-[0.15em] uppercase mb-5" style={{ color: "#C9A84C" }}>5. Your Contact Details</h2>
             <div className="space-y-4">
@@ -294,12 +294,10 @@ export default function ListCoworkingPage() {
             </div>
           </div>
 
-          {/* Section 6: Photos & Videos */}
+          {/* 6. Photos & Videos */}
           <div className="rounded-2xl border p-6" style={{ background: "#0C1428", borderColor: "rgba(201,168,76,0.1)" }}>
             <h2 className="text-sm font-black tracking-[0.15em] uppercase mb-1" style={{ color: "#C9A84C" }}>6. Photos & Videos</h2>
             <p className="text-xs mb-5" style={{ color: "#4A5A72" }}>Good photos get 3× more enquiries. Upload up to 8 photos and 2 videos.</p>
-
-            {/* Photos */}
             <div className="mb-5">
               <label className="block text-xs font-bold mb-2" style={{ color: "#8A9BB8" }}>Photos (up to 8)</label>
               <input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotos} />
@@ -333,8 +331,6 @@ export default function ListCoworkingPage() {
                 </div>
               )}
             </div>
-
-            {/* Videos */}
             <div>
               <label className="block text-xs font-bold mb-2" style={{ color: "#8A9BB8" }}>Videos (up to 2)</label>
               <input ref={videoRef} type="file" accept="video/*" multiple className="hidden" onChange={handleVideos} />
@@ -352,14 +348,12 @@ export default function ListCoworkingPage() {
             </div>
           </div>
 
-          {/* Error */}
           {error && (
             <div className="px-4 py-3 rounded-xl border text-sm font-semibold" style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.25)", color: "#F87171" }}>
               {error}
             </div>
           )}
 
-          {/* Submit */}
           <button type="submit" disabled={loading}
             className="w-full py-4 rounded-2xl text-sm font-black tracking-wide transition-all hover:opacity-90 hover:scale-[1.01] disabled:opacity-60"
             style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)", color: "#fff", boxShadow: "0 4px 24px rgba(201,168,76,0.35)" }}>
