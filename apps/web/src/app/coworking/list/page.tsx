@@ -119,10 +119,10 @@ export default function ListCoworkingPage() {
           <div className="flex items-center gap-3">
             {user && (
               <div className="flex items-center gap-2">
-                {user.avatar
-                  ? <img src={user.avatar} alt={user.name} className="w-7 h-7 rounded-full object-cover border" style={{ borderColor: "rgba(201,168,76,0.3)" }} />
-                  : <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black" style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)", color: "#fff" }}>{user.name[0]?.toUpperCase()}</div>
-                }
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black flex-shrink-0"
+                  style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)", color: "#fff" }}>
+                  {user.name[0]?.toUpperCase()}
+                </div>
                 <span className="text-xs font-semibold hidden sm:block" style={{ color: "#8A9BB8" }}>{user.name}</span>
               </div>
             )}
