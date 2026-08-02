@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, LogIn, UserPlus, X, ChevronRight, Bell, Sparkles } from "lucide-react";
+import { Zap, LogIn, UserPlus, X, ChevronRight, Bell, Sparkles, LayoutDashboard } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import type { TaxNewsItem } from "@/app/api/tax-news/route";
 
 // Fallback headlines if API hasn't loaded yet
@@ -26,7 +27,14 @@ export function AnnouncementTicker() {
   const [headlines, setHeadlines] = useState<Array<{ id: string; category: string; title: string; url: string }>>(FALLBACK_HEADLINES);
   const [current, setCurrent] = useState(0);
   const [dismissed, setDismissed] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setLoggedIn(!!session?.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setLoggedIn(!!session?.user));
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Fetch live headlines
   useEffect(() => {
@@ -147,23 +155,38 @@ export function AnnouncementTicker() {
             Pricing
           </Link>
 
-          <Link href="/login"
-            className="hidden sm:inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all hover:bg-white/10"
-            style={{ color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.15)" }}>
-            <LogIn size={13} />
-            Login
-          </Link>
-          <Link href="/register"
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all"
-            style={{
-              background: "linear-gradient(135deg, #E8C97A, #B8903A)",
-              color: "#1A1208",
-              boxShadow: "0 2px 10px rgba(184,144,58,0.45)",
-            }}>
-            <UserPlus size={13} />
-            <span className="hidden xs:inline">Sign Up</span>
-            <span className="xs:hidden">Free</span>
-          </Link>
+          {loggedIn ? (
+            <Link href="/dashboard"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all hover:scale-[1.04]"
+              style={{
+                background: "linear-gradient(135deg, #E8C97A, #B8903A)",
+                color: "#1A1208",
+                boxShadow: "0 2px 10px rgba(184,144,58,0.45)",
+              }}>
+              <LayoutDashboard size={13} />
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link href="/login"
+                className="hidden sm:inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.15)" }}>
+                <LogIn size={13} />
+                Login
+              </Link>
+              <Link href="/register"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all"
+                style={{
+                  background: "linear-gradient(135deg, #E8C97A, #B8903A)",
+                  color: "#1A1208",
+                  boxShadow: "0 2px 10px rgba(184,144,58,0.45)",
+                }}>
+                <UserPlus size={13} />
+                <span className="hidden xs:inline">Sign Up</span>
+                <span className="xs:hidden">Free</span>
+              </Link>
+            </>
+          )}
 
           {/* Dismiss */}
           <button
