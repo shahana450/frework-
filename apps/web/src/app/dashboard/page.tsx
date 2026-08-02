@@ -125,10 +125,126 @@ export default function DashboardPage() {
     router.replace("/");
   };
 
+  const ADMIN_EMAILS = ["admin.frework@gmail.com", "auditmanagercswa@gmail.com"];
+  const isAdmin = ADMIN_EMAILS.includes(user?.email ?? "");
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen" style={{ background: "#070C1A", color: "#EDE8DC" }}>
+        {/* Admin header */}
+        <div className="border-b sticky top-0 z-30" style={{ borderColor: "rgba(201,168,76,0.12)", background: "rgba(7,12,26,0.97)", backdropFilter: "blur(12px)" }}>
+          <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-sm" style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)" }}>A</div>
+              <div>
+                <p className="text-xs font-black" style={{ color: "#EDE8DC" }}>FreWork Admin</p>
+                <p className="text-[10px]" style={{ color: "#4A5A72" }}>{user?.email}</p>
+              </div>
+            </div>
+            <button onClick={handleSignOut} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all hover:opacity-80"
+              style={{ borderColor: "rgba(248,113,113,0.25)", color: "#F87171", background: "rgba(248,113,113,0.06)" }}>
+              <LogOut className="w-3.5 h-3.5" /> Sign out
+            </button>
+          </div>
+        </div>
+
+        <div className="max-w-5xl mx-auto px-4 py-10">
+          <h1 className="text-2xl font-black mb-1" style={{ color: "#EDE8DC" }}>Admin Panel</h1>
+          <p className="text-sm mb-10" style={{ color: "#8A9BB8" }}>Manage FreWork — approve spaces, review orders, monitor platform.</p>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[
+              {
+                icon: "🏛️",
+                title: "Coworking Submissions",
+                desc: "Review and approve space listings submitted by owners",
+                href: "/dashboard/coworking",
+                color: "#C9A84C",
+                border: "rgba(201,168,76,0.25)",
+                bg: "rgba(201,168,76,0.07)",
+                badge: "Approve / Reject",
+              },
+              {
+                icon: "📋",
+                title: "Service Orders",
+                desc: "View all paid service orders from customers",
+                href: "/dashboard/orders",
+                color: "#2563EB",
+                border: "rgba(37,99,235,0.25)",
+                bg: "rgba(37,99,235,0.07)",
+                badge: "Manage Orders",
+              },
+              {
+                icon: "👥",
+                title: "Freelancer Profiles",
+                desc: "Review and approve freelancer profile submissions",
+                href: "/dashboard/freelancer",
+                color: "#059669",
+                border: "rgba(5,150,105,0.25)",
+                bg: "rgba(5,150,105,0.07)",
+                badge: "Review Profiles",
+              },
+              {
+                icon: "🚀",
+                title: "Startup Listings",
+                desc: "Manage startup profiles and funding listings",
+                href: "/dashboard/startup",
+                color: "#7C3AED",
+                border: "rgba(124,58,237,0.25)",
+                bg: "rgba(124,58,237,0.07)",
+                badge: "View Startups",
+              },
+              {
+                icon: "💬",
+                title: "Support Messages",
+                desc: "Customer queries and WhatsApp conversations",
+                href: `https://wa.me/918590874681`,
+                color: "#25D366",
+                border: "rgba(37,211,102,0.25)",
+                bg: "rgba(37,211,102,0.07)",
+                badge: "Open WhatsApp",
+                external: true,
+              },
+              {
+                icon: "🌐",
+                title: "Live Website",
+                desc: "View the public-facing FreWork website",
+                href: "/",
+                color: "#0891B2",
+                border: "rgba(8,145,178,0.25)",
+                bg: "rgba(8,145,178,0.07)",
+                badge: "Open Site",
+              },
+            ].map((item) => (
+              <Link key={item.title} href={item.href} target={item.external ? "_blank" : undefined} rel={item.external ? "noopener noreferrer" : undefined}
+                className="rounded-2xl border p-6 flex flex-col gap-3 transition-all hover:scale-[1.02] hover:opacity-90"
+                style={{ background: item.bg, borderColor: item.border }}>
+                <div className="flex items-start justify-between">
+                  <span className="text-3xl">{item.icon}</span>
+                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full"
+                    style={{ background: item.bg, color: item.color, border: `1px solid ${item.border}` }}>
+                    {item.badge}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-black text-sm mb-1" style={{ color: "#EDE8DC" }}>{item.title}</h3>
+                  <p className="text-xs leading-relaxed" style={{ color: "#8A9BB8" }}>{item.desc}</p>
+                </div>
+                <div className="flex items-center gap-1 text-xs font-bold mt-auto" style={{ color: item.color }}>
+                  Open <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
