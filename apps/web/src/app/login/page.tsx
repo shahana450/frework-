@@ -37,6 +37,9 @@ function LoginForm() {
     setLoading(true);
     setError("");
     try {
+      // Store ?next= so auth callback can redirect there after login
+      const next = searchParams.get("next");
+      if (next) sessionStorage.setItem("auth_next", next);
       const { error: err } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

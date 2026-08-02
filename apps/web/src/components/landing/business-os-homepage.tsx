@@ -442,22 +442,27 @@ export function BusinessOSHomepage() {
               <div className="relative rounded-3xl overflow-hidden h-full transition-all hover:scale-[1.01] hover:shadow-2xl"
                 style={{ background:"linear-gradient(160deg,#100D02 0%,#1C1600 100%)", border:"1px solid rgba(201,168,76,0.28)", boxShadow:"0 8px 48px rgba(201,168,76,0.1)" }}>
                 <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#C9A84C,#E8C97A,#C9A84C)" }} />
-                {/* List Your Space — top banner */}
+                {/* List Your Space — hero banner */}
                 <Link href="/coworking/list"
-                  className="flex items-center justify-between gap-3 px-5 py-3 group transition-all hover:brightness-110"
-                  style={{ background:"linear-gradient(90deg,rgba(201,168,76,0.18),rgba(201,168,76,0.08))", borderBottom:"1px solid rgba(201,168,76,0.2)" }}>
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
-                      style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff" }}>+</span>
+                  className="relative flex items-center justify-between gap-4 px-6 py-5 group overflow-hidden transition-all hover:brightness-110"
+                  style={{ background:"linear-gradient(110deg,rgba(201,168,76,0.22) 0%,rgba(201,168,76,0.08) 60%,rgba(201,168,76,0.15) 100%)", borderBottom:"1px solid rgba(201,168,76,0.25)" }}>
+                  {/* shimmer sweep */}
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"
+                    style={{ background:"linear-gradient(90deg,transparent,rgba(201,168,76,0.12),transparent)" }} />
+                  <div className="flex items-center gap-4 relative z-10">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
+                      style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", boxShadow:"0 4px 16px rgba(201,168,76,0.45)" }}>🏛️</div>
                     <div>
-                      <p className="text-xs font-black leading-none" style={{ color:"#E8C97A" }}>Own a coworking space?</p>
-                      <p className="text-[10px] mt-0.5" style={{ color:"rgba(201,168,76,0.55)" }}>List it free · No commission · Direct leads to your WhatsApp</p>
+                      <p className="text-sm font-black leading-none mb-1" style={{ color:"#E8C97A" }}>Own a coworking space?</p>
+                      <p className="text-[11px] leading-relaxed" style={{ color:"rgba(201,168,76,0.6)" }}>List it free · Zero commission · Leads straight to your WhatsApp</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-black px-3 py-1.5 rounded-full flex-shrink-0 transition-all group-hover:scale-105"
-                    style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff", boxShadow:"0 2px 12px rgba(201,168,76,0.4)" }}>
-                    List Free →
-                  </span>
+                  <div className="flex-shrink-0 relative z-10">
+                    <span className="flex items-center gap-1.5 text-xs font-black px-4 py-2.5 rounded-xl transition-all group-hover:scale-105 group-hover:shadow-lg"
+                      style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff", boxShadow:"0 4px 18px rgba(201,168,76,0.45)" }}>
+                      List Free →
+                    </span>
+                  </div>
                 </Link>
                 <div className="p-7 md:p-8">
                   <div className="flex items-center gap-3 mb-6">

@@ -41,7 +41,12 @@ function AuthCallbackInner() {
         method: "google",
       }, { onConflict: "id" });
 
-      router.replace("/dashboard");
+      // Honour ?next= redirect if present in the stored state
+      const next = typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("next") || sessionStorage.getItem("auth_next") || "/dashboard"
+        : "/dashboard";
+      sessionStorage.removeItem("auth_next");
+      router.replace(next);
     };
 
     handleCallback();

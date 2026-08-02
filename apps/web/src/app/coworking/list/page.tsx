@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FreWorkLogo } from "@/components/ui/frework-logo";
+import { supabase } from "@/lib/supabase";
 
 const CITIES = ["Mumbai", "Bangalore", "Delhi NCR", "Hyderabad", "Pune", "Chennai", "Kolkata", "Ahmedabad", "Jaipur", "Surat", "Other"];
 const SPACE_TYPES = ["Hot Desk", "Private Cabin", "Meeting Room", "Event Space", "Virtual Office", "Dedicated Desk"];
@@ -11,7 +12,32 @@ const AMENITIES = ["High-Speed WiFi", "Coffee & Tea", "Parking", "Printer & Scan
 
 export default function ListCoworkingPage() {
   const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [user, setUser] = useState<{ name: string; email: string; avatar?: string } | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) {
+        router.replace("/login?next=/coworking/list");
+        return;
+      }
+      setUser({
+        name: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? session.user.email?.split("@")[0] ?? "User",
+        email: session.user.email ?? "",
+        avatar: session.user.user_metadata?.avatar_url,
+      });
+      setAuthChecked(true);
+    });
+  }, [router]);
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#070C1A" }}>
+        <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(201,168,76,0.2)", borderTopColor: "#C9A84C" }} />
+      </div>
+    );
+  }
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     space_name: "", city: "", address: "", pincode: "",
@@ -84,13 +110,24 @@ export default function ListCoworkingPage() {
   return (
     <div className="min-h-screen" style={{ background: "#070C1A", color: "#EDE8DC" }}>
       {/* Header */}
-      <div className="border-b" style={{ borderColor: "rgba(201,168,76,0.1)", background: "rgba(7,12,26,0.95)" }}>
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="border-b sticky top-0 z-30" style={{ borderColor: "rgba(201,168,76,0.1)", background: "rgba(7,12,26,0.97)", backdropFilter: "blur(12px)" }}>
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <FreWorkLogo size={32} />
-            <span className="font-bold" style={{ color: "#EDE8DC" }}>FreWork</span>
+            <FreWorkLogo size={30} />
+            <span className="font-bold text-sm" style={{ color: "#EDE8DC" }}>FreWork</span>
           </Link>
-          <Link href="/coworking" className="text-xs font-semibold" style={{ color: "rgba(201,168,76,0.7)" }}>← Back</Link>
+          <div className="flex items-center gap-3">
+            {user && (
+              <div className="flex items-center gap-2">
+                {user.avatar
+                  ? <img src={user.avatar} alt={user.name} className="w-7 h-7 rounded-full object-cover border" style={{ borderColor: "rgba(201,168,76,0.3)" }} />
+                  : <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black" style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)", color: "#fff" }}>{user.name[0]?.toUpperCase()}</div>
+                }
+                <span className="text-xs font-semibold hidden sm:block" style={{ color: "#8A9BB8" }}>{user.name}</span>
+              </div>
+            )}
+            <Link href="/coworking" className="text-xs font-semibold" style={{ color: "rgba(201,168,76,0.6)" }}>← Back</Link>
+          </div>
         </div>
       </div>
 
