@@ -12,6 +12,7 @@ import {
   Calculator, ReceiptText, ClipboardList, BarChart3, BadgeCheck, Lock,
   CheckCircle, Clock,
 } from "lucide-react";
+import { FreWorkLogo } from "@/components/ui/frework-logo";
 
 const PAID_SERVICES = [
   {
@@ -143,7 +144,7 @@ export default function DashboardPage() {
         <div className="border-b sticky top-0 z-30" style={{ borderColor: "rgba(201,168,76,0.12)", background: "rgba(7,12,26,0.97)", backdropFilter: "blur(12px)" }}>
           <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-sm" style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)" }}>A</div>
+              <FreWorkLogo size={32} />
               <div>
                 <p className="text-xs font-black" style={{ color: "#EDE8DC" }}>FreWork Admin</p>
                 <p className="text-[10px]" style={{ color: "#4A5A72" }}>{user?.email}</p>
@@ -265,8 +266,7 @@ export default function DashboardPage() {
       <header className="border-b border-slate-200 bg-white sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm"
-              style={{ background: "linear-gradient(135deg,#1246C8,#2563EB)" }}>F</div>
+            <FreWorkLogo size={32} />
             <span className="font-black text-slate-900 text-lg tracking-tight">FreWork</span>
           </Link>
 

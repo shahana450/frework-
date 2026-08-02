@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { usePhonePe } from "@/hooks/use-phonepe";
 import Link from "next/link";
+import { FreWorkLogo } from "@/components/ui/frework-logo";
 import {
   ArrowLeft, ShieldCheck, Clock, BadgeCheck,
   Phone, Mail, User, Building2, MessageSquare, Loader2, ChevronRight,
@@ -77,8 +78,7 @@ function OrderForm() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="w-px h-5 bg-slate-200" />
-          <div className="w-7 h-7 rounded-md flex items-center justify-center text-white font-black text-xs"
-            style={{ background: "linear-gradient(135deg,#1246C8,#2563EB)" }}>F</div>
+          <FreWorkLogo size={28} />
           <span className="font-black text-slate-900">FreWork</span>
           <ChevronRight className="w-4 h-4 text-slate-300" />
           <span className="text-sm text-slate-500 font-medium">Checkout</span>
