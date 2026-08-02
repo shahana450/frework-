@@ -487,6 +487,13 @@ export function BusinessOSHomepage() {
                       Book Visit
                     </a>
                   </div>
+                  <Link href="/coworking/list"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-xs font-bold border transition-all hover:opacity-90 group"
+                    style={{ borderColor:"rgba(201,168,76,0.25)", color:"#C9A84C", background:"rgba(201,168,76,0.05)" }}>
+                    <span className="w-4 h-4 rounded-full border flex items-center justify-center text-[10px] font-black transition-all group-hover:bg-amber-500/20"
+                      style={{ borderColor:"rgba(201,168,76,0.4)" }}>+</span>
+                    Own a space? List it free — no commission
+                  </Link>
                 </div>
               </div>
             </motion.div>
