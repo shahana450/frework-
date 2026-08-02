@@ -42,7 +42,7 @@ export default function CoworkingAdminPage() {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) { router.push("/login"); return; }
       // allow only the owner email
-      if (data.user.email !== "auditmanagercswa@gmail.com") {
+      if (data.user.email !== "admin.frework@gmail.com") {
         router.push("/dashboard");
         return;
       }
