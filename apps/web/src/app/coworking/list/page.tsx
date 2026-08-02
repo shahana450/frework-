@@ -15,7 +15,8 @@ export default function ListCoworkingPage() {
 
   // --- ALL hooks at the top ---
   const [authChecked, setAuthChecked] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [existingListing, setExistingListing] = useState<{ id: string; space_name: string; status: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -33,15 +34,26 @@ export default function ListCoworkingPage() {
   const videoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user) {
         router.replace("/login?next=/coworking/list");
         return;
       }
+      const u = session.user;
       setUser({
-        name: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? session.user.email?.split("@")[0] ?? "User",
-        email: session.user.email ?? "",
+        id: u.id,
+        name: u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email?.split("@")[0] ?? "User",
+        email: u.email ?? "",
       });
+      // Check if they already have a listing
+      const { data } = await supabase
+        .from("coworking_spaces")
+        .select("id, space_name, status")
+        .eq("owner_id", u.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) setExistingListing(data);
       setAuthChecked(true);
     });
   }, [router]);
@@ -82,9 +94,13 @@ export default function ListCoworkingPage() {
     }
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/coworking/submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { "Authorization": `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify(form),
       });
       const data = await res.json();
@@ -127,6 +143,13 @@ export default function ListCoworkingPage() {
                 <span className="text-xs font-semibold hidden sm:block" style={{ color: "#8A9BB8" }}>{user.name}</span>
               </div>
             )}
+            {existingListing && (
+              <Link href="/coworking/my-space"
+                className="text-xs font-black px-3 py-1.5 rounded-lg border transition-all hover:opacity-80"
+                style={{ borderColor: "rgba(201,168,76,0.3)", color: "#C9A84C", background: "rgba(201,168,76,0.07)" }}>
+                My Dashboard →
+              </Link>
+            )}
             <Link href="/coworking" className="text-xs font-semibold" style={{ color: "rgba(201,168,76,0.6)" }}>← Back</Link>
           </div>
         </div>
@@ -146,6 +169,28 @@ export default function ListCoworkingPage() {
             Submit your space details. Our team reviews every listing before it goes live — usually within 24 hours.
           </p>
         </div>
+
+        {existingListing && (
+          <Link href="/coworking/my-space"
+            className="flex items-center justify-between gap-4 p-5 rounded-2xl border mb-2 transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(110deg,rgba(201,168,76,0.1),rgba(201,168,76,0.04))", borderColor: "rgba(201,168,76,0.3)" }}>
+            <div className="flex items-center gap-4">
+              <span className="text-2xl">🏛️</span>
+              <div>
+                <p className="text-sm font-black" style={{ color: "#E8C97A" }}>You already have a listing: {existingListing.space_name}</p>
+                <p className="text-xs mt-0.5" style={{ color: "#8A9BB8" }}>
+                  Status: <span className="font-bold" style={{ color: existingListing.status === "approved" ? "#10B981" : existingListing.status === "rejected" ? "#F87171" : "#F59E0B" }}>
+                    {existingListing.status.charAt(0).toUpperCase() + existingListing.status.slice(1)}
+                  </span> · Go to your dashboard to manage enquiries and edit details
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-black px-4 py-2 rounded-xl flex-shrink-0"
+              style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)", color: "#fff" }}>
+              Open Dashboard →
+            </span>
+          </Link>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
 

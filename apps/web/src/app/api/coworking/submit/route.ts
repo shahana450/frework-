@@ -9,47 +9,38 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const {
-      space_name, city, address, pincode,
-      space_types, price_per_day, price_per_month,
-      total_seats, amenities, description,
-      contact_name, contact_email, contact_phone, contact_whatsapp,
-      opening_hours, website,
-    } = body;
 
-    if (!space_name || !city || !address || !contact_name || !contact_email || !contact_phone) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    const authHeader = req.headers.get("authorization");
+    let ownerId: string | null = null;
+    if (authHeader?.startsWith("Bearer ")) {
+      const { data: { user } } = await supabase.auth.getUser(authHeader.slice(7));
+      ownerId = user?.id ?? null;
     }
 
-    const { data, error } = await supabase
-      .from("coworking_spaces")
-      .insert({
-        space_name,
-        city,
-        address,
-        pincode: pincode || null,
-        space_types: space_types || [],
-        price_per_day: price_per_day ? Number(price_per_day) : null,
-        price_per_month: price_per_month ? Number(price_per_month) : null,
-        total_seats: total_seats ? Number(total_seats) : null,
-        amenities: amenities || [],
-        description: description || null,
-        contact_name,
-        contact_email,
-        contact_phone,
-        contact_whatsapp: contact_whatsapp || contact_phone,
-        opening_hours: opening_hours || null,
-        website: website || null,
-        status: "pending",
-      })
-      .select("id")
-      .single();
+    const { error } = await supabase.from("coworking_spaces").insert({
+      owner_id: ownerId,
+      space_name: body.space_name,
+      city: body.city,
+      address: body.address,
+      pincode: body.pincode,
+      space_types: body.space_types,
+      price_per_day: body.price_per_day || null,
+      price_per_month: body.price_per_month || null,
+      total_seats: body.total_seats || null,
+      amenities: body.amenities,
+      description: body.description,
+      opening_hours: body.opening_hours,
+      website: body.website,
+      contact_name: body.contact_name,
+      contact_email: body.contact_email,
+      contact_phone: body.contact_phone,
+      contact_whatsapp: body.contact_whatsapp || body.contact_phone,
+      status: "pending",
+    });
 
-    if (error) throw error;
-
-    return NextResponse.json({ success: true, id: data.id });
-  } catch (err) {
-    console.error("Coworking submit error:", err);
-    return NextResponse.json({ error: "Failed to submit listing" }, { status: 500 });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 }
