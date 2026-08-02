@@ -17,19 +17,19 @@ const SUPPORT_PHONE = (process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 85908 74681
 const SUPPORT_WA = `918590874681`;
 
 const L = {
-  bg: "#FFFFFF",
-  bgAlt: "#F8FAFC",
-  bgCard: "#FFFFFF",
-  text: "#0F172A",
-  textSub: "#475569",
-  textMuted: "#94A3B8",
-  gold: "#1E40AF",
-  goldLight: "#3B82F6",
-  goldDark: "#1E3A8A",
-  border: "rgba(15,32,68,0.1)",
-  borderLight: "rgba(15,32,68,0.06)",
-  shadow: "0 1px 3px rgba(15,32,68,0.08), 0 1px 2px rgba(15,32,68,0.04)",
-  shadowHover: "0 10px 40px rgba(15,32,68,0.12), 0 2px 8px rgba(15,32,68,0.06)",
+  bg: "#080D1C",
+  bgAlt: "#0C1428",
+  bgCard: "#101D35",
+  text: "#EDE8DC",
+  textSub: "#8A9BB8",
+  textMuted: "#4A5A72",
+  gold: "#C9A84C",
+  goldLight: "#E8C97A",
+  goldDark: "#A07C2E",
+  border: "rgba(201,168,76,0.18)",
+  borderLight: "rgba(201,168,76,0.08)",
+  shadow: "0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3)",
+  shadowHover: "0 10px 40px rgba(201,168,76,0.12), 0 2px 8px rgba(0,0,0,0.4)",
 };
 
 const MODULES = [
@@ -253,29 +253,21 @@ export function BusinessOSHomepage() {
     <div className="min-h-screen overflow-x-hidden" style={{ background: L.bg, color: L.text }}>
       <AnnouncementTicker />
 
-      {/* --- HERO --- */}
-      <section className="relative min-h-screen flex items-center justify-center px-4 pt-44 pb-20 overflow-hidden">
-        {/* Premium layered background */}
+      {/* --- HERO: TWO PILLARS --- */}
+      <section className="relative min-h-screen flex flex-col justify-center overflow-hidden" style={{ background:"#070C1A", paddingTop:"68px" }}>
+        {/* Layered background glows */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* Base gradient */}
-          <div style={{ position:"absolute", inset:0, background:"linear-gradient(160deg, #EEF2FF 0%, #FFFFFF 50%, #FFF7F0 100%)" }} />
-          {/* Top blue glow */}
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 90% 60% at 50% -5%, rgba(37,99,235,0.2) 0%, transparent 65%)" }} />
-          {/* Left violet accent */}
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 40% 55% at -5% 55%, rgba(99,102,241,0.11) 0%, transparent 60%)" }} />
-          {/* Right orange – India warmth */}
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 45% 50% at 108% 72%, rgba(234,88,12,0.09) 0%, transparent 60%)" }} />
-          {/* Bottom emerald glow */}
-          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 50% 35% at 20% 110%, rgba(16,185,129,0.07) 0%, transparent 60%)" }} />
-          {/* Dot grid */}
-          <div style={{ position:"absolute", inset:0, opacity:0.035, backgroundImage:"radial-gradient(rgba(37,99,235,1) 1px, transparent 1px)", backgroundSize:"28px 28px" }} />
+          <div style={{ position:"absolute", left:"-10%", top:"5%", width:700, height:700, borderRadius:"50%", background:"radial-gradient(circle, rgba(37,99,235,0.14) 0%, transparent 60%)", filter:"blur(90px)" }} />
+          <div style={{ position:"absolute", right:"-10%", top:"5%", width:700, height:700, borderRadius:"50%", background:"radial-gradient(circle, rgba(201,168,76,0.1) 0%, transparent 60%)", filter:"blur(90px)" }} />
+          <div style={{ position:"absolute", left:"30%", bottom:"-10%", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 60%)", filter:"blur(70px)" }} />
+          <div style={{ position:"absolute", inset:0, opacity:0.018, backgroundImage:"radial-gradient(rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize:"32px 32px" }} />
         </div>
 
-        {/* -- Interactive scrolling service banners -- */}
-        <div className="absolute top-[70px] inset-x-0 z-20 overflow-hidden">
+        {/* -- Scrolling service banners -- */}
+        <div className="absolute top-[68px] inset-x-0 z-20 overflow-hidden py-2" style={{ background:"rgba(7,12,26,0.9)", borderBottom:"1px solid rgba(201,168,76,0.1)" }}>
           {/* Fade edges */}
-          <div className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(90deg,#FFFFFF,transparent)" }} />
-          <div className="absolute inset-y-0 right-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(270deg,#FFFFFF,transparent)" }} />
+          <div className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(90deg,#070C1A,transparent)" }} />
+          <div className="absolute inset-y-0 right-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(270deg,#070C1A,transparent)" }} />
 
           {/* Row 1 – scrolls left, pauses on hover */}
           {(() => {
@@ -364,193 +356,163 @@ export function BusinessOSHomepage() {
           })()}
         </div>
 
-        <div className="relative z-10 w-full max-w-4xl mx-auto text-center">
+        {/* Main hero content */}
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-16 pb-14">
 
-          {/* -- Hero Logo with orbiting ring -- */}
-          <motion.div initial={{ opacity:0, scale:0.7 }} animate={{ opacity:1, scale:1 }}
-            transition={{ duration:0.7, ease:[0.16,1,0.3,1] }}
-            className="flex flex-col items-center mb-8">
-
-            <div className="relative flex items-center justify-center mb-5">
-              {/* Clean professional logo box */}
-              <motion.div whileHover={{ scale:1.05 }} transition={{ type:"spring", stiffness:300 }}
-                className="relative rounded-[24px] p-2 cursor-pointer"
-                style={{ background:"linear-gradient(135deg,#0F2044,#1E40AF)", boxShadow:"0 8px 40px rgba(18,70,200,0.28),0 2px 8px rgba(18,70,200,0.12)" }}>
-                <svg width="72" height="72" viewBox="0 0 38 38" fill="none">
-                  <defs>
-                    <linearGradient id="hw_bg" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stopColor="#0F2044"/><stop offset="100%" stopColor="#1E40AF"/>
-                    </linearGradient>
-                  </defs>
-                  <rect width="38" height="38" rx="9" fill="url(#hw_bg)"/>
-                  <g stroke="rgba(255,255,255,0.85)" strokeWidth="1.7" strokeLinecap="round">
-                    <line x1="19" y1="19" x2="19" y2="11"/>
-                    <line x1="19" y1="19" x2="26.5" y2="24"/>
-                    <line x1="19" y1="19" x2="11.5" y2="24"/>
-                  </g>
-                  <circle cx="19" cy="19" r="3" fill="white"/>
-                  <circle cx="19" cy="11" r="2" fill="rgba(255,255,255,0.9)"/>
-                  <circle cx="26.5" cy="24" r="2" fill="rgba(255,255,255,0.9)"/>
-                  <circle cx="11.5" cy="24" r="2" fill="rgba(255,255,255,0.9)"/>
-                </svg>
-              </motion.div>
-            </div>
-
-            {/* Wordmark */}
-            <motion.div className="flex items-baseline gap-1" whileHover={{ scale:1.03 }}>
-              <span className="font-black tracking-tight" style={{ fontSize:"1.8rem", color:L.text, fontFamily:"var(--font-plus-jakarta),sans-serif" }}>Fre</span>
-              <span className="font-black tracking-tight" style={{ fontSize:"1.8rem", background:`linear-gradient(135deg,#2563EB,#1E40AF)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", fontFamily:"var(--font-plus-jakarta),sans-serif" }}>Work</span>
-            </motion.div>
-          </motion.div>
-
-          {/* Premium pill badge */}
-          <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-xs font-bold tracking-wide uppercase"
-            style={{ background:"linear-gradient(135deg,rgba(37,99,235,0.08),rgba(99,102,241,0.1))", border:"1px solid rgba(37,99,235,0.18)", color:"#2563EB", backdropFilter:"blur(8px)" }}>
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse inline-block" />
-            Register · Comply · Hire · Work · Grow
-          </motion.div>
-
-          {/* Headline */}
-          <motion.h1 initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}
-            className="font-black leading-[1.04] mb-6 tracking-tight px-2"
-            style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2rem,6.5vw,5.8rem)", color:L.text, letterSpacing:"-0.02em" }}>
-            The Operating System
-            <br/>
-            <span style={{ background:`linear-gradient(135deg,#2563EB 0%,#4F46E5 40%,#1E40AF 100%)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
-              for Indian Businesses
+          {/* Brand headline */}
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
+            className="text-center mb-10">
+            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-[10px] font-black tracking-[0.3em] uppercase border mb-6 inline-block"
+              style={{ background:"rgba(201,168,76,0.08)", borderColor:"rgba(201,168,76,0.25)", color:"#C9A84C" }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              India&apos;s Business Platform
             </span>
-          </motion.h1>
-
-          <motion.p initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.28 }}
-            className="text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed px-4 font-medium" style={{ color:L.textSub }}>
-            Start, run and grow your business — GST, compliance, talent and workspaces, all in one platform.
-          </motion.p>
-
-          {/* Search bar */}
-          <motion.form initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}
-            onSubmit={handleSearch}
-            className="flex gap-2 max-w-xl mx-auto mb-8 p-1.5 rounded-2xl"
-            style={{ background:"#FFFFFF", border:"1px solid rgba(37,99,235,0.15)", boxShadow:"0 4px 32px rgba(37,99,235,0.1), 0 1px 4px rgba(0,0,0,0.06)" }}>
-            <div className="flex-1 flex items-center gap-3 px-4">
-              <Search className="w-4 h-4 flex-shrink-0" style={{ color: L.textMuted }} />
-              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                placeholder="What does your business need today?"
-                className="flex-1 bg-transparent outline-none text-sm py-2.5 font-medium" style={{ color: L.text }} />
-            </div>
-            <button type="submit" className="px-6 py-2.5 rounded-xl text-sm font-bold flex-shrink-0 transition-all hover:opacity-90 active:scale-95"
-              style={{ background:`linear-gradient(135deg,#2563EB,#1E40AF)`, color:"#fff", boxShadow:"0 4px 14px rgba(37,99,235,0.35)" }}>
-              Search
-            </button>
-          </motion.form>
-
-          {/* Quick search chips */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.32 }}
-            className="flex flex-wrap justify-center gap-2 mb-10">
-            {["Register a Company", "Find Coworking Space", "Hire Talent", "GST Filing", "Get Funding"].map(chip => (
-              <button key={chip} onClick={() => { setSearchQuery(chip); }}
-                className="px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all hover:scale-[1.04]"
-                style={{ background: L.bgCard, borderColor: L.borderLight, color: L.textSub, boxShadow: L.shadow }}>
-                {chip}
-              </button>
-            ))}
+            <h1 className="font-black leading-[1.04] tracking-tight"
+              style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.2rem,5.5vw,4.8rem)", color:"#EDE8DC", letterSpacing:"-0.025em" }}>
+              The smarter way to
+              <br/>
+              <span style={{ background:"linear-gradient(135deg,#C9A84C 0%,#E8C97A 50%,#C9A84C 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+                run your business.
+              </span>
+            </h1>
+            <p className="text-base font-medium max-w-xl mx-auto mt-4" style={{ color:"#8A9BB8" }}>
+              Two things every Indian business needs — expert compliance and the right workspace. Both, right here.
+            </p>
           </motion.div>
 
-          {/* CTAs */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-            className="flex flex-wrap justify-center gap-3 mb-16">
+          {/* ═══ TWO PILLAR CARDS ═══ */}
+          <div className="grid md:grid-cols-2 gap-5 mb-10">
 
-            {/* WhatsApp CTA — always first and most prominent */}
-            <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%20need%20business%20help.%20Please%20guide%20me.`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2.5 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all hover:scale-[1.03] hover:opacity-90"
-              style={{ background: "linear-gradient(135deg,#25D366,#128C7E)", color: "#fff", boxShadow: "0 4px 24px rgba(37,211,102,0.4)" }}>
-              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 flex-shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-              Chat with Expert — Free
-            </a>
+            {/* PILLAR 1 — COMPLIANCE */}
+            <motion.div initial={{ opacity:0, x:-24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.2, duration:0.5 }}>
+              <div className="relative rounded-3xl overflow-hidden h-full transition-all hover:scale-[1.01] hover:shadow-2xl"
+                style={{ background:"linear-gradient(160deg,#08112A 0%,#0D1A42 100%)", border:"1px solid rgba(37,99,235,0.3)", boxShadow:"0 8px 48px rgba(37,99,235,0.15)" }}>
+                <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#2563EB,#4F46E5,#0EA5E9)" }} />
+                <div className="p-7 md:p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
+                      style={{ background:"rgba(37,99,235,0.12)", border:"1px solid rgba(37,99,235,0.28)" }}>📋</div>
+                    <div>
+                      <p className="text-[9px] font-black tracking-[0.3em] uppercase" style={{ color:"#60A5FA" }}>Compliance & Legal</p>
+                      <p className="text-[11px] font-semibold" style={{ color:"rgba(148,163,184,0.5)" }}>Expert CAs &amp; Lawyers</p>
+                    </div>
+                  </div>
+                  <h2 className="font-black mb-3 leading-[1.1]"
+                    style={{ fontSize:"clamp(1.7rem,3vw,2.5rem)", color:"#EDE8DC", letterSpacing:"-0.02em" }}>
+                    Register. File.<br/>Comply.
+                  </h2>
+                  <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(148,163,184,0.7)" }}>
+                    From company registration to GST, income tax, ROC and MSME — verified CAs handle everything end-to-end, online.
+                  </p>
+                  <div className="grid grid-cols-2 gap-y-2 gap-x-3 mb-6">
+                    {["Company Registration","GST Registration","Income Tax (ITR)","GST Filing","ROC / MCA","MSME / Udyam"].map(s => (
+                      <div key={s} className="flex items-center gap-2 text-xs font-semibold" style={{ color:"rgba(203,213,225,0.7)" }}>
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background:"#3B82F6" }} />{s}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-0 mb-6 rounded-2xl overflow-hidden border" style={{ borderColor:"rgba(37,99,235,0.14)", background:"rgba(37,99,235,0.07)" }}>
+                    {[["₹499","Starting"],["24hr","Turnaround"],["100%","Online"]].map(([n,l],i,arr) => (
+                      <div key={l} className="flex-1 text-center py-3" style={{ borderRight:i<arr.length-1?"1px solid rgba(37,99,235,0.12)":"none" }}>
+                        <p className="text-sm font-black leading-none" style={{ color:"#60A5FA" }}>{n}</p>
+                        <p className="text-[9px] font-semibold mt-0.5" style={{ color:"rgba(148,163,184,0.45)" }}>{l}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2.5">
+                    <Link href="/services/compliance"
+                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all hover:opacity-90"
+                      style={{ background:"linear-gradient(135deg,#2563EB,#1E40AF)", color:"#fff", boxShadow:"0 4px 20px rgba(37,99,235,0.4)" }}>
+                      Explore Services <ArrowRight className="w-4 h-4" />
+                    </Link>
+                    <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%20need%20help%20with%20compliance%20services.`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="px-4 py-3 rounded-2xl text-xs font-bold border flex items-center gap-1.5 transition-all hover:opacity-90"
+                      style={{ borderColor:"rgba(37,211,102,0.3)", color:"#25D366", background:"rgba(37,211,102,0.06)" }}>
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 flex-shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                      Free Advice
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
 
-            {loggedIn ? (
-              <Link href="/dashboard"
-                className="flex items-center gap-2.5 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all hover:scale-[1.03] hover:opacity-90"
-                style={{ background: "linear-gradient(135deg,#0F2044,#1E3A8A)", color: "#fff", boxShadow: "0 4px 24px rgba(15,32,68,0.35)" }}>
-                <LayoutDashboard className="w-4 h-4" />
-                {userName ? `${userName}'s Dashboard` : "Go to Dashboard"}
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            ) : (
-              <>
-                <Link href="/register"
-                  className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all hover:scale-[1.03] hover:opacity-90"
-                  style={{ background: `linear-gradient(135deg,#1246C8,#2563EB)`, color: "#fff", boxShadow: "0 4px 24px rgba(18,70,200,0.3)" }}>
-                  Get Started Free <ChevronRight className="w-4 h-4" />
-                </Link>
-                <Link href="/login"
-                  className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold border transition-all hover:scale-[1.03]"
-                  style={{ borderColor: "#1246C8", color: "#1246C8", background: "rgba(18,70,200,0.06)", boxShadow: L.shadow }}>
-                  <LayoutDashboard className="w-4 h-4" />
-                  Login
-                </Link>
-              </>
-            )}
-          </motion.div>
-
-
+            {/* PILLAR 2 — COWORKING */}
+            <motion.div initial={{ opacity:0, x:24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.25, duration:0.5 }}>
+              <div className="relative rounded-3xl overflow-hidden h-full transition-all hover:scale-[1.01] hover:shadow-2xl"
+                style={{ background:"linear-gradient(160deg,#100D02 0%,#1C1600 100%)", border:"1px solid rgba(201,168,76,0.28)", boxShadow:"0 8px 48px rgba(201,168,76,0.1)" }}>
+                <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#C9A84C,#E8C97A,#C9A84C)" }} />
+                <div className="p-7 md:p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
+                      style={{ background:"rgba(201,168,76,0.12)", border:"1px solid rgba(201,168,76,0.28)" }}>🏛️</div>
+                    <div>
+                      <p className="text-[9px] font-black tracking-[0.3em] uppercase" style={{ color:"#C9A84C" }}>Premium Coworking</p>
+                      <p className="text-[11px] font-semibold" style={{ color:"rgba(148,163,184,0.5)" }}>Verified Spaces Across India</p>
+                    </div>
+                  </div>
+                  <h2 className="font-black mb-3 leading-[1.1]"
+                    style={{ fontSize:"clamp(1.7rem,3vw,2.5rem)", color:"#EDE8DC", letterSpacing:"-0.02em" }}>
+                    Your Ideal<br/>Workspace.
+                  </h2>
+                  <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(148,163,184,0.7)" }}>
+                    Hot desks, private cabins and meeting rooms across 8 cities. Every space personally verified before listing.
+                  </p>
+                  <div className="grid grid-cols-2 gap-y-2 gap-x-3 mb-6">
+                    {["Hot Desks","Private Cabins","Meeting Rooms","Event Spaces","8 Cities","200+ Spaces"].map(s => (
+                      <div key={s} className="flex items-center gap-2 text-xs font-semibold" style={{ color:"rgba(203,213,225,0.7)" }}>
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background:"#C9A84C" }} />{s}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-0 mb-6 rounded-2xl overflow-hidden border" style={{ borderColor:"rgba(201,168,76,0.14)", background:"rgba(201,168,76,0.07)" }}>
+                    {[["₹350","From /day"],["200+","Spaces"],["8","Cities"]].map(([n,l],i,arr) => (
+                      <div key={l} className="flex-1 text-center py-3" style={{ borderRight:i<arr.length-1?"1px solid rgba(201,168,76,0.12)":"none" }}>
+                        <p className="text-sm font-black leading-none" style={{ color:"#C9A84C" }}>{n}</p>
+                        <p className="text-[9px] font-semibold mt-0.5" style={{ color:"rgba(148,163,184,0.45)" }}>{l}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2.5">
+                    <Link href="/coworking"
+                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all hover:opacity-90"
+                      style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff", boxShadow:"0 4px 20px rgba(201,168,76,0.35)" }}>
+                      Find a Space <ArrowRight className="w-4 h-4" />
+                    </Link>
+                    <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%20need%20help%20finding%20a%20coworking%20space.`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="px-4 py-3 rounded-2xl text-xs font-bold border flex items-center gap-1.5 transition-all hover:opacity-90"
+                      style={{ borderColor:"rgba(37,211,102,0.3)", color:"#25D366", background:"rgba(37,211,102,0.06)" }}>
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 flex-shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                      Book Visit
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
 
           {/* Stats strip */}
-          <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.34 }}
-            className="flex items-stretch justify-center gap-0 mb-8 max-w-lg mx-auto rounded-2xl overflow-hidden border"
-            style={{ borderColor:"rgba(37,99,235,0.12)", background:"linear-gradient(90deg,rgba(37,99,235,0.04),rgba(99,102,241,0.05))" }}>
-            {[["500+","Businesses"],["200+","Spaces"],["8","Cities"],["₹499","From"]].map(([n,l],i,arr) => (
-              <div key={l} className="flex-1 text-center py-4 px-2" style={{ borderRight:i<arr.length-1?"1px solid rgba(37,99,235,0.1)":"none" }}>
-                <p className="text-lg font-black leading-none mb-0.5" style={{ color:"#0F2044" }}>{n}</p>
-                <p className="text-[10px] font-semibold" style={{ color:"#94A3B8" }}>{l}</p>
+          <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35 }}
+            className="flex items-center justify-center gap-8 flex-wrap mb-6">
+            {[["500+","Businesses Served"],["200+","Verified Spaces"],["8","Indian Cities"],["₹499","Starting Price"]].map(([n,l]) => (
+              <div key={l} className="text-center">
+                <p className="text-xl font-black leading-none" style={{ color:"#C9A84C" }}>{n}</p>
+                <p className="text-[10px] font-semibold mt-1" style={{ color:"rgba(148,163,184,0.45)" }}>{l}</p>
               </div>
             ))}
           </motion.div>
 
-          {/* -- Services Quick-Link Strip -- */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
-            className="mb-12">
-            <p className="text-[10px] font-black tracking-[0.3em] uppercase mb-4" style={{ color: L.textMuted }}>
-              Everything Your Business Needs
-            </p>
-            <div className="flex flex-wrap justify-center gap-2.5">
-              {[
-                { label: "Company Registration",  color: "#059669", bg: "rgba(5,150,105,0.07)",  href: "/services/business-registration" },
-                { label: "Coworking Spaces",      color: "#EA580C", bg: "rgba(234,88,12,0.07)",  href: "/coworking" },
-                { label: "Find Freelancers",      color: "#7C3AED", bg: "rgba(124,58,237,0.07)", href: "/freelancers" },
-                { label: "Pitch Deck & DPR",      color: "#D97706", bg: "rgba(217,119,6,0.07)",  href: "/services/dpr" },
-                { label: "Business Training",     color: "#1E40AF", bg: "rgba(18,70,200,0.07)",  href: "/services/training" },
-                { label: "GST Registration",      color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/compliance" },
-                { label: "GST Filing",            color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/compliance" },
-                { label: "Income Tax Return",     color: "#2563EB", bg: "rgba(37,99,235,0.07)",  href: "/services/compliance" },
-                { label: "Virtual Accountant",    color: "#059669", bg: "rgba(5,150,105,0.07)",  href: "/services/accounting" },
-                { label: "Business Restructuring",color: "#0891B2", bg: "rgba(8,145,178,0.07)",  href: "/services/restructuring" },
-              ].map(({ label, color, bg, href }) => (
-                <Link key={label} href={href}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border transition-all hover:scale-[1.05] hover:shadow-md"
-                  style={{ background: bg, color, borderColor: `${color}25` }}>
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color, opacity: 0.7 }} />
-                  {label}
-                </Link>
-              ))}
-              <Link href="/services"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black border transition-all hover:scale-[1.05]"
-                style={{ background: "linear-gradient(135deg, #1246C8, #2563EB)", color: "#fff", border: "none", boxShadow: "0 4px 16px rgba(18,70,200,0.28)" }}>
-                View All Services â†'
-              </Link>
-            </div>
-          </motion.div>
-
-          {/* Marquee */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="relative overflow-hidden">
-            <div className="flex gap-8 animate-marquee whitespace-nowrap">
-              {[...TRUST_TICKER, ...TRUST_TICKER].map((item, i) => (
-                <span key={i} className="inline-flex items-center gap-2.5 text-xs font-semibold flex-shrink-0" style={{ color: L.textMuted }}>
-                  <span className="w-1 h-1 rounded-full" style={{ background: L.gold, opacity: 0.5 }} />
-                  {item}
-                </span>
-              ))}
+          {/* Trust note */}
+          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.45 }}
+            className="text-center">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold" style={{ color:"rgba(148,163,184,0.4)" }}>
+              <span className="w-1 h-1 rounded-full bg-emerald-400" />
+              Trusted by 500+ Indian businesses
+              <span className="w-1 h-1 rounded-full bg-emerald-400" />
+              Free WhatsApp consultation
+              <span className="w-1 h-1 rounded-full bg-emerald-400" />
+              100% online
             </div>
           </motion.div>
         </div>
@@ -617,9 +579,10 @@ export function BusinessOSHomepage() {
       </section>
 
       {/* --- COWORKING SPOTLIGHT --- */}
-      <section className="py-28 px-4 relative overflow-hidden" style={{ background: "linear-gradient(160deg, #F8FAFF 0%, #FFFFFF 50%, #F0F4FF 100%)", borderTop: "1px solid rgba(37,99,235,0.08)" }}>
+      <section className="py-28 px-4 relative overflow-hidden" style={{ background: "linear-gradient(160deg,#0B1428 0%,#080D1C 50%,#0D1020 100%)", borderTop: `1px solid ${L.borderLight}` }}>
         <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position: "absolute", right: "-10%", top: "-20%", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 65%)", filter: "blur(40px)" }} />
+          <div style={{ position: "absolute", right: "-10%", top: "-20%", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,76,0.07) 0%, transparent 65%)", filter: "blur(60px)" }} />
+          <div style={{ position: "absolute", left: "-5%", bottom: "-10%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 60%)", filter: "blur(50px)" }} />
         </div>
 
         <div className="container max-w-6xl mx-auto relative z-10">
@@ -1071,33 +1034,33 @@ export function BusinessOSHomepage() {
       </section>
 
       {/* --- TESTIMONIALS --- */}
-      <section className="py-20 px-4" style={{ background: "#F8FAFC", borderTop: "1px solid rgba(15,32,68,0.06)" }}>
+      <section className="py-20 px-4" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
           <div className="text-center mb-10">
-            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: "#2563EB" }}>What our clients say</p>
-            <h2 className="font-black" style={{ fontFamily: "var(--font-plus-jakarta),sans-serif", fontSize: "clamp(1.5rem,3.5vw,2.2rem)", color: "#0F172A" }}>
+            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>What our clients say</p>
+            <h2 className="font-black" style={{ fontFamily: "var(--font-plus-jakarta),sans-serif", fontSize: "clamp(1.5rem,3.5vw,2.2rem)", color: L.text }}>
               Trusted by growing businesses
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-5">
             {[
               { quote: "FreWork registered my company and GST in 6 days. I was expecting it to take a month. The process was completely seamless.", name: "Rahul Sharma", role: "Founder, TechStart Pune", color: "#059669" },
-              { quote: "Booked a hot desk through FreWork and it was perfectly set up. Every space is personally verified — you get exactly what you see.", name: "Priya Menon", role: "Freelance Designer, Bangalore", color: "#7C3AED" },
-              { quote: "Our CA through FreWork filed 3 years of pending ITR in 4 days. Affordable, fast, and genuinely professional service.", name: "Anil Gupta", role: "SME Owner, Delhi NCR", color: "#2563EB" },
+              { quote: "Booked a hot desk through FreWork and it was perfectly set up. Every space is personally verified — you get exactly what you see.", name: "Priya Menon", role: "Freelance Designer, Bangalore", color: "#C9A84C" },
+              { quote: "Our CA through FreWork filed 3 years of pending ITR in 4 days. Affordable, fast, and genuinely professional service.", name: "Anil Gupta", role: "SME Owner, Delhi NCR", color: "#3B82F6" },
             ].map((item) => (
-              <div key={item.name} className="rounded-2xl p-6 border" style={{ background: "#FFFFFF", borderColor: `${item.color}18`, boxShadow: "0 2px 16px rgba(15,32,68,0.06)" }}>
+              <div key={item.name} className="rounded-2xl p-6 border" style={{ background: L.bgCard, borderColor: `${item.color}22`, boxShadow: L.shadow }}>
                 <div className="flex gap-0.5 mb-4">
-                  {[1,2,3,4,5].map(i => <span key={i} style={{ color: "#FBBF24", fontSize: "14px" }}>★</span>)}
+                  {[1,2,3,4,5].map(i => <span key={i} style={{ color: "#C9A84C", fontSize: "14px" }}>★</span>)}
                 </div>
-                <p className="text-sm leading-relaxed mb-5" style={{ color: "#475569" }}>&ldquo;{item.quote}&rdquo;</p>
+                <p className="text-sm leading-relaxed mb-5" style={{ color: L.textSub }}>&ldquo;{item.quote}&rdquo;</p>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0"
-                    style={{ background: `${item.color}12`, color: item.color, border: `1px solid ${item.color}20` }}>
+                    style={{ background: `${item.color}15`, color: item.color, border: `1px solid ${item.color}25` }}>
                     {item.name[0]}
                   </div>
                   <div>
-                    <p className="text-xs font-bold" style={{ color: "#0F172A" }}>{item.name}</p>
-                    <p className="text-[11px]" style={{ color: "#94A3B8" }}>{item.role}</p>
+                    <p className="text-xs font-bold" style={{ color: L.text }}>{item.name}</p>
+                    <p className="text-[11px]" style={{ color: L.textMuted }}>{item.role}</p>
                   </div>
                 </div>
               </div>
