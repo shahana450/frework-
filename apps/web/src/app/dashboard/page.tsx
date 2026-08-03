@@ -195,7 +195,7 @@ export default function DashboardPage() {
 
             {/* Services option */}
             <button
-              onClick={() => setShowPurpose(false)}
+              onClick={() => router.push("/dashboard/docs-upload")}
               className="group flex flex-col items-start gap-4 p-6 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:shadow-2xl"
               style={{ background: "linear-gradient(135deg,rgba(37,99,235,0.1),rgba(37,99,235,0.04))", borderColor: "rgba(37,99,235,0.2)" }}
             >
@@ -205,15 +205,15 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p className="font-black text-base mb-1" style={{ color: "#93C5FD" }}>
-                  Business Services
+                  GST / ITR / Accounting
                 </p>
                 <p className="text-xs leading-relaxed" style={{ color: "#8A9BB8" }}>
-                  GST filing, ITR, company registration, compliance — manage all your orders here
+                  Select a service, upload your documents — our CA handles everything within 24 hours
                 </p>
               </div>
               <span className="text-xs font-black px-3 py-1.5 rounded-lg mt-auto"
                 style={{ background: "rgba(37,99,235,0.12)", color: "#60A5FA", border: "1px solid rgba(37,99,235,0.2)" }}>
-                Go to Dashboard →
+                Upload Documents →
               </span>
             </button>
           </div>
