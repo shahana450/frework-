@@ -18,7 +18,7 @@ const SERVICES = {
       { id: "pan", label: "PAN Card / Incorporation Certificate", required: true, hint: "Owner / Director PAN or Company Incorporation Certificate" },
       { id: "aadhaar", label: "Aadhaar Card", required: true, hint: "Owner / Authorised Signatory" },
       { id: "photo", label: "Passport Size Photo", required: true, hint: "Owner / Director" },
-      { id: "bank", label: "Cancelled Cheque / Bank Statement", required: true, hint: "Business bank account" },
+      { id: "bank", label: "Cancelled Cheque / Bank Statement", required: false, hint: "Business bank account (optional)" },
       { id: "address_proof", label: "Business Address Proof", required: true, hint: "Electricity bill / Rent agreement / NOC" },
       { id: "building_tax", label: "Building Tax Copy / Ownership Certificate", required: true, hint: "Property tax receipt or ownership document for business premises" },
       { id: "moa", label: "MOA / Partnership Deed", required: false, hint: "If company / partnership (optional for proprietorship)" },
