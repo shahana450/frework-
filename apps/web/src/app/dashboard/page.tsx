@@ -121,10 +121,17 @@ export default function DashboardPage() {
       setUserRole(fwUser?.role ?? "client");
       setMySpaces(spacesData ?? []);
       setHasCoworkingListing(!!coworkData);
-      // Show purpose selector only for non-admin users on fresh login
+      // Show purpose selector only for non-admin users who haven't chosen yet
       const adminEmails = ["admin.frework@gmail.com", "auditmanagercswa@gmail.com"];
       if (!adminEmails.includes(u.email ?? "")) {
-        setShowPurpose(true);
+        const chosen = localStorage.getItem(`fw_purpose_${u.id}`);
+        if (!chosen) {
+          setShowPurpose(true);
+        } else {
+          // Already chose — redirect immediately
+          router.replace(chosen);
+          return;
+        }
       }
       setLoading(false);
     });
@@ -169,7 +176,11 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Coworking option */}
             <button
-              onClick={() => router.push(hasCoworkingListing ? "/coworking/my-space" : "/coworking/list")}
+              onClick={() => {
+                const dest = hasCoworkingListing ? "/coworking/my-space" : "/coworking/list";
+                if (user?.id) localStorage.setItem(`fw_purpose_${user.id}`, dest);
+                router.push(dest);
+              }}
               className="group flex flex-col items-start gap-4 p-6 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:shadow-2xl"
               style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.1),rgba(201,168,76,0.04))", borderColor: "rgba(201,168,76,0.25)" }}
             >
@@ -195,7 +206,10 @@ export default function DashboardPage() {
 
             {/* Services option */}
             <button
-              onClick={() => router.push("/dashboard/docs-upload")}
+              onClick={() => {
+                if (user?.id) localStorage.setItem(`fw_purpose_${user.id}`, "/dashboard/docs-upload");
+                router.push("/dashboard/docs-upload");
+              }}
               className="group flex flex-col items-start gap-4 p-6 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:shadow-2xl"
               style={{ background: "linear-gradient(135deg,rgba(37,99,235,0.1),rgba(37,99,235,0.04))", borderColor: "rgba(37,99,235,0.2)" }}
             >
@@ -271,6 +285,16 @@ export default function DashboardPage() {
                 border: "rgba(37,99,235,0.25)",
                 bg: "rgba(37,99,235,0.07)",
                 badge: "Manage Orders",
+              },
+              {
+                icon: "📂",
+                title: "Service Requests",
+                desc: "Review uploaded docs and grant service packages to users",
+                href: "/dashboard/service-requests",
+                color: "#F59E0B",
+                border: "rgba(245,158,11,0.25)",
+                bg: "rgba(245,158,11,0.07)",
+                badge: "Approve Packages",
               },
               {
                 icon: "👥",
