@@ -207,8 +207,8 @@ export default function DashboardPage() {
             {/* Services option */}
             <button
               onClick={() => {
-                if (user?.id) localStorage.setItem(`fw_purpose_${user.id}`, "/dashboard/docs-upload");
-                router.push("/dashboard/docs-upload");
+                if (user?.id) localStorage.setItem(`fw_purpose_${user.id}`, "/dashboard/services");
+                router.push("/dashboard/services");
               }}
               className="group flex flex-col items-start gap-4 p-6 rounded-2xl border text-left transition-all hover:scale-[1.02] hover:shadow-2xl"
               style={{ background: "linear-gradient(135deg,rgba(37,99,235,0.1),rgba(37,99,235,0.04))", borderColor: "rgba(37,99,235,0.2)" }}
