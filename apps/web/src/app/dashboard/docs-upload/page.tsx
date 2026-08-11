@@ -136,13 +136,9 @@ function DocsUploadInner() {
     setSubmitting(true);
     try {
       // Insert via server-side API (uses service role key — bypasses schema cache)
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/service-request/submit", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id: user!.id,
           user_email: user!.email,
