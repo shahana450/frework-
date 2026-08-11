@@ -154,17 +154,17 @@ function DocsUploadInner() {
       }
       const req = { id: result.id };
 
-      // Upload files — non-fatal: request is saved even if storage fails
+      // Upload files — fully non-fatal, each in its own try/catch
       for (const upload of uploads) {
-        // Sanitize filename: keep only ASCII-safe chars to avoid ByteString errors
-        const ext = upload.name.split(".").pop()?.replace(/[^a-zA-Z0-9]/g, "") ?? "pdf";
-        const safeName = `${upload.docId}.${ext}`;
-        const path = `service-docs/${req.id}/${safeName}`;
-        const { error: storageErr } = await supabase.storage
-          .from("fw-documents")
-          .upload(path, upload.file, { upsert: true });
-        if (storageErr) {
-          console.warn("Storage upload failed for", upload.docId, storageErr.message);
+        try {
+          const ext = upload.name.split(".").pop()?.replace(/[^a-zA-Z0-9]/g, "") ?? "pdf";
+          const safeName = `${upload.docId}.${ext}`;
+          const path = `service-docs/${req.id}/${safeName}`;
+          await supabase.storage
+            .from("fw-documents")
+            .upload(path, upload.file, { upsert: true });
+        } catch {
+          // Storage errors are non-fatal — CA will follow up if files are missing
         }
       }
 
