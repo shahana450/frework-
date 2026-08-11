@@ -135,6 +135,7 @@ function DocsUploadInner() {
     if (!phone) { setError("Please enter your phone number"); return; }
     setSubmitting(true);
     try {
+      // Insert service request record
       const { data: req, error: reqErr } = await supabase.from("fw_service_requests").insert({
         user_id: user!.id,
         user_email: user!.email,
@@ -144,14 +145,29 @@ function DocsUploadInner() {
         notes,
         status: "docs_received",
       }).select("id").single();
-      if (reqErr) throw reqErr;
+
+      if (reqErr) {
+        // Surface the real Supabase error so it's diagnosable
+        throw new Error(reqErr.message || reqErr.code || "Database insert failed");
+      }
+
+      // Upload files — non-fatal: request is saved even if storage fails
       for (const upload of uploads) {
         const path = `service-docs/${req.id}/${upload.docId}-${upload.name}`;
-        await supabase.storage.from("fw-documents").upload(path, upload.file, { upsert: true });
+        const { error: storageErr } = await supabase.storage
+          .from("fw-documents")
+          .upload(path, upload.file, { upsert: true });
+        if (storageErr) {
+          // Log but don't block submission — CA can follow up for missing files
+          console.warn("Storage upload failed for", upload.docId, storageErr.message);
+        }
       }
+
       setSubmitted(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      const msg = err instanceof Error ? err.message : String(err);
+      // Show the real error so the user/admin can diagnose
+      setError(msg || "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
