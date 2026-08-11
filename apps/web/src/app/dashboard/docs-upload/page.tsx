@@ -135,21 +135,28 @@ function DocsUploadInner() {
     if (!phone) { setError("Please enter your phone number"); return; }
     setSubmitting(true);
     try {
-      // Insert service request record
-      const { data: req, error: reqErr } = await supabase.from("fw_service_requests").insert({
-        user_id: user!.id,
-        user_email: user!.email,
-        user_phone: phone,
-        service_key: selectedService,
-        service_name: service.label,
-        notes,
-        status: "docs_received",
-      }).select("id").single();
-
-      if (reqErr) {
-        // Surface the real Supabase error so it's diagnosable
-        throw new Error(reqErr.message || reqErr.code || "Database insert failed");
+      // Insert via server-side API (uses service role key — bypasses schema cache)
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/service-request/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          user_id: user!.id,
+          user_email: user!.email,
+          user_phone: phone,
+          service_key: selectedService,
+          service_name: service.label,
+          notes,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok || result.error) {
+        throw new Error(result.error || "Failed to submit request");
       }
+      const req = { id: result.id };
 
       // Upload files — non-fatal: request is saved even if storage fails
       for (const upload of uploads) {
