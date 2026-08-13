@@ -191,11 +191,14 @@ export default function FinanceDashboard() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "2rem" }}>
               {[
                 { icon: "📤", title: "Upload Anything", desc: "Invoice, bill, receipt, bank statement — AI extracts and categorizes", href: "/finance/upload", gold: true },
-                { icon: "📊", title: "Chart of Accounts", desc: "Manage your account heads and ledgers", href: "/finance/chart-of-accounts" },
-                { icon: "📋", title: "Journal Entry", desc: "Manual double-entry journal with Dr = Cr enforcement", href: "/finance/journals/new" },
                 { icon: "🔍", title: "AI Review Queue", desc: "Review AI-suggested journal entries before posting", href: "/finance/ai-review" },
-                { icon: "📈", title: "Financial Reports", desc: "P&L, Balance Sheet, Trial Balance, Cash Flow", href: "/finance/reports" },
-                { icon: "🏦", title: "GST Returns", desc: "GSTR-1, GSTR-3B auto-prepared from posted entries", href: "/finance/gst" },
+                { icon: "📋", title: "New Journal Entry", desc: "Manual double-entry journal with Dr = Cr enforcement", href: "/finance/journals/new" },
+                { icon: "📈", title: "Financial Reports", desc: "P&L, Balance Sheet, Trial Balance", href: "/finance/reports" },
+                { icon: "🏛️", title: "GST Returns", desc: "GSTR-1, GSTR-3B auto-prepared from posted entries", href: "/finance/gst" },
+                { icon: "🔄", title: "Tally Bridge", desc: "Export journal entries as Tally-compatible XML", href: "/finance/tally" },
+                { icon: "🏦", title: "Bank Reconciliation", desc: "Import CSV bank statement and auto-match entries", href: "/finance/banking" },
+                { icon: "👥", title: "Contacts", desc: "Manage customers and vendors with opening balances", href: "/finance/contacts" },
+                { icon: "📊", title: "Chart of Accounts", desc: "Manage account heads with Indian structure", href: "/finance/chart-of-accounts" },
               ].map((action, i) => (
                 <Link key={i} href={action.href} style={{ textDecoration: "none" }}>
                   <div style={{
