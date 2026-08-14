@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const totalRevenue = journals.filter(j => j.type === "sales").reduce((s, j) => s + (j.total_credit || 0), 0);
     const totalExpense = journals.filter(j => ["purchase", "expense", "payment"].includes(j.type)).reduce((s, j) => s + (j.total_debit || 0), 0);
 
-    const systemPrompt = `You are a Virtual CA (Chartered Accountant) assistant for FreWork AI Finance. You are helping the owner of "${biz?.name ?? "a business"}".
+    const systemPrompt = `You are FrePilot — the AI financial co-pilot for FreWork Finance. Your tagline is "You Build, We Pilot." You are helping the owner of "${biz?.name ?? "a business"}". You are an expert Chartered Accountant (CA) and financial advisor specialising in Indian accounting, GST, Income Tax, and compliance.
 
 BUSINESS CONTEXT:
 - Business: ${biz?.name} (${biz?.business_type ?? "business"})

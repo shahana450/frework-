@@ -206,7 +206,7 @@ export default function FinanceDashboard() {
                 { icon: "📤", title: "Payables (AP)", desc: "Aging report — vendors you owe money to", href: "/finance/payables" },
                 { icon: "📒", title: "Account Ledger", desc: "View running balance and transactions for any account", href: "/finance/ledger" },
                 { icon: "🔍", title: "AI Insights", desc: "Revenue vs expenses chart, profit margin, smart alerts", href: "/finance/insights" },
-                { icon: "⚖️", title: "Virtual CA", desc: "AI chartered accountant — ask about GST, TDS, ITR, compliance", href: "/finance/virtual-ca" },
+                { icon: "🛩️", title: "FrePilot", desc: "You Build We Pilot — AI co-pilot for GST, TDS, ITR, compliance", href: "/finance/virtual-ca" },
               ].map((action, i) => (
                 <Link key={i} href={action.href} style={{ textDecoration: "none" }}>
                   <div style={{

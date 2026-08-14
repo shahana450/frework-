@@ -330,7 +330,7 @@ export default function DashboardPage() {
               {
                 icon: "📊",
                 title: "FreWork Finance",
-                desc: "AI bookkeeping, GST returns, journals, Virtual CA — full accounting suite",
+                desc: "AI bookkeeping, GST returns, journals, FrePilot — full accounting suite",
                 href: "/finance",
                 color: "#C9A84C",
                 border: "rgba(201,168,76,0.35)",
@@ -460,7 +460,7 @@ export default function DashboardPage() {
                 <span className="font-black text-base" style={{ color: "#EDE8DC" }}>FreWork Finance — AI Bookkeeping</span>
               </div>
               <p className="text-xs leading-relaxed" style={{ color: "#8A9BB8" }}>
-                Upload invoices, bills, and bank statements · AI extracts and posts journal entries · GST returns, P&amp;L, Balance Sheet, Virtual CA
+                Upload invoices, bills, and bank statements · AI extracts and posts journal entries · GST returns, P&amp;L, Balance Sheet, FrePilot
               </p>
             </div>
             <div className="flex-shrink-0 flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-sm"

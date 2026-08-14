@@ -31,7 +31,7 @@ function MarkdownText({ text }: { text: string }) {
   return <div dangerouslySetInnerHTML={{ __html: html }} style={{ lineHeight: 1.65, fontSize: "0.88rem" }} />;
 }
 
-export default function VirtualCAPage() {
+export default function FrePilotPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
   const [bizName, setBizName] = useState("");
@@ -50,10 +50,9 @@ export default function VirtualCAPage() {
       setBizId(saved);
       const { data } = await supabase.from("fw_fin_businesses").select("name").eq("id", saved).single();
       if (data) setBizName(data.name);
-      // Welcome message
       setMessages([{
         role: "assistant",
-        content: `Namaste! I'm your Virtual CA for **${data?.name ?? "your business"}**. I have access to your financial data and can help you with:\n\n- **Accounting queries** — journal entries, ledgers, double-entry\n- **GST** — GSTR-1, GSTR-3B, ITC reconciliation\n- **Income Tax** — ITR filing, advance tax, TDS\n- **Financial analysis** — P&L interpretation, cash flow\n- **Compliance** — due dates, penalties, notices\n\nAsk me anything about your finances or Indian tax laws.`,
+        content: `Namaste! I'm **FrePilot** — your AI financial co-pilot for **${data?.name ?? "your business"}**.\n\n*You Build, We Pilot* — I have full access to your financial data and can help you with:\n\n- **Accounting queries** — journal entries, ledgers, double-entry\n- **GST** — GSTR-1, GSTR-3B, ITC reconciliation\n- **Income Tax** — ITR filing, advance tax, TDS\n- **Financial analysis** — P&L interpretation, cash flow\n- **Compliance** — due dates, penalties, notices\n\nAsk me anything about your finances or Indian tax laws.`,
         ts: Date.now(),
       }]);
     });
@@ -98,7 +97,7 @@ export default function VirtualCAPage() {
   function clearChat() {
     setMessages([{
       role: "assistant",
-      content: `Chat cleared. How can I help you with ${bizName}'s finances?`,
+      content: `Chat cleared. I'm FrePilot — how can I help with ${bizName}'s finances?`,
       ts: Date.now(),
     }]);
   }
@@ -109,7 +108,10 @@ export default function VirtualCAPage() {
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56, flexShrink: 0 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
         <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Virtual CA</span>
+        <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
+          <span style={{ color: "#C9A84C", fontWeight: 800, fontSize: "0.88rem" }}>FrePilot</span>
+          <span style={{ color: "rgba(237,232,220,0.25)", fontSize: "0.6rem", letterSpacing: "0.04em" }}>You Build We Pilot</span>
+        </div>
         <div style={{ flex: 1 }} />
         {bizName && <span style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>{bizName}</span>}
         <button onClick={clearChat} style={{ background: "rgba(237,232,220,0.05)", border: "1px solid rgba(237,232,220,0.1)", color: "rgba(237,232,220,0.4)", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem" }}>
@@ -118,7 +120,6 @@ export default function VirtualCAPage() {
       </nav>
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden", maxWidth: 860, width: "100%", margin: "0 auto", padding: "0 1rem" }}>
-        {/* Chat area */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {/* Messages */}
           <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem 0" }}>
@@ -127,15 +128,13 @@ export default function VirtualCAPage() {
                 display: "flex", gap: "0.75rem", marginBottom: "1.25rem",
                 flexDirection: msg.role === "user" ? "row-reverse" : "row",
               }}>
-                {/* Avatar */}
                 <div style={{
                   width: 34, height: 34, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem",
                   background: msg.role === "assistant" ? "rgba(201,168,76,0.15)" : "rgba(96,165,250,0.15)",
                   border: `1px solid ${msg.role === "assistant" ? "rgba(201,168,76,0.3)" : "rgba(96,165,250,0.3)"}`,
                 }}>
-                  {msg.role === "assistant" ? "⚖️" : "👤"}
+                  {msg.role === "assistant" ? "🛩️" : "👤"}
                 </div>
-                {/* Bubble */}
                 <div style={{
                   maxWidth: "78%", padding: "0.85rem 1.1rem", borderRadius: msg.role === "user" ? "14px 4px 14px 14px" : "4px 14px 14px 14px",
                   background: msg.role === "assistant" ? "rgba(255,255,255,0.04)" : "rgba(96,165,250,0.1)",
@@ -150,7 +149,7 @@ export default function VirtualCAPage() {
 
             {loading && (
               <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem" }}>
-                <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(201,168,76,0.15)", border: "1px solid rgba(201,168,76,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>⚖️</div>
+                <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(201,168,76,0.15)", border: "1px solid rgba(201,168,76,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>🛩️</div>
                 <div style={{ padding: "0.85rem 1.1rem", borderRadius: "4px 14px 14px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(237,232,220,0.07)" }}>
                   <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                     {[0, 1, 2].map(i => (
@@ -184,7 +183,7 @@ export default function VirtualCAPage() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder="Ask your Virtual CA anything — GST, TDS, ITR, journal entries, financial advice…"
+                placeholder="Ask FrePilot anything — GST, TDS, ITR, journal entries, financial advice…"
                 rows={2}
                 style={{
                   flex: 1, background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.15)", color: "#EDE8DC",
@@ -203,7 +202,7 @@ export default function VirtualCAPage() {
                 {loading ? "…" : "Send"}
               </button>
             </div>
-            <div style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.25)", marginTop: "0.4rem" }}>Press Enter to send · Shift+Enter for new line · Powered by Claude AI</div>
+            <div style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.25)", marginTop: "0.4rem" }}>Press Enter to send · Shift+Enter for new line · FrePilot powered by Claude AI</div>
           </div>
         </div>
       </div>

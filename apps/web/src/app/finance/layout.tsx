@@ -10,7 +10,7 @@ const NAV_GROUPS = [
     items: [
       { icon: "🏠", label: "Dashboard", href: "/finance" },
       { icon: "🔍", label: "AI Insights", href: "/finance/insights" },
-      { icon: "⚖️", label: "Virtual CA", href: "/finance/virtual-ca" },
+      { icon: "🛩️", label: "FrePilot", href: "/finance/virtual-ca" },
     ],
   },
   {
