@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
-type ReportTab = "trial_balance" | "profit_loss" | "balance_sheet";
+type ReportTab = "trial_balance" | "profit_loss" | "balance_sheet" | "cash_flow";
 type AccRow = { code?: string; name: string; type: string; sub_type: string | null; dr: number; cr: number };
 
 type PLData = {
@@ -100,6 +100,7 @@ export default function ReportsPage() {
     { key: "profit_loss", label: "Profit & Loss" },
     { key: "balance_sheet", label: "Balance Sheet" },
     { key: "trial_balance", label: "Trial Balance" },
+    { key: "cash_flow", label: "Cash Flow" },
   ];
 
   return (
@@ -255,9 +256,112 @@ export default function ReportsPage() {
                 )}
               </>
             )}
+
+            {/* Cash Flow Statement */}
+            {tab === "cash_flow" && plData && fyId && (
+              <CashFlowStatement bizId={bizId} fyId={fyId} plData={plData} />
+            )}
+            {tab === "cash_flow" && !plData && !loading && (
+              <div style={{ padding: "3rem", textAlign: "center", color: "rgba(237,232,220,0.3)", fontSize: "0.88rem" }}>
+                <div>Load Profit &amp; Loss first to compute Cash Flow.</div>
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function CashFlowStatement({ bizId, fyId, plData }: { bizId: string | null; fyId: string; plData: PLData }) {
+  const [journals, setJournals] = useState<{ type: string; total_debit: number; total_credit: number; narration: string }[]>([]);
+
+  useEffect(() => {
+    if (!bizId) return;
+    supabase.from("fw_fin_journals")
+      .select("type,total_debit,total_credit,narration")
+      .eq("business_id", bizId).eq("fy_id", fyId).eq("status", "posted")
+      .then(({ data }) => setJournals(data ?? []));
+  }, [bizId, fyId]);
+
+  const netProfit = plData.net_profit;
+
+  const receipts = journals.filter(j => j.type === "receipt").reduce((s, j) => s + j.total_credit, 0);
+  const payments = journals.filter(j => j.type === "payment").reduce((s, j) => s + j.total_debit, 0);
+  const expenses = journals.filter(j => j.type === "expense").reduce((s, j) => s + j.total_debit, 0);
+
+  const operatingCF = netProfit + receipts - payments - expenses;
+  const financingCF = 0; // no loan/equity entries yet
+  const investingCF = 0; // no capex entries yet
+  const netCF = operatingCF + investingCF + financingCF;
+
+  const cfRow = (label: string, value: number, indent = false, bold = false) => (
+    <tr key={label} style={{ borderTop: "1px solid rgba(237,232,220,0.04)" }}>
+      <td style={{ padding: `0.55rem ${indent ? "2rem" : "1rem"}`, fontSize: "0.85rem", fontWeight: bold ? 800 : 400, color: bold ? "#EDE8DC" : "rgba(237,232,220,0.75)" }}>{label}</td>
+      <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontWeight: bold ? 800 : 400, fontVariantNumeric: "tabular-nums", color: value < 0 ? "#f87171" : value > 0 ? "#EDE8DC" : "rgba(237,232,220,0.3)" }}>
+        {value !== 0 ? `${value < 0 ? "(" : ""}₹${Math.abs(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}${value < 0 ? ")" : ""}` : "—"}
+      </td>
+    </tr>
+  );
+
+  return (
+    <>
+      <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(237,232,220,0.08)" }}>
+        <div style={{ fontWeight: 800, fontSize: "1rem" }}>Cash Flow Statement</div>
+        <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", marginTop: "0.2rem" }}>Indirect Method — Operating, Investing, Financing</div>
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr style={{ background: "rgba(255,255,255,0.02)" }}>
+            <th style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Particulars</th>
+            <th style={{ padding: "0.6rem 1rem", textAlign: "right", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Amount (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colSpan={2} style={{ padding: "0.75rem 1rem", fontWeight: 800, background: "rgba(201,168,76,0.06)", color: "#C9A84C", fontSize: "0.82rem" }}>A. Operating Activities</td></tr>
+          {cfRow("Net Profit / (Loss)", netProfit, false, true)}
+          {cfRow("Adjustments:", 0)}
+          {cfRow("Add: Customer Receipts", receipts, true)}
+          {cfRow("Less: Vendor Payments", -payments, true)}
+          {cfRow("Less: Operating Expenses", -expenses, true)}
+          <tr style={{ borderTop: "2px solid rgba(201,168,76,0.25)", background: "rgba(201,168,76,0.05)" }}>
+            <td style={{ padding: "0.7rem 1rem", fontWeight: 800 }}>Net Cash from Operations</td>
+            <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: operatingCF >= 0 ? "#4ade80" : "#f87171" }}>
+              {operatingCF < 0 ? "(" : ""}₹{Math.abs(operatingCF).toLocaleString("en-IN", { minimumFractionDigits: 2 })}{operatingCF < 0 ? ")" : ""}
+            </td>
+          </tr>
+
+          <tr><td colSpan={2} style={{ padding: "0.75rem 1rem", fontWeight: 800, background: "rgba(96,165,250,0.06)", color: "#60a5fa", fontSize: "0.82rem" }}>B. Investing Activities</td></tr>
+          <tr style={{ borderTop: "1px solid rgba(237,232,220,0.04)" }}>
+            <td style={{ padding: "0.55rem 1rem", fontSize: "0.85rem", color: "rgba(237,232,220,0.4)" }}>Purchase / Sale of Fixed Assets</td>
+            <td style={{ padding: "0.55rem 1rem", textAlign: "right", color: "rgba(237,232,220,0.25)" }}>—</td>
+          </tr>
+          <tr style={{ borderTop: "2px solid rgba(96,165,250,0.2)", background: "rgba(96,165,250,0.04)" }}>
+            <td style={{ padding: "0.7rem 1rem", fontWeight: 800 }}>Net Cash from Investing</td>
+            <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "rgba(237,232,220,0.4)" }}>₹0.00</td>
+          </tr>
+
+          <tr><td colSpan={2} style={{ padding: "0.75rem 1rem", fontWeight: 800, background: "rgba(74,222,128,0.04)", color: "#4ade80", fontSize: "0.82rem" }}>C. Financing Activities</td></tr>
+          <tr style={{ borderTop: "1px solid rgba(237,232,220,0.04)" }}>
+            <td style={{ padding: "0.55rem 1rem", fontSize: "0.85rem", color: "rgba(237,232,220,0.4)" }}>Loans raised / repaid, Capital introduced</td>
+            <td style={{ padding: "0.55rem 1rem", textAlign: "right", color: "rgba(237,232,220,0.25)" }}>—</td>
+          </tr>
+          <tr style={{ borderTop: "2px solid rgba(74,222,128,0.2)", background: "rgba(74,222,128,0.04)" }}>
+            <td style={{ padding: "0.7rem 1rem", fontWeight: 800 }}>Net Cash from Financing</td>
+            <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "rgba(237,232,220,0.4)" }}>₹0.00</td>
+          </tr>
+
+          <tr style={{ borderTop: "3px solid rgba(201,168,76,0.4)", background: "rgba(201,168,76,0.08)" }}>
+            <td style={{ padding: "0.9rem 1rem", fontWeight: 900, fontSize: "0.95rem", color: "#C9A84C" }}>Net Increase / (Decrease) in Cash</td>
+            <td style={{ padding: "0.9rem 1rem", textAlign: "right", fontWeight: 900, fontSize: "0.95rem", fontVariantNumeric: "tabular-nums", color: netCF >= 0 ? "#4ade80" : "#f87171" }}>
+              {netCF < 0 ? "(" : ""}₹{Math.abs(netCF).toLocaleString("en-IN", { minimumFractionDigits: 2 })}{netCF < 0 ? ")" : ""}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div style={{ padding: "0.75rem 1rem", fontSize: "0.72rem", color: "rgba(237,232,220,0.25)", borderTop: "1px solid rgba(237,232,220,0.05)" }}>
+        Note: Cash flow uses journal type classification. Investing and financing activities will populate as you record fixed asset purchases, loans, and capital entries.
+      </div>
+    </>
   );
 }
