@@ -328,6 +328,16 @@ export default function DashboardPage() {
                 external: true,
               },
               {
+                icon: "📊",
+                title: "FreWork Finance",
+                desc: "AI bookkeeping, GST returns, journals, Virtual CA — full accounting suite",
+                href: "/finance",
+                color: "#C9A84C",
+                border: "rgba(201,168,76,0.35)",
+                bg: "rgba(201,168,76,0.07)",
+                badge: "Open Finance",
+              },
+              {
                 icon: "🌐",
                 title: "Live Website",
                 desc: "View the public-facing FreWork website",
@@ -435,6 +445,30 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* ── FINANCE BANNER ── */}
+        <Link href="/finance" className="block mb-6 rounded-2xl overflow-hidden border transition-all hover:shadow-lg hover:scale-[1.01]"
+          style={{ borderColor: "rgba(201,168,76,0.3)", background: "linear-gradient(135deg,rgba(201,168,76,0.12) 0%,rgba(7,12,26,0.8) 100%)", backdropFilter: "blur(8px)" }}>
+          <div className="px-6 py-5 flex items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+              style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)", boxShadow: "0 4px 20px rgba(201,168,76,0.35)" }}>
+              📊
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-black" style={{ background: "rgba(201,168,76,0.15)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.3)" }}>NEW</span>
+                <span className="font-black text-base" style={{ color: "#EDE8DC" }}>FreWork Finance — AI Bookkeeping</span>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: "#8A9BB8" }}>
+                Upload invoices, bills, and bank statements · AI extracts and posts journal entries · GST returns, P&amp;L, Balance Sheet, Virtual CA
+              </p>
+            </div>
+            <div className="flex-shrink-0 flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-sm"
+              style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)", color: "#070C1A" }}>
+              Open Finance <ArrowRight className="w-4 h-4" />
+            </div>
+          </div>
+        </Link>
 
         {/* ── professional SERVICES ── */}
         <div className="mb-8">
@@ -849,6 +883,7 @@ export default function DashboardPage() {
                   { icon: Building2, label: "Coworking",    href: "/coworking",    color: "text-cyan-600",    bg: "bg-cyan-50 hover:bg-cyan-100 border-cyan-100" },
                   { icon: Rocket,    label: "Startups",     href: "/startups",     color: "text-purple-600",  bg: "bg-purple-50 hover:bg-purple-100 border-purple-100" },
                   { icon: AlertCircle, label: "Contact CA", href: "/contact",      color: "text-blue-600",    bg: "bg-blue-50 hover:bg-blue-100 border-blue-100" },
+                  { icon: BarChart3, label: "Finance",      href: "/finance",      color: "text-amber-600",   bg: "bg-amber-50 hover:bg-amber-100 border-amber-100" },
                 ].map(({ icon: Icon, label, href, color, bg }) => (
                   <Link key={label} href={href}
                     className={`flex flex-col items-center gap-2 p-3 rounded-xl border ${bg} transition-all text-center`}>
