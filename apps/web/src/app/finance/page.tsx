@@ -199,6 +199,10 @@ export default function FinanceDashboard() {
                 { icon: "🏦", title: "Bank Reconciliation", desc: "Import CSV bank statement and auto-match entries", href: "/finance/banking" },
                 { icon: "👥", title: "Contacts", desc: "Manage customers and vendors with opening balances", href: "/finance/contacts" },
                 { icon: "📊", title: "Chart of Accounts", desc: "Manage account heads with Indian structure", href: "/finance/chart-of-accounts" },
+                { icon: "🧾", title: "Sales Invoice", desc: "Raise a sales invoice — GST auto-calculated, journal auto-created", href: "/finance/sales/new" },
+                { icon: "💸", title: "Record Expense", desc: "Quick expense entry with GST ITC and TDS support", href: "/finance/expenses" },
+                { icon: "📒", title: "Account Ledger", desc: "View running balance and transactions for any account", href: "/finance/ledger" },
+                { icon: "⚖️", title: "Virtual CA", desc: "AI chartered accountant — ask about GST, TDS, ITR, compliance", href: "/finance/virtual-ca" },
               ].map((action, i) => (
                 <Link key={i} href={action.href} style={{ textDecoration: "none" }}>
                   <div style={{

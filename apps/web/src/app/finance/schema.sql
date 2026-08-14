@@ -230,6 +230,21 @@ CREATE POLICY "admin_businesses" ON fw_fin_businesses FOR ALL USING (
   auth.email() IN ('admin.frework@gmail.com', 'auditmanagercswa@gmail.com')
 );
 
+-- 11. Virtual CA Chat History
+CREATE TABLE IF NOT EXISTS fw_fin_virtual_ca_chats (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at timestamptz DEFAULT now(),
+  business_id uuid REFERENCES fw_fin_businesses(id) ON DELETE CASCADE,
+  user_message text NOT NULL,
+  assistant_reply text NOT NULL
+);
+
+ALTER TABLE fw_fin_virtual_ca_chats ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "ca_chat_owner" ON fw_fin_virtual_ca_chats FOR ALL USING (
+  business_id IN (SELECT id FROM fw_fin_businesses WHERE owner_id = auth.uid())
+);
+
 -- ============================================================
 -- STORAGE BUCKET (run separately if needed)
 -- ============================================================
