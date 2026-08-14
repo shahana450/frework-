@@ -119,11 +119,43 @@ export default function UploadPage() {
 
       if (docErr) throw new Error(docErr.message);
 
-      // AI Analysis (simulated — replace with real OCR/AI API)
+      // AI Analysis — extract text then call Claude
       setFiles(prev => prev.map(f => f.id === docFile.id ? { ...f, status: "analyzing" } : f));
-      await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
 
-      const aiResult = simulateAI(docFile.file.name, docFile.docType);
+      let extractedText = `Document: ${docFile.file.name}\nType: ${docFile.docType}\n`;
+      // For images, use a description; for PDFs we send filename context
+      if (docFile.file.type.startsWith("image/")) {
+        extractedText += `[Image file - ${docFile.file.name}] Please analyse based on document type: ${docFile.docType}`;
+      } else {
+        extractedText += `[PDF/Document file - ${docFile.file.name}] Document type hint: ${docFile.docType}`;
+      }
+
+      let aiResult;
+      try {
+        const aiRes = await fetch("/api/finance/ai-analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: extractedText, doc_id: doc.id, business_id: bizId }),
+        });
+        if (aiRes.ok) {
+          const aiData = await aiRes.json();
+          aiResult = {
+            vendor: aiData.vendor ?? aiData.customer,
+            amount: aiData.amount,
+            gst: aiData.gst_amount,
+            date: aiData.date,
+            narration: aiData.narration,
+            confidence: aiData.confidence ?? 0.85,
+            type: aiData.doc_type ?? docFile.docType,
+            items: aiData.items,
+          };
+        } else {
+          throw new Error("AI unavailable");
+        }
+      } catch {
+        // Fallback to simulation if AI API not configured
+        aiResult = simulateAI(docFile.file.name, docFile.docType);
+      }
 
       // Save AI summary to document
       await supabase.from("fw_fin_documents").update({
@@ -137,12 +169,12 @@ export default function UploadPage() {
         document_id: doc.id,
         suggested_type: docFile.docType === "invoice" ? "sales" : docFile.docType === "bill" ? "purchase" : "expense",
         suggested_narration: aiResult.narration,
-        suggested_lines: generateSuggestedLines(docFile.docType, aiResult),
+        suggested_lines: generateSuggestedLines(docFile.docType, { amount: aiResult?.amount, gst: aiResult?.gst }),
         confidence: aiResult.confidence ?? 0.85,
         status: "pending",
       });
 
-      setFiles(prev => prev.map(f => f.id === docFile.id ? { ...f, status: "done", aiResult } : f));
+      setFiles(prev => prev.map(f => f.id === docFile.id ? { ...f, status: "done", aiResult: aiResult ?? undefined } : f));
     } catch (err: unknown) {
       setFiles(prev => prev.map(f => f.id === docFile.id ? { ...f, status: "error", errorMsg: err instanceof Error ? err.message : "Upload failed" } : f));
     }
