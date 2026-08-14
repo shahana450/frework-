@@ -121,7 +121,12 @@ export default function BusinessSetup() {
 
       router.push("/finance");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      if (msg.includes("schema cache") || msg.includes("does not exist") || msg.includes("relation")) {
+        setError("__SCHEMA_MISSING__");
+      } else {
+        setError(msg);
+      }
     } finally {
       setSaving(false);
     }
@@ -384,7 +389,27 @@ export default function BusinessSetup() {
                   <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{row.value}</span>
                 </div>
               ))}
-              {error && <div style={{ marginTop: "1rem", color: "#f87171", fontSize: "0.83rem", background: "rgba(248,113,113,0.1)", padding: "0.75rem", borderRadius: 6 }}>{error}</div>}
+              {error === "__SCHEMA_MISSING__" && (
+                <div style={{ marginTop: "1rem", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 10, padding: "1rem 1.25rem" }}>
+                  <div style={{ fontWeight: 700, color: "#f87171", marginBottom: "0.5rem" }}>⚠️ Database tables not set up yet</div>
+                  <div style={{ fontSize: "0.8rem", color: "rgba(237,232,220,0.6)", lineHeight: 1.6, marginBottom: "0.85rem" }}>
+                    The FreWork Finance tables don&apos;t exist in your Supabase project yet. You need to run the schema SQL once in your Supabase dashboard.
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.5)", marginBottom: "0.5rem", fontWeight: 600 }}>Steps:</div>
+                  <ol style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.78rem", color: "rgba(237,232,220,0.55)", lineHeight: 2 }}>
+                    <li>Open <strong style={{ color: "#C9A84C" }}>supabase.com</strong> → your project → <strong style={{ color: "#C9A84C" }}>SQL Editor</strong></li>
+                    <li>Click <strong style={{ color: "#C9A84C" }}>New Query</strong></li>
+                    <li>Download the schema SQL and paste it in:</li>
+                  </ol>
+                  <a href="/api/finance/setup-schema" target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: "0.75rem", background: "#C9A84C", color: "#070C1A", padding: "7px 16px", borderRadius: 7, textDecoration: "none", fontWeight: 700, fontSize: "0.8rem" }}>
+                    ⬇ Download schema.sql
+                  </a>
+                  <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "rgba(237,232,220,0.35)" }}>After running the SQL, click <strong>Create Business</strong> again.</div>
+                </div>
+              )}
+              {error && error !== "__SCHEMA_MISSING__" && (
+                <div style={{ marginTop: "1rem", color: "#f87171", fontSize: "0.83rem", background: "rgba(248,113,113,0.1)", padding: "0.75rem", borderRadius: 6 }}>{error}</div>
+              )}
             </>
           )}
         </div>

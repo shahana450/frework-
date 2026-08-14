@@ -22,11 +22,14 @@ const NAV_GROUPS = [
       { icon: "📦", label: "Purchase Bill", href: "/finance/purchases/new" },
       { icon: "💸", label: "Record Expense", href: "/finance/expenses" },
       { icon: "💳", label: "Payment Entry", href: "/finance/payment" },
+      { icon: "🔴", label: "Credit Note", href: "/finance/credit-note" },
+      { icon: "🟢", label: "Debit Note", href: "/finance/debit-note" },
     ],
   },
   {
     label: "Books",
     items: [
+      { icon: "🧾", label: "Sales List", href: "/finance/sales" },
       { icon: "📋", label: "Journal Entries", href: "/finance/journals" },
       { icon: "📒", label: "Account Ledger", href: "/finance/ledger" },
       { icon: "📥", label: "Receivables (AR)", href: "/finance/receivables" },
@@ -48,6 +51,8 @@ const NAV_GROUPS = [
     items: [
       { icon: "📊", label: "Chart of Accounts", href: "/finance/chart-of-accounts" },
       { icon: "👥", label: "Contacts", href: "/finance/contacts" },
+      { icon: "📅", label: "Financial Years", href: "/finance/fy" },
+      { icon: "🫂", label: "Team & Access", href: "/finance/team" },
       { icon: "⚙️", label: "Business Setup", href: "/finance/setup" },
     ],
   },
