@@ -233,12 +233,17 @@ export default function BusinessSetup() {
   return (
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 900, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+          <span>🛩️</span> FrePilot
+        </Link>
         <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Business Setup</span>
+        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Set Up Your Business</span>
       </nav>
 
       <div style={{ maxWidth: 640, margin: "3rem auto", padding: "0 1.5rem" }}>
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <div style={{ fontSize: "0.8rem", color: "rgba(237,232,220,0.4)", letterSpacing: "0.05em" }}>You Build, We Pilot — let's get your books ready</div>
+        </div>
         {/* Step indicator */}
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2.5rem" }}>
           {steps.map((s, i) => (

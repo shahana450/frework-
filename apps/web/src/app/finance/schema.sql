@@ -230,7 +230,19 @@ CREATE POLICY "admin_businesses" ON fw_fin_businesses FOR ALL USING (
   auth.email() IN ('admin.frework@gmail.com', 'auditmanagercswa@gmail.com')
 );
 
--- 11. Virtual CA Chat History
+-- 11. Team Members
+CREATE TABLE IF NOT EXISTS fw_fin_team_members (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at timestamptz DEFAULT now(),
+  business_id uuid REFERENCES fw_fin_businesses(id) ON DELETE CASCADE,
+  invited_email text NOT NULL,
+  role text NOT NULL DEFAULT 'viewer', -- admin | accountant | ca_reviewer | viewer
+  status text DEFAULT 'pending', -- pending | active | removed
+  invited_by uuid REFERENCES auth.users(id),
+  UNIQUE(business_id, invited_email)
+);
+
+-- 12. Virtual CA Chat History
 CREATE TABLE IF NOT EXISTS fw_fin_virtual_ca_chats (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   created_at timestamptz DEFAULT now(),
@@ -239,15 +251,21 @@ CREATE TABLE IF NOT EXISTS fw_fin_virtual_ca_chats (
   assistant_reply text NOT NULL
 );
 
+ALTER TABLE fw_fin_team_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fw_fin_virtual_ca_chats ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "team_owner" ON fw_fin_team_members FOR ALL USING (
+  business_id IN (SELECT id FROM fw_fin_businesses WHERE owner_id = auth.uid())
+);
 
 CREATE POLICY "ca_chat_owner" ON fw_fin_virtual_ca_chats FOR ALL USING (
   business_id IN (SELECT id FROM fw_fin_businesses WHERE owner_id = auth.uid())
 );
 
+-- Add contact_id to journals (if not exists)
+ALTER TABLE fw_fin_journals ADD COLUMN IF NOT EXISTS contact_id uuid REFERENCES fw_fin_contacts(id);
+
 -- ============================================================
 -- STORAGE BUCKET (run separately if needed)
 -- ============================================================
--- INSERT INTO storage.buckets (id, name, public) VALUES ('fw-finance-docs', 'fw-finance-docs', false);
--- CREATE POLICY "owner_upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'fw-finance-docs' AND auth.uid() IS NOT NULL);
--- CREATE POLICY "owner_read" ON storage.objects FOR SELECT USING (bucket_id = 'fw-finance-docs' AND auth.uid() IS NOT NULL);
+INSERT INTO storage.buckets (id, name, public) VALUES ('fw-finance-docs', 'fw-finance-docs', false) ON CONFLICT DO NOTHING;

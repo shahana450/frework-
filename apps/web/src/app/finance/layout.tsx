@@ -93,8 +93,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         <div style={{ padding: "0 12px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(237,232,220,0.07)", flexShrink: 0 }}>
           {!collapsed && (
             <Link href="/finance" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "1.1rem" }}>📊</span>
-              <span style={{ fontWeight: 900, fontSize: "0.88rem", color: "#C9A84C", letterSpacing: "-0.02em" }}>Finance</span>
+              <span style={{ fontSize: "1.1rem" }}>🛩️</span>
+              <span style={{ fontWeight: 900, fontSize: "0.88rem", color: "#C9A84C", letterSpacing: "-0.02em" }}>FrePilot</span>
             </Link>
           )}
           <button onClick={() => setCollapsed(c => !c)} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.3)", cursor: "pointer", padding: 4, borderRadius: 4, fontSize: "0.9rem", marginLeft: collapsed ? "auto" : 0, marginRight: collapsed ? "auto" : 0 }}>

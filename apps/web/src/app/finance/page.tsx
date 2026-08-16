@@ -1,51 +1,44 @@
-﻿"use client";
+"use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
-type Business = {
-  id: string;
-  name: string;
-  gstin: string | null;
-  gst_registration_type: string;
-};
+type Business = { id: string; name: string; gstin: string | null; gst_registration_type: string; state: string | null };
+type Stats = { sales: number; expenses: number; drafts: number; pendingTds: number; revenue: number; profit: number };
 
-type DashStats = {
-  totalDocs: number;
-  pendingReview: number;
-  totalJournals: number;
-  pendingJournals: number;
-};
+const QUICK = [
+  { icon: "🧾", label: "New Invoice", href: "/finance/sales/new", color: "#C9A84C" },
+  { icon: "📦", label: "Purchase Bill", href: "/finance/purchases/new", color: "#60a5fa" },
+  { icon: "💸", label: "Record Expense", href: "/finance/expenses", color: "#a78bfa" },
+  { icon: "📤", label: "Upload Doc", href: "/finance/upload", color: "#4ade80" },
+  { icon: "💳", label: "Payment Entry", href: "/finance/payment", color: "#fb923c" },
+  { icon: "🛩️", label: "Ask FrePilot", href: "/finance/virtual-ca", color: "#C9A84C" },
+];
 
-type RecentDoc = {
-  id: string;
-  file_name: string;
-  doc_type: string | null;
-  status: string;
-  created_at: string;
-  ai_summary: { vendor?: string; amount?: number; date?: string } | null;
-};
+const MODULES = [
+  { icon: "📈", label: "P&L / Reports", desc: "Income statement, balance sheet, cash flow", href: "/finance/reports" },
+  { icon: "🏛️", label: "GST Returns", desc: "GSTR-1, GSTR-3B — auto-prepared", href: "/finance/gst" },
+  { icon: "🔖", label: "TDS Tracker", desc: "Section-wise TDS, due dates, calculator", href: "/finance/tds" },
+  { icon: "📒", label: "Journal Entries", desc: "Double-entry ledger — Dr = Cr enforced", href: "/finance/journals" },
+  { icon: "🔴", label: "Credit Notes", desc: "Issue CN to customers — sales returns", href: "/finance/credit-note" },
+  { icon: "🟢", label: "Debit Notes", desc: "Issue DN to vendors — purchase returns", href: "/finance/debit-note" },
+  { icon: "📥", label: "Receivables (AR)", desc: "Who owes you money, aging report", href: "/finance/receivables" },
+  { icon: "📤", label: "Payables (AP)", desc: "Who you owe, vendor aging", href: "/finance/payables" },
+  { icon: "🏦", label: "Bank Reconciliation", desc: "Import CSV, auto-match entries", href: "/finance/banking" },
+  { icon: "🔄", label: "Tally Export", desc: "Export as Tally-compatible XML", href: "/finance/tally" },
+  { icon: "👥", label: "Contacts", desc: "Customers & vendors with opening balances", href: "/finance/contacts" },
+  { icon: "📊", label: "Chart of Accounts", desc: "Indian account heads structure", href: "/finance/chart-of-accounts" },
+];
 
-const DOC_TYPE_LABEL: Record<string, string> = {
-  invoice: "Sales Invoice", bill: "Purchase Bill", receipt: "Receipt",
-  bank_statement: "Bank Statement", salary_slip: "Salary Slip", other: "Document",
-};
-
-const STATUS_COLOR: Record<string, string> = {
-  pending: "#C9A84C", processing: "#60a5fa", reviewed: "#a78bfa",
-  posted: "#4ade80", rejected: "#f87171",
-};
-
-export default function FinanceDashboard() {
+export default function FrePilotDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [activeBiz, setActiveBiz] = useState<Business | null>(null);
-  const [stats, setStats] = useState<DashStats>({ totalDocs: 0, pendingReview: 0, totalJournals: 0, pendingJournals: 0 });
-  const [recentDocs, setRecentDocs] = useState<RecentDoc[]>([]);
+  const [stats, setStats] = useState<Stats>({ sales: 0, expenses: 0, drafts: 0, pendingTds: 0, revenue: 0, profit: 0 });
   const [loading, setLoading] = useState(true);
-  const [currentFY, setCurrentFY] = useState("2024-25");
+  const [fyLabel, setFyLabel] = useState("2025-26");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -56,248 +49,169 @@ export default function FinanceDashboard() {
   }, []);
 
   async function loadBusinesses(uid: string) {
-    const { data } = await supabase
-      .from("fw_fin_businesses")
-      .select("id,name,gstin,gst_registration_type")
-      .eq("owner_id", uid)
-      .eq("is_active", true)
-      .order("created_at");
-    if (!data || data.length === 0) {
-      setLoading(false);
-      return;
-    }
+    const { data } = await supabase.from("fw_fin_businesses")
+      .select("id,name,gstin,gst_registration_type,state").eq("owner_id", uid).eq("is_active", true).order("created_at");
+    if (!data || data.length === 0) { setLoading(false); return; }
     setBusinesses(data);
     const saved = localStorage.getItem(`fw_fin_biz_${uid}`);
     const biz = data.find(b => b.id === saved) || data[0];
     setActiveBiz(biz);
-    loadStats(biz.id);
+    loadStats(biz.id, uid);
   }
 
-  async function loadStats(bizId: string) {
+  async function loadStats(bizId: string, uid: string) {
     setLoading(true);
-    const [docsRes, journalRes, recentRes] = await Promise.all([
-      supabase.from("fw_fin_documents").select("id,status").eq("business_id", bizId),
-      supabase.from("fw_fin_journals").select("id,status").eq("business_id", bizId),
-      supabase.from("fw_fin_documents")
-        .select("id,file_name,doc_type,status,created_at,ai_summary")
-        .eq("business_id", bizId)
-        .order("created_at", { ascending: false })
-        .limit(6),
+    const [fyRes, journalsRes] = await Promise.all([
+      supabase.from("fw_fin_financial_years").select("label").eq("business_id", bizId).eq("is_current", true).single(),
+      supabase.from("fw_fin_journals").select("type,status,total_credit,total_debit").eq("business_id", bizId),
     ]);
-    const docs = docsRes.data ?? [];
-    const journals = journalRes.data ?? [];
+    if (fyRes.data) setFyLabel(fyRes.data.label);
+    const journals = journalsRes.data ?? [];
+    const posted = journals.filter(j => j.status === "posted");
+    const salesRev = posted.filter(j => j.type === "sales").reduce((s, j) => s + (j.total_credit || 0), 0);
+    const expTotal = posted.filter(j => j.type === "purchase" || j.type === "journal").reduce((s, j) => s + (j.total_debit || 0), 0);
     setStats({
-      totalDocs: docs.length,
-      pendingReview: docs.filter(d => d.status === "pending" || d.status === "reviewed").length,
-      totalJournals: journals.length,
-      pendingJournals: journals.filter(j => j.status === "draft").length,
+      sales: posted.filter(j => j.type === "sales").length,
+      expenses: posted.filter(j => j.type === "purchase").length,
+      drafts: journals.filter(j => j.status === "draft").length,
+      pendingTds: 0,
+      revenue: salesRev,
+      profit: salesRev - expTotal,
     });
-    setRecentDocs(recentRes.data ?? []);
     setLoading(false);
   }
 
   function switchBiz(biz: Business) {
     setActiveBiz(biz);
-    if (user) localStorage.setItem(`fw_fin_biz_${user.id}`, biz.id);
-    loadStats(biz.id);
+    if (user) { localStorage.setItem(`fw_fin_biz_${user.id}`, biz.id); loadStats(biz.id, user.id); }
   }
 
   const now = new Date();
-  const greeting = now.getHours() < 12 ? "Good morning" : now.getHours() < 17 ? "Good afternoon" : "Good evening";
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const fmt = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  // ─── No business yet ───────────────────────────────────────────────────────
+  if (!loading && businesses.length === 0) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "2rem" }}>
+        <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>🛩️</div>
+        <h1 style={{ fontSize: "2rem", fontWeight: 900, color: "#C9A84C", margin: "0 0 0.4rem" }}>Welcome to FrePilot</h1>
+        <p style={{ color: "rgba(237,232,220,0.5)", fontSize: "1rem", maxWidth: 400, lineHeight: 1.6, margin: "0 0 2rem" }}>
+          Your AI accountant is ready. Set up your business in 2 minutes and let FrePilot handle the books.
+        </p>
+        <Link href="/finance/setup" style={{ background: "#C9A84C", color: "#070C1A", padding: "14px 36px", borderRadius: 10, fontWeight: 800, textDecoration: "none", fontSize: "1rem", letterSpacing: "0.02em" }}>
+          Set Up My Business →
+        </Link>
+        <div style={{ marginTop: "3rem", display: "flex", gap: "2rem", color: "rgba(237,232,220,0.35)", fontSize: "0.78rem" }}>
+          {["GST-ready invoicing", "Double-entry accounting", "TDS tracking", "Financial reports"].map(f => (
+            <span key={f}>✓ {f}</span>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      {/* Top Nav */}
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1.5rem", height: 56 }}>
-        <Link href="/dashboard" style={{ color: "#C9A84C", fontWeight: 700, fontSize: "1.1rem", textDecoration: "none", letterSpacing: "0.05em" }}>
-          FreWork
-        </Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>|</span>
-        <span style={{ color: "#C9A84C", fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>Finance</span>
+      {/* Top bar */}
+      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.15)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56, position: "sticky", top: 0, background: "rgba(7,12,26,0.95)", backdropFilter: "blur(8px)", zIndex: 30 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: "1.2rem" }}>🛩️</span>
+          <span style={{ fontWeight: 900, fontSize: "1rem", color: "#C9A84C", letterSpacing: "-0.01em" }}>FrePilot</span>
+          <span style={{ fontSize: "0.65rem", color: "rgba(201,168,76,0.5)", fontWeight: 500, marginLeft: 2 }}>by FreWork</span>
+        </div>
         <div style={{ flex: 1 }} />
         {businesses.length > 1 && (
-          <select
-            value={activeBiz?.id ?? ""}
-            onChange={e => { const b = businesses.find(x => x.id === e.target.value); if (b) switchBiz(b); }}
-            style={{ background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)", color: "#EDE8DC", padding: "4px 10px", borderRadius: 6, fontSize: "0.85rem", cursor: "pointer" }}
-          >
+          <select value={activeBiz?.id ?? ""} onChange={e => { const b = businesses.find(x => x.id === e.target.value); if (b) switchBiz(b); }}
+            style={{ background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", color: "#EDE8DC", padding: "4px 10px", borderRadius: 6, fontSize: "0.82rem", cursor: "pointer" }}>
             {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         )}
-        <Link href="/finance/upload" style={{ background: "#C9A84C", color: "#070C1A", padding: "6px 16px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", textDecoration: "none", letterSpacing: "0.05em" }}>
-          + Upload
+        <Link href="/finance/virtual-ca" style={{ background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.3)", color: "#C9A84C", padding: "6px 14px", borderRadius: 7, fontSize: "0.8rem", textDecoration: "none", fontWeight: 600 }}>
+          🛩️ Ask FrePilot
         </Link>
-        <Link href="/dashboard" style={{ color: "rgba(237,232,220,0.5)", fontSize: "0.8rem", textDecoration: "none" }}>← Dashboard</Link>
+        <Link href="/finance/setup" style={{ color: "rgba(237,232,220,0.35)", fontSize: "0.78rem", textDecoration: "none" }}>⚙</Link>
       </nav>
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem" }}>
-        {/* No business state */}
-        {!loading && businesses.length === 0 && (
-          <div style={{ textAlign: "center", padding: "6rem 2rem" }}>
-            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🏢</div>
-            <h2 style={{ color: "#C9A84C", marginBottom: "0.5rem" }}>Set Up Your Business</h2>
-            <p style={{ color: "rgba(237,232,220,0.6)", marginBottom: "2rem" }}>Start by adding your business details to enable AI-powered bookkeeping.</p>
-            <Link href="/finance/setup" style={{ background: "#C9A84C", color: "#070C1A", padding: "12px 32px", borderRadius: 8, fontWeight: 700, textDecoration: "none", fontSize: "0.95rem" }}>
-              Get Started →
-            </Link>
-          </div>
-        )}
-
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
         {activeBiz && (
           <>
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem" }}>
-              <div>
-                <div style={{ color: "rgba(237,232,220,0.5)", fontSize: "0.8rem", marginBottom: "0.25rem" }}>{greeting}</div>
-                <h1 style={{ margin: 0, fontSize: "1.6rem", fontWeight: 700 }}>{activeBiz.name}</h1>
-                {activeBiz.gstin && (
-                  <div style={{ color: "rgba(237,232,220,0.4)", fontSize: "0.78rem", marginTop: "0.2rem" }}>
-                    GSTIN: {activeBiz.gstin} · FY {currentFY}
-                  </div>
-                )}
+            <div style={{ marginBottom: "2rem" }}>
+              <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)", marginBottom: "0.25rem" }}>{greeting} · FY {fyLabel}</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "1rem", flexWrap: "wrap" }}>
+                <h1 style={{ margin: 0, fontSize: "1.6rem", fontWeight: 800 }}>{activeBiz.name}</h1>
+                {activeBiz.gstin && <span style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.35)", fontFamily: "monospace" }}>GSTIN {activeBiz.gstin}</span>}
               </div>
-              <Link href="/finance/setup" style={{ color: "rgba(237,232,220,0.4)", fontSize: "0.78rem", textDecoration: "none" }}>
-                ⚙ Settings
-              </Link>
             </div>
 
-            {/* KPI Cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "2rem" }}>
+            {/* FrePilot AI Banner */}
+            <Link href="/finance/virtual-ca" style={{ textDecoration: "none", display: "block", marginBottom: "1.5rem" }}>
+              <div style={{ background: "linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(201,168,76,0.04) 100%)", border: "1px solid rgba(201,168,76,0.25)", borderRadius: 14, padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1.25rem", cursor: "pointer", transition: "border-color 0.2s" }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(201,168,76,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>🛩️</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, color: "#C9A84C", fontSize: "0.95rem" }}>FrePilot AI — Your Virtual Accountant</div>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.5)", marginTop: "0.2rem" }}>Ask anything — GST rates, TDS sections, journal entries, compliance deadlines. Powered by Claude AI.</div>
+                </div>
+                <div style={{ color: "rgba(201,168,76,0.5)", fontSize: "1.2rem", flexShrink: 0 }}>→</div>
+              </div>
+            </Link>
+
+            {/* KPI row */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
               {[
-                { label: "Documents Uploaded", value: stats.totalDocs, sub: "All time", icon: "📄", link: null },
-                { label: "Pending AI Review", value: stats.pendingReview, sub: "Needs your attention", icon: "🤖", link: "/finance/ai-review", alert: stats.pendingReview > 0 },
-                { label: "Journal Entries", value: stats.totalJournals, sub: "Total posted", icon: "📒", link: "/finance/journals" },
-                { label: "Draft Journals", value: stats.pendingJournals, sub: "Not yet posted", icon: "✏️", link: "/finance/journals", alert: stats.pendingJournals > 0 },
-              ].map((kpi, i) => (
-                <div key={i} style={{
-                  background: kpi.alert ? "rgba(201,168,76,0.08)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${kpi.alert ? "rgba(201,168,76,0.3)" : "rgba(237,232,220,0.08)"}`,
-                  borderRadius: 12, padding: "1.2rem", position: "relative", overflow: "hidden"
-                }}>
-                  <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{kpi.icon}</div>
-                  <div style={{ fontSize: "1.8rem", fontWeight: 800, color: kpi.alert ? "#C9A84C" : "#EDE8DC", fontVariantNumeric: "tabular-nums" }}>
-                    {loading ? "—" : kpi.value}
+                { label: "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#4ade80", icon: "📈" },
+                { label: "Net Profit", value: loading ? "—" : fmt(stats.profit), color: stats.profit >= 0 ? "#4ade80" : "#f87171", icon: "💰" },
+                { label: "Sales Invoices", value: loading ? "—" : String(stats.sales), color: "#C9A84C", icon: "🧾" },
+                { label: "Draft Entries", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#fb923c" : "rgba(237,232,220,0.4)", icon: "✏️", alert: stats.drafts > 0 },
+              ].map(k => (
+                <div key={k.label} style={{ background: k.alert ? "rgba(251,146,60,0.06)" : "rgba(255,255,255,0.025)", border: `1px solid ${k.alert ? "rgba(251,146,60,0.2)" : "rgba(237,232,220,0.07)"}`, borderRadius: 12, padding: "1rem 1.1rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                    <span style={{ fontSize: "0.6rem", color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>{k.label}</span>
+                    <span style={{ fontSize: "0.9rem" }}>{k.icon}</span>
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.5)", marginTop: "0.2rem" }}>{kpi.label}</div>
-                  <div style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.3)", marginTop: "0.15rem" }}>{kpi.sub}</div>
-                  {kpi.link && (
-                    <Link href={kpi.link} style={{ position: "absolute", inset: 0, borderRadius: 12 }} />
-                  )}
+                  <div style={{ fontSize: "1.4rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>{k.value}</div>
                 </div>
               ))}
             </div>
 
-            {/* Quick Actions */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "2rem" }}>
-              {[
-                { icon: "📤", title: "Upload Anything", desc: "Invoice, bill, receipt, bank statement — AI extracts and categorizes", href: "/finance/upload", gold: true },
-                { icon: "🔍", title: "AI Review Queue", desc: "Review AI-suggested journal entries before posting", href: "/finance/ai-review" },
-                { icon: "📋", title: "New Journal Entry", desc: "Manual double-entry journal with Dr = Cr enforcement", href: "/finance/journals/new" },
-                { icon: "📈", title: "Financial Reports", desc: "P&L, Balance Sheet, Trial Balance", href: "/finance/reports" },
-                { icon: "🏛️", title: "GST Returns", desc: "GSTR-1, GSTR-3B auto-prepared from posted entries", href: "/finance/gst" },
-                { icon: "🔄", title: "Tally Bridge", desc: "Export journal entries as Tally-compatible XML", href: "/finance/tally" },
-                { icon: "🏦", title: "Bank Reconciliation", desc: "Import CSV bank statement and auto-match entries", href: "/finance/banking" },
-                { icon: "👥", title: "Contacts", desc: "Manage customers and vendors with opening balances", href: "/finance/contacts" },
-                { icon: "📊", title: "Chart of Accounts", desc: "Manage account heads with Indian structure", href: "/finance/chart-of-accounts" },
-                { icon: "🧾", title: "Sales Invoice", desc: "Raise a sales invoice — GST auto-calculated, journal auto-created", href: "/finance/sales/new" },
-                { icon: "📦", title: "Purchase Bill", desc: "Record vendor bill with GST ITC — CGST/SGST/IGST auto-split", href: "/finance/purchases/new" },
-                { icon: "💸", title: "Record Expense", desc: "Quick expense entry with GST ITC and TDS support", href: "/finance/expenses" },
-                { icon: "📥", title: "Receivables (AR)", desc: "Aging report — customers who owe you money", href: "/finance/receivables" },
-                { icon: "📤", title: "Payables (AP)", desc: "Aging report — vendors you owe money to", href: "/finance/payables" },
-                { icon: "📒", title: "Account Ledger", desc: "View running balance and transactions for any account", href: "/finance/ledger" },
-                { icon: "🔍", title: "AI Insights", desc: "Revenue vs expenses chart, profit margin, smart alerts", href: "/finance/insights" },
-                { icon: "🛩️", title: "FrePilot", desc: "You Build We Pilot — AI co-pilot for GST, TDS, ITR, compliance", href: "/finance/virtual-ca" },
-              ].map((action, i) => (
-                <Link key={i} href={action.href} style={{ textDecoration: "none" }}>
-                  <div style={{
-                    background: action.gold ? "rgba(201,168,76,0.1)" : "rgba(255,255,255,0.03)",
-                    border: `1px solid ${action.gold ? "rgba(201,168,76,0.35)" : "rgba(237,232,220,0.08)"}`,
-                    borderRadius: 12, padding: "1.2rem", cursor: "pointer",
-                    transition: "border-color 0.2s",
-                  }}>
-                    <div style={{ fontSize: "1.4rem", marginBottom: "0.5rem" }}>{action.icon}</div>
-                    <div style={{ fontWeight: 600, fontSize: "0.9rem", color: action.gold ? "#C9A84C" : "#EDE8DC", marginBottom: "0.3rem" }}>{action.title}</div>
-                    <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", lineHeight: 1.4 }}>{action.desc}</div>
-                  </div>
-                </Link>
-              ))}
+            {/* Quick actions */}
+            <div style={{ marginBottom: "2rem" }}>
+              <div style={{ fontSize: "0.65rem", color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.75rem" }}>Quick Actions</div>
+              <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap" }}>
+                {QUICK.map(q => (
+                  <Link key={q.href} href={q.href} style={{ textDecoration: "none" }}>
+                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, padding: "0.65rem 1rem", display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: "1rem" }}>{q.icon}</span>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 600, color: q.color }}>{q.label}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
 
-            {/* Recent Documents */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, overflow: "hidden" }}>
-              <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid rgba(237,232,220,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>Recent Uploads</span>
-                <Link href="/finance/upload" style={{ color: "#C9A84C", fontSize: "0.78rem", textDecoration: "none" }}>View all →</Link>
+            {/* Modules grid */}
+            <div style={{ marginBottom: "0.75rem" }}>
+              <div style={{ fontSize: "0.65rem", color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.75rem" }}>All Modules</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
+                {MODULES.map(m => (
+                  <Link key={m.href} href={m.href} style={{ textDecoration: "none" }}>
+                    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 10, padding: "0.9rem 1rem", display: "flex", gap: "0.75rem", alignItems: "flex-start", cursor: "pointer" }}>
+                      <span style={{ fontSize: "1.1rem", flexShrink: 0, marginTop: 1 }}>{m.icon}</span>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: "0.83rem", color: "#EDE8DC", marginBottom: "0.2rem" }}>{m.label}</div>
+                        <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.35)", lineHeight: 1.4 }}>{m.desc}</div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
               </div>
-              {loading ? (
-                <div style={{ padding: "2rem", textAlign: "center", color: "rgba(237,232,220,0.3)", fontSize: "0.85rem" }}>Loading…</div>
-              ) : recentDocs.length === 0 ? (
-                <div style={{ padding: "3rem", textAlign: "center" }}>
-                  <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>📂</div>
-                  <div style={{ color: "rgba(237,232,220,0.4)", fontSize: "0.85rem" }}>No documents yet. Upload your first invoice or bill.</div>
-                  <Link href="/finance/upload" style={{ display: "inline-block", marginTop: "1rem", color: "#C9A84C", fontSize: "0.85rem" }}>Upload now →</Link>
-                </div>
-              ) : (
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ background: "rgba(255,255,255,0.02)" }}>
-                      {["File", "Type", "Vendor / Details", "Amount", "Status", "Date"].map(h => (
-                        <th key={h} style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentDocs.map(doc => (
-                      <tr key={doc.id} style={{ borderTop: "1px solid rgba(237,232,220,0.05)" }}>
-                        <td style={{ padding: "0.75rem 1rem", fontSize: "0.82rem", color: "#EDE8DC", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {doc.file_name}
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", fontSize: "0.78rem" }}>
-                          <span style={{ background: "rgba(201,168,76,0.1)", color: "#C9A84C", padding: "2px 8px", borderRadius: 4, fontSize: "0.72rem" }}>
-                            {DOC_TYPE_LABEL[doc.doc_type ?? ""] ?? "—"}
-                          </span>
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", fontSize: "0.82rem", color: "rgba(237,232,220,0.6)" }}>
-                          {doc.ai_summary?.vendor ?? "—"}
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "#EDE8DC" }}>
-                          {doc.ai_summary?.amount ? `₹${doc.ai_summary.amount.toLocaleString("en-IN")}` : "—"}
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem" }}>
-                          <span style={{
-                            color: STATUS_COLOR[doc.status] ?? "#EDE8DC",
-                            background: `${STATUS_COLOR[doc.status]}18`,
-                            padding: "2px 8px", borderRadius: 4, fontSize: "0.72rem", fontWeight: 600
-                          }}>
-                            {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
-                          </span>
-                        </td>
-                        <td style={{ padding: "0.75rem 1rem", fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>
-                          {new Date(doc.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
             </div>
 
-            {/* Bottom Info Bar */}
-            <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-              <div style={{ flex: 1, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, padding: "1rem 1.25rem" }}>
-                <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.4rem" }}>Current Financial Year</div>
-                <div style={{ fontWeight: 700, color: "#C9A84C" }}>FY {currentFY}</div>
-                <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", marginTop: "0.2rem" }}>1 Apr 2024 – 31 Mar 2025</div>
-              </div>
-              <div style={{ flex: 1, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, padding: "1rem 1.25rem" }}>
-                <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.4rem" }}>GST Status</div>
-                <div style={{ fontWeight: 700, color: "#4ade80" }}>{activeBiz.gst_registration_type.charAt(0).toUpperCase() + activeBiz.gst_registration_type.slice(1)}</div>
-                <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", marginTop: "0.2rem" }}>{activeBiz.gstin || "GSTIN not set"}</div>
-              </div>
-              <div style={{ flex: 1, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, padding: "1rem 1.25rem" }}>
-                <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.4rem" }}>Add Another Business</div>
-                <Link href="/finance/setup" style={{ color: "#C9A84C", fontSize: "0.85rem", textDecoration: "none", fontWeight: 600 }}>+ New Business →</Link>
-              </div>
+            {/* Footer */}
+            <div style={{ marginTop: "2rem", textAlign: "center", fontSize: "0.72rem", color: "rgba(237,232,220,0.2)" }}>
+              FrePilot · Powered by Claude AI · {activeBiz.gstin ? `GSTIN ${activeBiz.gstin}` : "GST not configured"} · FY {fyLabel}
             </div>
           </>
         )}
