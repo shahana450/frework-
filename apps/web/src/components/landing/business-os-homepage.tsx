@@ -456,128 +456,110 @@ export function BusinessOSHomepage() {
               </div>
             </motion.div>
 
-            {/* PILLAR 2 — COWORKING */}
+            {/* PILLAR 2 — FREPILOT */}
             <motion.div initial={{ opacity:0, x:24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.25, duration:0.5 }}>
-              <div className="relative rounded-3xl overflow-hidden h-full transition-all hover:scale-[1.01] hover:shadow-2xl"
-                style={{ background:"linear-gradient(160deg,#100D02 0%,#1C1600 100%)", border:"1px solid rgba(201,168,76,0.28)", boxShadow:"0 8px 48px rgba(201,168,76,0.1)" }}>
-                <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#C9A84C,#E8C97A,#C9A84C)" }} />
-                {/* List Your Space — hero banner */}
-                <Link href="/coworking/list"
-                  className="relative flex items-center justify-between gap-4 px-6 py-5 group overflow-hidden transition-all hover:brightness-110"
-                  style={{ background:"linear-gradient(110deg,rgba(201,168,76,0.22) 0%,rgba(201,168,76,0.08) 60%,rgba(201,168,76,0.15) 100%)", borderBottom:"1px solid rgba(201,168,76,0.25)" }}>
-                  {/* shimmer sweep */}
-                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none"
-                    style={{ background:"linear-gradient(90deg,transparent,rgba(201,168,76,0.12),transparent)" }} />
-                  <div className="flex items-center gap-4 relative z-10">
-                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
-                      style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", boxShadow:"0 4px 16px rgba(201,168,76,0.45)" }}>🏛️</div>
-                    <div>
-                      <p className="text-sm font-black leading-none mb-1" style={{ color:"#E8C97A" }}>Own a coworking space?</p>
-                      <p className="text-[11px] leading-relaxed" style={{ color:"rgba(201,168,76,0.6)" }}>List it free · Zero commission · Leads straight to your WhatsApp</p>
-                    </div>
-                  </div>
-                  <div className="flex-shrink-0 relative z-10">
-                    <span className="flex items-center gap-1.5 text-xs font-black px-4 py-2.5 rounded-xl transition-all group-hover:scale-105 group-hover:shadow-lg"
-                      style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff", boxShadow:"0 4px 18px rgba(201,168,76,0.45)" }}>
-                      List Free →
-                    </span>
-                  </div>
-                </Link>
-                <div className="p-7 md:p-8">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
-                      style={{ background:"rgba(201,168,76,0.12)", border:"1px solid rgba(201,168,76,0.28)" }}>🏛️</div>
-                    <div>
-                      <p className="text-[9px] font-black tracking-[0.3em] uppercase" style={{ color:"#C9A84C" }}>Premium Coworking</p>
-                      <p className="text-[11px] font-semibold" style={{ color:"rgba(148,163,184,0.5)" }}>Verified Spaces Across India</p>
-                    </div>
-                  </div>
-                  <h2 className="font-black mb-3 leading-[1.1]"
-                    style={{ fontSize:"clamp(1.7rem,3vw,2.5rem)", color:"#EDE8DC", letterSpacing:"-0.02em" }}>
-                    Your Ideal<br/>Workspace.
-                  </h2>
-                  <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(148,163,184,0.7)" }}>
-                    Hot desks, private cabins and meeting rooms across 8 cities. Every space personally verified before listing.
-                  </p>
-                  <div className="grid grid-cols-2 gap-y-2 gap-x-3 mb-6">
-                    {["Hot Desks","Private Cabins","Meeting Rooms","Event Spaces","8 Cities","200+ Spaces"].map(s => (
-                      <div key={s} className="flex items-center gap-2 text-xs font-semibold" style={{ color:"rgba(203,213,225,0.7)" }}>
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background:"#C9A84C" }} />{s}
+              <button onClick={handleFrePilotClick} className="w-full h-full text-left group" style={{ background:"none", border:"none", padding:0, cursor:"pointer" }}>
+                <div className="relative rounded-3xl overflow-hidden h-full transition-all hover:scale-[1.01] hover:shadow-2xl"
+                  style={{ background:"linear-gradient(160deg,#0C1005 0%,#141A02 100%)", border:"1px solid rgba(201,168,76,0.32)", boxShadow:"0 8px 48px rgba(201,168,76,0.1)" }}>
+                  <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#C9A84C,#E8C97A,#C9A84C)" }} />
+                  {/* NEW badge banner */}
+                  <div className="relative flex items-center justify-between gap-4 px-6 py-4 overflow-hidden"
+                    style={{ background:"linear-gradient(110deg,rgba(201,168,76,0.18) 0%,rgba(201,168,76,0.06) 60%,rgba(201,168,76,0.12) 100%)", borderBottom:"1px solid rgba(201,168,76,0.2)" }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
+                        style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", boxShadow:"0 4px 14px rgba(201,168,76,0.4)" }}>🛩️</div>
+                      <div>
+                        <p className="text-sm font-black leading-none mb-0.5" style={{ color:"#E8C97A" }}>FrePilot — AI Accountant</p>
+                        <p className="text-[11px]" style={{ color:"rgba(201,168,76,0.55)" }}>You Build, We Pilot · ₹499/month</p>
                       </div>
-                    ))}
+                    </div>
+                    <span className="text-[9px] font-black px-2.5 py-1 rounded-full flex-shrink-0"
+                      style={{ background:"rgba(201,168,76,0.15)", color:"#C9A84C", border:"1px solid rgba(201,168,76,0.3)" }}>NEW</span>
                   </div>
-                  <div className="flex gap-0 mb-6 rounded-2xl overflow-hidden border" style={{ borderColor:"rgba(201,168,76,0.14)", background:"rgba(201,168,76,0.07)" }}>
-                    {[["₹350","From /day"],["200+","Spaces"],["8","Cities"]].map(([n,l],i,arr) => (
-                      <div key={l} className="flex-1 text-center py-3" style={{ borderRight:i<arr.length-1?"1px solid rgba(201,168,76,0.12)":"none" }}>
-                        <p className="text-sm font-black leading-none" style={{ color:"#C9A84C" }}>{n}</p>
-                        <p className="text-[9px] font-semibold mt-0.5" style={{ color:"rgba(148,163,184,0.45)" }}>{l}</p>
+                  <div className="p-7 md:p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
+                        style={{ background:"rgba(201,168,76,0.12)", border:"1px solid rgba(201,168,76,0.28)" }}>🤖</div>
+                      <div>
+                        <p className="text-[9px] font-black tracking-[0.3em] uppercase" style={{ color:"#C9A84C" }}>AI-Powered Accounting</p>
+                        <p className="text-[11px] font-semibold" style={{ color:"rgba(148,163,184,0.5)" }}>Built for Indian SMBs</p>
                       </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2.5">
-                    <Link href="/coworking"
-                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all hover:opacity-90"
-                      style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff", boxShadow:"0 4px 20px rgba(201,168,76,0.35)" }}>
-                      Find a Space <ArrowRight className="w-4 h-4" />
-                    </Link>
-                    <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%20need%20help%20finding%20a%20coworking%20space.`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="px-4 py-3 rounded-2xl text-xs font-bold border flex items-center gap-1.5 transition-all hover:opacity-90"
-                      style={{ borderColor:"rgba(37,211,102,0.3)", color:"#25D366", background:"rgba(37,211,102,0.06)" }}>
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 flex-shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                      Book Visit
-                    </a>
+                    </div>
+                    <h2 className="font-black mb-3 leading-[1.1]"
+                      style={{ fontSize:"clamp(1.7rem,3vw,2.5rem)", color:"#EDE8DC", letterSpacing:"-0.02em" }}>
+                      Your books.<br/><span style={{ color:"#C9A84C" }}>Done right.</span>
+                    </h2>
+                    <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(148,163,184,0.7)" }}>
+                      GST invoicing, TDS tracking, P&amp;L reports and an AI CA co-pilot — all in one place. No accountant needed.
+                    </p>
+                    <div className="grid grid-cols-2 gap-y-2 gap-x-3 mb-6">
+                      {["GST Invoicing","AI Chat (Claude)","TDS Tracker","P&L & Balance Sheet","Journal Entries","Tally Export"].map(s => (
+                        <div key={s} className="flex items-center gap-2 text-xs font-semibold" style={{ color:"rgba(203,213,225,0.7)" }}>
+                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background:"#C9A84C" }} />{s}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-0 mb-6 rounded-2xl overflow-hidden border" style={{ borderColor:"rgba(201,168,76,0.14)", background:"rgba(201,168,76,0.07)" }}>
+                      {[["₹499","Per Month"],["∞","Transactions"],["AI","Powered"]].map(([n,l],i,arr) => (
+                        <div key={l} className="flex-1 text-center py-3" style={{ borderRight:i<arr.length-1?"1px solid rgba(201,168,76,0.12)":"none" }}>
+                          <p className="text-sm font-black leading-none" style={{ color:"#C9A84C" }}>{n}</p>
+                          <p className="text-[9px] font-semibold mt-0.5" style={{ color:"rgba(148,163,184,0.45)" }}>{l}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2.5">
+                      <span className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all group-hover:opacity-90"
+                        style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff", boxShadow:"0 4px 20px rgba(201,168,76,0.35)" }}>
+                        {loggedIn ? "Open FrePilot" : "Get Started"} <ArrowRight className="w-4 h-4" />
+                      </span>
+                      {!loggedIn && (
+                        <span className="px-4 py-3 rounded-2xl text-xs font-bold border flex items-center gap-1.5"
+                          style={{ borderColor:"rgba(201,168,76,0.25)", color:"rgba(201,168,76,0.6)", background:"rgba(201,168,76,0.05)" }}>
+                          Google Sign-in
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </button>
             </motion.div>
           </div>
 
-          {/* ═══ FREPILOT CARD ═══ */}
-          <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3, duration:0.5 }} className="mb-10">
-            <button onClick={handleFrePilotClick} className="w-full text-left group" style={{ background:"none", border:"none", padding:0, cursor:"pointer" }}>
-              <div className="relative rounded-3xl overflow-hidden transition-all duration-300 hover:scale-[1.005] hover:shadow-2xl"
-                style={{ background:"linear-gradient(160deg,#0C1005 0%,#141A02 100%)", border:"1px solid rgba(201,168,76,0.32)", boxShadow:"0 8px 48px rgba(201,168,76,0.08)" }}>
-                <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#C9A84C,#E8C97A,#C9A84C)" }} />
-                <div className="p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6">
-                  {/* Icon */}
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
-                    style={{ background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid rgba(201,168,76,0.3)" }}>
-                    🛩️
-                  </div>
-                  {/* Text */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1 flex-wrap">
-                      <p className="text-[9px] font-black tracking-[0.3em] uppercase" style={{ color:"#C9A84C" }}>FrePilot — AI Accountant</p>
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background:"rgba(201,168,76,0.12)", color:"#C9A84C", border:"1px solid rgba(201,168,76,0.25)" }}>NEW</span>
-                    </div>
-                    <h2 className="font-black mb-2 leading-[1.1]"
-                      style={{ fontSize:"clamp(1.4rem,3vw,2rem)", color:"#EDE8DC", letterSpacing:"-0.02em" }}>
-                      Your AI accountant. <span style={{ color:"#C9A84C" }}>₹499/month.</span>
-                    </h2>
-                    <p className="text-sm leading-relaxed mb-4" style={{ color:"rgba(148,163,184,0.7)", maxWidth:560 }}>
-                      GST-ready invoicing, double-entry accounting, TDS tracking, P&L reports, and an AI co-pilot that answers like a CA — all without hiring one.
-                    </p>
-                    <div className="flex flex-wrap gap-x-5 gap-y-1.5 mb-4">
-                      {["GST Invoicing","TDS Tracker","P&L & Balance Sheet","AI Chat (Claude)","Team Access","Tally Export"].map(f => (
-                        <span key={f} className="text-xs flex items-center gap-1.5" style={{ color:"rgba(201,168,76,0.65)" }}>
-                          <span className="w-1 h-1 rounded-full" style={{ background:"#C9A84C", display:"inline-block", flexShrink:0 }} />{f}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  {/* CTA */}
-                  <div className="flex-shrink-0 flex flex-col items-center gap-2">
-                    <span className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all group-hover:scale-105"
-                      style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff", boxShadow:"0 4px 20px rgba(201,168,76,0.35)" }}>
-                      {loggedIn ? "Open FrePilot" : "Get Started"} <ArrowRight className="w-4 h-4" />
-                    </span>
-                    {!loggedIn && <span className="text-[10px]" style={{ color:"rgba(148,163,184,0.4)" }}>Sign in with Google</span>}
-                    {loggedIn && userName && <span className="text-[10px]" style={{ color:"rgba(201,168,76,0.5)" }}>Welcome back, {userName}</span>}
+          {/* ═══ COWORKING — compact card below ═══ */}
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3, duration:0.5 }} className="mb-10">
+            <div className="relative rounded-3xl overflow-hidden transition-all hover:scale-[1.005] hover:shadow-2xl"
+              style={{ background:"linear-gradient(160deg,#100D02 0%,#1C1600 100%)", border:"1px solid rgba(201,168,76,0.22)", boxShadow:"0 8px 48px rgba(201,168,76,0.08)" }}>
+              <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#C9A84C,#E8C97A,#C9A84C)" }} />
+              <div className="p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
+                  style={{ background:"rgba(201,168,76,0.12)", border:"1px solid rgba(201,168,76,0.28)" }}>🏛️</div>
+                <div className="flex-1">
+                  <p className="text-[9px] font-black tracking-[0.3em] uppercase mb-1" style={{ color:"#C9A84C" }}>Premium Coworking</p>
+                  <h3 className="font-black mb-2 leading-tight" style={{ fontSize:"clamp(1.2rem,2.5vw,1.6rem)", color:"#EDE8DC", letterSpacing:"-0.02em" }}>
+                    Your Ideal Workspace.
+                  </h3>
+                  <div className="flex flex-wrap gap-x-5 gap-y-1 mb-0">
+                    {["Hot Desks from ₹350/day","Private Cabins","Meeting Rooms","8 Cities","200+ Spaces"].map(s => (
+                      <span key={s} className="text-xs flex items-center gap-1.5" style={{ color:"rgba(201,168,76,0.6)" }}>
+                        <span className="w-1 h-1 rounded-full" style={{ background:"#C9A84C", display:"inline-block" }} />{s}
+                      </span>
+                    ))}
                   </div>
                 </div>
+                <div className="flex gap-2.5 flex-shrink-0">
+                  <Link href="/coworking"
+                    className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all hover:opacity-90"
+                    style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff", boxShadow:"0 4px 16px rgba(201,168,76,0.3)" }}>
+                    Find a Space <ArrowRight className="w-4 h-4" />
+                  </Link>
+                  <Link href="/coworking/list"
+                    className="px-4 py-3 rounded-2xl text-xs font-bold border flex items-center gap-1.5 transition-all hover:opacity-90"
+                    style={{ borderColor:"rgba(201,168,76,0.25)", color:"rgba(201,168,76,0.7)", background:"rgba(201,168,76,0.05)" }}>
+                    List Free →
+                  </Link>
+                </div>
               </div>
-            </button>
+            </div>
           </motion.div>
 
           {/* Stats strip */}
