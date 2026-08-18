@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -115,7 +115,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
           {!collapsed && (
             <Link href="/finance" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: "1.1rem" }}>🛩️</span>
-              <span style={{ fontWeight: 900, fontSize: "0.88rem", color: "#C9A84C", letterSpacing: "-0.02em" }}>FrePilot</span>
+              <span style={{ fontWeight: 900, fontSize: "0.88rem", color: "#3B82F6", letterSpacing: "-0.02em" }}>FrePilot</span>
             </Link>
           )}
           <button onClick={() => setCollapsed(c => !c)} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.3)", cursor: "pointer", padding: 4, borderRadius: 4, fontSize: "0.9rem", marginLeft: collapsed ? "auto" : 0, marginRight: collapsed ? "auto" : 0 }}>
@@ -148,9 +148,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                     padding: collapsed ? "8px 0" : "6px 14px",
                     justifyContent: collapsed ? "center" : "flex-start",
                     fontSize: "0.8rem", textDecoration: "none",
-                    color: active ? "#C9A84C" : "rgba(237,232,220,0.55)",
-                    background: active ? "rgba(201,168,76,0.1)" : "transparent",
-                    borderLeft: active ? "2px solid #C9A84C" : "2px solid transparent",
+                    color: active ? "#3B82F6" : "rgba(237,232,220,0.55)",
+                    background: active ? "rgba(59,130,246,0.1)" : "transparent",
+                    borderLeft: active ? "2px solid #3B82F6" : "2px solid transparent",
                     fontWeight: active ? 700 : 400,
                     transition: "all 0.15s",
                   }}>
@@ -178,3 +178,4 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
     </div>
   );
 }
+

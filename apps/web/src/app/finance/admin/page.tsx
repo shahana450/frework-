@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -21,7 +21,7 @@ type Sub = {
 };
 
 const statusColor = (s: string) =>
-  s === "active" ? "#4ade80" : s === "trial" ? "#C9A84C" : s === "cancelled" ? "#f87171" : "#8A9BB8";
+  s === "active" ? "#4ade80" : s === "trial" ? "#3B82F6" : s === "cancelled" ? "#f87171" : "#8A9BB8";
 
 export default function AdminPortal() {
   const router = useRouter();
@@ -36,11 +36,16 @@ export default function AdminPortal() {
 
   const load = useCallback(async (tok: string) => {
     setLoading(true);
-    const res = await fetch("/api/finance/subscription/admin", {
-      headers: { Authorization: `Bearer ${tok}` },
-    });
-    const data = await res.json();
-    setSubs(data.subs ?? []);
+    try {
+      const res = await fetch("/api/finance/subscription/admin", {
+        headers: { Authorization: `Bearer ${tok}` },
+      });
+      const data = await res.json();
+      if (!res.ok) { setMsg(`API error ${res.status}: ${data.error ?? "Check Vercel env vars (SUPABASE_SERVICE_ROLE_KEY)"}`); }
+      setSubs(data.subs ?? []);
+    } catch (e) {
+      setMsg(`Network error: ${e instanceof Error ? e.message : "unknown"}`);
+    }
     setLoading(false);
   }, []);
 
@@ -79,8 +84,8 @@ export default function AdminPortal() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", height: 56, display: "flex", alignItems: "center", gap: "1rem" }}>
-        <span style={{ fontWeight: 900, color: "#C9A84C", fontSize: "0.95rem" }}>FrePilot Admin</span>
+      <nav style={{ borderBottom: "1px solid rgba(59,130,246,0.2)", padding: "0 2rem", height: 56, display: "flex", alignItems: "center", gap: "1rem" }}>
+        <span style={{ fontWeight: 900, color: "#3B82F6", fontSize: "0.95rem" }}>FrePilot Admin</span>
         <span style={{ flex: 1 }} />
         <a href="/finance" style={{ color: "rgba(237,232,220,0.4)", fontSize: "0.8rem", textDecoration: "none" }}>← Back to Finance</a>
       </nav>
@@ -90,8 +95,8 @@ export default function AdminPortal() {
         <p style={{ margin: "0 0 2rem", color: "rgba(237,232,220,0.4)", fontSize: "0.85rem" }}>Grant trials, activate, or revoke access without payment.</p>
 
         {/* Grant new access */}
-        <div style={{ background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 12, padding: "1.25rem 1.5rem", marginBottom: "2rem" }}>
-          <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#C9A84C", marginBottom: "1rem" }}>Grant Access to a User</div>
+        <div style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: 12, padding: "1.25rem 1.5rem", marginBottom: "2rem" }}>
+          <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#3B82F6", marginBottom: "1rem" }}>Grant Access to a User</div>
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "flex-end" }}>
             <div>
               <label style={{ display: "block", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>User ID (from Supabase auth)</label>
@@ -109,7 +114,7 @@ export default function AdminPortal() {
                 {[1, 3, 7, 14, 30].map(d => <option key={d} value={d}>{d} days</option>)}
               </select>
             </div>
-            <button onClick={() => grantNew("trial")} disabled={working} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "8px 18px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.83rem", opacity: working ? 0.6 : 1 }}>
+            <button onClick={() => grantNew("trial")} disabled={working} style={{ background: "#3B82F6", border: "none", color: "#ffffff", padding: "8px 18px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.83rem", opacity: working ? 0.6 : 1 }}>
               Grant Trial
             </button>
             <button onClick={() => grantNew("active")} disabled={working} style={{ background: "rgba(74,222,128,0.15)", border: "1px solid rgba(74,222,128,0.3)", color: "#4ade80", padding: "8px 18px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.83rem", opacity: working ? 0.6 : 1 }}>
@@ -164,7 +169,7 @@ export default function AdminPortal() {
                             </button>
                           )}
                           {s.status !== "trial" && (
-                            <button onClick={() => act("grant_trial", s.user_id, { plan: s.plan, trial_days: 7 })} disabled={working} style={{ background: "rgba(201,168,76,0.12)", border: "none", color: "#C9A84C", padding: "3px 10px", borderRadius: 5, cursor: "pointer", fontSize: "0.72rem", fontWeight: 700 }}>
+                            <button onClick={() => act("grant_trial", s.user_id, { plan: s.plan, trial_days: 7 })} disabled={working} style={{ background: "rgba(59,130,246,0.12)", border: "none", color: "#3B82F6", padding: "3px 10px", borderRadius: 5, cursor: "pointer", fontSize: "0.72rem", fontWeight: 700 }}>
                               +7d Trial
                             </button>
                           )}
@@ -195,3 +200,4 @@ export default function AdminPortal() {
     </div>
   );
 }
+
