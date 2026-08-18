@@ -282,8 +282,8 @@ export function BusinessOSHomepage() {
         </div>
 
         {/* Services nav strip */}
-        <div className="absolute top-[68px] inset-x-0 z-20 overflow-x-auto" style={{ background:"rgba(6,10,24,0.97)", borderBottom:"1px solid rgba(59,130,246,0.12)" }}>
-          <div className="flex items-center gap-0 px-6 py-0 min-w-max">
+        <div className="absolute top-[68px] inset-x-0 z-20 overflow-x-auto" style={{ background:"#ffffff", borderBottom:"1px solid rgba(59,130,246,0.15)", boxShadow:"0 2px 12px rgba(59,130,246,0.08)" }}>
+          <div className="flex items-center justify-center gap-0 px-6 min-w-max mx-auto">
             {[
               { label:"GST Registration", href:"/services/gst" },
               { label:"Income Tax Return", href:"/services/income-tax" },
@@ -299,13 +299,22 @@ export function BusinessOSHomepage() {
             ].map((s, i, arr) => (
               <span key={s.label} className="flex items-center">
                 <Link href={s.href}
-                  className="text-[11px] font-medium px-3.5 py-2.5 whitespace-nowrap transition-colors block"
-                  style={{ color:"rgba(138,160,200,0.7)" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color="#60A5FA"; (e.currentTarget as HTMLElement).style.background="rgba(59,130,246,0.06)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color="rgba(138,160,200,0.7)"; (e.currentTarget as HTMLElement).style.background="transparent"; }}>
+                  className="text-[11px] font-semibold px-3.5 py-2.5 whitespace-nowrap block transition-all duration-150 rounded"
+                  style={{ color:"#1D4ED8", letterSpacing:"0.01em" }}
+                  onMouseEnter={e => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.color = "#ffffff";
+                    el.style.background = "#3B82F6";
+                    el.style.borderRadius = "4px";
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.color = "#1D4ED8";
+                    el.style.background = "transparent";
+                  }}>
                   {s.label}
                 </Link>
-                {i < arr.length - 1 && <span style={{ color:"rgba(255,255,255,0.07)", fontSize:"12px" }}>│</span>}
+                {i < arr.length - 1 && <span style={{ color:"rgba(59,130,246,0.2)", fontSize:"14px", lineHeight:1 }}>│</span>}
               </span>
             ))}
           </div>
