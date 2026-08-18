@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -7,8 +7,8 @@ import Link from "next/link";
 const TDS_SECTIONS = [
   { section: "194C", description: "Contractor / Sub-contractor payments", threshold: 30000, rate_individual: 1, rate_company: 2 },
   { section: "194J", description: "Professional / Technical fees", threshold: 30000, rate_individual: 10, rate_company: 10 },
-  { section: "194I(a)", description: "Rent — Plant, Machinery, Equipment", threshold: 240000, rate_individual: 2, rate_company: 2 },
-  { section: "194I(b)", description: "Rent — Land, Building, Furniture", threshold: 240000, rate_individual: 10, rate_company: 10 },
+  { section: "194I(a)", description: "Rent â€” Plant, Machinery, Equipment", threshold: 240000, rate_individual: 2, rate_company: 2 },
+  { section: "194I(b)", description: "Rent â€” Land, Building, Furniture", threshold: 240000, rate_individual: 10, rate_company: 10 },
   { section: "194A", description: "Interest (other than on securities)", threshold: 40000, rate_individual: 10, rate_company: 10 },
   { section: "194H", description: "Commission or brokerage", threshold: 15000, rate_individual: 5, rate_company: 5 },
   { section: "194B", description: "Lottery / game winnings", threshold: 10000, rate_individual: 30, rate_company: 30 },
@@ -40,7 +40,7 @@ export default function TDSTrackerPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = localStorage.getItem(`fw_fin_biz_${user.id}`);
+      const saved = (localStorage.getItem(`fw_fin_biz_$user.id`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
 
@@ -98,26 +98,26 @@ export default function TDSTrackerPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>â€º</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>TDS Tracker</span>
         <div style={{ flex: 1 }} />
         {nextDue && (
           <div style={{ fontSize: "0.78rem", background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.25)", color: "#C9A84C", padding: "4px 12px", borderRadius: 8 }}>
-            📅 Next TDS due: {nextDue.date}
+            ðŸ“… Next TDS due: {nextDue.date}
           </div>
         )}
       </nav>
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "2rem" }}>
         <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>TDS Tracker</h1>
-        <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Tax Deducted at Source — rates, calculator, deduction history</p>
+        <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Tax Deducted at Source â€” rates, calculator, deduction history</p>
 
         {/* KPI */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
           {[
-            { label: "Total TDS Deducted", value: `₹${fmt(totalTdsDeducted)}`, color: "#C9A84C", icon: "🔖" },
-            { label: "TDS Entries Found", value: tdsJournals.length, color: "#60a5fa", icon: "📋" },
-            { label: "Next Deposit Due", value: nextDue?.date ?? "—", color: "#f87171", icon: "📅" },
+            { label: "Total TDS Deducted", value: `â‚¹${fmt(totalTdsDeducted)}`, color: "#C9A84C", icon: "ðŸ”–" },
+            { label: "TDS Entries Found", value: tdsJournals.length, color: "#60a5fa", icon: "ðŸ“‹" },
+            { label: "Next Deposit Due", value: nextDue?.date ?? "â€”", color: "#f87171", icon: "ðŸ“…" },
           ].map(k => (
             <div key={k.label} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 10, padding: "1rem" }}>
               <div style={{ fontSize: "1.2rem", marginBottom: "0.35rem" }}>{k.icon}</div>
@@ -144,9 +144,9 @@ export default function TDSTrackerPage() {
         {activeTab === "tracker" && (
           tdsJournals.length === 0 ? (
             <div style={{ textAlign: "center", padding: "4rem", color: "rgba(237,232,220,0.3)" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>🔖</div>
+              <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>ðŸ”–</div>
               <div>No TDS entries found. Record expenses with TDS deduction in the Expense or Purchase Bill pages.</div>
-              <Link href="/finance/expenses" style={{ display: "inline-block", marginTop: "1.5rem", color: "#C9A84C", textDecoration: "none", fontSize: "0.85rem" }}>→ Record Expense with TDS</Link>
+              <Link href="/finance/expenses" style={{ display: "inline-block", marginTop: "1.5rem", color: "#C9A84C", textDecoration: "none", fontSize: "0.85rem" }}>â†’ Record Expense with TDS</Link>
             </div>
           ) : (
             <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, overflow: "hidden" }}>
@@ -166,14 +166,14 @@ export default function TDSTrackerPage() {
                       </td>
                       <td style={{ padding: "0.65rem 1rem", fontSize: "0.75rem", fontFamily: "monospace", color: "rgba(201,168,76,0.6)" }}>{j.entry_no}</td>
                       <td style={{ padding: "0.65rem 1rem", fontSize: "0.82rem", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
-                      <td style={{ padding: "0.65rem 1rem", textAlign: "right", fontWeight: 700, color: "#C9A84C", fontVariantNumeric: "tabular-nums" }}>₹{fmt(j.total_debit)}</td>
+                      <td style={{ padding: "0.65rem 1rem", textAlign: "right", fontWeight: 700, color: "#C9A84C", fontVariantNumeric: "tabular-nums" }}>â‚¹{fmt(j.total_debit)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: "2px solid rgba(201,168,76,0.3)", background: "rgba(201,168,76,0.05)" }}>
                     <td colSpan={3} style={{ padding: "0.7rem 1rem", fontWeight: 800 }}>Total TDS</td>
-                    <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 900, color: "#C9A84C", fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalTdsDeducted)}</td>
+                    <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 900, color: "#C9A84C", fontVariantNumeric: "tabular-nums" }}>â‚¹{fmt(totalTdsDeducted)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -203,7 +203,7 @@ export default function TDSTrackerPage() {
                         </td>
                         <td style={{ padding: "0.55rem 0.85rem", fontSize: "0.75rem", color: "rgba(237,232,220,0.6)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.description}</td>
                         <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", fontVariantNumeric: "tabular-nums" }}>
-                          ₹{(s.threshold).toLocaleString("en-IN")}
+                          â‚¹{(s.threshold).toLocaleString("en-IN")}
                         </td>
                         <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontSize: "0.8rem", fontWeight: 700, color: "#4ade80" }}>
                           {s.rate_individual === s.rate_company ? `${s.rate_individual}%` : `${s.rate_individual}%/${s.rate_company}%`}
@@ -221,11 +221,11 @@ export default function TDSTrackerPage() {
               <div style={{ marginBottom: "0.85rem" }}>
                 <label style={labelStyle}>TDS Section</label>
                 <select value={calcSection} onChange={e => setCalcSection(e.target.value)} style={inputStyle}>
-                  {TDS_SECTIONS.map(s => <option key={s.section} value={s.section}>{s.section} — {s.description}</option>)}
+                  {TDS_SECTIONS.map(s => <option key={s.section} value={s.section}>{s.section} â€” {s.description}</option>)}
                 </select>
               </div>
               <div style={{ marginBottom: "0.85rem" }}>
-                <label style={labelStyle}>Gross Payment Amount (₹)</label>
+                <label style={labelStyle}>Gross Payment Amount (â‚¹)</label>
                 <input type="number" value={calcAmount} onChange={e => setCalcAmount(e.target.value)} placeholder="Enter gross amount" style={{ ...inputStyle, textAlign: "right", fontSize: "1rem" }} />
               </div>
               <div style={{ marginBottom: "1.25rem" }}>
@@ -250,14 +250,14 @@ export default function TDSTrackerPage() {
                   ].map(r => (
                     <div key={r.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                       <span style={{ fontSize: "0.82rem", color: "rgba(237,232,220,0.5)" }}>{r.label}</span>
-                      <span style={{ fontWeight: 700, color: r.color ?? "#EDE8DC", fontVariantNumeric: "tabular-nums" }}>₹{fmt(r.value)}</span>
+                      <span style={{ fontWeight: 700, color: r.color ?? "#EDE8DC", fontVariantNumeric: "tabular-nums" }}>â‚¹{fmt(r.value)}</span>
                     </div>
                   ))}
                 </div>
               )}
               {!calcResult && (
                 <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.25)", lineHeight: 1.6 }}>
-                  Click "Calculate TDS" to see the deduction breakdown. Rates shown are basic rates — surcharge and cess may apply for high-income deductees.
+                  Click "Calculate TDS" to see the deduction breakdown. Rates shown are basic rates â€” surcharge and cess may apply for high-income deductees.
                 </div>
               )}
             </div>
@@ -289,3 +289,4 @@ export default function TDSTrackerPage() {
     </div>
   );
 }
+

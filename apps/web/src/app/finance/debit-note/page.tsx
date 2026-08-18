@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -33,7 +33,7 @@ export default function DebitNotePage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = localStorage.getItem(`fw_fin_biz_${user.id}`);
+      const saved = (localStorage.getItem(`fw_fin_biz_$user.id`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
 
@@ -78,7 +78,7 @@ export default function DebitNotePage() {
     const contactName = contacts.find(c => c.id === contactId)?.name ?? "Vendor";
 
     const lines: { account_id: string; dr_amount: number; cr_amount: number; narration: string }[] = [
-      { account_id: creditorAccountId, dr_amount: totalAmt, cr_amount: 0, narration: `AP reduced — DN ${entryNo} to ${contactName}` },
+      { account_id: creditorAccountId, dr_amount: totalAmt, cr_amount: 0, narration: `AP reduced â€” DN ${entryNo} to ${contactName}` },
     ];
 
     // ITC reversal (debit note reduces ITC)
@@ -95,14 +95,14 @@ export default function DebitNotePage() {
       }
     }
 
-    lines.push({ account_id: purchaseAccountId, dr_amount: 0, cr_amount: amt, narration: `Purchase return — ${reason.replace("_", " ")}` });
+    lines.push({ account_id: purchaseAccountId, dr_amount: 0, cr_amount: amt, narration: `Purchase return â€” ${reason.replace("_", " ")}` });
 
     const totalDr = lines.reduce((s, l) => s + l.dr_amount, 0);
     const totalCr = lines.reduce((s, l) => s + l.cr_amount, 0);
 
     const { data: journal, error: jErr } = await supabase.from("fw_fin_journals").insert({
       business_id: bizId, fy_id: fyId, date, entry_no: entryNo, type: "debit_note",
-      narration: narration || `Debit Note to ${contactName} — ${reason.replace("_", " ")}`,
+      narration: narration || `Debit Note to ${contactName} â€” ${reason.replace("_", " ")}`,
       reference_no: refBill || null, contact_id: contactId || null,
       total_debit: totalDr, total_credit: totalCr, status: "posted", ai_generated: false,
     }).select("id").single();
@@ -110,7 +110,7 @@ export default function DebitNotePage() {
     if (jErr || !journal) { setError(jErr?.message ?? "Failed"); setSaving(false); return; }
     await supabase.from("fw_fin_journal_lines").insert(lines.map(l => ({ ...l, journal_id: journal.id })));
 
-    setSuccess(`Posted: ${entryNo} — ₹${totalAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`);
+    setSuccess(`Posted: ${entryNo} â€” â‚¹${totalAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`);
     setAmount(""); setNarration(""); setRefBill(""); setContactId("");
     setSaving(false);
 
@@ -126,17 +126,17 @@ export default function DebitNotePage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>â€º</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Debit Note</span>
       </nav>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem", maxWidth: 1000, margin: "0 auto", padding: "2rem" }}>
         <div>
           <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Debit Note</h1>
-          <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Issue a debit note to a vendor — reduces your outstanding payable (AP) balance and reverses ITC</p>
+          <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Issue a debit note to a vendor â€” reduces your outstanding payable (AP) balance and reverses ITC</p>
 
           {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
-          {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
+          {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>âœ“ {success}</div>}
 
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
@@ -167,13 +167,13 @@ export default function DebitNotePage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div>
-                <label style={labelStyle}>Amount (₹) before GST</label>
+                <label style={labelStyle}>Amount (â‚¹) before GST</label>
                 <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" style={{ ...inputStyle, textAlign: "right", fontSize: "1rem", fontWeight: 700 }} />
               </div>
               <div>
                 <label style={labelStyle}>GST Rate</label>
                 <select value={gstRate} onChange={e => setGstRate(e.target.value)} style={inputStyle}>
-                  <option value="0">0% — Exempt / Nil rated</option>
+                  <option value="0">0% â€” Exempt / Nil rated</option>
                   <option value="5">5% GST</option>
                   <option value="12">12% GST</option>
                   <option value="18">18% GST</option>
@@ -188,25 +188,25 @@ export default function DebitNotePage() {
 
             {amt > 0 && (
               <div style={{ background: "rgba(237,232,220,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Base Amount</span><span>₹{fmt(amt)}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Base Amount</span><span>â‚¹{fmt(amt)}</span></div>
                 {!isInterState && cgst > 0 && <>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>CGST @ {parseFloat(gstRate) / 2}%</span><span>₹{fmt(cgst)}</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>SGST @ {parseFloat(gstRate) / 2}%</span><span>₹{fmt(sgst)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>CGST @ {parseFloat(gstRate) / 2}%</span><span>â‚¹{fmt(cgst)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>SGST @ {parseFloat(gstRate) / 2}%</span><span>â‚¹{fmt(sgst)}</span></div>
                 </>}
-                {isInterState && igst > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>IGST @ {gstRate}%</span><span>₹{fmt(igst)}</span></div>}
+                {isInterState && igst > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>IGST @ {gstRate}%</span><span>â‚¹{fmt(igst)}</span></div>}
                 <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, borderTop: "1px solid rgba(237,232,220,0.08)", paddingTop: 6, marginTop: 6, color: "#4ade80" }}>
-                  <span>Total Debit Note Value</span><span>₹{fmt(totalAmt)}</span>
+                  <span>Total Debit Note Value</span><span>â‚¹{fmt(totalAmt)}</span>
                 </div>
               </div>
             )}
 
             <div style={{ marginBottom: "1rem" }}>
               <label style={labelStyle}>Narration</label>
-              <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder="e.g. Purchase return to vendor against BILL-0001 — damaged goods" rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+              <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder="e.g. Purchase return to vendor against BILL-0001 â€” damaged goods" rows={2} style={{ ...inputStyle, resize: "vertical" }} />
             </div>
 
             <button onClick={handlePost} disabled={saving || !amt} style={{ background: "#4ade80", border: "none", color: "#070C1A", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: (!amt || saving) ? 0.5 : 1 }}>
-              {saving ? "Posting…" : "Post Debit Note"}
+              {saving ? "Postingâ€¦" : "Post Debit Note"}
             </button>
           </div>
         </div>
@@ -221,16 +221,17 @@ export default function DebitNotePage() {
                   <span style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.3)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                 </div>
                 <div style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration}</div>
-                <div style={{ textAlign: "right", marginTop: "0.25rem", fontSize: "0.82rem", fontWeight: 700, color: "#4ade80" }}>₹{fmt(r.total_credit)}</div>
+                <div style={{ textAlign: "right", marginTop: "0.25rem", fontSize: "0.82rem", fontWeight: 700, color: "#4ade80" }}>â‚¹{fmt(r.total_credit)}</div>
               </div>
             ))}
             {recent.length === 0 && <div style={{ color: "rgba(237,232,220,0.25)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No debit notes yet</div>}
           </div>
           <Link href="/finance/credit-note" style={{ display: "block", marginTop: "1rem", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", color: "#f87171", padding: "8px 14px", borderRadius: 8, textDecoration: "none", fontSize: "0.8rem", textAlign: "center", fontWeight: 600 }}>
-            → Credit Note (to customer)
+            â†’ Credit Note (to customer)
           </Link>
         </div>
       </div>
     </div>
   );
 }
+

@@ -44,7 +44,7 @@ export default function AIReviewPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = localStorage.getItem(`fw_fin_biz_${user.id}`);
+      const saved = (localStorage.getItem(`fw_fin_biz_$user.id`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       loadSuggestions(saved);
@@ -342,3 +342,4 @@ export default function AIReviewPage() {
     </div>
   );
 }
+
