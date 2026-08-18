@@ -17,19 +17,20 @@ const SUPPORT_PHONE = (process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 85908 74681
 const SUPPORT_WA = `918590874681`;
 
 const L = {
-  bg: "#07091A",
-  bgAlt: "#0A0D20",
-  bgCard: "#0D1228",
-  text: "#E8E4DA",
-  textSub: "#7A8BA8",
-  textMuted: "#3E4D62",
-  gold: "#B8963C",
-  goldLight: "#D4AC5A",
-  goldDark: "#8C6E28",
-  border: "rgba(184,150,60,0.16)",
-  borderLight: "rgba(255,255,255,0.06)",
-  shadow: "0 1px 3px rgba(0,0,0,0.5)",
-  shadowHover: "0 4px 24px rgba(0,0,0,0.4)",
+  bg: "#060A18",
+  bgAlt: "#080E1F",
+  bgCard: "#0C1326",
+  text: "#F0F4FF",
+  textSub: "#8AA0C8",
+  textMuted: "#3D5070",
+  blue: "#3B82F6",
+  blueLight: "#60A5FA",
+  blueDark: "#1D4ED8",
+  accent: "#3B82F6",
+  border: "rgba(59,130,246,0.18)",
+  borderLight: "rgba(255,255,255,0.07)",
+  shadow: "0 1px 4px rgba(0,0,0,0.5)",
+  shadowHover: "0 4px 24px rgba(59,130,246,0.15)",
 };
 
 const MODULES = [
@@ -199,9 +200,9 @@ const COWORK_PLANS = [
 function GoldDivider() {
   return (
     <div className="flex items-center gap-3 justify-center my-4">
-      <div className="h-px w-12 opacity-40" style={{ background: `linear-gradient(90deg, transparent, ${L.gold})` }} />
-      <div className="w-1 h-1 rounded-full" style={{ background: L.gold, opacity: 0.5 }} />
-      <div className="h-px w-12 opacity-40" style={{ background: `linear-gradient(90deg, ${L.gold}, transparent)` }} />
+      <div className="h-px w-12 opacity-40" style={{ background: `linear-gradient(90deg, transparent, ${L.blue})` }} />
+      <div className="w-1 h-1 rounded-full" style={{ background: L.blue, opacity: 0.5 }} />
+      <div className="h-px w-12 opacity-40" style={{ background: `linear-gradient(90deg, ${L.blue}, transparent)` }} />
     </div>
   );
 }
@@ -273,15 +274,16 @@ export function BusinessOSHomepage() {
       <AnnouncementTicker />
 
       {/* --- HERO: TWO PILLARS --- */}
-      <section className="relative min-h-screen flex flex-col justify-center overflow-hidden" style={{ background:"#070C1A", paddingTop:"68px" }}>
-        {/* Subtle background accent */}
+      <section className="relative min-h-screen flex flex-col justify-center overflow-hidden" style={{ background:"#060A18", paddingTop:"68px" }}>
+        {/* Background: subtle blue glow */}
         <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position:"absolute", left:"20%", top:"10%", width:600, height:400, borderRadius:"50%", background:"radial-gradient(ellipse, rgba(184,150,60,0.05) 0%, transparent 70%)", filter:"blur(60px)" }} />
+          <div style={{ position:"absolute", left:"10%", top:"5%", width:800, height:500, borderRadius:"50%", background:"radial-gradient(ellipse, rgba(59,130,246,0.08) 0%, transparent 65%)", filter:"blur(80px)" }} />
+          <div style={{ position:"absolute", right:"5%", bottom:"10%", width:500, height:400, borderRadius:"50%", background:"radial-gradient(ellipse, rgba(99,102,241,0.06) 0%, transparent 65%)", filter:"blur(70px)" }} />
         </div>
 
         {/* Services nav strip */}
-        <div className="absolute top-[68px] inset-x-0 z-20 overflow-x-auto" style={{ background:"rgba(7,9,26,0.95)", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center gap-1 px-4 py-2 min-w-max">
+        <div className="absolute top-[68px] inset-x-0 z-20 overflow-x-auto" style={{ background:"rgba(6,10,24,0.97)", borderBottom:"1px solid rgba(59,130,246,0.12)" }}>
+          <div className="flex items-center gap-0 px-6 py-0 min-w-max">
             {[
               { label:"GST Registration", href:"/services/gst" },
               { label:"Income Tax Return", href:"/services/income-tax" },
@@ -295,15 +297,15 @@ export function BusinessOSHomepage() {
               { label:"Business Audit", href:"/services/audit" },
               { label:"MSME Registration", href:"/services/business-registration" },
             ].map((s, i, arr) => (
-              <span key={s.label} className="flex items-center gap-1">
+              <span key={s.label} className="flex items-center">
                 <Link href={s.href}
-                  className="text-[11px] font-medium px-3 py-1 rounded transition-colors whitespace-nowrap"
-                  style={{ color:"rgba(184,150,60,0.7)" }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color="#B8963C"}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color="rgba(184,150,60,0.7)"}>
+                  className="text-[11px] font-medium px-3.5 py-2.5 whitespace-nowrap transition-colors block"
+                  style={{ color:"rgba(138,160,200,0.7)" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color="#60A5FA"; (e.currentTarget as HTMLElement).style.background="rgba(59,130,246,0.06)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color="rgba(138,160,200,0.7)"; (e.currentTarget as HTMLElement).style.background="transparent"; }}>
                   {s.label}
                 </Link>
-                {i < arr.length - 1 && <span style={{ color:"rgba(255,255,255,0.1)", fontSize:"10px" }}>|</span>}
+                {i < arr.length - 1 && <span style={{ color:"rgba(255,255,255,0.07)", fontSize:"12px" }}>│</span>}
               </span>
             ))}
           </div>
@@ -315,19 +317,19 @@ export function BusinessOSHomepage() {
           {/* Brand headline */}
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
             className="text-center mb-10">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded text-[10px] font-semibold tracking-[0.2em] uppercase border mb-6 inline-block"
-              style={{ background:"rgba(184,150,60,0.06)", borderColor:"rgba(184,150,60,0.2)", color:"#B8963C" }}>
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 text-[10px] font-semibold tracking-[0.22em] uppercase mb-6 inline-block"
+              style={{ background:"rgba(59,130,246,0.1)", borderRadius:"4px", border:"1px solid rgba(59,130,246,0.25)", color:"#60A5FA" }}>
               India&apos;s Business Platform
             </span>
-            <h1 className="font-bold leading-[1.06] tracking-tight"
-              style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.2rem,5vw,4.4rem)", color:"#E8E4DA", letterSpacing:"-0.02em" }}>
+            <h1 className="font-bold leading-[1.05] tracking-tight"
+              style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.4rem,5.5vw,4.8rem)", color:"#F0F4FF", letterSpacing:"-0.025em" }}>
               The smarter way to
               <br/>
-              <span style={{ color:"#B8963C" }}>
+              <span style={{ background:"linear-gradient(135deg,#60A5FA 0%,#818CF8 60%,#38BDF8 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
                 run your business.
               </span>
             </h1>
-            <p className="text-base max-w-lg mx-auto mt-5" style={{ color:"rgba(122,139,168,0.85)", lineHeight:"1.7" }}>
+            <p className="text-base max-w-lg mx-auto mt-5" style={{ color:"rgba(138,160,200,0.8)", lineHeight:"1.75" }}>
               Expert CA compliance, verified coworking spaces, and AI-powered accounting — everything your Indian business needs, in one place.
             </p>
           </motion.div>
@@ -337,25 +339,26 @@ export function BusinessOSHomepage() {
 
             {/* PILLAR 1 — COMPLIANCE */}
             <motion.div initial={{ opacity:0, x:-24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.2, duration:0.5 }}>
-              <div className="relative rounded-xl overflow-hidden h-full transition-all hover:border-white/10"
-                style={{ background:"#0D1228", border:"1px solid rgba(255,255,255,0.07)" }}>
-                <div className="h-[2px]" style={{ background:"linear-gradient(90deg,rgba(184,150,60,0.6),rgba(184,150,60,0.2),transparent)" }} />
+              <div className="relative rounded-2xl overflow-hidden h-full group transition-all"
+                style={{ background:"linear-gradient(145deg,#0C1326 0%,#0E1830 100%)", border:"1px solid rgba(59,130,246,0.2)", boxShadow:"0 0 0 0 rgba(59,130,246,0)" }}>
+                {/* Top accent bar */}
+                <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#3B82F6,#818CF8 50%,transparent)" }} />
                 <div className="p-7 md:p-8">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background:"rgba(184,150,60,0.1)", border:"1px solid rgba(184,150,60,0.2)" }}>
-                      <FileText className="w-5 h-5" style={{ color:"#B8963C" }} />
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background:"rgba(59,130,246,0.12)", border:"1px solid rgba(59,130,246,0.25)" }}>
+                      <FileText className="w-5 h-5" style={{ color:"#60A5FA" }} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase" style={{ color:"#B8963C" }}>Compliance & Legal</p>
-                      <p className="text-[11px]" style={{ color:"rgba(122,139,168,0.6)" }}>Expert CAs &amp; Lawyers</p>
+                      <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color:"#60A5FA" }}>Compliance & Legal</p>
+                      <p className="text-[11px]" style={{ color:"rgba(138,160,200,0.55)" }}>Expert CAs &amp; Lawyers</p>
                     </div>
                   </div>
                   <h2 className="font-bold mb-3 leading-[1.1]"
-                    style={{ fontSize:"clamp(1.6rem,2.8vw,2.2rem)", color:"#E8E4DA", letterSpacing:"-0.015em" }}>
+                    style={{ fontSize:"clamp(1.7rem,3vw,2.3rem)", color:"#F0F4FF", letterSpacing:"-0.02em" }}>
                     Register. File. Comply.
                   </h2>
-                  <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(122,139,168,0.85)" }}>
+                  <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(138,160,200,0.75)", lineHeight:"1.7" }}>
                     Company registration, GST, income tax, ROC and MSME — verified Chartered Accountants handle everything end-to-end.
                   </p>
                   {/* Pricing tiers */}
@@ -367,25 +370,25 @@ export function BusinessOSHomepage() {
                     ].map(p => (
                       <a key={p.label} href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%27m%20interested%20in%20the%20${p.label}%20plan%20(${encodeURIComponent(p.price)}).`}
                         target="_blank" rel="noopener noreferrer"
-                        className="flex-1 rounded-lg p-2.5 text-center transition-all hover:border-white/15"
-                        style={{ background:"rgba(255,255,255,0.03)", border:`1px solid ${p.popular ? "rgba(184,150,60,0.3)" : "rgba(255,255,255,0.07)"}`, position:"relative" }}>
-                        {p.popular && <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-semibold px-2 py-0.5 rounded" style={{ background:"rgba(184,150,60,0.9)", color:"#07091A", whiteSpace:"nowrap" }}>Popular</div>}
-                        <div className="text-sm font-bold leading-none mb-0.5" style={{ color:"#B8963C" }}>{p.price}</div>
-                        <div className="text-[9px] font-semibold mb-1" style={{ color:"rgba(232,228,218,0.8)" }}>{p.label}</div>
-                        <div className="text-[8px] leading-tight" style={{ color:"rgba(122,139,168,0.6)" }}>{p.services}</div>
+                        className="flex-1 rounded-xl p-3 text-center transition-all hover:scale-[1.02]"
+                        style={{ background: p.popular ? "rgba(59,130,246,0.12)" : "rgba(255,255,255,0.03)", border:`1px solid ${p.popular ? "rgba(59,130,246,0.4)" : "rgba(255,255,255,0.07)"}`, position:"relative" }}>
+                        {p.popular && <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[8px] font-bold px-2.5 py-0.5 rounded-full" style={{ background:"#3B82F6", color:"#fff", whiteSpace:"nowrap" }}>Popular</div>}
+                        <div className="text-base font-bold leading-none mb-1" style={{ color: p.popular ? "#60A5FA" : "#3B82F6" }}>{p.price}</div>
+                        <div className="text-[9px] font-semibold mb-1" style={{ color:"rgba(240,244,255,0.75)" }}>{p.label}</div>
+                        <div className="text-[8px] leading-tight" style={{ color:"rgba(138,160,200,0.5)" }}>{p.services}</div>
                       </a>
                     ))}
                   </div>
                   <div className="flex gap-2.5">
                     <Link href="/services/compliance"
-                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
-                      style={{ background:"#B8963C", color:"#07091A" }}>
+                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                      style={{ background:"linear-gradient(135deg,#3B82F6,#1D4ED8)", color:"#fff", boxShadow:"0 4px 16px rgba(59,130,246,0.3)" }}>
                       Explore Services <ArrowRight className="w-4 h-4" />
                     </Link>
                     <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%20need%20help%20with%20compliance%20services.`}
                       target="_blank" rel="noopener noreferrer"
-                      className="px-4 py-3 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition-all hover:border-white/15"
-                      style={{ borderColor:"rgba(255,255,255,0.08)", color:"rgba(122,139,168,0.8)", background:"rgba(255,255,255,0.03)" }}>
+                      className="px-4 py-3 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all hover:border-white/15"
+                      style={{ borderColor:"rgba(255,255,255,0.09)", color:"rgba(138,160,200,0.7)", background:"rgba(255,255,255,0.03)" }}>
                       <svg viewBox="0 0 24 24" fill="#25D366" className="w-4 h-4 flex-shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                       Free Advice
                     </a>
@@ -397,65 +400,67 @@ export function BusinessOSHomepage() {
             {/* PILLAR 2 — FREPILOT */}
             <motion.div initial={{ opacity:0, x:24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.25, duration:0.5 }}>
               <button onClick={handleFrePilotClick} className="w-full h-full text-left group" style={{ background:"none", border:"none", padding:0, cursor:"pointer" }}>
-                <div className="relative rounded-xl overflow-hidden h-full transition-all hover:border-white/10"
-                  style={{ background:"#0D1228", border:"1px solid rgba(184,150,60,0.2)" }}>
-                  <div className="h-[2px]" style={{ background:"linear-gradient(90deg,rgba(184,150,60,0.6),rgba(184,150,60,0.2),transparent)" }} />
+                <div className="relative rounded-2xl overflow-hidden h-full transition-all"
+                  style={{ background:"linear-gradient(145deg,#0A1020 0%,#0D1530 100%)", border:"1px solid rgba(99,102,241,0.25)" }}>
+                  <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#818CF8,#3B82F6 50%,transparent)" }} />
                   {/* Header bar */}
-                  <div className="flex items-center justify-between gap-4 px-6 py-3.5 border-b" style={{ borderColor:"rgba(255,255,255,0.06)" }}>
+                  <div className="flex items-center justify-between gap-4 px-6 py-3.5 border-b" style={{ borderColor:"rgba(99,102,241,0.12)" }}>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background:"rgba(184,150,60,0.12)", border:"1px solid rgba(184,150,60,0.25)" }}>
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background:"rgba(129,140,248,0.15)", border:"1px solid rgba(129,140,248,0.3)" }}>
                         <span style={{ fontSize:"1rem" }}>🛩️</span>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold leading-none mb-0.5" style={{ color:"#D4AC5A" }}>FrePilot — AI Accountant</p>
-                        <p className="text-[11px]" style={{ color:"rgba(184,150,60,0.5)" }}>You Build, We Pilot · ₹2,999/month</p>
+                        <p className="text-sm font-semibold leading-none mb-0.5" style={{ color:"#A5B4FC" }}>FrePilot — AI Accountant</p>
+                        <p className="text-[11px]" style={{ color:"rgba(129,140,248,0.5)" }}>You Build, We Pilot · ₹2,999/month</p>
                       </div>
                     </div>
-                    <span className="text-[9px] font-semibold px-2 py-0.5 rounded flex-shrink-0"
-                      style={{ background:"rgba(184,150,60,0.1)", color:"#B8963C", border:"1px solid rgba(184,150,60,0.2)" }}>NEW</span>
+                    <span className="text-[9px] font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+                      style={{ background:"rgba(99,102,241,0.2)", color:"#A5B4FC", border:"1px solid rgba(99,102,241,0.35)" }}>NEW</span>
                   </div>
                   <div className="p-7 md:p-8">
                     <div className="flex items-center gap-3 mb-5">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background:"rgba(184,150,60,0.1)", border:"1px solid rgba(184,150,60,0.2)" }}>
-                        <Rocket className="w-5 h-5" style={{ color:"#B8963C" }} />
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background:"rgba(129,140,248,0.12)", border:"1px solid rgba(129,140,248,0.25)" }}>
+                        <Rocket className="w-5 h-5" style={{ color:"#A5B4FC" }} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold tracking-[0.15em] uppercase" style={{ color:"#B8963C" }}>AI-Powered Accounting</p>
-                        <p className="text-[11px]" style={{ color:"rgba(122,139,168,0.6)" }}>Built for Indian SMBs</p>
+                        <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color:"#A5B4FC" }}>AI-Powered Accounting</p>
+                        <p className="text-[11px]" style={{ color:"rgba(138,160,200,0.55)" }}>Built for Indian SMBs</p>
                       </div>
                     </div>
                     <h2 className="font-bold mb-3 leading-[1.1]"
-                      style={{ fontSize:"clamp(1.6rem,2.8vw,2.2rem)", color:"#E8E4DA", letterSpacing:"-0.015em" }}>
+                      style={{ fontSize:"clamp(1.7rem,3vw,2.3rem)", color:"#F0F4FF", letterSpacing:"-0.02em" }}>
                       Your books. Done right.
                     </h2>
-                    <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(122,139,168,0.85)" }}>
+                    <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(138,160,200,0.75)", lineHeight:"1.7" }}>
                       GST invoicing, TDS tracking, P&amp;L reports, and an AI accounting assistant — all in one platform built for India.
                     </p>
-                    <div className="grid grid-cols-2 gap-y-2 gap-x-3 mb-6">
+                    <div className="grid grid-cols-2 gap-y-2.5 gap-x-3 mb-6">
                       {["GST Invoicing","AI Chat Assistant","TDS Tracker","P&L & Balance Sheet","Journal Entries","Tally Export"].map(s => (
-                        <div key={s} className="flex items-center gap-2 text-xs" style={{ color:"rgba(184,184,200,0.65)" }}>
-                          <Check className="w-3 h-3 flex-shrink-0" style={{ color:"#B8963C" }} />{s}
+                        <div key={s} className="flex items-center gap-2 text-xs" style={{ color:"rgba(165,180,252,0.7)" }}>
+                          <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0" style={{ background:"rgba(59,130,246,0.15)" }}>
+                            <Check className="w-2.5 h-2.5" style={{ color:"#60A5FA" }} />
+                          </div>{s}
                         </div>
                       ))}
                     </div>
-                    <div className="flex gap-0 mb-6 rounded-lg overflow-hidden border" style={{ borderColor:"rgba(255,255,255,0.07)" }}>
+                    <div className="flex gap-0 mb-6 rounded-xl overflow-hidden border" style={{ borderColor:"rgba(99,102,241,0.15)", background:"rgba(99,102,241,0.05)" }}>
                       {[["₹2,999","Per Month"],["Unlimited","Transactions"],["AI","Powered"]].map(([n,l],i,arr) => (
-                        <div key={l} className="flex-1 text-center py-3" style={{ borderRight:i<arr.length-1?"1px solid rgba(255,255,255,0.06)":"none" }}>
-                          <p className="text-sm font-bold leading-none" style={{ color:"#B8963C" }}>{n}</p>
-                          <p className="text-[9px] font-medium mt-0.5" style={{ color:"rgba(122,139,168,0.5)" }}>{l}</p>
+                        <div key={l} className="flex-1 text-center py-3" style={{ borderRight:i<arr.length-1?"1px solid rgba(99,102,241,0.1)":"none" }}>
+                          <p className="text-sm font-bold leading-none" style={{ color:"#A5B4FC" }}>{n}</p>
+                          <p className="text-[9px] font-medium mt-0.5" style={{ color:"rgba(138,160,200,0.45)" }}>{l}</p>
                         </div>
                       ))}
                     </div>
                     <div className="flex gap-2.5">
-                      <span className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all group-hover:opacity-90"
-                        style={{ background:"#B8963C", color:"#07091A" }}>
+                      <span className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all group-hover:opacity-90"
+                        style={{ background:"linear-gradient(135deg,#6366F1,#3B82F6)", color:"#fff", boxShadow:"0 4px 16px rgba(99,102,241,0.35)" }}>
                         {loggedIn ? "Open FrePilot" : "Get Started"} <ArrowRight className="w-4 h-4" />
                       </span>
                       {!loggedIn && (
-                        <span className="px-4 py-3 rounded-lg text-xs font-medium border flex items-center gap-1.5"
-                          style={{ borderColor:"rgba(255,255,255,0.08)", color:"rgba(122,139,168,0.7)", background:"rgba(255,255,255,0.03)" }}>
+                        <span className="px-4 py-3 rounded-xl text-xs font-medium border flex items-center gap-1.5"
+                          style={{ borderColor:"rgba(255,255,255,0.09)", color:"rgba(138,160,200,0.65)", background:"rgba(255,255,255,0.03)" }}>
                           Google Sign-in
                         </span>
                       )}
@@ -468,35 +473,36 @@ export function BusinessOSHomepage() {
 
           {/* ═══ COWORKING — compact card below ═══ */}
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3, duration:0.5 }} className="mb-10">
-            <div className="relative rounded-xl overflow-hidden transition-all"
-              style={{ background:"#0D1228", border:"1px solid rgba(255,255,255,0.07)" }}>
+            <div className="relative rounded-2xl overflow-hidden transition-all"
+              style={{ background:"linear-gradient(145deg,#0C1326,#0E1830)", border:"1px solid rgba(56,189,248,0.2)" }}>
+              <div className="h-[2px]" style={{ background:"linear-gradient(90deg,#38BDF8,transparent)" }} />
               <div className="p-6 md:p-7 flex flex-col md:flex-row items-start md:items-center gap-6">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background:"rgba(184,150,60,0.1)", border:"1px solid rgba(184,150,60,0.2)" }}>
-                  <MapPin className="w-5 h-5" style={{ color:"#B8963C" }} />
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background:"rgba(56,189,248,0.12)", border:"1px solid rgba(56,189,248,0.3)" }}>
+                  <MapPin className="w-5 h-5" style={{ color:"#38BDF8" }} />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style={{ color:"#B8963C" }}>Premium Coworking</p>
-                  <h3 className="font-bold mb-2 leading-tight" style={{ fontSize:"clamp(1.1rem,2vw,1.4rem)", color:"#E8E4DA" }}>
+                  <p className="text-[10px] font-semibold tracking-[0.18em] uppercase mb-1" style={{ color:"#38BDF8" }}>Premium Coworking</p>
+                  <h3 className="font-bold mb-2 leading-tight" style={{ fontSize:"clamp(1.1rem,2vw,1.4rem)", color:"#F0F4FF" }}>
                     Your Ideal Workspace — 8 Indian Cities
                   </h3>
                   <div className="flex flex-wrap gap-x-4 gap-y-1">
                     {["Hot Desks from ₹350/day","Private Cabins","Meeting Rooms","200+ Verified Spaces"].map(s => (
-                      <span key={s} className="text-xs flex items-center gap-1.5" style={{ color:"rgba(122,139,168,0.7)" }}>
-                        <span className="w-1 h-1 rounded-full" style={{ background:"#B8963C", display:"inline-block" }} />{s}
+                      <span key={s} className="text-xs flex items-center gap-1.5" style={{ color:"rgba(138,160,200,0.65)" }}>
+                        <span className="w-1 h-1 rounded-full" style={{ background:"#38BDF8", display:"inline-block", opacity:0.7 }} />{s}
                       </span>
                     ))}
                   </div>
                 </div>
                 <div className="flex gap-2.5 flex-shrink-0">
                   <Link href="/coworking"
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
-                    style={{ background:"#B8963C", color:"#07091A" }}>
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                    style={{ background:"linear-gradient(135deg,#0EA5E9,#0284C7)", color:"#fff", boxShadow:"0 4px 14px rgba(14,165,233,0.3)" }}>
                     Find a Space <ArrowRight className="w-4 h-4" />
                   </Link>
                   <Link href="/coworking/list"
-                    className="px-4 py-2.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-all hover:border-white/15"
-                    style={{ borderColor:"rgba(255,255,255,0.08)", color:"rgba(122,139,168,0.7)", background:"rgba(255,255,255,0.03)" }}>
+                    className="px-4 py-2.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition-all hover:border-sky-500/30"
+                    style={{ borderColor:"rgba(56,189,248,0.2)", color:"rgba(138,160,200,0.65)", background:"rgba(56,189,248,0.05)" }}>
                     List Free
                   </Link>
                 </div>
@@ -535,7 +541,7 @@ export function BusinessOSHomepage() {
       <section className="py-20 px-4 relative" style={{ background: "#07091A", borderTop:"1px solid rgba(255,255,255,0.05)" }}>
         <div className="container max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-12">
-            <p className="text-[10px] font-semibold tracking-[0.25em] uppercase mb-3" style={{ color: "#B8963C" }}>One Platform · Five Business Essentials</p>
+            <p className="text-[10px] font-semibold tracking-[0.25em] uppercase mb-3" style={{ color: "#3B82F6" }}>One Platform · Five Business Essentials</p>
             <h2 className="font-bold leading-tight" style={{ fontFamily: "var(--font-plus-jakarta),sans-serif", fontSize: "clamp(1.8rem,4vw,2.6rem)", color: "#E8E4DA" }}>
               Not just tax. Everything your business needs.
             </h2>
@@ -546,38 +552,39 @@ export function BusinessOSHomepage() {
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { icon: Building2, title: "Start", sub: "Register & Set Up", stat: "7-day", statLabel: "setup", items: ["Company Registration", "GST Number", "MSME Certificate"], href: "/services/business-registration" },
-              { icon: FileText, title: "Comply", sub: "Tax & Compliance", stat: "₹499", statLabel: "from", items: ["GST Filing", "ITR Filing", "ROC / MCA"], href: "/services/compliance" },
-              { icon: Users, title: "Hire", sub: "Talent & Experts", stat: "24hr", statLabel: "match", items: ["Professionals", "Developers", "Designers"], href: "/freelancers" },
-              { icon: MapPin, title: "Work", sub: "Coworking Spaces", stat: "200+", statLabel: "spaces", items: ["Hot Desks", "Private Cabins", "8 Cities"], href: "/coworking" },
-              { icon: TrendingUp, title: "Grow", sub: "Funding & Scale", stat: "500+", statLabel: "clients", items: ["Pitch Decks", "DPR / Business Plan", "Investor Connect"], href: "/services/dpr" },
-            ].map(p => {
+              { icon: Building2, title: "Start", sub: "Register & Set Up", stat: "7 days", items: ["Company Registration", "GST Number", "MSME Certificate"], href: "/services/business-registration", color: "#3B82F6" },
+              { icon: FileText, title: "Comply", sub: "Tax & Compliance", stat: "from ₹499", items: ["GST Filing", "ITR Filing", "ROC / MCA"], href: "/services/compliance", color: "#60A5FA" },
+              { icon: Users, title: "Hire", sub: "Talent & Experts", stat: "24 hr match", items: ["Professionals", "Developers", "Designers"], href: "/freelancers", color: "#818CF8" },
+              { icon: MapPin, title: "Work", sub: "Coworking Spaces", stat: "200+ spaces", items: ["Hot Desks", "Private Cabins", "8 Cities"], href: "/coworking", color: "#38BDF8" },
+              { icon: TrendingUp, title: "Grow", sub: "Funding & Scale", stat: "500+ clients", items: ["Pitch Decks", "DPR / Business Plan", "Investor Connect"], href: "/services/dpr", color: "#6366F1" },
+            ].map((p, idx) => {
               const Icon = p.icon;
               return (
               <Link key={p.title} href={p.href}
-                className="group relative rounded-xl p-5 border transition-all duration-200 hover:border-white/10 cursor-pointer block"
-                style={{ background: "#0D1228", borderColor: "rgba(255,255,255,0.07)" }}>
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background:"rgba(184,150,60,0.1)", border:"1px solid rgba(184,150,60,0.15)" }}>
-                    <Icon className="w-4 h-4" style={{ color:"#B8963C" }} />
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold leading-none" style={{ color: "#B8963C" }}>{p.stat}</p>
-                    <p className="text-[9px]" style={{ color: "rgba(122,139,168,0.5)" }}>{p.statLabel}</p>
-                  </div>
+                className="group relative rounded-2xl p-5 border cursor-pointer block overflow-hidden"
+                style={{ background:"linear-gradient(145deg,#0C1326 0%,#0E1830 100%)", borderColor:"rgba(59,130,246,0.15)", transition:"border-color 0.2s,box-shadow 0.2s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=`${p.color}45`; (e.currentTarget as HTMLElement).style.boxShadow=`0 8px 32px ${p.color}18`; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor="rgba(59,130,246,0.15)"; (e.currentTarget as HTMLElement).style.boxShadow="none"; }}>
+                {/* Top accent */}
+                <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background:`linear-gradient(90deg,${p.color},transparent)` }} />
+                {/* Number */}
+                <div className="absolute top-4 right-4 text-[9px] font-bold tabular-nums" style={{ color:"rgba(255,255,255,0.1)" }}>0{idx+1}</div>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background:`${p.color}14`, border:`1px solid ${p.color}30` }}>
+                  <Icon className="w-5 h-5" style={{ color: p.color }} />
                 </div>
-                <p className="font-bold text-sm mb-0.5" style={{ color: "#E8E4DA" }}>{p.title}</p>
-                <p className="text-[11px] mb-3" style={{ color: "rgba(122,139,168,0.65)" }}>{p.sub}</p>
-                <ul className="space-y-1">
+                <p className="font-bold text-sm mb-0.5" style={{ color: "#F0F4FF" }}>{p.title}</p>
+                <p className="text-[10px] mb-1 font-medium" style={{ color: p.color }}>{p.stat}</p>
+                <p className="text-[11px] mb-3" style={{ color: "rgba(138,160,200,0.6)" }}>{p.sub}</p>
+                <ul className="space-y-1.5">
                   {p.items.map(item => (
-                    <li key={item} className="text-[11px] flex items-center gap-1.5" style={{ color: "rgba(184,184,200,0.55)" }}>
-                      <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: "#B8963C", opacity: 0.6 }} />
+                    <li key={item} className="text-[11px] flex items-center gap-1.5" style={{ color: "rgba(165,180,252,0.55)" }}>
+                      <div className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: p.color, opacity:0.7 }} />
                       {item}
                     </li>
                   ))}
                 </ul>
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ChevronRight className="w-4 h-4" style={{ color: "#B8963C" }} />
+                <div className="mt-4 flex items-center gap-1 text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: p.color }}>
+                  View details <ChevronRight className="w-3 h-3" />
                 </div>
               </Link>
             );
@@ -592,8 +599,8 @@ export function BusinessOSHomepage() {
 
         <div className="container max-w-6xl mx-auto relative z-10">
           <div className="flex items-center gap-3 mb-14">
-            <div className="h-px w-10" style={{ background: `rgba(184,150,60,0.4)` }} />
-            <span className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: "#B8963C" }}>Coworking</span>
+            <div className="h-px w-10" style={{ background: `rgba(59,130,246,0.12)` }} />
+            <span className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: "#3B82F6" }}>Coworking</span>
             <div className="h-px flex-1" style={{ background: `rgba(255,255,255,0.05)` }} />
           </div>
 
@@ -601,14 +608,14 @@ export function BusinessOSHomepage() {
             {/* Left */}
             <div>
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-semibold tracking-[0.15em] uppercase mb-6 border"
-                style={{ background: "rgba(184,150,60,0.06)", borderColor: "rgba(184,150,60,0.2)", color: "#B8963C" }}>
+                style={{ background: "rgba(59,130,246,0.12)", borderColor: "rgba(59,130,246,0.12)", color: "#3B82F6" }}>
                 Now Live
               </span>
 
               <h2 className="font-bold leading-[1.05] mb-5"
                 style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", color: L.text }}>
                 Your perfect office,<br />
-                <span style={{ color: "#B8963C" }}>wherever you work.</span>
+                <span style={{ color: "#3B82F6" }}>wherever you work.</span>
               </h2>
 
               <p className="text-base leading-relaxed mb-8" style={{ color: L.textSub }}>
@@ -631,7 +638,7 @@ export function BusinessOSHomepage() {
               </div>
 
               {/* Cities */}
-              <p className="text-[10px] font-black tracking-[0.25em] uppercase mb-3" style={{ color: L.gold }}>Available in</p>
+              <p className="text-[10px] font-black tracking-[0.25em] uppercase mb-3" style={{ color: L.blue }}>Available in</p>
               <div className="flex flex-wrap gap-2 mb-8">
                 {["Mumbai", "Bangalore", "Delhi NCR", "Hyderabad", "Pune", "Chennai", "Kolkata", "Ahmedabad"].map(city => (
                   <span key={city} className="px-3 py-1 rounded-full text-xs border font-medium"
@@ -641,12 +648,12 @@ export function BusinessOSHomepage() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-0 mb-8 rounded-lg overflow-hidden border" style={{ borderColor: "rgba(255,255,255,0.07)" }}>{[{n:"200+",l:"Spaces"},{n:"8",l:"Cities"},{n:"₹350",l:"From /day"}].map((s,idx) => (<div key={s.l} className="flex-1 text-center py-3 px-2" style={{ borderRight: idx<2 ? "1px solid rgba(255,255,255,0.06)" : "none" }}><p className="text-base font-bold" style={{ color: "#B8963C" }}>{s.n}</p><p className="text-[10px]" style={{ color: L.textMuted }}>{s.l}</p></div>))}</div>
+              <div className="flex items-center gap-0 mb-8 rounded-lg overflow-hidden border" style={{ borderColor: "rgba(255,255,255,0.07)" }}>{[{n:"200+",l:"Spaces"},{n:"8",l:"Cities"},{n:"₹350",l:"From /day"}].map((s,idx) => (<div key={s.l} className="flex-1 text-center py-3 px-2" style={{ borderRight: idx<2 ? "1px solid rgba(255,255,255,0.06)" : "none" }}><p className="text-base font-bold" style={{ color: "#3B82F6" }}>{s.n}</p><p className="text-[10px]" style={{ color: L.textMuted }}>{s.l}</p></div>))}</div>
 
               <div className="flex gap-3 flex-wrap">
                 <Link href="/coworking"
                   className="flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
-                  style={{ background: "#B8963C", color: "#07091A" }}>
+                  style={{ background: "#3B82F6", color: "#07091A" }}>
                   Explore Spaces <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link href="/coworking"
@@ -661,7 +668,7 @@ export function BusinessOSHomepage() {
             <div className="relative">
               <div className="rounded-xl overflow-hidden border"
                 style={{ background: L.bgCard, borderColor: "rgba(255,255,255,0.07)" }}>
-                <div className="h-[2px]" style={{ background: "linear-gradient(90deg,rgba(184,150,60,0.5),rgba(184,150,60,0.15),transparent)" }} />
+                <div className="h-[2px]" style={{ background: "linear-gradient(90deg,rgba(59,130,246,0.12),rgba(59,130,246,0.12),transparent)" }} />
 
                 <div className="px-6 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(37,99,235,0.08)" }}>
                   <div className="flex items-center gap-3">
@@ -689,13 +696,13 @@ export function BusinessOSHomepage() {
                       <button key={plan.key} onClick={() => setSelectedPlan(plan.key)}
                         className="rounded-2xl p-3.5 text-left border cursor-pointer transition-all duration-200"
                         style={selectedPlan === plan.key ? {
-                          borderColor: "rgba(184,150,60,0.35)", background: "rgba(184,150,60,0.06)",
+                          borderColor: "rgba(59,130,246,0.12)", background: "rgba(59,130,246,0.12)",
                         } : {
                           borderColor: "rgba(255,255,255,0.06)", background: L.bgAlt
                         }}>
                         <p className="text-xl mb-1">{plan.emoji}</p>
-                        <p className="text-[11px] font-semibold mb-0.5" style={{ color: selectedPlan === plan.key ? "#D4AC5A" : L.textSub }}>{plan.label}</p>
-                        <p className="text-xs font-bold" style={{ color: selectedPlan === plan.key ? "#B8963C" : L.textMuted }}>
+                        <p className="text-[11px] font-semibold mb-0.5" style={{ color: selectedPlan === plan.key ? "#60A5FA" : L.textSub }}>{plan.label}</p>
+                        <p className="text-xs font-bold" style={{ color: selectedPlan === plan.key ? "#3B82F6" : L.textMuted }}>
                           {plan.price}<span className="font-normal text-[10px]">{plan.per}</span>
                         </p>
                       </button>
@@ -717,7 +724,7 @@ export function BusinessOSHomepage() {
 
                   <Link href="/coworking"
                     className="w-full py-3 rounded-lg text-sm font-semibold text-center block transition-all hover:opacity-90"
-                    style={{ background: "#B8963C", color: "#07091A" }}>
+                    style={{ background: "#3B82F6", color: "#07091A" }}>
                     Book a Visit →
                   </Link>
                 </div>
@@ -739,7 +746,7 @@ export function BusinessOSHomepage() {
       <section className="py-28 px-4 relative" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-8">
-            <p className="text-[10px] font-semibold tracking-[0.2em] uppercase mb-3" style={{ color: "#B8963C" }}>Services · One Platform</p>
+            <p className="text-[10px] font-semibold tracking-[0.2em] uppercase mb-3" style={{ color: "#3B82F6" }}>Services · One Platform</p>
             <h2 className="font-bold mb-3 leading-tight"
               style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: L.text }}>
               Everything your business needs
@@ -915,7 +922,7 @@ export function BusinessOSHomepage() {
       <section className="py-28 px-4" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>How it works</p>
+            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.blue }}>How it works</p>
             <GoldDivider />
             <h2 className="font-black mt-4" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: L.text }}>
               Simple as 1 – 2 – 3
@@ -943,13 +950,13 @@ export function BusinessOSHomepage() {
                       }}>
                       <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5"
                         style={{ background: isActive ? `rgba(184,144,58,0.12)` : `rgba(184,144,58,0.06)`, border: `1px solid ${L.border}` }}>
-                        <span className="font-black text-2xl" style={{ color: L.gold }}>{step.n}</span>
+                        <span className="font-black text-2xl" style={{ color: L.blue }}>{step.n}</span>
                       </div>
                       <h3 className="font-bold mb-3 text-base text-center" style={{ color: L.text }}>{step.t}</h3>
                       <p className="text-sm leading-relaxed text-center mb-3" style={{ color: L.textSub }}>{step.d}</p>
 
                       <div className="flex justify-center">
-                        <span className="text-xs font-semibold" style={{ color: L.gold }}>
+                        <span className="text-xs font-semibold" style={{ color: L.blue }}>
                           {isActive ? "Click to collapse â†'" : "Click to learn more ↓"}
                         </span>
                       </div>
@@ -978,10 +985,10 @@ export function BusinessOSHomepage() {
       <section className="py-28 px-4" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>Why FreWork</p>
+            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.blue }}>Why FreWork</p>
             <GoldDivider />
             <h2 className="font-black mt-4" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: L.text }}>
-              Your complete business platform, <span style={{ color: L.gold }}>all in one place</span>
+              Your complete business platform, <span style={{ color: L.blue }}>all in one place</span>
             </h2>
             <p className="mt-3 text-sm max-w-sm mx-auto" style={{ color: L.textSub }}>
               From incorporation to GST, hiring to workspace — everything a growing Indian business needs, handled.
@@ -1001,15 +1008,15 @@ export function BusinessOSHomepage() {
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
                   <button className="w-full text-left" onClick={() => setOpen(!open)}>
                     <div className="p-6 rounded-xl border transition-all duration-300 relative overflow-hidden"
-                      style={{ background: L.bgCard, borderColor: open ? "rgba(184,150,60,0.2)" : L.borderLight }}>
-                      <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: `linear-gradient(90deg, rgba(184,150,60,0.5), transparent)` }} />
+                      style={{ background: L.bgCard, borderColor: open ? "rgba(59,130,246,0.12)" : L.borderLight }}>
+                      <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: `linear-gradient(90deg, rgba(59,130,246,0.12), transparent)` }} />
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
-                        style={{ background: "rgba(184,150,60,0.08)", border: "1px solid rgba(184,150,60,0.15)" }}>
-                        <Icon className="w-5 h-5" style={{ color: "#B8963C" }} />
+                        style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.12)" }}>
+                        <Icon className="w-5 h-5" style={{ color: "#3B82F6" }} />
                       </div>
                       <h3 className="font-semibold mb-2 text-base" style={{ color: L.text }}>{item.t}</h3>
                       <p className="text-sm leading-relaxed mb-3" style={{ color: L.textSub }}>{item.d}</p>
-                      <span className="text-xs font-medium" style={{ color: "#B8963C" }}>{open ? "Show less" : "Read more"}</span>
+                      <span className="text-xs font-medium" style={{ color: "#3B82F6" }}>{open ? "Show less" : "Read more"}</span>
                       <AnimatePresence>
                         {open && (
                           <motion.p
@@ -1034,7 +1041,7 @@ export function BusinessOSHomepage() {
       <section className="py-20 px-4" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
           <div className="text-center mb-10">
-            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>What our clients say</p>
+            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.blue }}>What our clients say</p>
             <h2 className="font-black" style={{ fontFamily: "var(--font-plus-jakarta),sans-serif", fontSize: "clamp(1.5rem,3.5vw,2.2rem)", color: L.text }}>
               Trusted by growing businesses
             </h2>
@@ -1087,11 +1094,11 @@ export function BusinessOSHomepage() {
                   className="flex items-center gap-3 p-3.5 rounded-lg border transition-all group hover:border-white/12"
                   style={{ background: L.bgCard, borderColor: "rgba(255,255,255,0.06)" }}>
                   <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
-                    style={{ background: "rgba(184,150,60,0.08)", border: "1px solid rgba(184,150,60,0.12)" }}>
-                    <Icon className="w-3.5 h-3.5" style={{ color: "#B8963C" }} />
+                    style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.12)" }}>
+                    <Icon className="w-3.5 h-3.5" style={{ color: "#3B82F6" }} />
                   </div>
                   <span className="text-xs font-medium leading-tight" style={{ color: L.textSub }}>{s.label}</span>
-                  <ArrowRight className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "#B8963C" }} />
+                  <ArrowRight className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "#3B82F6" }} />
                 </Link>
               );
             })}
@@ -1100,32 +1107,35 @@ export function BusinessOSHomepage() {
       </section>
 
       {/* --- CTA --- */}
-      <section className="py-24 px-4 relative" style={{ background: "#07091A", borderTop:"1px solid rgba(255,255,255,0.05)" }}>
-        <div className="container max-w-3xl mx-auto text-center">
-          <p className="text-[10px] font-semibold tracking-[0.25em] uppercase mb-4" style={{ color: "#B8963C" }}>Ready to start?</p>
+      <section className="py-24 px-4 relative overflow-hidden" style={{ background: "#060A18", borderTop:"1px solid rgba(59,130,246,0.12)" }}>
+        <div className="absolute inset-0 pointer-events-none">
+          <div style={{ position:"absolute", left:"20%", top:"-30%", width:600, height:600, borderRadius:"50%", background:"radial-gradient(circle, rgba(59,130,246,0.07) 0%, transparent 60%)", filter:"blur(80px)" }} />
+        </div>
+        <div className="container max-w-3xl mx-auto text-center relative z-10">
+          <p className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: "#60A5FA" }}>Ready to start?</p>
           <h2 className="font-bold mb-4 leading-tight"
-            style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(2rem, 4.5vw, 3rem)", color: "#E8E4DA" }}>
+            style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(2rem, 4.5vw, 3rem)", color: "#F0F4FF" }}>
             India&apos;s complete business platform.
           </h2>
-          <p className="text-base mb-10 max-w-md mx-auto" style={{ color: "rgba(122,139,168,0.8)" }}>
+          <p className="text-base mb-10 max-w-md mx-auto" style={{ color: "rgba(138,160,200,0.7)" }}>
             Join founders, SMEs, and professionals building their business with FreWork.
           </p>
           <div className="flex flex-wrap gap-3 justify-center mb-10">
             <Link href="/register"
-              className="flex items-center gap-2 px-8 py-3.5 rounded-lg font-semibold text-sm transition-all hover:opacity-90"
-              style={{ background: "#B8963C", color: "#07091A" }}>
+              className="flex items-center gap-2 px-8 py-3.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
+              style={{ background:"linear-gradient(135deg,#3B82F6,#1D4ED8)", color:"#fff", boxShadow:"0 6px 24px rgba(59,130,246,0.35)" }}>
               Get Started Free <ChevronRight className="w-4 h-4" />
             </Link>
             <a href={`tel:${SUPPORT_PHONE}`}
-              className="flex items-center gap-2 px-8 py-3.5 rounded-lg font-semibold text-sm border transition-all hover:border-white/15"
-              style={{ borderColor: "rgba(255,255,255,0.1)", color: "rgba(232,228,218,0.75)", background: "rgba(255,255,255,0.04)" }}>
-              <Phone className="w-4 h-4" style={{ color: "#B8963C" }} /> {SUPPORT_PHONE}
+              className="flex items-center gap-2 px-8 py-3.5 rounded-xl font-semibold text-sm border transition-all hover:border-blue-500/30"
+              style={{ borderColor: "rgba(59,130,246,0.2)", color: "rgba(165,180,252,0.8)", background: "rgba(59,130,246,0.05)" }}>
+              <Phone className="w-4 h-4" style={{ color: "#60A5FA" }} /> {SUPPORT_PHONE}
             </a>
           </div>
           <div className="flex items-center justify-center gap-6 flex-wrap">
             {["Company Registration", "GST Filing", "Coworking", "Hire Talent", "Pitch Decks"].map(s => (
-              <span key={s} className="flex items-center gap-1.5 text-xs" style={{ color: "rgba(122,139,168,0.45)" }}>
-                <span className="w-1 h-1 rounded-full" style={{ background: "#B8963C", opacity:0.5 }} />{s}
+              <span key={s} className="flex items-center gap-1.5 text-xs" style={{ color: "rgba(138,160,200,0.4)" }}>
+                <span className="w-1 h-1 rounded-full" style={{ background: "#3B82F6", opacity:0.5 }} />{s}
               </span>
             ))}
           </div>
