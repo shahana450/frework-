@@ -423,19 +423,22 @@ export function BusinessOSHomepage() {
                   <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(148,163,184,0.7)" }}>
                     From company registration to GST, income tax, ROC and MSME — verified CAs handle everything end-to-end, online.
                   </p>
-                  <div className="grid grid-cols-2 gap-y-2 gap-x-3 mb-6">
-                    {["Company Registration","GST Registration","Income Tax (ITR)","GST Filing","ROC / MCA","MSME / Udyam"].map(s => (
-                      <div key={s} className="flex items-center gap-2 text-xs font-semibold" style={{ color:"rgba(203,213,225,0.7)" }}>
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background:"#3B82F6" }} />{s}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-0 mb-6 rounded-2xl overflow-hidden border" style={{ borderColor:"rgba(37,99,235,0.14)", background:"rgba(37,99,235,0.07)" }}>
-                    {[["₹499","Starting"],["24hr","Turnaround"],["100%","Online"]].map(([n,l],i,arr) => (
-                      <div key={l} className="flex-1 text-center py-3" style={{ borderRight:i<arr.length-1?"1px solid rgba(37,99,235,0.12)":"none" }}>
-                        <p className="text-sm font-black leading-none" style={{ color:"#60A5FA" }}>{n}</p>
-                        <p className="text-[9px] font-semibold mt-0.5" style={{ color:"rgba(148,163,184,0.45)" }}>{l}</p>
-                      </div>
+                  {/* Pricing tiers */}
+                  <div className="flex gap-2 mb-5">
+                    {[
+                      { price:"₹999", label:"Basic", services:"GST Reg · MSME · PAN/TAN", color:"#60A5FA" },
+                      { price:"₹1,999", label:"Standard", services:"ITR Filing · GST Filing · TDS", color:"#818CF8", popular:true },
+                      { price:"₹2,999", label:"Pro", services:"ROC · MCA · Company Reg", color:"#A78BFA" },
+                    ].map(p => (
+                      <a key={p.label} href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%27m%20interested%20in%20the%20${p.label}%20plan%20(${encodeURIComponent(p.price)}).`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex-1 rounded-xl p-2.5 text-center transition-all hover:scale-[1.03]"
+                        style={{ background: p.popular ? "rgba(129,140,248,0.13)" : "rgba(37,99,235,0.07)", border:`1px solid ${p.popular ? "rgba(129,140,248,0.4)" : "rgba(37,99,235,0.15)"}`, position:"relative" }}>
+                        {p.popular && <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-black px-2 py-0.5 rounded-full" style={{ background:"#818CF8", color:"#fff", whiteSpace:"nowrap" }}>Popular</div>}
+                        <div className="text-base font-black leading-none mb-0.5" style={{ color:p.color }}>{p.price}</div>
+                        <div className="text-[9px] font-bold mb-1" style={{ color:"rgba(203,213,225,0.9)" }}>{p.label}</div>
+                        <div className="text-[8px] leading-tight" style={{ color:"rgba(148,163,184,0.55)" }}>{p.services}</div>
+                      </a>
                     ))}
                   </div>
                   <div className="flex gap-2.5">
