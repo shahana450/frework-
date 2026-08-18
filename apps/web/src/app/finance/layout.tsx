@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -81,7 +81,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const sidebarW = collapsed ? 56 : 220;
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji'" }}>
       {/* Sidebar */}
       <aside style={{
         width: sidebarW, flexShrink: 0, background: "rgba(255,255,255,0.015)",
