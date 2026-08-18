@@ -37,7 +37,7 @@ const MODULES = [
   {
     id: "start", label: "START", tagline: "Register & Set Up", emoji: "🏢",
     desc: "Get your business legally incorporated in India – fast, affordable, and fully online.",
-    icon: Building2, color: "#059669", href: "/services/compliance", badge: "Most Popular",
+    icon: Building2, color: "#3B82F6", href: "/services/compliance", badge: "Most Popular",
     items: ["Company Registration", "GST Registration", "PAN & TAN", "MSME / Udyam"],
     detail: {
       heading: "Everything to start your business",
@@ -75,7 +75,7 @@ const MODULES = [
   {
     id: "finance", label: "FINANCE", tagline: "Manage Money", emoji: "💰",
     desc: "Invoicing, payroll, bookkeeping – keep your finances clean and audit-ready.",
-    icon: IndianRupee, color: "#7C3AED", href: "/pricing", badge: "Coming Soon",
+    icon: IndianRupee, color: "#818CF8", href: "/pricing", badge: "Coming Soon",
     items: ["Invoicing", "Payroll", "Bookkeeping", "Reports"],
     detail: {
       heading: "Your finance team, built in",
@@ -94,7 +94,7 @@ const MODULES = [
   {
     id: "professionals", label: "FIND PEOPLE", tagline: "Hire Talent", emoji: "👥",
     desc: "Verified CAs, developers, designers and consultants for your business.",
-    icon: Users, color: "#D97706", href: "/freelancers", badge: "Live",
+    icon: Users, color: "#60A5FA", href: "/freelancers", badge: "Live",
     items: ["Professionals & Lawyers", "Developers", "Designers", "Consultants"],
     detail: {
       heading: "Hire verified professionals",
@@ -113,7 +113,7 @@ const MODULES = [
   {
     id: "grow", label: "GROW", tagline: "Scale Up", emoji: "📈",
     desc: "Business plans, DPRs, pitch decks – the documents you need to raise money and scale.",
-    icon: TrendingUp, color: "#DC2626", href: "/services/dpr", badge: null,
+    icon: TrendingUp, color: "#38BDF8", href: "/services/dpr", badge: null,
     items: ["DPR", "Pitch Deck", "Business Plan", "Restructuring"],
     detail: {
       heading: "Documents that open doors",
@@ -197,7 +197,7 @@ const COWORK_PLANS = [
   { key: "virtual", emoji: "🌐", label: "Virtual Office", price: "₹999", per: "/month", desc: "Premium business address, GST registration address, mail handling and call answering. Look professional without a physical office." },
 ];
 
-function GoldDivider() {
+function BlueDivider() {
   return (
     <div className="flex items-center gap-3 justify-center my-4">
       <div className="h-px w-12 opacity-40" style={{ background: `linear-gradient(90deg, transparent, ${L.blue})` }} />
@@ -524,7 +524,7 @@ export function BusinessOSHomepage() {
             className="flex items-center justify-center gap-8 flex-wrap mb-6">
             {[["500+","Businesses Served"],["200+","Verified Spaces"],["8","Indian Cities"],["₹499","Starting Price"]].map(([n,l]) => (
               <div key={l} className="text-center">
-                <p className="text-xl font-black leading-none" style={{ color:"#C9A84C" }}>{n}</p>
+                <p className="text-xl font-black leading-none" style={{ color:"#3B82F6" }}>{n}</p>
                 <p className="text-[10px] font-semibold mt-1" style={{ color:"rgba(148,163,184,0.45)" }}>{l}</p>
               </div>
             ))}
@@ -534,11 +534,11 @@ export function BusinessOSHomepage() {
           <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.45 }}
             className="text-center">
             <div className="inline-flex items-center gap-2 text-xs font-semibold" style={{ color:"rgba(148,163,184,0.4)" }}>
-              <span className="w-1 h-1 rounded-full bg-emerald-400" />
+              <span className="w-1 h-1 rounded-full bg-blue-400" />
               Trusted by 500+ Indian businesses
-              <span className="w-1 h-1 rounded-full bg-emerald-400" />
+              <span className="w-1 h-1 rounded-full bg-blue-400" />
               Free WhatsApp consultation
-              <span className="w-1 h-1 rounded-full bg-emerald-400" />
+              <span className="w-1 h-1 rounded-full bg-blue-400" />
               100% online
             </div>
           </motion.div>
@@ -689,8 +689,8 @@ export function BusinessOSHomepage() {
                     </div>
                   </div>
                   <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border"
-                    style={{ background: "rgba(5,150,105,0.06)", color: "#065F46", borderColor: "rgba(5,150,105,0.2)" }}>
-                    <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                    style={{ background: "rgba(59,130,246,0.08)", color: "#1D4ED8", borderColor: "rgba(59,130,246,0.2)" }}>
+                    <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
                     Available
                   </span>
                 </div>
@@ -932,7 +932,7 @@ export function BusinessOSHomepage() {
         <div className="container max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.blue }}>How it works</p>
-            <GoldDivider />
+            <BlueDivider />
             <h2 className="font-black mt-4" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: L.text }}>
               Simple as 1 – 2 – 3
             </h2>
@@ -995,7 +995,7 @@ export function BusinessOSHomepage() {
         <div className="container max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.blue }}>Why FreWork</p>
-            <GoldDivider />
+            <BlueDivider />
             <h2 className="font-black mt-4" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: L.text }}>
               Your complete business platform, <span style={{ color: L.blue }}>all in one place</span>
             </h2>
@@ -1057,13 +1057,13 @@ export function BusinessOSHomepage() {
           </div>
           <div className="grid md:grid-cols-3 gap-5">
             {[
-              { quote: "FreWork registered my company and GST in 6 days. I was expecting it to take a month. The process was completely seamless.", name: "Rahul Sharma", role: "Founder, TechStart Pune", color: "#059669" },
-              { quote: "Booked a hot desk through FreWork and it was perfectly set up. Every space is personally verified — you get exactly what you see.", name: "Priya Menon", role: "Freelance Designer, Bangalore", color: "#C9A84C" },
+              { quote: "FreWork registered my company and GST in 6 days. I was expecting it to take a month. The process was completely seamless.", name: "Rahul Sharma", role: "Founder, TechStart Pune", color: "#3B82F6" },
+              { quote: "Booked a hot desk through FreWork and it was perfectly set up. Every space is personally verified — you get exactly what you see.", name: "Priya Menon", role: "Freelance Designer, Bangalore", color: "#3B82F6" },
               { quote: "Our CA through FreWork filed 3 years of pending ITR in 4 days. Affordable, fast, and genuinely professional service.", name: "Anil Gupta", role: "SME Owner, Delhi NCR", color: "#3B82F6" },
             ].map((item) => (
               <div key={item.name} className="rounded-2xl p-6 border" style={{ background: L.bgCard, borderColor: `${item.color}22`, boxShadow: L.shadow }}>
                 <div className="flex gap-0.5 mb-4">
-                  {[1,2,3,4,5].map(i => <span key={i} style={{ color: "#C9A84C", fontSize: "14px" }}>★</span>)}
+                  {[1,2,3,4,5].map(i => <span key={i} style={{ color: "#3B82F6", fontSize: "14px" }}>★</span>)}
                 </div>
                 <p className="text-sm leading-relaxed mb-5" style={{ color: L.textSub }}>&ldquo;{item.quote}&rdquo;</p>
                 <div className="flex items-center gap-3">
@@ -1181,10 +1181,10 @@ export function BusinessOSHomepage() {
         >
           <div
             className="relative w-full max-w-sm rounded-3xl overflow-hidden"
-            style={{ background: "linear-gradient(160deg,#0C1005,#141A02)", border: "1px solid rgba(201,168,76,0.3)", boxShadow: "0 24px 80px rgba(0,0,0,0.7)" }}
+            style={{ background: "linear-gradient(160deg,#0C1326,#0E1A38)", border: "1px solid rgba(59,130,246,0.25)", boxShadow: "0 24px 80px rgba(0,0,0,0.7)" }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="h-[3px]" style={{ background: "linear-gradient(90deg,#C9A84C,#E8C97A,#C9A84C)" }} />
+            <div className="h-[3px]" style={{ background: "linear-gradient(90deg,#3B82F6,#818CF8,#3B82F6)" }} />
             <button
               onClick={() => setShowAuthModal(false)}
               className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all hover:opacity-70"
@@ -1192,10 +1192,10 @@ export function BusinessOSHomepage() {
             >✕</button>
             <div className="p-8 text-center">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4"
-                style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border: "1px solid rgba(201,168,76,0.3)" }}>
+                style={{ background: "linear-gradient(135deg,rgba(59,130,246,0.15),rgba(59,130,246,0.06))", border: "1px solid rgba(59,130,246,0.3)" }}>
                 🛩️
               </div>
-              <p className="text-[9px] font-black tracking-[0.3em] uppercase mb-2" style={{ color: "#C9A84C" }}>FrePilot by FreWork</p>
+              <p className="text-[9px] font-black tracking-[0.3em] uppercase mb-2" style={{ color: "#3B82F6" }}>FrePilot by FreWork</p>
               <h3 className="font-black text-xl mb-1" style={{ color: "#EDE8DC", letterSpacing: "-0.02em" }}>Sign in to access FrePilot</h3>
               <p className="text-xs mb-6" style={{ color: "rgba(148,163,184,0.5)" }}>Your AI accountant — GST, books, TDS and more.</p>
               <button
@@ -1221,3 +1221,4 @@ export function BusinessOSHomepage() {
     </div>
   );
 }
+
