@@ -58,25 +58,46 @@ const NAV_GROUPS = [
   },
 ];
 
+const UNGUARDED = ["/finance/pricing", "/finance/setup", "/finance/admin"];
+
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [bizName, setBizName] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  const [subChecked, setSubChecked] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
+
+      // Subscription gate \u2014 skip for unguarded pages
+      if (!UNGUARDED.some(p => pathname.startsWith(p))) {
+        const { data: sub } = await supabase
+          .from("fw_fin_subscriptions")
+          .select("status,subscription_ends_at")
+          .eq("user_id", user.id)
+          .in("status", ["active", "trial"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        const valid = sub && new Date(sub.subscription_ends_at) > new Date();
+        if (!valid) { router.replace("/finance/pricing"); return; }
+      }
+      setSubChecked(true);
+
       const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (saved) {
         const { data } = await supabase.from("fw_fin_businesses").select("name").eq("id", saved).single();
         if (data) setBizName(data.name);
       }
     });
-  }, []);
+  }, [pathname]);
 
-  // Don't show sidebar on setup page
-  if (pathname === "/finance/setup") return <>{children}</>;
+  // Don't show sidebar on setup/pricing/admin pages, and wait for sub check
+  if (UNGUARDED.some(p => pathname.startsWith(p))) return <>{children}</>;
+  if (!subChecked) return <div style={{ minHeight: "100vh", background: "#070C1A" }} />;
 
   const sidebarW = collapsed ? 56 : 220;
 
