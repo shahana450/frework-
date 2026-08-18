@@ -60,7 +60,7 @@ export default function SalesListPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Sales Invoices</span>
         <div style={{ flex: 1 }} />
         <Link href="/finance/sales/new" style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "7px 16px", borderRadius: 7, textDecoration: "none", fontWeight: 700, fontSize: "0.82rem" }}>
@@ -75,8 +75,8 @@ export default function SalesListPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
           {[
             { label: "Total Invoices", value: totals.count, color: "#60a5fa", prefix: "" },
-            { label: "Total Billed", value: totals.total, color: "#C9A84C", prefix: "\u20B9" },
-            { label: "Total Posted", value: totals.posted, color: "#4ade80", prefix: "\u20B9" },
+            { label: "Total Billed", value: totals.total, color: "#C9A84C", prefix: "₹" },
+            { label: "Total Posted", value: totals.posted, color: "#4ade80", prefix: "₹" },
           ].map(k => (
             <div key={k.label} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 10, padding: "0.85rem 1rem" }}>
               <div style={{ fontSize: "1.2rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>
@@ -96,19 +96,19 @@ export default function SalesListPage() {
               </button>
             ))}
           </div>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoices\u2026"
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoices…"
             style={{ background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.1)", color: "#EDE8DC", padding: "6px 12px", borderRadius: 7, fontSize: "0.82rem", outline: "none", flex: 1, maxWidth: 300 }} />
         </div>
 
         {/* Table */}
         <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, overflow: "hidden" }}>
           {loading ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "rgba(237,232,220,0.3)" }}>Loading\u2026</div>
+            <div style={{ padding: "3rem", textAlign: "center", color: "rgba(237,232,220,0.3)" }}>Loading…</div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: "3rem", textAlign: "center", color: "rgba(237,232,220,0.3)" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>\u{1F9FE}</div>
+              <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>🧾</div>
               <div>{search ? "No invoices match your search." : "No sales invoices yet."}</div>
-              <Link href="/finance/sales/new" style={{ display: "inline-block", marginTop: "1rem", color: "#C9A84C", textDecoration: "none", fontSize: "0.85rem" }}>\u2192 Create First Invoice</Link>
+              <Link href="/finance/sales/new" style={{ display: "inline-block", marginTop: "1rem", color: "#C9A84C", textDecoration: "none", fontSize: "0.85rem" }}>→ Create First Invoice</Link>
             </div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -126,9 +126,9 @@ export default function SalesListPage() {
                     <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", color: "rgba(237,232,220,0.55)", whiteSpace: "nowrap" }}>
                       {new Date(inv.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
                     </td>
-                    <td style={{ padding: "0.65rem 1rem", fontSize: "0.82rem", color: "rgba(237,232,220,0.7)" }}>{contacts[inv.contact_id ?? ""] ?? "\u2014"}</td>
+                    <td style={{ padding: "0.65rem 1rem", fontSize: "0.82rem", color: "rgba(237,232,220,0.7)" }}>{contacts[inv.contact_id ?? ""] ?? "—"}</td>
                     <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(237,232,220,0.55)" }}>{inv.narration}</td>
-                    <td style={{ padding: "0.65rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(inv.total_credit)}</td>
+                    <td style={{ padding: "0.65rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>₹{fmt(inv.total_credit)}</td>
                     <td style={{ padding: "0.65rem 1rem" }}>
                       <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: 8, background: `${statusColor(inv.status)}18`, color: statusColor(inv.status), fontWeight: 600, textTransform: "capitalize" }}>
                         {inv.status}
@@ -141,7 +141,7 @@ export default function SalesListPage() {
                 <tr style={{ borderTop: "2px solid rgba(201,168,76,0.25)", background: "rgba(201,168,76,0.04)" }}>
                   <td colSpan={4} style={{ padding: "0.7rem 1rem", fontWeight: 800 }}>Total ({filtered.length} invoices)</td>
                   <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 900, color: "#C9A84C", fontVariantNumeric: "tabular-nums" }}>
-                    \u20B9{fmt(filtered.reduce((s, i) => s + i.total_credit, 0))}
+                    ₹{fmt(filtered.reduce((s, i) => s + i.total_credit, 0))}
                   </td>
                   <td />
                 </tr>

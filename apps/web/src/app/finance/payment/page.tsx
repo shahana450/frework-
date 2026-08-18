@@ -108,7 +108,7 @@ export default function PaymentPage() {
     if (jErr || !journal) { setError(jErr?.message ?? "Failed"); setSaving(false); return; }
     await supabase.from("fw_fin_journal_lines").insert(jLines.map(l => ({ ...l, journal_id: journal.id })));
 
-    setSuccess(`${mode === "post" ? "Posted" : "Saved"}: ${entryNo} \u2014 \u20B9${parseFloat(amount).toLocaleString("en-IN")}`);
+    setSuccess(`${mode === "post" ? "Posted" : "Saved"}: ${entryNo} — ₹${parseFloat(amount).toLocaleString("en-IN")}`);
     setAmount(""); setNarration(""); setRefNo(""); setChequeNo(""); setContactId("");
     setSaving(false);
 
@@ -124,7 +124,7 @@ export default function PaymentPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Payment Entry</span>
       </nav>
 
@@ -141,13 +141,13 @@ export default function PaymentPage() {
                 background: paymentType === t ? (t === "receipt" ? "#4ade80" : "#f87171") : "rgba(237,232,220,0.06)",
                 color: paymentType === t ? "#070C1A" : "rgba(237,232,220,0.5)",
               }}>
-                {t === "receipt" ? "\u{1F4B0} Customer Receipt" : "\u{1F4B3} Vendor Payment"}
+                {t === "receipt" ? "💰 Customer Receipt" : "💳 Vendor Payment"}
               </button>
             ))}
           </div>
 
           {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
-          {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>\u2713 {success}</div>}
+          {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
@@ -165,7 +165,7 @@ export default function PaymentPage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div>
-                <label style={labelStyle}>Amount (\u20B9)</label>
+                <label style={labelStyle}>Amount (₹)</label>
                 <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" style={{ ...inputStyle, textAlign: "right", fontSize: "1rem", fontWeight: 700 }} />
               </div>
               <div>
@@ -219,13 +219,13 @@ export default function PaymentPage() {
                 <div style={{ fontWeight: 700, marginBottom: "0.5rem", color: "rgba(237,232,220,0.5)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Journal Preview</div>
                 {paymentType === "receipt" ? (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Bank / Cash</span><span style={{ color: "#f87171", fontVariantNumeric: "tabular-nums" }}>\u20B9{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Debtors (AR)</span><span style={{ color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>\u20B9{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Bank / Cash</span><span style={{ color: "#f87171", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Debtors (AR)</span><span style={{ color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
                   </>
                 ) : (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Creditors (AP)</span><span style={{ color: "#f87171", fontVariantNumeric: "tabular-nums" }}>\u20B9{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Bank / Cash</span><span style={{ color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>\u20B9{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Creditors (AP)</span><span style={{ color: "#f87171", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Bank / Cash</span><span style={{ color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
                   </>
                 )}
               </div>
@@ -234,13 +234,13 @@ export default function PaymentPage() {
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button onClick={() => handleSave("draft")} disabled={saving} style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
               <button onClick={() => handleSave("post")} disabled={saving} style={{ background: paymentType === "receipt" ? "#4ade80" : "#f87171", border: "none", color: "#070C1A", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
-                {saving ? "Saving\u2026" : `Post ${paymentType === "receipt" ? "Receipt" : "Payment"}`}
+                {saving ? "Saving…" : `Post ${paymentType === "receipt" ? "Receipt" : "Payment"}`}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Sidebar \u2014 Recent */}
+        {/* Sidebar — Recent */}
         <div>
           <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Payments</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -253,7 +253,7 @@ export default function PaymentPage() {
                 <div style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.25rem" }}>
                   <span style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.3)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                  <span style={{ fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: r.type === "receipt" ? "#4ade80" : "#f87171" }}>\u20B9{fmt(r.type === "receipt" ? r.total_credit : r.total_debit)}</span>
+                  <span style={{ fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: r.type === "receipt" ? "#4ade80" : "#f87171" }}>₹{fmt(r.type === "receipt" ? r.total_credit : r.total_debit)}</span>
                 </div>
               </div>
             ))}

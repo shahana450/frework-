@@ -102,7 +102,7 @@ export default function InsightsPage() {
     setTopExpenses(Array.from(expByAcc.entries()).map(([name, amount]) => ({ name, amount, type: "expense" })).sort((a, b) => b.amount - a.amount).slice(0, 5));
     setTopRevenue(Array.from(revByAcc.entries()).map(([name, amount]) => ({ name, amount, type: "income" })).sort((a, b) => b.amount - a.amount).slice(0, 5));
 
-    // GST payable estimate \u2014 sum output vs input GST from account names
+    // GST payable estimate — sum output vs input GST from account names
     const gstOut = lList.filter(l => l.fw_fin_chart_of_accounts?.name.toLowerCase().includes("gst output") || l.fw_fin_chart_of_accounts?.name.toLowerCase().includes("cgst output") || l.fw_fin_chart_of_accounts?.name.toLowerCase().includes("sgst output") || l.fw_fin_chart_of_accounts?.name.toLowerCase().includes("igst output")).reduce((s, l) => s + l.cr_amount, 0);
     const gstIn = lList.filter(l => l.fw_fin_chart_of_accounts?.name.toLowerCase().includes("gst input") || l.fw_fin_chart_of_accounts?.name.toLowerCase().includes("cgst input") || l.fw_fin_chart_of_accounts?.name.toLowerCase().includes("sgst input") || l.fw_fin_chart_of_accounts?.name.toLowerCase().includes("igst input")).reduce((s, l) => s + l.dr_amount, 0);
     setGstPayable(Math.max(0, gstOut - gstIn));
@@ -115,7 +115,7 @@ export default function InsightsPage() {
   }
 
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
-  const fmtShort = (n: number) => n >= 100000 ? `\u20B9${(n / 100000).toFixed(1)}L` : n >= 1000 ? `\u20B9${(n / 1000).toFixed(1)}K` : `\u20B9${Math.round(n)}`;
+  const fmtShort = (n: number) => n >= 100000 ? `₹${(n / 100000).toFixed(1)}L` : n >= 1000 ? `₹${(n / 1000).toFixed(1)}K` : `₹${Math.round(n)}`;
 
   const maxMonthValue = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expenses)), 1);
   const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : "0.0";
@@ -125,32 +125,32 @@ export default function InsightsPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>AI Insights</span>
         <div style={{ flex: 1 }} />
         <Link href="/finance/virtual-ca" style={{ background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.3)", color: "#C9A84C", padding: "6px 14px", borderRadius: 8, textDecoration: "none", fontSize: "0.82rem" }}>
-          \u{1F6E9}\uFE0F Ask FrePilot
+          🛩️ Ask FrePilot
         </Link>
       </nav>
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
         <div style={{ marginBottom: "1.5rem" }}>
           <h1 style={{ margin: "0 0 0.2rem", fontSize: "1.3rem", fontWeight: 800 }}>AI Financial Insights</h1>
-          <p style={{ margin: 0, color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>{bizName} \u2014 Current Financial Year</p>
+          <p style={{ margin: 0, color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>{bizName} — Current Financial Year</p>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(237,232,220,0.3)" }}>Analysing your financials\u2026</div>
+          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(237,232,220,0.3)" }}>Analysing your financials…</div>
         ) : (
           <>
             {/* KPI Strip */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
               {[
-                { label: "Revenue", value: totalRevenue, color: "#4ade80", icon: "\u{1F4C8}" },
-                { label: "Expenses", value: totalExpenses, color: "#f87171", icon: "\u{1F4C9}" },
-                { label: "Net Profit", value: netProfit, color: netProfit >= 0 ? "#C9A84C" : "#f87171", icon: "\u{1F4B0}" },
-                { label: "GST Payable", value: gstPayable, color: "#60a5fa", icon: "\u{1F3DB}\uFE0F" },
-                { label: "Cash & Bank", value: cashBalance, color: "rgba(237,232,220,0.8)", icon: "\u{1F3E6}" },
+                { label: "Revenue", value: totalRevenue, color: "#4ade80", icon: "📈" },
+                { label: "Expenses", value: totalExpenses, color: "#f87171", icon: "📉" },
+                { label: "Net Profit", value: netProfit, color: netProfit >= 0 ? "#C9A84C" : "#f87171", icon: "💰" },
+                { label: "GST Payable", value: gstPayable, color: "#60a5fa", icon: "🏛️" },
+                { label: "Cash & Bank", value: cashBalance, color: "rgba(237,232,220,0.8)", icon: "🏦" },
               ].map(k => (
                 <div key={k.label} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 10, padding: "0.9rem 1rem" }}>
                   <div style={{ fontSize: "1.1rem", marginBottom: "0.35rem" }}>{k.icon}</div>
@@ -173,15 +173,15 @@ export default function InsightsPage() {
                   ? "Healthy margin. Room to improve by controlling expenses or increasing pricing."
                   : parseFloat(profitMargin) >= 0
                   ? "Thin margin. Review your largest expense categories and consider pricing strategy."
-                  : "Operating at a loss. Immediate action needed \u2014 cut costs or increase revenue."}
+                  : "Operating at a loss. Immediate action needed — cut costs or increase revenue."}
               </div>
               <Link href="/finance/virtual-ca" style={{ flexShrink: 0, background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.25)", color: "#C9A84C", padding: "8px 16px", borderRadius: 8, textDecoration: "none", fontSize: "0.8rem", fontWeight: 600 }}>
-                Ask FrePilot \u2192
+                Ask FrePilot →
               </Link>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem", marginBottom: "1.5rem" }}>
-              {/* Bar Chart \u2014 Monthly P&L */}
+              {/* Bar Chart — Monthly P&L */}
               <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem" }}>
                 <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "1.25rem" }}>Monthly Revenue vs Expenses</div>
                 {monthlyData.length === 0 ? (
@@ -196,8 +196,8 @@ export default function InsightsPage() {
                         <div key={m.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
                           <div style={{ fontSize: "0.62rem", color: "rgba(237,232,220,0.3)", marginBottom: 4, fontVariantNumeric: "tabular-nums" }}>{fmtShort(m.profit)}</div>
                           <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 140 }}>
-                            <div title={`Revenue: \u20B9${fmt(m.revenue)}`} style={{ width: 14, height: revH, background: "linear-gradient(180deg,#4ade80,#22c55e)", borderRadius: "3px 3px 0 0", transition: "height 0.4s" }} />
-                            <div title={`Expenses: \u20B9${fmt(m.expenses)}`} style={{ width: 14, height: expH, background: "linear-gradient(180deg,#f87171,#ef4444)", borderRadius: "3px 3px 0 0", transition: "height 0.4s" }} />
+                            <div title={`Revenue: ₹${fmt(m.revenue)}`} style={{ width: 14, height: revH, background: "linear-gradient(180deg,#4ade80,#22c55e)", borderRadius: "3px 3px 0 0", transition: "height 0.4s" }} />
+                            <div title={`Expenses: ₹${fmt(m.expenses)}`} style={{ width: 14, height: expH, background: "linear-gradient(180deg,#f87171,#ef4444)", borderRadius: "3px 3px 0 0", transition: "height 0.4s" }} />
                           </div>
                           <div style={{ fontSize: "0.62rem", color: "rgba(237,232,220,0.4)", marginTop: 4 }}>{label}</div>
                         </div>
@@ -263,7 +263,7 @@ export default function InsightsPage() {
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
                             <span style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "65%" }}>{d.name}</span>
                             <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
-                              <span style={{ fontSize: "0.75rem", fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(d.amount)}</span>
+                              <span style={{ fontSize: "0.75rem", fontVariantNumeric: "tabular-nums" }}>₹{fmt(d.amount)}</span>
                               <span style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.3)" }}>{total > 0 ? `${((d.amount / total) * 100).toFixed(0)}%` : ""}</span>
                             </div>
                           </div>
@@ -283,17 +283,17 @@ export default function InsightsPage() {
               <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "1rem" }}>Smart Alerts & Recommendations</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
                 {[
-                  gstPayable > 0 && { icon: "\u{1F3DB}\uFE0F", text: `GST payable estimated at \u20B9${fmt(gstPayable)}. File GSTR-3B before the 20th.`, color: "#60a5fa", href: "/finance/gst" },
-                  netProfit < 0 && { icon: "\u26A0\uFE0F", text: "Business is operating at a loss this year. Review your top expenses and pricing.", color: "#f87171", href: "/finance/virtual-ca" },
-                  totalRevenue === 0 && { icon: "\u{1F4C8}", text: "No sales recorded yet. Create your first sales invoice to start tracking revenue.", color: "#C9A84C", href: "/finance/sales/new" },
-                  totalExpenses > totalRevenue * 0.8 && totalRevenue > 0 && { icon: "\u{1F4CA}", text: `Expenses are ${((totalExpenses / totalRevenue) * 100).toFixed(0)}% of revenue. Industry benchmark is typically 60\u201370%.`, color: "#fb923c", href: "/finance/reports" },
-                  gstPayable > 0 && { icon: "\u2705", text: "Ensure GST ITC is claimed on all purchase bills with valid GSTIN.", color: "#4ade80", href: "/finance/virtual-ca" },
-                  { icon: "\u{1F4CB}", text: "Keep all invoices uploaded and AI-reviewed for accurate books and easy ITR filing.", color: "rgba(237,232,220,0.5)", href: "/finance/upload" },
+                  gstPayable > 0 && { icon: "🏛️", text: `GST payable estimated at ₹${fmt(gstPayable)}. File GSTR-3B before the 20th.`, color: "#60a5fa", href: "/finance/gst" },
+                  netProfit < 0 && { icon: "⚠️", text: "Business is operating at a loss this year. Review your top expenses and pricing.", color: "#f87171", href: "/finance/virtual-ca" },
+                  totalRevenue === 0 && { icon: "📈", text: "No sales recorded yet. Create your first sales invoice to start tracking revenue.", color: "#C9A84C", href: "/finance/sales/new" },
+                  totalExpenses > totalRevenue * 0.8 && totalRevenue > 0 && { icon: "📊", text: `Expenses are ${((totalExpenses / totalRevenue) * 100).toFixed(0)}% of revenue. Industry benchmark is typically 60–70%.`, color: "#fb923c", href: "/finance/reports" },
+                  gstPayable > 0 && { icon: "✅", text: "Ensure GST ITC is claimed on all purchase bills with valid GSTIN.", color: "#4ade80", href: "/finance/virtual-ca" },
+                  { icon: "📋", text: "Keep all invoices uploaded and AI-reviewed for accurate books and easy ITR filing.", color: "rgba(237,232,220,0.5)", href: "/finance/upload" },
                 ].filter(Boolean).map((alert, i) => alert && (
                   <Link key={i} href={alert.href} style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.65rem 0.85rem", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 8, textDecoration: "none" }}>
                     <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{alert.icon}</span>
                     <span style={{ fontSize: "0.82rem", color: alert.color, flex: 1, lineHeight: 1.45 }}>{alert.text}</span>
-                    <span style={{ fontSize: "0.75rem", color: "#C9A84C", flexShrink: 0 }}>\u2192</span>
+                    <span style={{ fontSize: "0.75rem", color: "#C9A84C", flexShrink: 0 }}>→</span>
                   </Link>
                 ))}
               </div>

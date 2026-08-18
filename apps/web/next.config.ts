@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: {},
+  experimental: {}, // build-bust: 2026-08-18
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.amazonaws.com" },

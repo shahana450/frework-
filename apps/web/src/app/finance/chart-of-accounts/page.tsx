@@ -1,4 +1,4 @@
-\uFEFF"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -92,7 +92,7 @@ export default function ChartOfAccountsPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Chart of Accounts</span>
         <div style={{ flex: 1 }} />
         <button onClick={() => setShowAdd(true)} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "6px 16px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>
@@ -118,13 +118,13 @@ export default function ChartOfAccountsPage() {
           })}
           <input
             value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search accounts\u2026"
+            placeholder="Search accounts…"
             style={{ marginLeft: "auto", background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "6px 14px", borderRadius: 20, fontSize: "0.82rem", width: 220, outline: "none" }}
           />
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "4rem", color: "rgba(237,232,220,0.3)" }}>Loading\u2026</div>
+          <div style={{ textAlign: "center", padding: "4rem", color: "rgba(237,232,220,0.3)" }}>Loading…</div>
         ) : (
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -147,7 +147,7 @@ export default function ChartOfAccountsPage() {
                       <tr key={acc.id} style={{ borderTop: "1px solid rgba(237,232,220,0.04)" }}>
                         <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", color: "rgba(237,232,220,0.5)", fontVariantNumeric: "tabular-nums", fontFamily: "monospace" }}>{acc.code}</td>
                         <td style={{ padding: "0.65rem 1rem", fontSize: "0.85rem", fontWeight: acc.is_group ? 700 : 400, color: acc.is_group ? "#C9A84C" : "#EDE8DC" }}>
-                          {acc.is_group && <span style={{ marginRight: "0.4rem", fontSize: "0.7rem", opacity: 0.7 }}>\u25BE</span>}
+                          {acc.is_group && <span style={{ marginRight: "0.4rem", fontSize: "0.7rem", opacity: 0.7 }}>▾</span>}
                           {acc.name}
                         </td>
                         <td style={{ padding: "0.65rem 1rem" }}>
@@ -213,7 +213,7 @@ export default function ChartOfAccountsPage() {
               <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
                 <button onClick={() => { setShowAdd(false); setError(""); }} style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "8px 18px", borderRadius: 7, cursor: "pointer", fontSize: "0.88rem" }}>Cancel</button>
                 <button onClick={addAccount} disabled={saving} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "8px 20px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
-                  {saving ? "Saving\u2026" : "Add Account"}
+                  {saving ? "Saving…" : "Add Account"}
                 </button>
               </div>
             </div>

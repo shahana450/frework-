@@ -124,19 +124,19 @@ function LedgerContent() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Ledger</span>
         <div style={{ flex: 1 }} />
         <button onClick={() => window.print()} style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.1)", color: "#EDE8DC", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
-          \u{1F5A8} Print
+          🖨 Print
         </button>
       </nav>
 
       <div style={{ display: "flex", height: "calc(100vh - 56px)" }}>
-        {/* Sidebar \u2014 Account List */}
+        {/* Sidebar — Account List */}
         <div style={{ width: 260, borderRight: "1px solid rgba(237,232,220,0.08)", display: "flex", flexDirection: "column", flexShrink: 0 }}>
           <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid rgba(237,232,220,0.06)" }}>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search accounts\u2026"
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search accounts…"
               style={{ width: "100%", background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "6px 10px", borderRadius: 6, fontSize: "0.8rem", outline: "none", boxSizing: "border-box" }} />
           </div>
           <div style={{ flex: 1, overflowY: "auto" }}>
@@ -166,18 +166,18 @@ function LedgerContent() {
           </div>
         </div>
 
-        {/* Main \u2014 Ledger */}
+        {/* Main — Ledger */}
         <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem" }}>
           {!selectedAcc ? (
             <div style={{ textAlign: "center", padding: "5rem 2rem" }}>
-              <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>\u{1F4D2}</div>
+              <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📒</div>
               <div style={{ color: "rgba(237,232,220,0.4)", fontSize: "0.9rem" }}>Select an account from the left to view its ledger</div>
             </div>
           ) : (
             <>
               <div style={{ marginBottom: "1.5rem" }}>
                 <h2 style={{ margin: "0 0 0.25rem", fontSize: "1.2rem", fontWeight: 800 }}>{selectedAcc.name}</h2>
-                <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>Account Code: {selectedAcc.code} \u00B7 Type: {selectedAcc.type}</div>
+                <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>Account Code: {selectedAcc.code} · Type: {selectedAcc.type}</div>
               </div>
 
               {/* Summary cards */}
@@ -189,13 +189,13 @@ function LedgerContent() {
                 ].map(k => (
                   <div key={k.label} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 10, padding: "0.85rem 1rem" }}>
                     <div style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.35rem" }}>{k.label}</div>
-                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(k.value)}</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>₹{fmt(k.value)}</div>
                   </div>
                 ))}
               </div>
 
               {loading ? (
-                <div style={{ textAlign: "center", padding: "3rem", color: "rgba(237,232,220,0.3)" }}>Loading ledger\u2026</div>
+                <div style={{ textAlign: "center", padding: "3rem", color: "rgba(237,232,220,0.3)" }}>Loading ledger…</div>
               ) : entries.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "3rem", color: "rgba(237,232,220,0.3)" }}>No posted transactions for this account.</div>
               ) : (
@@ -203,8 +203,8 @@ function LedgerContent() {
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr style={{ background: "rgba(255,255,255,0.02)" }}>
-                        {["Date", "Entry No", "Narration", "Debit (\u20B9)", "Credit (\u20B9)", "Balance"].map(h => (
-                          <th key={h} style={{ padding: "0.55rem 0.85rem", textAlign: ["Debit (\u20B9)", "Credit (\u20B9)", "Balance"].includes(h) ? "right" : "left", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
+                        {["Date", "Entry No", "Narration", "Debit (₹)", "Credit (₹)", "Balance"].map(h => (
+                          <th key={h} style={{ padding: "0.55rem 0.85rem", textAlign: ["Debit (₹)", "Credit (₹)", "Balance"].includes(h) ? "right" : "left", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -212,10 +212,10 @@ function LedgerContent() {
                       <tr style={{ background: "rgba(201,168,76,0.04)", borderBottom: "1px solid rgba(237,232,220,0.06)" }}>
                         <td colSpan={3} style={{ padding: "0.5rem 0.85rem", fontSize: "0.8rem", fontWeight: 600, color: "rgba(237,232,220,0.5)" }}>Opening Balance</td>
                         <td style={{ padding: "0.5rem 0.85rem", textAlign: "right", fontSize: "0.8rem", color: "rgba(237,232,220,0.5)", fontVariantNumeric: "tabular-nums" }}>
-                          {openingType === "Dr" && openingBal > 0 ? fmt(openingBal) : "\u2014"}
+                          {openingType === "Dr" && openingBal > 0 ? fmt(openingBal) : "—"}
                         </td>
                         <td style={{ padding: "0.5rem 0.85rem", textAlign: "right", fontSize: "0.8rem", color: "rgba(237,232,220,0.5)", fontVariantNumeric: "tabular-nums" }}>
-                          {openingType === "Cr" && openingBal > 0 ? fmt(openingBal) : "\u2014"}
+                          {openingType === "Cr" && openingBal > 0 ? fmt(openingBal) : "—"}
                         </td>
                         <td style={{ padding: "0.5rem 0.85rem", textAlign: "right", fontSize: "0.8rem", fontVariantNumeric: "tabular-nums", color: "#C9A84C" }}>
                           {fmt(openingBal)} {openingType}
@@ -229,10 +229,10 @@ function LedgerContent() {
                           <td style={{ padding: "0.5rem 0.85rem", fontSize: "0.75rem", fontFamily: "monospace", color: "rgba(201,168,76,0.7)" }}>{e.entry_no}</td>
                           <td style={{ padding: "0.5rem 0.85rem", fontSize: "0.82rem", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.narration}</td>
                           <td style={{ padding: "0.5rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: e.dr > 0 ? "#f87171" : "rgba(237,232,220,0.2)" }}>
-                            {e.dr > 0 ? fmt(e.dr) : "\u2014"}
+                            {e.dr > 0 ? fmt(e.dr) : "—"}
                           </td>
                           <td style={{ padding: "0.5rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: e.cr > 0 ? "#4ade80" : "rgba(237,232,220,0.2)" }}>
-                            {e.cr > 0 ? fmt(e.cr) : "\u2014"}
+                            {e.cr > 0 ? fmt(e.cr) : "—"}
                           </td>
                           <td style={{ padding: "0.5rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "#EDE8DC" }}>
                             {fmt(e.balance)} <span style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.35)" }}>{e.balance_type}</span>

@@ -36,13 +36,13 @@ function SectionTable({ title, rows, drLabel = "Debit", crLabel = "Credit", netL
       {rows.map(r => (
         <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 1rem", borderTop: "1px solid rgba(237,232,220,0.04)", fontSize: "0.85rem" }}>
           <span style={{ color: "rgba(237,232,220,0.7)" }}>{r.name}</span>
-          <span style={{ fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(Math.abs(r.dr - r.cr))}</span>
+          <span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(Math.abs(r.dr - r.cr))}</span>
         </div>
       ))}
       {netLabel && netValue !== undefined && (
         <div style={{ display: "flex", justifyContent: "space-between", padding: "0.6rem 1rem", borderTop: "2px solid rgba(237,232,220,0.12)", fontWeight: 700, color: netColor ?? "#C9A84C" }}>
           <span>{netLabel}</span>
-          <span style={{ fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(Math.abs(netValue))}</span>
+          <span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(Math.abs(netValue))}</span>
         </div>
       )}
     </div>
@@ -107,7 +107,7 @@ export default function ReportsPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Reports</span>
         <div style={{ flex: 1 }} />
         {financialYears.length > 0 && (
@@ -117,7 +117,7 @@ export default function ReportsPage() {
           </select>
         )}
         <button onClick={() => window.print()} style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.1)", color: "#EDE8DC", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
-          \u{1F5A8} Print
+          🖨 Print
         </button>
       </nav>
 
@@ -137,7 +137,7 @@ export default function ReportsPage() {
         {error && <div style={{ color: "#f87171", background: "rgba(248,113,113,0.08)", padding: "1rem", borderRadius: 8, marginBottom: "1rem" }}>{error}</div>}
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(237,232,220,0.3)" }}>Calculating\u2026</div>
+          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(237,232,220,0.3)" }}>Calculating…</div>
         ) : (
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, overflow: "hidden" }}>
             {/* Profit & Loss */}
@@ -145,14 +145,14 @@ export default function ReportsPage() {
               <>
                 <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(237,232,220,0.08)" }}>
                   <div style={{ fontWeight: 800, fontSize: "1rem" }}>Profit & Loss Statement</div>
-                  <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", marginTop: "0.2rem" }}>For the period \u2014 Financial Year {financialYears.find(f => f.id === fyId)?.label}</div>
+                  <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", marginTop: "0.2rem" }}>For the period — Financial Year {financialYears.find(f => f.id === fyId)?.label}</div>
                 </div>
                 <SectionTable title="Revenue / Sales" rows={plData.direct_income} />
                 <SectionTable title="Direct Expenses (Cost of Goods Sold)" rows={plData.direct_expense} />
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: "rgba(201,168,76,0.06)", fontWeight: 800, fontSize: "0.95rem" }}>
                   <span>Gross Profit</span>
                   <span style={{ color: plData.gross_profit >= 0 ? "#4ade80" : "#f87171", fontVariantNumeric: "tabular-nums" }}>
-                    {plData.gross_profit < 0 ? "-" : ""}\u20B9{fmt(plData.gross_profit)}
+                    {plData.gross_profit < 0 ? "-" : ""}₹{fmt(plData.gross_profit)}
                   </span>
                 </div>
                 <SectionTable title="Other Income" rows={plData.indirect_income} />
@@ -160,7 +160,7 @@ export default function ReportsPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "1rem 1.5rem", background: "rgba(201,168,76,0.1)", fontWeight: 800, fontSize: "1.1rem", borderTop: "2px solid rgba(201,168,76,0.3)" }}>
                   <span>Net {plData.net_profit >= 0 ? "Profit" : "Loss"}</span>
                   <span style={{ color: plData.net_profit >= 0 ? "#4ade80" : "#f87171", fontVariantNumeric: "tabular-nums" }}>
-                    {plData.net_profit < 0 ? "-" : ""}\u20B9{fmt(plData.net_profit)}
+                    {plData.net_profit < 0 ? "-" : ""}₹{fmt(plData.net_profit)}
                   </span>
                 </div>
                 {plData.total_income === 0 && plData.total_expense === 0 && (
@@ -185,7 +185,7 @@ export default function ReportsPage() {
                     <SectionTable title="Fixed Assets" rows={bsData.fixed_assets} />
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: "rgba(96,165,250,0.08)", fontWeight: 800 }}>
                       <span>Total Assets</span>
-                      <span style={{ color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(bsData.total_assets)}</span>
+                      <span style={{ color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>₹{fmt(bsData.total_assets)}</span>
                     </div>
                   </div>
                   <div>
@@ -195,11 +195,11 @@ export default function ReportsPage() {
                     <SectionTable title="Capital & Equity" rows={bsData.equity} />
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 1rem", borderTop: "1px solid rgba(237,232,220,0.06)", fontSize: "0.85rem" }}>
                       <span style={{ color: "rgba(237,232,220,0.7)" }}>Net {bsData.net_profit >= 0 ? "Profit" : "Loss"} (current year)</span>
-                      <span style={{ color: bsData.net_profit >= 0 ? "#4ade80" : "#f87171", fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(bsData.net_profit)}</span>
+                      <span style={{ color: bsData.net_profit >= 0 ? "#4ade80" : "#f87171", fontVariantNumeric: "tabular-nums" }}>₹{fmt(bsData.net_profit)}</span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: "rgba(248,113,113,0.08)", fontWeight: 800 }}>
                       <span>Total Liabilities & Capital</span>
-                      <span style={{ color: "#f87171", fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(bsData.total_liabilities_equity)}</span>
+                      <span style={{ color: "#f87171", fontVariantNumeric: "tabular-nums" }}>₹{fmt(bsData.total_liabilities_equity)}</span>
                     </div>
                   </div>
                 </div>
@@ -219,8 +219,8 @@ export default function ReportsPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "rgba(255,255,255,0.02)" }}>
-                      {["Code", "Account Name", "Debit (\u20B9)", "Credit (\u20B9)"].map(h => (
-                        <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h.includes("\u20B9") ? "right" : "left", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
+                      {["Code", "Account Name", "Debit (₹)", "Credit (₹)"].map(h => (
+                        <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h.includes("₹") ? "right" : "left", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -230,10 +230,10 @@ export default function ReportsPage() {
                         <td style={{ padding: "0.55rem 1rem", fontSize: "0.78rem", fontFamily: "monospace", color: "rgba(237,232,220,0.4)" }}>{a.code}</td>
                         <td style={{ padding: "0.55rem 1rem", fontSize: "0.85rem" }}>{a.name}</td>
                         <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", color: a.dr > 0 ? "#EDE8DC" : "rgba(237,232,220,0.25)" }}>
-                          {a.dr > 0 ? fmt(a.dr) : "\u2014"}
+                          {a.dr > 0 ? fmt(a.dr) : "—"}
                         </td>
                         <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", color: a.cr > 0 ? "#EDE8DC" : "rgba(237,232,220,0.25)" }}>
-                          {a.cr > 0 ? fmt(a.cr) : "\u2014"}
+                          {a.cr > 0 ? fmt(a.cr) : "—"}
                         </td>
                       </tr>
                     ))}
@@ -241,12 +241,12 @@ export default function ReportsPage() {
                   <tfoot>
                     <tr style={{ borderTop: "2px solid rgba(201,168,76,0.3)", background: "rgba(201,168,76,0.06)" }}>
                       <td colSpan={2} style={{ padding: "0.75rem 1rem", fontWeight: 800, fontSize: "0.9rem" }}>Grand Total</td>
-                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#C9A84C" }}>\u20B9{fmt(tbData.total_dr)}</td>
-                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#C9A84C" }}>\u20B9{fmt(tbData.total_cr)}</td>
+                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#C9A84C" }}>₹{fmt(tbData.total_dr)}</td>
+                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#C9A84C" }}>₹{fmt(tbData.total_cr)}</td>
                     </tr>
                     <tr>
                       <td colSpan={4} style={{ padding: "0.5rem 1rem", textAlign: "right", fontSize: "0.78rem", color: Math.abs(tbData.total_dr - tbData.total_cr) < 0.01 ? "#4ade80" : "#f87171" }}>
-                        {Math.abs(tbData.total_dr - tbData.total_cr) < 0.01 ? "\u2713 Trial Balance is balanced" : `\u26A0 Difference: \u20B9${fmt(Math.abs(tbData.total_dr - tbData.total_cr))}`}
+                        {Math.abs(tbData.total_dr - tbData.total_cr) < 0.01 ? "✓ Trial Balance is balanced" : `⚠ Difference: ₹${fmt(Math.abs(tbData.total_dr - tbData.total_cr))}`}
                       </td>
                     </tr>
                   </tfoot>
@@ -299,7 +299,7 @@ function CashFlowStatement({ bizId, fyId, plData }: { bizId: string | null; fyId
     <tr key={label} style={{ borderTop: "1px solid rgba(237,232,220,0.04)" }}>
       <td style={{ padding: `0.55rem ${indent ? "2rem" : "1rem"}`, fontSize: "0.85rem", fontWeight: bold ? 800 : 400, color: bold ? "#EDE8DC" : "rgba(237,232,220,0.75)" }}>{label}</td>
       <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontWeight: bold ? 800 : 400, fontVariantNumeric: "tabular-nums", color: value < 0 ? "#f87171" : value > 0 ? "#EDE8DC" : "rgba(237,232,220,0.3)" }}>
-        {value !== 0 ? `${value < 0 ? "(" : ""}\u20B9${Math.abs(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}${value < 0 ? ")" : ""}` : "\u2014"}
+        {value !== 0 ? `${value < 0 ? "(" : ""}₹${Math.abs(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}${value < 0 ? ")" : ""}` : "—"}
       </td>
     </tr>
   );
@@ -308,13 +308,13 @@ function CashFlowStatement({ bizId, fyId, plData }: { bizId: string | null; fyId
     <>
       <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(237,232,220,0.08)" }}>
         <div style={{ fontWeight: 800, fontSize: "1rem" }}>Cash Flow Statement</div>
-        <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", marginTop: "0.2rem" }}>Indirect Method \u2014 Operating, Investing, Financing</div>
+        <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", marginTop: "0.2rem" }}>Indirect Method — Operating, Investing, Financing</div>
       </div>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ background: "rgba(255,255,255,0.02)" }}>
             <th style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Particulars</th>
-            <th style={{ padding: "0.6rem 1rem", textAlign: "right", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Amount (\u20B9)</th>
+            <th style={{ padding: "0.6rem 1rem", textAlign: "right", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Amount (₹)</th>
           </tr>
         </thead>
         <tbody>
@@ -327,34 +327,34 @@ function CashFlowStatement({ bizId, fyId, plData }: { bizId: string | null; fyId
           <tr style={{ borderTop: "2px solid rgba(201,168,76,0.25)", background: "rgba(201,168,76,0.05)" }}>
             <td style={{ padding: "0.7rem 1rem", fontWeight: 800 }}>Net Cash from Operations</td>
             <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: operatingCF >= 0 ? "#4ade80" : "#f87171" }}>
-              {operatingCF < 0 ? "(" : ""}\u20B9{Math.abs(operatingCF).toLocaleString("en-IN", { minimumFractionDigits: 2 })}{operatingCF < 0 ? ")" : ""}
+              {operatingCF < 0 ? "(" : ""}₹{Math.abs(operatingCF).toLocaleString("en-IN", { minimumFractionDigits: 2 })}{operatingCF < 0 ? ")" : ""}
             </td>
           </tr>
 
           <tr><td colSpan={2} style={{ padding: "0.75rem 1rem", fontWeight: 800, background: "rgba(96,165,250,0.06)", color: "#60a5fa", fontSize: "0.82rem" }}>B. Investing Activities</td></tr>
           <tr style={{ borderTop: "1px solid rgba(237,232,220,0.04)" }}>
             <td style={{ padding: "0.55rem 1rem", fontSize: "0.85rem", color: "rgba(237,232,220,0.4)" }}>Purchase / Sale of Fixed Assets</td>
-            <td style={{ padding: "0.55rem 1rem", textAlign: "right", color: "rgba(237,232,220,0.25)" }}>\u2014</td>
+            <td style={{ padding: "0.55rem 1rem", textAlign: "right", color: "rgba(237,232,220,0.25)" }}>—</td>
           </tr>
           <tr style={{ borderTop: "2px solid rgba(96,165,250,0.2)", background: "rgba(96,165,250,0.04)" }}>
             <td style={{ padding: "0.7rem 1rem", fontWeight: 800 }}>Net Cash from Investing</td>
-            <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "rgba(237,232,220,0.4)" }}>\u20B90.00</td>
+            <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "rgba(237,232,220,0.4)" }}>₹0.00</td>
           </tr>
 
           <tr><td colSpan={2} style={{ padding: "0.75rem 1rem", fontWeight: 800, background: "rgba(74,222,128,0.04)", color: "#4ade80", fontSize: "0.82rem" }}>C. Financing Activities</td></tr>
           <tr style={{ borderTop: "1px solid rgba(237,232,220,0.04)" }}>
             <td style={{ padding: "0.55rem 1rem", fontSize: "0.85rem", color: "rgba(237,232,220,0.4)" }}>Loans raised / repaid, Capital introduced</td>
-            <td style={{ padding: "0.55rem 1rem", textAlign: "right", color: "rgba(237,232,220,0.25)" }}>\u2014</td>
+            <td style={{ padding: "0.55rem 1rem", textAlign: "right", color: "rgba(237,232,220,0.25)" }}>—</td>
           </tr>
           <tr style={{ borderTop: "2px solid rgba(74,222,128,0.2)", background: "rgba(74,222,128,0.04)" }}>
             <td style={{ padding: "0.7rem 1rem", fontWeight: 800 }}>Net Cash from Financing</td>
-            <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "rgba(237,232,220,0.4)" }}>\u20B90.00</td>
+            <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "rgba(237,232,220,0.4)" }}>₹0.00</td>
           </tr>
 
           <tr style={{ borderTop: "3px solid rgba(201,168,76,0.4)", background: "rgba(201,168,76,0.08)" }}>
             <td style={{ padding: "0.9rem 1rem", fontWeight: 900, fontSize: "0.95rem", color: "#C9A84C" }}>Net Increase / (Decrease) in Cash</td>
             <td style={{ padding: "0.9rem 1rem", textAlign: "right", fontWeight: 900, fontSize: "0.95rem", fontVariantNumeric: "tabular-nums", color: netCF >= 0 ? "#4ade80" : "#f87171" }}>
-              {netCF < 0 ? "(" : ""}\u20B9{Math.abs(netCF).toLocaleString("en-IN", { minimumFractionDigits: 2 })}{netCF < 0 ? ")" : ""}
+              {netCF < 0 ? "(" : ""}₹{Math.abs(netCF).toLocaleString("en-IN", { minimumFractionDigits: 2 })}{netCF < 0 ? ")" : ""}
             </td>
           </tr>
         </tbody>

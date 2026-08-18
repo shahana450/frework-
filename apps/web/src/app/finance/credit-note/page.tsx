@@ -79,10 +79,10 @@ export default function CreditNotePage() {
     const contactName = contacts.find(c => c.id === contactId)?.name ?? "Customer";
 
     const lines: { account_id: string; dr_amount: number; cr_amount: number; narration: string }[] = [
-      { account_id: salesAccountId, dr_amount: amt, cr_amount: 0, narration: `Credit Note \u2014 ${reason.replace("_", " ")} to ${contactName}` },
+      { account_id: salesAccountId, dr_amount: amt, cr_amount: 0, narration: `Credit Note — ${reason.replace("_", " ")} to ${contactName}` },
     ];
 
-    // GST reversal \u2014 find GST accounts
+    // GST reversal — find GST accounts
     const cgstAcc = accounts.find(a => a.name.toLowerCase().includes("cgst") && a.name.toLowerCase().includes("output"));
     const sgstAcc = accounts.find(a => a.name.toLowerCase().includes("sgst") && a.name.toLowerCase().includes("output"));
     const igstAcc = accounts.find(a => a.name.toLowerCase().includes("igst") && a.name.toLowerCase().includes("output"));
@@ -96,14 +96,14 @@ export default function CreditNotePage() {
       }
     }
 
-    lines.push({ account_id: debtorAccountId, dr_amount: 0, cr_amount: totalAmt, narration: `AR reduced \u2014 CN ${entryNo}` });
+    lines.push({ account_id: debtorAccountId, dr_amount: 0, cr_amount: totalAmt, narration: `AR reduced — CN ${entryNo}` });
 
     const totalDr = lines.reduce((s, l) => s + l.dr_amount, 0);
     const totalCr = lines.reduce((s, l) => s + l.cr_amount, 0);
 
     const { data: journal, error: jErr } = await supabase.from("fw_fin_journals").insert({
       business_id: bizId, fy_id: fyId, date, entry_no: entryNo, type: "credit_note",
-      narration: narration || `Credit Note to ${contactName} \u2014 ${reason.replace("_", " ")}`,
+      narration: narration || `Credit Note to ${contactName} — ${reason.replace("_", " ")}`,
       reference_no: refInvoice || null, contact_id: contactId || null,
       total_debit: totalDr, total_credit: totalCr, status: "posted", ai_generated: false,
     }).select("id").single();
@@ -111,7 +111,7 @@ export default function CreditNotePage() {
     if (jErr || !journal) { setError(jErr?.message ?? "Failed"); setSaving(false); return; }
     await supabase.from("fw_fin_journal_lines").insert(lines.map(l => ({ ...l, journal_id: journal.id })));
 
-    setSuccess(`Posted: ${entryNo} \u2014 \u20B9${totalAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`);
+    setSuccess(`Posted: ${entryNo} — ₹${totalAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`);
     setAmount(""); setNarration(""); setRefInvoice(""); setContactId("");
     setSaving(false);
 
@@ -127,17 +127,17 @@ export default function CreditNotePage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Credit Note</span>
       </nav>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem", maxWidth: 1000, margin: "0 auto", padding: "2rem" }}>
         <div>
           <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Credit Note</h1>
-          <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Issue a credit note to a customer \u2014 reduces their outstanding (AR) balance</p>
+          <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Issue a credit note to a customer — reduces their outstanding (AR) balance</p>
 
           {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
-          {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>\u2713 {success}</div>}
+          {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
@@ -168,13 +168,13 @@ export default function CreditNotePage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div>
-                <label style={labelStyle}>Amount (\u20B9) before GST</label>
+                <label style={labelStyle}>Amount (₹) before GST</label>
                 <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" style={{ ...inputStyle, textAlign: "right", fontSize: "1rem", fontWeight: 700 }} />
               </div>
               <div>
                 <label style={labelStyle}>GST Rate</label>
                 <select value={gstRate} onChange={e => setGstRate(e.target.value)} style={inputStyle}>
-                  <option value="0">0% \u2014 Exempt / Nil rated</option>
+                  <option value="0">0% — Exempt / Nil rated</option>
                   <option value="5">5% GST</option>
                   <option value="12">12% GST</option>
                   <option value="18">18% GST</option>
@@ -190,25 +190,25 @@ export default function CreditNotePage() {
             {/* Amount breakdown */}
             {amt > 0 && (
               <div style={{ background: "rgba(237,232,220,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Base Amount</span><span style={{ fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(amt)}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Base Amount</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(amt)}</span></div>
                 {!isInterState && cgst > 0 && <>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>CGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(cgst)}</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>SGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(sgst)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>CGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(cgst)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>SGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(sgst)}</span></div>
                 </>}
-                {isInterState && igst > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>IGST @ {gstRate}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(igst)}</span></div>}
+                {isInterState && igst > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>IGST @ {gstRate}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(igst)}</span></div>}
                 <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, borderTop: "1px solid rgba(237,232,220,0.08)", paddingTop: 6, marginTop: 6, color: "#f87171" }}>
-                  <span>Total Credit Note Value</span><span style={{ fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(totalAmt)}</span>
+                  <span>Total Credit Note Value</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalAmt)}</span>
                 </div>
               </div>
             )}
 
             <div style={{ marginBottom: "1rem" }}>
               <label style={labelStyle}>Narration</label>
-              <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder="e.g. Sales return against INV-0001 \u2014 damaged goods" rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+              <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder="e.g. Sales return against INV-0001 — damaged goods" rows={2} style={{ ...inputStyle, resize: "vertical" }} />
             </div>
 
             <button onClick={handlePost} disabled={saving || !amt} style={{ background: "#f87171", border: "none", color: "#070C1A", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: (!amt || saving) ? 0.5 : 1 }}>
-              {saving ? "Posting\u2026" : "Post Credit Note"}
+              {saving ? "Posting…" : "Post Credit Note"}
             </button>
           </div>
         </div>
@@ -224,13 +224,13 @@ export default function CreditNotePage() {
                   <span style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.3)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                 </div>
                 <div style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration}</div>
-                <div style={{ textAlign: "right", marginTop: "0.25rem", fontSize: "0.82rem", fontWeight: 700, color: "#f87171" }}>\u20B9{fmt(r.total_debit)}</div>
+                <div style={{ textAlign: "right", marginTop: "0.25rem", fontSize: "0.82rem", fontWeight: 700, color: "#f87171" }}>₹{fmt(r.total_debit)}</div>
               </div>
             ))}
             {recent.length === 0 && <div style={{ color: "rgba(237,232,220,0.25)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No credit notes yet</div>}
           </div>
           <Link href="/finance/debit-note" style={{ display: "block", marginTop: "1rem", background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.2)", color: "#4ade80", padding: "8px 14px", borderRadius: 8, textDecoration: "none", fontSize: "0.8rem", textAlign: "center", fontWeight: 600 }}>
-            \u2192 Debit Note (from vendor)
+            → Debit Note (from vendor)
           </Link>
         </div>
       </div>

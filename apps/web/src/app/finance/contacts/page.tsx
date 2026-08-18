@@ -76,7 +76,7 @@ export default function ContactsPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Contacts</span>
         <div style={{ flex: 1 }} />
         <button onClick={() => { setForm(blank()); setEditId(null); setShowForm(true); }} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "6px 16px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>
@@ -94,16 +94,16 @@ export default function ContactsPage() {
               padding: "5px 16px", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.82rem", textTransform: "capitalize",
             }}>{f === "all" ? `All (${contacts.length})` : f === "customer" ? `Customers (${contacts.filter(c => c.type === "customer" || c.type === "both").length})` : `Vendors (${contacts.filter(c => c.type === "vendor" || c.type === "both").length})`}</button>
           ))}
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or GSTIN\u2026"
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or GSTIN…"
             style={{ marginLeft: "auto", ...inp, width: 220 }} />
         </div>
 
         <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, overflow: "hidden" }}>
           {loading ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "rgba(237,232,220,0.3)" }}>Loading\u2026</div>
+            <div style={{ padding: "3rem", textAlign: "center", color: "rgba(237,232,220,0.3)" }}>Loading…</div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: "4rem", textAlign: "center" }}>
-              <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>\u{1F465}</div>
+              <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>👥</div>
               <div style={{ color: "rgba(237,232,220,0.4)", marginBottom: "1rem" }}>No contacts yet.</div>
               <button onClick={() => setShowForm(true)} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "8px 20px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>+ Add First Contact</button>
             </div>
@@ -129,12 +129,12 @@ export default function ContactsPage() {
                         {c.type.charAt(0).toUpperCase() + c.type.slice(1)}
                       </span>
                     </td>
-                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.8rem", fontFamily: "monospace", color: "rgba(237,232,220,0.5)" }}>{c.gstin ?? "\u2014"}</td>
-                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", color: "rgba(237,232,220,0.6)" }}>{c.city ? `${c.city}, ${c.state}` : "\u2014"}</td>
-                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", color: "rgba(237,232,220,0.6)" }}>{c.phone ?? "\u2014"}</td>
+                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.8rem", fontFamily: "monospace", color: "rgba(237,232,220,0.5)" }}>{c.gstin ?? "—"}</td>
+                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", color: "rgba(237,232,220,0.6)" }}>{c.city ? `${c.city}, ${c.state}` : "—"}</td>
+                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", color: "rgba(237,232,220,0.6)" }}>{c.phone ?? "—"}</td>
                     <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem" }}>{c.credit_days} days</td>
                     <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>
-                      {c.opening_balance > 0 ? `\u20B9${c.opening_balance.toLocaleString("en-IN")} ${c.opening_balance_type.toUpperCase()}` : "\u2014"}
+                      {c.opening_balance > 0 ? `₹${c.opening_balance.toLocaleString("en-IN")} ${c.opening_balance_type.toUpperCase()}` : "—"}
                     </td>
                     <td style={{ padding: "0.7rem 1rem" }}>
                       <button onClick={() => startEdit(c)} style={{ background: "none", border: "none", color: "#C9A84C", cursor: "pointer", fontSize: "0.78rem" }}>Edit</button>
@@ -197,7 +197,7 @@ export default function ContactsPage() {
                 <input type="number" value={form.credit_days} onChange={e => set("credit_days", parseInt(e.target.value) || 0)} style={inp} />
               </div>
               <div>
-                <label style={lbl}>Opening Balance (\u20B9)</label>
+                <label style={lbl}>Opening Balance (₹)</label>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <input type="number" value={form.opening_balance} onChange={e => set("opening_balance", parseFloat(e.target.value) || 0)} style={{ ...inp, flex: 1 }} />
                   <select value={form.opening_balance_type} onChange={e => set("opening_balance_type", e.target.value)} style={{ ...inp, width: 60 }}>
@@ -212,7 +212,7 @@ export default function ContactsPage() {
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "1.5rem" }}>
               <button onClick={() => { setShowForm(false); setEditId(null); setError(""); }} style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "8px 18px", borderRadius: 7, cursor: "pointer" }}>Cancel</button>
               <button onClick={save} disabled={saving} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "8px 20px", borderRadius: 7, cursor: "pointer", fontWeight: 700, opacity: saving ? 0.7 : 1 }}>
-                {saving ? "Saving\u2026" : editId ? "Update" : "Add Contact"}
+                {saving ? "Saving…" : editId ? "Update" : "Add Contact"}
               </button>
             </div>
           </div>
