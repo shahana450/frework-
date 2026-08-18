@@ -50,11 +50,11 @@ export default function AdminPortal() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user?.email || !ADMIN_EMAILS.includes(session.user.email)) {
-        router.replace("/finance");
-        return;
-      }
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user?.email) { router.replace("/login"); return; }
+      if (!ADMIN_EMAILS.includes(user.email)) { router.replace("/finance"); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.replace("/login"); return; }
       setToken(session.access_token);
       load(session.access_token);
     });
@@ -81,6 +81,12 @@ export default function AdminPortal() {
   }
 
   const inp: React.CSSProperties = { background: "rgba(237,232,220,0.05)", border: "1px solid rgba(237,232,220,0.15)", color: "#EDE8DC", padding: "7px 10px", borderRadius: 6, fontSize: "0.83rem", outline: "none" };
+
+  if (!token && loading) return (
+    <div style={{ minHeight: "100vh", background: "#070C1A", display: "flex", alignItems: "center", justifyContent: "center", color: "#8AA0C8", fontFamily: "system-ui,sans-serif" }}>
+      Checking auth…
+    </div>
+  );
 
   return (
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
