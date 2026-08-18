@@ -13,7 +13,7 @@ const QUICK_PROMPTS = [
   "What documents do I need for ITR filing?",
   "How to record a purchase with GST in double entry?",
   "When is the GSTR-3B due date for this month?",
-  "What is the TDS rate for contractor payments above ₹30,000?",
+  "What is the TDS rate for contractor payments above \u20B930,000?",
   "Explain the composition scheme eligibility for my business",
 ];
 
@@ -24,7 +24,7 @@ function MarkdownText({ text }: { text: string }) {
     .replace(/`(.+?)`/g, '<code style="background:rgba(201,168,76,0.15);padding:1px 5px;border-radius:3px;font-size:0.9em">$1</code>')
     .replace(/^### (.+)$/gm, '<div style="font-weight:700;font-size:0.95em;color:#C9A84C;margin:0.75rem 0 0.3rem">$1</div>')
     .replace(/^## (.+)$/gm, '<div style="font-weight:800;font-size:1em;color:#C9A84C;margin:0.75rem 0 0.35rem">$1</div>')
-    .replace(/^- (.+)$/gm, '<div style="padding-left:1rem;margin:0.15rem 0">• $1</div>')
+    .replace(/^- (.+)$/gm, '<div style="padding-left:1rem;margin:0.15rem 0">\u2022 $1</div>')
     .replace(/^\d+\. (.+)$/gm, '<div style="padding-left:1rem;margin:0.15rem 0">$1</div>')
     .replace(/\n\n/g, '<div style="margin:0.5rem 0"></div>')
     .replace(/\n/g, "<br/>");
@@ -45,14 +45,14 @@ export default function FrePilotPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
+      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data } = await supabase.from("fw_fin_businesses").select("name").eq("id", saved).single();
       if (data) setBizName(data.name);
       setMessages([{
         role: "assistant",
-        content: `Namaste! I'm **FrePilot** — your AI financial co-pilot for **${data?.name ?? "your business"}**.\n\n*You Build, We Pilot* — I have full access to your financial data and can help you with:\n\n- **Accounting queries** — journal entries, ledgers, double-entry\n- **GST** — GSTR-1, GSTR-3B, ITC reconciliation\n- **Income Tax** — ITR filing, advance tax, TDS\n- **Financial analysis** — P&L interpretation, cash flow\n- **Compliance** — due dates, penalties, notices\n\nAsk me anything about your finances or Indian tax laws.`,
+        content: `Namaste! I'm **FrePilot** \u2014 your AI financial co-pilot for **${data?.name ?? "your business"}**.\n\n*You Build, We Pilot* \u2014 I have full access to your financial data and can help you with:\n\n- **Accounting queries** \u2014 journal entries, ledgers, double-entry\n- **GST** \u2014 GSTR-1, GSTR-3B, ITC reconciliation\n- **Income Tax** \u2014 ITR filing, advance tax, TDS\n- **Financial analysis** \u2014 P&L interpretation, cash flow\n- **Compliance** \u2014 due dates, penalties, notices\n\nAsk me anything about your finances or Indian tax laws.`,
         ts: Date.now(),
       }]);
     });
@@ -97,7 +97,7 @@ export default function FrePilotPage() {
   function clearChat() {
     setMessages([{
       role: "assistant",
-      content: `Chat cleared. I'm FrePilot — how can I help with ${bizName}'s finances?`,
+      content: `Chat cleared. I'm FrePilot \u2014 how can I help with ${bizName}'s finances?`,
       ts: Date.now(),
     }]);
   }
@@ -107,7 +107,7 @@ export default function FrePilotPage() {
       {/* Nav */}
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56, flexShrink: 0 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
         <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
           <span style={{ color: "#C9A84C", fontWeight: 800, fontSize: "0.88rem" }}>FrePilot</span>
           <span style={{ color: "rgba(237,232,220,0.25)", fontSize: "0.6rem", letterSpacing: "0.04em" }}>You Build We Pilot</span>
@@ -133,7 +133,7 @@ export default function FrePilotPage() {
                   background: msg.role === "assistant" ? "rgba(201,168,76,0.15)" : "rgba(96,165,250,0.15)",
                   border: `1px solid ${msg.role === "assistant" ? "rgba(201,168,76,0.3)" : "rgba(96,165,250,0.3)"}`,
                 }}>
-                  {msg.role === "assistant" ? "🛩️" : "👤"}
+                  {msg.role === "assistant" ? "\u{1F6E9}\uFE0F" : "\u{1F464}"}
                 </div>
                 <div style={{
                   maxWidth: "78%", padding: "0.85rem 1.1rem", borderRadius: msg.role === "user" ? "14px 4px 14px 14px" : "4px 14px 14px 14px",
@@ -149,7 +149,7 @@ export default function FrePilotPage() {
 
             {loading && (
               <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem" }}>
-                <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(201,168,76,0.15)", border: "1px solid rgba(201,168,76,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>🛩️</div>
+                <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(201,168,76,0.15)", border: "1px solid rgba(201,168,76,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>\u{1F6E9}\uFE0F</div>
                 <div style={{ padding: "0.85rem 1.1rem", borderRadius: "4px 14px 14px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(237,232,220,0.07)" }}>
                   <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                     {[0, 1, 2].map(i => (
@@ -183,7 +183,7 @@ export default function FrePilotPage() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder="Ask FrePilot anything — GST, TDS, ITR, journal entries, financial advice…"
+                placeholder="Ask FrePilot anything \u2014 GST, TDS, ITR, journal entries, financial advice\u2026"
                 rows={2}
                 style={{
                   flex: 1, background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.15)", color: "#EDE8DC",
@@ -199,10 +199,10 @@ export default function FrePilotPage() {
                   opacity: (loading || !input.trim()) ? 0.5 : 1,
                 }}
               >
-                {loading ? "…" : "Send"}
+                {loading ? "\u2026" : "Send"}
               </button>
             </div>
-            <div style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.25)", marginTop: "0.4rem" }}>Press Enter to send · Shift+Enter for new line · FrePilot powered by Claude AI</div>
+            <div style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.25)", marginTop: "0.4rem" }}>Press Enter to send \u00B7 Shift+Enter for new line \u00B7 FrePilot powered by Claude AI</div>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-﻿"use client";
+\uFEFF"use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -234,15 +234,15 @@ export default function BusinessSetup() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 900, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
-          <span>🛩️</span> FrePilot
+          <span>\u{1F6E9}\uFE0F</span> FrePilot
         </Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Set Up Your Business</span>
       </nav>
 
       <div style={{ maxWidth: 640, margin: "3rem auto", padding: "0 1.5rem" }}>
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ fontSize: "0.8rem", color: "rgba(237,232,220,0.4)", letterSpacing: "0.05em" }}>You Build, We Pilot — let's get your books ready</div>
+          <div style={{ fontSize: "0.8rem", color: "rgba(237,232,220,0.4)", letterSpacing: "0.05em" }}>You Build, We Pilot \u2014 let's get your books ready</div>
         </div>
         {/* Step indicator */}
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2.5rem" }}>
@@ -342,9 +342,9 @@ export default function BusinessSetup() {
               <div style={fieldStyle}>
                 <label style={labelStyle}>Current Financial Year</label>
                 <select style={inputStyle} value={form.fy_start} onChange={e => set("fy_start", e.target.value)}>
-                  <option value="2023-04-01">FY 2023-24 (Apr 2023 – Mar 2024)</option>
-                  <option value="2024-04-01">FY 2024-25 (Apr 2024 – Mar 2025)</option>
-                  <option value="2025-04-01">FY 2025-26 (Apr 2025 – Mar 2026)</option>
+                  <option value="2023-04-01">FY 2023-24 (Apr 2023 \u2013 Mar 2024)</option>
+                  <option value="2024-04-01">FY 2024-25 (Apr 2024 \u2013 Mar 2025)</option>
+                  <option value="2025-04-01">FY 2025-26 (Apr 2025 \u2013 Mar 2026)</option>
                 </select>
               </div>
             </>
@@ -370,7 +370,7 @@ export default function BusinessSetup() {
               <div style={{ marginTop: "1.5rem", background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.15)", borderRadius: 8, padding: "1rem" }}>
                 <div style={{ fontSize: "0.8rem", color: "#C9A84C", fontWeight: 600, marginBottom: "0.3rem" }}>What's included</div>
                 <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.5)", lineHeight: 1.6 }}>
-                  Assets (Cash, Bank, Debtors, GST ITC) · Liabilities (Creditors, GST Payable, TDS) · Capital · Income & Expenses with Indian accounting structure
+                  Assets (Cash, Bank, Debtors, GST ITC) \u00B7 Liabilities (Creditors, GST Payable, TDS) \u00B7 Capital \u00B7 Income & Expenses with Indian accounting structure
                 </div>
               </div>
             </>
@@ -380,14 +380,14 @@ export default function BusinessSetup() {
             <>
               <h2 style={{ margin: "0 0 1.5rem", fontSize: "1.2rem", fontWeight: 700 }}>Review & Create</h2>
               {[
-                { label: "Business Name", value: form.name || "—" },
-                { label: "Business Type", value: BIZ_TYPES.find(b => b.value === form.business_type)?.label ?? "—" },
-                { label: "Location", value: [form.city, form.state].filter(Boolean).join(", ") || "—" },
-                { label: "GST Type", value: GST_TYPES.find(g => g.value === form.gst_registration_type)?.label ?? "—" },
+                { label: "Business Name", value: form.name || "\u2014" },
+                { label: "Business Type", value: BIZ_TYPES.find(b => b.value === form.business_type)?.label ?? "\u2014" },
+                { label: "Location", value: [form.city, form.state].filter(Boolean).join(", ") || "\u2014" },
+                { label: "GST Type", value: GST_TYPES.find(g => g.value === form.gst_registration_type)?.label ?? "\u2014" },
                 { label: "GSTIN", value: form.gstin || "Not provided" },
                 { label: "PAN", value: form.pan || "Not provided" },
                 { label: "Financial Year", value: form.fy_start.startsWith("2024") ? "FY 2024-25" : form.fy_start.startsWith("2025") ? "FY 2025-26" : "FY 2023-24" },
-                { label: "Accounts Preset", value: COA_PRESETS.find(c => c.value === form.coa_preset)?.label ?? "—" },
+                { label: "Accounts Preset", value: COA_PRESETS.find(c => c.value === form.coa_preset)?.label ?? "\u2014" },
               ].map(row => (
                 <div key={row.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.6rem 0", borderBottom: "1px solid rgba(237,232,220,0.06)" }}>
                   <span style={{ fontSize: "0.82rem", color: "rgba(237,232,220,0.5)" }}>{row.label}</span>
@@ -396,18 +396,18 @@ export default function BusinessSetup() {
               ))}
               {error === "__SCHEMA_MISSING__" && (
                 <div style={{ marginTop: "1rem", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 10, padding: "1rem 1.25rem" }}>
-                  <div style={{ fontWeight: 700, color: "#f87171", marginBottom: "0.5rem" }}>⚠️ Database tables not set up yet</div>
+                  <div style={{ fontWeight: 700, color: "#f87171", marginBottom: "0.5rem" }}>\u26A0\uFE0F Database tables not set up yet</div>
                   <div style={{ fontSize: "0.8rem", color: "rgba(237,232,220,0.6)", lineHeight: 1.6, marginBottom: "0.85rem" }}>
                     The FreWork Finance tables don&apos;t exist in your Supabase project yet. You need to run the schema SQL once in your Supabase dashboard.
                   </div>
                   <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.5)", marginBottom: "0.5rem", fontWeight: 600 }}>Steps:</div>
                   <ol style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.78rem", color: "rgba(237,232,220,0.55)", lineHeight: 2 }}>
-                    <li>Open <strong style={{ color: "#C9A84C" }}>supabase.com</strong> → your project → <strong style={{ color: "#C9A84C" }}>SQL Editor</strong></li>
+                    <li>Open <strong style={{ color: "#C9A84C" }}>supabase.com</strong> \u2192 your project \u2192 <strong style={{ color: "#C9A84C" }}>SQL Editor</strong></li>
                     <li>Click <strong style={{ color: "#C9A84C" }}>New Query</strong></li>
                     <li>Download the schema SQL and paste it in:</li>
                   </ol>
                   <a href="/api/finance/setup-schema" target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: "0.75rem", background: "#C9A84C", color: "#070C1A", padding: "7px 16px", borderRadius: 7, textDecoration: "none", fontWeight: 700, fontSize: "0.8rem" }}>
-                    ⬇ Download schema.sql
+                    \u2B07 Download schema.sql
                   </a>
                   <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "rgba(237,232,220,0.35)" }}>After running the SQL, click <strong>Create Business</strong> again.</div>
                 </div>
@@ -423,7 +423,7 @@ export default function BusinessSetup() {
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1.5rem" }}>
           {step > 1 ? (
             <button onClick={() => setStep(s => (s - 1) as Step)} style={{ background: "rgba(237,232,220,0.08)", border: "none", color: "#EDE8DC", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem" }}>
-              ← Back
+              \u2190 Back
             </button>
           ) : (
             <Link href="/finance" style={{ background: "rgba(237,232,220,0.05)", border: "none", color: "rgba(237,232,220,0.5)", padding: "10px 24px", borderRadius: 8, textDecoration: "none", fontSize: "0.9rem" }}>
@@ -435,7 +435,7 @@ export default function BusinessSetup() {
               onClick={() => { if (step === 1 && !form.name) { setError("Business name is required"); return; } setError(""); setStep(s => (s + 1) as Step); }}
               style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem" }}
             >
-              Next →
+              Next \u2192
             </button>
           ) : (
             <button
@@ -443,7 +443,7 @@ export default function BusinessSetup() {
               disabled={saving}
               style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 28px", borderRadius: 8, cursor: saving ? "wait" : "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: saving ? 0.7 : 1 }}
             >
-              {saving ? "Creating…" : "Create Business →"}
+              {saving ? "Creating\u2026" : "Create Business \u2192"}
             </button>
           )}
         </div>

@@ -37,7 +37,7 @@ export default function NewSalesInvoicePage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
+      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
 
@@ -161,9 +161,9 @@ export default function NewSalesInvoicePage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
         <Link href="/finance/journals" style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem", textDecoration: "none" }}>Journals</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>New Sales Invoice</span>
       </nav>
 
@@ -171,7 +171,7 @@ export default function NewSalesInvoicePage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
           <div>
             <h1 style={{ margin: "0 0 0.2rem", fontSize: "1.3rem", fontWeight: 800 }}>New Sales Invoice</h1>
-            <p style={{ margin: 0, color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Create a sales invoice — journal entry is auto-generated</p>
+            <p style={{ margin: 0, color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Create a sales invoice \u2014 journal entry is auto-generated</p>
           </div>
           <div style={{ display: "flex", gap: "0.75rem" }}>
             <button onClick={() => handleSubmit("draft")} disabled={saving} style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
@@ -242,8 +242,8 @@ export default function NewSalesInvoicePage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "rgba(255,255,255,0.01)" }}>
-                  {["Description", "HSN/SAC", "Qty", "Rate (₹)", `GST %`, "Base (₹)", isIGST ? "IGST (₹)" : "CGST+SGST (₹)", ""].map(h => (
-                    <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: h.includes("₹") || h.includes("%") ? "right" : "left", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>{h}</th>
+                  {["Description", "HSN/SAC", "Qty", "Rate (\u20B9)", `GST %`, "Base (\u20B9)", isIGST ? "IGST (\u20B9)" : "CGST+SGST (\u20B9)", ""].map(h => (
+                    <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: h.includes("\u20B9") || h.includes("%") ? "right" : "left", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -275,7 +275,7 @@ export default function NewSalesInvoicePage() {
                     </td>
                     <td style={{ padding: "0.4rem 0.75rem" }}>
                       {lines.length > 1 && (
-                        <button onClick={() => removeLine(i)} style={{ background: "none", border: "none", color: "rgba(248,113,113,0.5)", cursor: "pointer", fontSize: "1rem", padding: "2px 4px" }}>✕</button>
+                        <button onClick={() => removeLine(i)} style={{ background: "none", border: "none", color: "rgba(248,113,113,0.5)", cursor: "pointer", fontSize: "1rem", padding: "2px 4px" }}>\u2715</button>
                       )}
                     </td>
                   </tr>
@@ -306,13 +306,13 @@ export default function NewSalesInvoicePage() {
             ].map(row => (
               <div key={row.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                 <span style={{ fontSize: "0.8rem", color: "rgba(237,232,220,0.45)" }}>{row.label}</span>
-                <span style={{ fontSize: "0.8rem", color: row.color, fontVariantNumeric: "tabular-nums" }}>₹{fmt(row.value)}</span>
+                <span style={{ fontSize: "0.8rem", color: row.color, fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(row.value)}</span>
               </div>
             ))}
             <div style={{ height: 1, background: "rgba(201,168,76,0.2)", margin: "0.75rem 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ fontWeight: 800, fontSize: "1rem" }}>Grand Total</span>
-              <span style={{ fontWeight: 900, fontSize: "1.2rem", color: "#C9A84C", fontVariantNumeric: "tabular-nums" }}>₹{fmt(grandTotal)}</span>
+              <span style={{ fontWeight: 900, fontSize: "1.2rem", color: "#C9A84C", fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(grandTotal)}</span>
             </div>
           </div>
         </div>

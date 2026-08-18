@@ -33,7 +33,7 @@ export default function BankingPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
+      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
     });
@@ -118,7 +118,7 @@ export default function BankingPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Bank Reconciliation</span>
       </nav>
 
@@ -141,7 +141,7 @@ export default function BankingPage() {
             {parseError && <div style={{ color: "#f87171", fontSize: "0.83rem", marginBottom: "1rem" }}>{parseError}</div>}
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button onClick={handleParse} disabled={!csvText.trim()} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: !csvText.trim() ? 0.5 : 1 }}>
-                Parse & Preview →
+                Parse & Preview \u2192
               </button>
               <Link href="/finance/upload" style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.1)", color: "#EDE8DC", padding: "10px 20px", borderRadius: 8, textDecoration: "none", fontSize: "0.9rem" }}>
                 Upload PDF instead
@@ -163,7 +163,7 @@ export default function BankingPage() {
               ].map(k => (
                 <div key={k.label} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, padding: "1rem" }}>
                   <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>{k.label}</div>
-                  <div style={{ fontSize: "1.4rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>₹{fmt(Math.abs(k.value))}</div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(Math.abs(k.value))}</div>
                 </div>
               ))}
             </div>
@@ -187,13 +187,13 @@ export default function BankingPage() {
                         <td style={{ padding: "0.5rem 1rem", fontSize: "0.8rem", whiteSpace: "nowrap", color: "rgba(237,232,220,0.6)" }}>{txn.date}</td>
                         <td style={{ padding: "0.5rem 1rem", fontSize: "0.82rem", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txn.narration}</td>
                         <td style={{ padding: "0.5rem 1rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: txn.type === "debit" ? "#f87171" : "rgba(237,232,220,0.25)" }}>
-                          {txn.type === "debit" ? fmt(txn.amount) : "—"}
+                          {txn.type === "debit" ? fmt(txn.amount) : "\u2014"}
                         </td>
                         <td style={{ padding: "0.5rem 1rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: txn.type === "credit" ? "#4ade80" : "rgba(237,232,220,0.25)" }}>
-                          {txn.type === "credit" ? fmt(txn.amount) : "—"}
+                          {txn.type === "credit" ? fmt(txn.amount) : "\u2014"}
                         </td>
                         <td style={{ padding: "0.5rem 1rem", textAlign: "right", fontSize: "0.78rem", fontVariantNumeric: "tabular-nums", color: "rgba(237,232,220,0.4)" }}>
-                          {txn.balance > 0 ? fmt(txn.balance) : "—"}
+                          {txn.balance > 0 ? fmt(txn.balance) : "\u2014"}
                         </td>
                       </tr>
                     ))}
@@ -203,9 +203,9 @@ export default function BankingPage() {
             </div>
 
             <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button onClick={() => setStep("upload")} style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem" }}>← Back</button>
+              <button onClick={() => setStep("upload")} style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem" }}>\u2190 Back</button>
               <button onClick={importTransactions} disabled={uploading} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: uploading ? 0.7 : 1 }}>
-                {uploading ? "Importing…" : `Import ${previewRows.length} Transactions →`}
+                {uploading ? "Importing\u2026" : `Import ${previewRows.length} Transactions \u2192`}
               </button>
             </div>
           </>
@@ -213,12 +213,12 @@ export default function BankingPage() {
 
         {step === "done" && (
           <div style={{ textAlign: "center", padding: "3rem" }}>
-            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✅</div>
+            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>\u2705</div>
             <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: "0.5rem" }}>Bank Statement Imported</div>
             <div style={{ color: "rgba(237,232,220,0.5)", marginBottom: "2rem" }}>{transactions.length} transactions imported. Review AI suggestions to post journal entries.</div>
             <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
               <Link href="/finance/ai-review" style={{ background: "#C9A84C", color: "#070C1A", padding: "10px 24px", borderRadius: 8, fontWeight: 700, textDecoration: "none" }}>
-                Review AI Suggestions →
+                Review AI Suggestions \u2192
               </Link>
               <button onClick={() => { setCsvText(""); setStep("upload"); setPreviewRows([]); }} style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}>
                 Import Another

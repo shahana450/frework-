@@ -1,4 +1,4 @@
-﻿"use client";
+\uFEFF"use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -44,7 +44,7 @@ export default function AIReviewPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
+      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       loadSuggestions(saved);
@@ -80,14 +80,14 @@ export default function AIReviewPage() {
       const totalCr = lines.reduce((a, l) => a + (l.cr ?? 0), 0);
 
       if (Math.abs(totalDr - totalCr) > 0.01) {
-        alert(`Debit (₹${totalDr.toLocaleString("en-IN")}) ≠ Credit (₹${totalCr.toLocaleString("en-IN")}). Please balance the entry.`);
+        alert(`Debit (\u20B9${totalDr.toLocaleString("en-IN")}) \u2260 Credit (\u20B9${totalCr.toLocaleString("en-IN")}). Please balance the entry.`);
         setSaving(null); return;
       }
 
       // Get current FY
       const { data: fy } = await supabase.from("fw_fin_financial_years").select("id").eq("business_id", bizId).eq("is_current", true).single();
 
-      // Get CoA for name→id mapping
+      // Get CoA for name\u2192id mapping
       const { data: coa } = await supabase.from("fw_fin_chart_of_accounts").select("id,name").eq("business_id", bizId);
       const coaMap: Record<string, string> = {};
       (coa ?? []).forEach(a => { coaMap[a.name] = a.id; });
@@ -147,7 +147,7 @@ export default function AIReviewPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>AI Review Queue</span>
         {pendingCount > 0 && <span style={{ background: "#C9A84C", color: "#070C1A", fontSize: "0.7rem", fontWeight: 800, padding: "2px 7px", borderRadius: 10 }}>{pendingCount}</span>}
         <div style={{ flex: 1 }} />
@@ -158,7 +158,7 @@ export default function AIReviewPage() {
         <div style={{ marginBottom: "1.5rem" }}>
           <h1 style={{ margin: "0 0 0.4rem", fontSize: "1.4rem", fontWeight: 800 }}>AI Journal Suggestions</h1>
           <p style={{ margin: 0, color: "rgba(237,232,220,0.5)", fontSize: "0.85rem" }}>
-            Review AI-suggested journal entries from your uploaded documents. You have final authority — edit or reject before posting.
+            Review AI-suggested journal entries from your uploaded documents. You have final authority \u2014 edit or reject before posting.
           </p>
         </div>
 
@@ -177,16 +177,16 @@ export default function AIReviewPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "4rem", color: "rgba(237,232,220,0.3)" }}>Loading suggestions…</div>
+          <div style={{ textAlign: "center", padding: "4rem", color: "rgba(237,232,220,0.3)" }}>Loading suggestions\u2026</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>
-              {filter === "pending" ? "🤖" : filter === "accepted" ? "✅" : "❌"}
+              {filter === "pending" ? "\u{1F916}" : filter === "accepted" ? "\u2705" : "\u274C"}
             </div>
             <div style={{ color: "rgba(237,232,220,0.4)", fontSize: "0.9rem" }}>
               {filter === "pending" ? "No pending suggestions. Upload documents to get started." : `No ${filter} suggestions.`}
             </div>
-            {filter === "pending" && <Link href="/finance/upload" style={{ display: "inline-block", marginTop: "1rem", color: "#C9A84C", fontSize: "0.85rem" }}>Upload documents →</Link>}
+            {filter === "pending" && <Link href="/finance/upload" style={{ display: "inline-block", marginTop: "1rem", color: "#C9A84C", fontSize: "0.85rem" }}>Upload documents \u2192</Link>}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -221,8 +221,8 @@ export default function AIReviewPage() {
                       {s.fw_fin_documents && (
                         <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", marginTop: "0.2rem" }}>
                           {s.fw_fin_documents.file_name}
-                          {s.fw_fin_documents.ai_summary?.amount && ` · ₹${s.fw_fin_documents.ai_summary.amount.toLocaleString("en-IN")}`}
-                          {s.fw_fin_documents.ai_summary?.date && ` · ${s.fw_fin_documents.ai_summary.date}`}
+                          {s.fw_fin_documents.ai_summary?.amount && ` \u00B7 \u20B9${s.fw_fin_documents.ai_summary.amount.toLocaleString("en-IN")}`}
+                          {s.fw_fin_documents.ai_summary?.date && ` \u00B7 ${s.fw_fin_documents.ai_summary.date}`}
                         </div>
                       )}
                     </div>
@@ -233,16 +233,16 @@ export default function AIReviewPage() {
                             Reject
                           </button>
                           <button onClick={e => { e.stopPropagation(); accept(s); }} disabled={saving === s.id} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontWeight: 700, fontSize: "0.78rem", opacity: saving === s.id ? 0.7 : 1 }}>
-                            {saving === s.id ? "Posting…" : "✓ Accept"}
+                            {saving === s.id ? "Posting\u2026" : "\u2713 Accept"}
                           </button>
                         </>
                       )}
                       {s.status !== "pending" && (
                         <span style={{ fontSize: "0.8rem", color: s.status === "accepted" ? "#4ade80" : "#f87171", fontWeight: 600 }}>
-                          {s.status === "accepted" ? "✓ Posted" : "✕ Rejected"}
+                          {s.status === "accepted" ? "\u2713 Posted" : "\u2715 Rejected"}
                         </span>
                       )}
-                      <span style={{ color: "rgba(237,232,220,0.3)", fontSize: "0.9rem" }}>{isExp ? "▲" : "▼"}</span>
+                      <span style={{ color: "rgba(237,232,220,0.3)", fontSize: "0.9rem" }}>{isExp ? "\u25B2" : "\u25BC"}</span>
                     </div>
                   </div>
 
@@ -263,7 +263,7 @@ export default function AIReviewPage() {
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.83rem" }}>
                         <thead>
                           <tr>
-                            {["Account", "Dr (₹)", "Cr (₹)", ""].map(h => (
+                            {["Account", "Dr (\u20B9)", "Cr (\u20B9)", ""].map(h => (
                               <th key={h} style={{ textAlign: "left", padding: "4px 8px", color: "rgba(237,232,220,0.4)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>{h}</th>
                             ))}
                           </tr>
@@ -296,7 +296,7 @@ export default function AIReviewPage() {
                                 </td>
                               ))}
                               <td style={{ padding: "6px 8px" }}>
-                                <button onClick={() => setEditLines(prev => ({ ...prev, [s.id]: lines.filter((_, i) => i !== li) }))} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.3)", cursor: "pointer", fontSize: "0.9rem" }}>×</button>
+                                <button onClick={() => setEditLines(prev => ({ ...prev, [s.id]: lines.filter((_, i) => i !== li) }))} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.3)", cursor: "pointer", fontSize: "0.9rem" }}>\u00D7</button>
                               </td>
                             </tr>
                           ))}
@@ -311,7 +311,7 @@ export default function AIReviewPage() {
                               {totalCr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                             </td>
                             <td style={{ padding: "6px 8px", fontSize: "0.75rem", color: balanced ? "#4ade80" : "#f87171", fontWeight: 600 }}>
-                              {balanced ? "✓ Balanced" : "⚠ Unbalanced"}
+                              {balanced ? "\u2713 Balanced" : "\u26A0 Unbalanced"}
                             </td>
                           </tr>
                         </tfoot>
@@ -327,7 +327,7 @@ export default function AIReviewPage() {
                             Reject
                           </button>
                           <button onClick={() => accept(s)} disabled={saving === s.id || !balanced} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "7px 20px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.85rem", opacity: (saving === s.id || !balanced) ? 0.6 : 1 }}>
-                            {saving === s.id ? "Posting…" : "✓ Accept & Post Journal"}
+                            {saving === s.id ? "Posting\u2026" : "\u2713 Accept & Post Journal"}
                           </button>
                         </div>
                       )}

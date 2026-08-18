@@ -1,4 +1,4 @@
-﻿"use client";
+\uFEFF"use client";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -20,12 +20,12 @@ type DocFile = {
 };
 
 const DOC_TYPES = [
-  { value: "invoice", label: "Sales Invoice", icon: "🧾" },
-  { value: "bill", label: "Purchase Bill", icon: "📦" },
-  { value: "receipt", label: "Expense Receipt", icon: "🏷️" },
-  { value: "bank_statement", label: "Bank Statement", icon: "🏦" },
-  { value: "salary_slip", label: "Salary Slip", icon: "👔" },
-  { value: "other", label: "Other Document", icon: "📄" },
+  { value: "invoice", label: "Sales Invoice", icon: "\u{1F9FE}" },
+  { value: "bill", label: "Purchase Bill", icon: "\u{1F4E6}" },
+  { value: "receipt", label: "Expense Receipt", icon: "\u{1F3F7}\uFE0F" },
+  { value: "bank_statement", label: "Bank Statement", icon: "\u{1F3E6}" },
+  { value: "salary_slip", label: "Salary Slip", icon: "\u{1F454}" },
+  { value: "other", label: "Other Document", icon: "\u{1F4C4}" },
 ];
 
 function guessDocType(filename: string): string {
@@ -51,7 +51,7 @@ export default function UploadPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
       setUserId(user.id);
-      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
+      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (saved) {
         const { data } = await supabase.from("fw_fin_businesses").select("id,name").eq("id", saved).single();
         if (data) { setBizId(data.id); setBizName(data.name); }
@@ -119,7 +119,7 @@ export default function UploadPage() {
 
       if (docErr) throw new Error(docErr.message);
 
-      // AI Analysis — extract text then call Claude
+      // AI Analysis \u2014 extract text then call Claude
       setFiles(prev => prev.map(f => f.id === docFile.id ? { ...f, status: "analyzing" } : f));
 
       let extractedText = `Document: ${docFile.file.name}\nType: ${docFile.docType}\n`;
@@ -188,7 +188,7 @@ export default function UploadPage() {
     const date = new Date(Date.now() - Math.random() * 30 * 86400000).toISOString().split("T")[0];
     return {
       vendor, amount, gst, date,
-      narration: `${DOC_TYPES.find(d => d.value === docType)?.label ?? "Document"} from ${vendor} — ₹${amount.toLocaleString("en-IN")}`,
+      narration: `${DOC_TYPES.find(d => d.value === docType)?.label ?? "Document"} from ${vendor} \u2014 \u20B9${amount.toLocaleString("en-IN")}`,
       confidence: 0.78 + Math.random() * 0.2,
       type: docType,
     };
@@ -233,7 +233,7 @@ export default function UploadPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Upload Documents</span>
         <div style={{ flex: 1 }} />
         {bizName && <span style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>{bizName}</span>}
@@ -260,12 +260,12 @@ export default function UploadPage() {
             transition: "all 0.2s", marginBottom: "1.5rem",
           }}
         >
-          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📂</div>
+          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>\u{1F4C2}</div>
           <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: "0.4rem" }}>
             {dragging ? "Drop files here" : "Drop files or click to browse"}
           </div>
           <div style={{ color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>
-            PDF, JPG, PNG, XLSX · Invoices, Bills, Receipts, Bank Statements
+            PDF, JPG, PNG, XLSX \u00B7 Invoices, Bills, Receipts, Bank Statements
           </div>
           <input ref={fileInputRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.csv" style={{ display: "none" }}
             onChange={e => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} />
@@ -276,12 +276,12 @@ export default function UploadPage() {
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <div style={{ fontSize: "0.85rem", color: "rgba(237,232,220,0.5)" }}>
-                {files.length} file{files.length !== 1 ? "s" : ""} · {doneCount} processed
+                {files.length} file{files.length !== 1 ? "s" : ""} \u00B7 {doneCount} processed
               </div>
               <div style={{ display: "flex", gap: "0.75rem" }}>
                 {doneCount > 0 && (
                   <Link href="/finance/ai-review" style={{ color: "#C9A84C", fontSize: "0.82rem", textDecoration: "none", fontWeight: 600 }}>
-                    Review AI Suggestions →
+                    Review AI Suggestions \u2192
                   </Link>
                 )}
                 {idleCount > 0 && (
@@ -301,7 +301,7 @@ export default function UploadPage() {
                   <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
                     {/* Preview thumbnail */}
                     <div style={{ width: 48, height: 48, flexShrink: 0, borderRadius: 8, background: "rgba(237,232,220,0.06)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                      {doc.preview ? <img src={doc.preview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.5rem" }}>{DOC_TYPES.find(d => d.value === doc.docType)?.icon ?? "📄"}</span>}
+                      {doc.preview ? <img src={doc.preview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "1.5rem" }}>{DOC_TYPES.find(d => d.value === doc.docType)?.icon ?? "\u{1F4C4}"}</span>}
                     </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -322,20 +322,20 @@ export default function UploadPage() {
                       )}
 
                       {/* Status */}
-                      {doc.status === "uploading" && <div style={{ fontSize: "0.78rem", color: "#60a5fa", marginTop: "0.3rem" }}>⬆ Uploading…</div>}
-                      {doc.status === "analyzing" && <div style={{ fontSize: "0.78rem", color: "#C9A84C", marginTop: "0.3rem" }}>🤖 AI analyzing document…</div>}
-                      {doc.status === "error" && <div style={{ fontSize: "0.78rem", color: "#f87171", marginTop: "0.3rem" }}>❌ {doc.errorMsg}</div>}
+                      {doc.status === "uploading" && <div style={{ fontSize: "0.78rem", color: "#60a5fa", marginTop: "0.3rem" }}>\u2B06 Uploading\u2026</div>}
+                      {doc.status === "analyzing" && <div style={{ fontSize: "0.78rem", color: "#C9A84C", marginTop: "0.3rem" }}>\u{1F916} AI analyzing document\u2026</div>}
+                      {doc.status === "error" && <div style={{ fontSize: "0.78rem", color: "#f87171", marginTop: "0.3rem" }}>\u274C {doc.errorMsg}</div>}
 
                       {/* AI Result */}
                       {doc.status === "done" && doc.aiResult && (
                         <div style={{ marginTop: "0.75rem", background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.15)", borderRadius: 8, padding: "0.75rem" }}>
                           <div style={{ fontSize: "0.72rem", color: "#4ade80", fontWeight: 700, marginBottom: "0.5rem", letterSpacing: "0.06em" }}>
-                            ✓ AI EXTRACTED · {Math.round((doc.aiResult.confidence ?? 0) * 100)}% confidence
+                            \u2713 AI EXTRACTED \u00B7 {Math.round((doc.aiResult.confidence ?? 0) * 100)}% confidence
                           </div>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
                             {doc.aiResult.vendor && <div><span style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" }}>Vendor</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{doc.aiResult.vendor}</span></div>}
-                            {doc.aiResult.amount && <div><span style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" }}>Amount</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>₹{doc.aiResult.amount.toLocaleString("en-IN")}</span></div>}
-                            {doc.aiResult.gst && <div><span style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" }}>GST</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>₹{doc.aiResult.gst.toLocaleString("en-IN")}</span></div>}
+                            {doc.aiResult.amount && <div><span style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" }}>Amount</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>\u20B9{doc.aiResult.amount.toLocaleString("en-IN")}</span></div>}
+                            {doc.aiResult.gst && <div><span style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" }}>GST</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>\u20B9{doc.aiResult.gst.toLocaleString("en-IN")}</span></div>}
                             {doc.aiResult.date && <div><span style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" }}>Date</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{doc.aiResult.date}</span></div>}
                           </div>
                           <div style={{ marginTop: "0.5rem", fontSize: "0.78rem", color: "rgba(237,232,220,0.5)" }}>{doc.aiResult.narration}</div>
@@ -349,7 +349,7 @@ export default function UploadPage() {
                           Process
                         </button>
                       )}
-                      <button onClick={() => removeFile(doc.id)} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.3)", cursor: "pointer", fontSize: "1rem", padding: "2px 4px" }}>×</button>
+                      <button onClick={() => removeFile(doc.id)} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.3)", cursor: "pointer", fontSize: "1rem", padding: "2px 4px" }}>\u00D7</button>
                     </div>
                   </div>
                 </div>
@@ -359,7 +359,7 @@ export default function UploadPage() {
             {doneCount > 0 && (
               <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
                 <Link href="/finance/ai-review" style={{ background: "#C9A84C", color: "#070C1A", padding: "12px 32px", borderRadius: 8, fontWeight: 700, textDecoration: "none", fontSize: "0.95rem" }}>
-                  Review AI Journal Suggestions →
+                  Review AI Journal Suggestions \u2192
                 </Link>
               </div>
             )}
@@ -370,9 +370,9 @@ export default function UploadPage() {
         {files.length === 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginTop: "1rem" }}>
             {[
-              { icon: "🧾", title: "Sales Invoices", desc: "GST invoices you've raised to customers" },
-              { icon: "📦", title: "Purchase Bills", desc: "Bills from vendors and suppliers" },
-              { icon: "🏦", title: "Bank Statements", desc: "PDF or Excel bank statements for reconciliation" },
+              { icon: "\u{1F9FE}", title: "Sales Invoices", desc: "GST invoices you've raised to customers" },
+              { icon: "\u{1F4E6}", title: "Purchase Bills", desc: "Bills from vendors and suppliers" },
+              { icon: "\u{1F3E6}", title: "Bank Statements", desc: "PDF or Excel bank statements for reconciliation" },
             ].map(tip => (
               <div key={tip.title} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 10, padding: "1rem" }}>
                 <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{tip.icon}</div>

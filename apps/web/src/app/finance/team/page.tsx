@@ -7,7 +7,7 @@ import Link from "next/link";
 type Member = { id: string; invited_email: string; role: string; status: string; created_at: string };
 
 const ROLES = [
-  { value: "admin", label: "Admin", desc: "Full access — can post, edit, close FY, manage team" },
+  { value: "admin", label: "Admin", desc: "Full access \u2014 can post, edit, close FY, manage team" },
   { value: "accountant", label: "Accountant", desc: "Can create/edit journals, upload docs, run reports" },
   { value: "ca_reviewer", label: "CA / Reviewer", desc: "Read-only + can review AI suggestions, add comments" },
   { value: "viewer", label: "Viewer", desc: "Read-only access to reports and ledgers" },
@@ -28,7 +28,7 @@ export default function TeamPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
+      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
 
@@ -86,7 +86,7 @@ export default function TeamPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Team & Access</span>
         {bizName && <span style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.3)", marginLeft: "auto" }}>{bizName}</span>}
       </nav>
@@ -96,7 +96,7 @@ export default function TeamPage() {
         <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Invite your CA, accountant, or business partner to collaborate on this business</p>
 
         {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
-        {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
+        {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>\u2713 {success}</div>}
 
         {/* Invite form */}
         <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem", marginBottom: "1.5rem" }}>
@@ -115,7 +115,7 @@ export default function TeamPage() {
               </select>
             </div>
             <button onClick={invite} disabled={saving || !inviteEmail} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "8px 20px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.85rem", height: 36, opacity: (!inviteEmail || saving) ? 0.5 : 1 }}>
-              {saving ? "…" : "Invite"}
+              {saving ? "\u2026" : "Invite"}
             </button>
           </div>
         </div>
@@ -141,7 +141,7 @@ export default function TeamPage() {
           </div>
           {members.length === 0 ? (
             <div style={{ padding: "3rem", textAlign: "center", color: "rgba(237,232,220,0.3)" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>👥</div>
+              <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>\u{1F465}</div>
               <div>No team members yet. Invite your CA or accountant above.</div>
             </div>
           ) : (

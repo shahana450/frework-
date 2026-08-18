@@ -8,52 +8,52 @@ const NAV_GROUPS = [
   {
     label: "Overview",
     items: [
-      { icon: "🏠", label: "Dashboard", href: "/finance" },
-      { icon: "🔍", label: "AI Insights", href: "/finance/insights" },
-      { icon: "🛩️", label: "FrePilot", href: "/finance/virtual-ca" },
+      { icon: "\u{1F3E0}", label: "Dashboard", href: "/finance" },
+      { icon: "\u{1F50D}", label: "AI Insights", href: "/finance/insights" },
+      { icon: "\u{1F6E9}\uFE0F", label: "FrePilot", href: "/finance/virtual-ca" },
     ],
   },
   {
     label: "Transactions",
     items: [
-      { icon: "📤", label: "Upload Documents", href: "/finance/upload" },
-      { icon: "🤖", label: "AI Review Queue", href: "/finance/ai-review" },
-      { icon: "🧾", label: "Sales Invoice", href: "/finance/sales/new" },
-      { icon: "📦", label: "Purchase Bill", href: "/finance/purchases/new" },
-      { icon: "💸", label: "Record Expense", href: "/finance/expenses" },
-      { icon: "💳", label: "Payment Entry", href: "/finance/payment" },
-      { icon: "🔴", label: "Credit Note", href: "/finance/credit-note" },
-      { icon: "🟢", label: "Debit Note", href: "/finance/debit-note" },
+      { icon: "\u{1F4E4}", label: "Upload Documents", href: "/finance/upload" },
+      { icon: "\u{1F916}", label: "AI Review Queue", href: "/finance/ai-review" },
+      { icon: "\u{1F9FE}", label: "Sales Invoice", href: "/finance/sales/new" },
+      { icon: "\u{1F4E6}", label: "Purchase Bill", href: "/finance/purchases/new" },
+      { icon: "\u{1F4B8}", label: "Record Expense", href: "/finance/expenses" },
+      { icon: "\u{1F4B3}", label: "Payment Entry", href: "/finance/payment" },
+      { icon: "\u{1F534}", label: "Credit Note", href: "/finance/credit-note" },
+      { icon: "\u{1F7E2}", label: "Debit Note", href: "/finance/debit-note" },
     ],
   },
   {
     label: "Books",
     items: [
-      { icon: "🧾", label: "Sales List", href: "/finance/sales" },
-      { icon: "📋", label: "Journal Entries", href: "/finance/journals" },
-      { icon: "📒", label: "Account Ledger", href: "/finance/ledger" },
-      { icon: "📥", label: "Receivables (AR)", href: "/finance/receivables" },
-      { icon: "📤", label: "Payables (AP)", href: "/finance/payables" },
+      { icon: "\u{1F9FE}", label: "Sales List", href: "/finance/sales" },
+      { icon: "\u{1F4CB}", label: "Journal Entries", href: "/finance/journals" },
+      { icon: "\u{1F4D2}", label: "Account Ledger", href: "/finance/ledger" },
+      { icon: "\u{1F4E5}", label: "Receivables (AR)", href: "/finance/receivables" },
+      { icon: "\u{1F4E4}", label: "Payables (AP)", href: "/finance/payables" },
     ],
   },
   {
     label: "Reports",
     items: [
-      { icon: "📈", label: "Financial Reports", href: "/finance/reports" },
-      { icon: "🏛️", label: "GST Returns", href: "/finance/gst" },
-      { icon: "🔖", label: "TDS Tracker", href: "/finance/tds" },
-      { icon: "🏦", label: "Bank Reconciliation", href: "/finance/banking" },
-      { icon: "🔄", label: "Tally Export", href: "/finance/tally" },
+      { icon: "\u{1F4C8}", label: "Financial Reports", href: "/finance/reports" },
+      { icon: "\u{1F3DB}\uFE0F", label: "GST Returns", href: "/finance/gst" },
+      { icon: "\u{1F516}", label: "TDS Tracker", href: "/finance/tds" },
+      { icon: "\u{1F3E6}", label: "Bank Reconciliation", href: "/finance/banking" },
+      { icon: "\u{1F504}", label: "Tally Export", href: "/finance/tally" },
     ],
   },
   {
     label: "Setup",
     items: [
-      { icon: "📊", label: "Chart of Accounts", href: "/finance/chart-of-accounts" },
-      { icon: "👥", label: "Contacts", href: "/finance/contacts" },
-      { icon: "📅", label: "Financial Years", href: "/finance/fy" },
-      { icon: "🫂", label: "Team & Access", href: "/finance/team" },
-      { icon: "⚙️", label: "Business Setup", href: "/finance/setup" },
+      { icon: "\u{1F4CA}", label: "Chart of Accounts", href: "/finance/chart-of-accounts" },
+      { icon: "\u{1F465}", label: "Contacts", href: "/finance/contacts" },
+      { icon: "\u{1F4C5}", label: "Financial Years", href: "/finance/fy" },
+      { icon: "\u{1FAC2}", label: "Team & Access", href: "/finance/team" },
+      { icon: "\u2699\uFE0F", label: "Business Setup", href: "/finance/setup" },
     ],
   },
 ];
@@ -67,7 +67,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
-      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
+      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (saved) {
         const { data } = await supabase.from("fw_fin_businesses").select("name").eq("id", saved).single();
         if (data) setBizName(data.name);
@@ -93,12 +93,12 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         <div style={{ padding: "0 12px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(237,232,220,0.07)", flexShrink: 0 }}>
           {!collapsed && (
             <Link href="/finance" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "1.1rem" }}>🛩️</span>
+              <span style={{ fontSize: "1.1rem" }}>\u{1F6E9}\uFE0F</span>
               <span style={{ fontWeight: 900, fontSize: "0.88rem", color: "#C9A84C", letterSpacing: "-0.02em" }}>FrePilot</span>
             </Link>
           )}
           <button onClick={() => setCollapsed(c => !c)} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.3)", cursor: "pointer", padding: 4, borderRadius: 4, fontSize: "0.9rem", marginLeft: collapsed ? "auto" : 0, marginRight: collapsed ? "auto" : 0 }}>
-            {collapsed ? "→" : "←"}
+            {collapsed ? "\u2192" : "\u2190"}
           </button>
         </div>
 
@@ -145,7 +145,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         {/* Bottom links */}
         <div style={{ borderTop: "1px solid rgba(237,232,220,0.07)", padding: "8px 0", flexShrink: 0 }}>
           <Link href="/dashboard" title={collapsed ? "Main Dashboard" : undefined} style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : 8, padding: collapsed ? "8px 0" : "6px 14px", justifyContent: collapsed ? "center" : "flex-start", textDecoration: "none", color: "rgba(237,232,220,0.3)", fontSize: "0.75rem" }}>
-            <span>🏠</span>{!collapsed && <span>Main Dashboard</span>}
+            <span>\u{1F3E0}</span>{!collapsed && <span>Main Dashboard</span>}
           </Link>
         </div>
       </aside>

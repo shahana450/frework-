@@ -1,4 +1,4 @@
-﻿"use client";
+\uFEFF"use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -38,7 +38,7 @@ export default function JournalsPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
+      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data } = await supabase.from("fw_fin_journals")
@@ -57,7 +57,7 @@ export default function JournalsPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Journal Entries</span>
         <div style={{ flex: 1 }} />
         <Link href="/finance/journals/new" style={{ background: "#C9A84C", color: "#070C1A", padding: "6px 16px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", textDecoration: "none" }}>
@@ -69,7 +69,7 @@ export default function JournalsPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
           <div>
             <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800 }}>Journal Entries</h1>
-            <div style={{ fontSize: "0.82rem", color: "rgba(237,232,220,0.4)" }}>{filtered.length} entries · Total: ₹{totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
+            <div style={{ fontSize: "0.82rem", color: "rgba(237,232,220,0.4)" }}>{filtered.length} entries \u00B7 Total: \u20B9{totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
           </div>
           <div style={{ display: "flex", gap: "0.5rem" }}>
             {(["all", "draft", "posted"] as const).map(f => (
@@ -85,18 +85,18 @@ export default function JournalsPage() {
 
         <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, overflow: "hidden" }}>
           {loading ? (
-            <div style={{ padding: "4rem", textAlign: "center", color: "rgba(237,232,220,0.3)" }}>Loading…</div>
+            <div style={{ padding: "4rem", textAlign: "center", color: "rgba(237,232,220,0.3)" }}>Loading\u2026</div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: "4rem", textAlign: "center" }}>
-              <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📒</div>
+              <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>\u{1F4D2}</div>
               <div style={{ color: "rgba(237,232,220,0.4)", marginBottom: "1rem" }}>No journal entries yet.</div>
-              <Link href="/finance/upload" style={{ color: "#C9A84C", fontSize: "0.85rem" }}>Upload documents to auto-generate entries →</Link>
+              <Link href="/finance/upload" style={{ color: "#C9A84C", fontSize: "0.85rem" }}>Upload documents to auto-generate entries \u2192</Link>
             </div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "rgba(255,255,255,0.02)" }}>
-                  {["Entry No", "Date", "Type", "Narration", "Debit (₹)", "Credit (₹)", "Status", "Source"].map(h => (
+                  {["Entry No", "Date", "Type", "Narration", "Debit (\u20B9)", "Credit (\u20B9)", "Status", "Source"].map(h => (
                     <th key={h} style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
                   ))}
                 </tr>
@@ -115,10 +115,10 @@ export default function JournalsPage() {
                     </td>
                     <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
                     <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
-                      {j.total_debit?.toLocaleString("en-IN", { minimumFractionDigits: 2 }) ?? "—"}
+                      {j.total_debit?.toLocaleString("en-IN", { minimumFractionDigits: 2 }) ?? "\u2014"}
                     </td>
                     <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
-                      {j.total_credit?.toLocaleString("en-IN", { minimumFractionDigits: 2 }) ?? "—"}
+                      {j.total_credit?.toLocaleString("en-IN", { minimumFractionDigits: 2 }) ?? "\u2014"}
                     </td>
                     <td style={{ padding: "0.7rem 1rem" }}>
                       <span style={{ color: STATUS_COLOR[j.status] ?? "#EDE8DC", background: `${STATUS_COLOR[j.status] ?? "#EDE8DC"}15`, padding: "2px 8px", borderRadius: 4, fontSize: "0.72rem", fontWeight: 600 }}>
@@ -126,7 +126,7 @@ export default function JournalsPage() {
                       </span>
                     </td>
                     <td style={{ padding: "0.7rem 1rem" }}>
-                      {j.ai_generated && <span style={{ fontSize: "0.7rem", color: "#a78bfa", background: "rgba(167,139,250,0.1)", padding: "2px 7px", borderRadius: 4 }}>🤖 AI</span>}
+                      {j.ai_generated && <span style={{ fontSize: "0.7rem", color: "#a78bfa", background: "rgba(167,139,250,0.1)", padding: "2px 7px", borderRadius: 4 }}>\u{1F916} AI</span>}
                     </td>
                   </tr>
                 ))}

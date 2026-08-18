@@ -47,7 +47,7 @@ export default function GSTPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
+      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data } = await supabase.from("fw_fin_businesses").select("name,gstin").eq("id", saved).single();
@@ -80,7 +80,7 @@ export default function GSTPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>\u203A</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>GST Returns</span>
         <div style={{ flex: 1 }} />
         <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
@@ -92,7 +92,7 @@ export default function GSTPage() {
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "2rem" }}>
         <div style={{ marginBottom: "1.5rem" }}>
           <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800 }}>GST Returns</h1>
-          {gstin && <div style={{ fontSize: "0.82rem", color: "rgba(237,232,220,0.4)" }}>{bizName} · GSTIN: {gstin}</div>}
+          {gstin && <div style={{ fontSize: "0.82rem", color: "rgba(237,232,220,0.4)" }}>{bizName} \u00B7 GSTIN: {gstin}</div>}
         </div>
 
         {/* Tabs */}
@@ -114,12 +114,12 @@ export default function GSTPage() {
 
         {!gstin && (
           <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: "1rem 1.25rem", marginBottom: "1.5rem", fontSize: "0.85rem", color: "#f59e0b" }}>
-            ⚠ GSTIN not set for this business. <Link href="/finance/setup" style={{ color: "#C9A84C", textDecoration: "none", fontWeight: 600 }}>Update business settings →</Link>
+            \u26A0 GSTIN not set for this business. <Link href="/finance/setup" style={{ color: "#C9A84C", textDecoration: "none", fontWeight: 600 }}>Update business settings \u2192</Link>
           </div>
         )}
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "4rem", color: "rgba(237,232,220,0.3)" }}>Calculating GST…</div>
+          <div style={{ textAlign: "center", padding: "4rem", color: "rgba(237,232,220,0.3)" }}>Calculating GST\u2026</div>
         ) : summary && (
           <>
             {activeTab === "dashboard" && (
@@ -132,21 +132,21 @@ export default function GSTPage() {
                   ].map(k => (
                     <div key={k.label} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, padding: "1.25rem" }}>
                       <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>{k.label}</div>
-                      <div style={{ fontSize: "1.6rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>₹{fmt(k.value)}</div>
+                      <div style={{ fontSize: "1.6rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>\u20B9{fmt(k.value)}</div>
                       <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.3)", marginTop: "0.2rem" }}>{monthLabel}</div>
                     </div>
                   ))}
                 </div>
 
                 <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, overflow: "hidden" }}>
-                  <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid rgba(237,232,220,0.08)", fontWeight: 700, fontSize: "0.88rem" }}>GST Computation — {monthLabel}</div>
+                  <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid rgba(237,232,220,0.08)", fontWeight: 700, fontSize: "0.88rem" }}>GST Computation \u2014 {monthLabel}</div>
                   {[
                     { label: "Output Tax (Sales)", sub: "", value: summary.output_tax, indent: false, bold: true },
                     { label: "CGST Payable", sub: "9%", value: summary.cgst_payable, indent: true, bold: false },
                     { label: "SGST Payable", sub: "9%", value: summary.sgst_payable, indent: true, bold: false },
                     { label: "IGST Payable", sub: "18%", value: summary.igst_payable, indent: true, bold: false },
                     { label: "Input Tax Credit (Purchases)", sub: "", value: summary.input_credit, indent: false, bold: true },
-                    { label: "Net GST Payable", sub: "Output − ITC", value: summary.net_gst_payable, indent: false, bold: true },
+                    { label: "Net GST Payable", sub: "Output \u2212 ITC", value: summary.net_gst_payable, indent: false, bold: true },
                   ].map((row, i) => (
                     <div key={i} style={{
                       display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -161,7 +161,7 @@ export default function GSTPage() {
                       <span style={{
                         fontVariantNumeric: "tabular-nums", fontWeight: row.bold ? 700 : 400,
                         color: row.label === "Net GST Payable" ? (row.value > 0 ? "#f87171" : "#4ade80") : "#EDE8DC",
-                      }}>₹{fmt(row.value)}</span>
+                      }}>\u20B9{fmt(row.value)}</span>
                     </div>
                   ))}
                 </div>
@@ -170,46 +170,46 @@ export default function GSTPage() {
 
             {activeTab === "gstr1" && (
               <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, padding: "2rem", textAlign: "center" }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📋</div>
-                <div style={{ fontWeight: 700, marginBottom: "0.5rem" }}>GSTR-1 — Outward Supplies</div>
+                <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>\u{1F4CB}</div>
+                <div style={{ fontWeight: 700, marginBottom: "0.5rem" }}>GSTR-1 \u2014 Outward Supplies</div>
                 <div style={{ color: "rgba(237,232,220,0.5)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>
                   Auto-prepared from your posted sales journal entries for {monthLabel}.
                 </div>
                 <div style={{ background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.15)", borderRadius: 8, padding: "1rem", marginBottom: "1.5rem", textAlign: "left" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                     <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Total Taxable Supplies (B2B + B2C)</span>
-                    <span style={{ fontWeight: 700 }}>₹{fmt(summary.total_sales)}</span>
+                    <span style={{ fontWeight: 700 }}>\u20B9{fmt(summary.total_sales)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                     <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Integrated Tax (IGST)</span>
-                    <span>₹{fmt(summary.igst_payable)}</span>
+                    <span>\u20B9{fmt(summary.igst_payable)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                     <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Central Tax (CGST)</span>
-                    <span>₹{fmt(summary.cgst_payable)}</span>
+                    <span>\u20B9{fmt(summary.cgst_payable)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>State Tax (SGST/UTGST)</span>
-                    <span>₹{fmt(summary.sgst_payable)}</span>
+                    <span>\u20B9{fmt(summary.sgst_payable)}</span>
                   </div>
                 </div>
                 <a href={`/api/finance/gst?business_id=${bizId}&month=${selectedMonth}&report=gstr1`}
                   style={{ background: "#C9A84C", color: "#070C1A", padding: "10px 24px", borderRadius: 8, fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>
                   Download GSTR-1 JSON
                 </a>
-                <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "rgba(237,232,220,0.3)" }}>Full GSTR-1 JSON export — coming in next update</div>
+                <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "rgba(237,232,220,0.3)" }}>Full GSTR-1 JSON export \u2014 coming in next update</div>
               </div>
             )}
 
             {activeTab === "gstr3b" && (
               <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, overflow: "hidden" }}>
-                <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid rgba(237,232,220,0.08)", fontWeight: 700 }}>GSTR-3B Summary — {monthLabel}</div>
+                <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid rgba(237,232,220,0.08)", fontWeight: 700 }}>GSTR-3B Summary \u2014 {monthLabel}</div>
                 {[
                   { section: "3.1", label: "Tax on outward and reverse charge inward supplies", value: summary.output_tax },
                   { section: "3.1(a)", label: "Outward taxable supplies (other than zero rated, nil and exempted)", value: summary.total_sales, sub: true },
                   { section: "4", label: "Eligible ITC", value: summary.input_credit },
                   { section: "4(A)(5)", label: "All other ITC (inputs, capital goods, services)", value: summary.input_credit, sub: true },
-                  { section: "6.1", label: "Net Tax Payable (3.1 − 4)", value: summary.net_gst_payable },
+                  { section: "6.1", label: "Net Tax Payable (3.1 \u2212 4)", value: summary.net_gst_payable },
                 ].map(row => (
                   <div key={row.section} style={{
                     display: "flex", gap: "1rem", padding: `${row.sub ? "0.5rem 1.5rem" : "0.75rem 1rem"}`,
@@ -218,12 +218,12 @@ export default function GSTPage() {
                   }}>
                     <span style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.35)", width: 56, flexShrink: 0, fontFamily: "monospace" }}>{row.section}</span>
                     <span style={{ flex: 1, fontSize: row.sub ? "0.82rem" : "0.88rem", color: row.sub ? "rgba(237,232,220,0.65)" : "#EDE8DC", fontWeight: row.section === "6.1" ? 700 : 400 }}>{row.label}</span>
-                    <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: row.section === "6.1" ? 700 : 400, color: row.section === "6.1" && row.value > 0 ? "#f87171" : "#EDE8DC" }}>₹{fmt(row.value)}</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: row.section === "6.1" ? 700 : 400, color: row.section === "6.1" && row.value > 0 ? "#f87171" : "#EDE8DC" }}>\u20B9{fmt(row.value)}</span>
                   </div>
                 ))}
                 <div style={{ padding: "1rem", borderTop: "1px solid rgba(237,232,220,0.08)", display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
                   <button onClick={() => {
-                    const text = `GSTR-3B Summary — ${monthLabel}\nGSTIN: ${gstin}\n\nOutward Tax: ₹${fmt(summary.output_tax)}\nInput Credit: ₹${fmt(summary.input_credit)}\nNet Payable: ₹${fmt(summary.net_gst_payable)}`;
+                    const text = `GSTR-3B Summary \u2014 ${monthLabel}\nGSTIN: ${gstin}\n\nOutward Tax: \u20B9${fmt(summary.output_tax)}\nInput Credit: \u20B9${fmt(summary.input_credit)}\nNet Payable: \u20B9${fmt(summary.net_gst_payable)}`;
                     navigator.clipboard.writeText(text);
                   }} style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.1)", color: "#EDE8DC", padding: "7px 16px", borderRadius: 6, cursor: "pointer", fontSize: "0.82rem" }}>
                     Copy Summary
