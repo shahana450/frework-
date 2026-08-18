@@ -17,19 +17,19 @@ const SUPPORT_PHONE = (process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 85908 74681
 const SUPPORT_WA = `918590874681`;
 
 const L = {
-  bg: "#080D1C",
-  bgAlt: "#0C1428",
-  bgCard: "#101D35",
-  text: "#EDE8DC",
-  textSub: "#8A9BB8",
-  textMuted: "#4A5A72",
-  gold: "#C9A84C",
-  goldLight: "#E8C97A",
-  goldDark: "#A07C2E",
-  border: "rgba(201,168,76,0.18)",
-  borderLight: "rgba(201,168,76,0.08)",
-  shadow: "0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3)",
-  shadowHover: "0 10px 40px rgba(201,168,76,0.12), 0 2px 8px rgba(0,0,0,0.4)",
+  bg: "#07091A",
+  bgAlt: "#0A0D20",
+  bgCard: "#0D1228",
+  text: "#E8E4DA",
+  textSub: "#7A8BA8",
+  textMuted: "#3E4D62",
+  gold: "#B8963C",
+  goldLight: "#D4AC5A",
+  goldDark: "#8C6E28",
+  border: "rgba(184,150,60,0.16)",
+  borderLight: "rgba(255,255,255,0.06)",
+  shadow: "0 1px 3px rgba(0,0,0,0.5)",
+  shadowHover: "0 4px 24px rgba(0,0,0,0.4)",
 };
 
 const MODULES = [
@@ -274,105 +274,39 @@ export function BusinessOSHomepage() {
 
       {/* --- HERO: TWO PILLARS --- */}
       <section className="relative min-h-screen flex flex-col justify-center overflow-hidden" style={{ background:"#070C1A", paddingTop:"68px" }}>
-        {/* Layered background glows */}
+        {/* Subtle background accent */}
         <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position:"absolute", left:"-10%", top:"5%", width:700, height:700, borderRadius:"50%", background:"radial-gradient(circle, rgba(37,99,235,0.14) 0%, transparent 60%)", filter:"blur(90px)" }} />
-          <div style={{ position:"absolute", right:"-10%", top:"5%", width:700, height:700, borderRadius:"50%", background:"radial-gradient(circle, rgba(201,168,76,0.1) 0%, transparent 60%)", filter:"blur(90px)" }} />
-          <div style={{ position:"absolute", left:"30%", bottom:"-10%", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 60%)", filter:"blur(70px)" }} />
-          <div style={{ position:"absolute", inset:0, opacity:0.018, backgroundImage:"radial-gradient(rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize:"32px 32px" }} />
+          <div style={{ position:"absolute", left:"20%", top:"10%", width:600, height:400, borderRadius:"50%", background:"radial-gradient(ellipse, rgba(184,150,60,0.05) 0%, transparent 70%)", filter:"blur(60px)" }} />
         </div>
 
-        {/* -- Scrolling service banners -- */}
-        <div className="absolute top-[68px] inset-x-0 z-20 overflow-hidden py-2" style={{ background:"rgba(7,12,26,0.9)", borderBottom:"1px solid rgba(201,168,76,0.1)" }}>
-          {/* Fade edges */}
-          <div className="absolute inset-y-0 left-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(90deg,#070C1A,transparent)" }} />
-          <div className="absolute inset-y-0 right-0 w-24 z-10 pointer-events-none" style={{ background:"linear-gradient(270deg,#070C1A,transparent)" }} />
-
-          {/* Row 1 – scrolls left, pauses on hover */}
-          {(() => {
-            const row1 = [
-              { label:"GST Registration",    icon:"📋", color:"#2563EB", bg:"rgba(37,99,235,0.09)",   href:"/services/gst" },
-              { label:"Income Tax Return",   icon:"🏛️", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/income-tax" },
-              { label:"Company Registration",icon:"🏢", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
-              { label:"Virtual Accountant",  icon:"💼", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
-              { label:"Find Freelancers",    icon:"👥", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/freelancers" },
-              { label:"Coworking Spaces",    icon:"📍", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/coworking" },
-              { label:"Business Audit",      icon:"🔍", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
-              { label:"Virtual CFO",         icon:"📊", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/virtual-cfo" },
-            ];
-            return (
-              <div className="group flex gap-3 mb-2.5 whitespace-nowrap"
-                style={{ animation:"marquee 22s linear infinite" }}
-                onMouseEnter={e => (e.currentTarget.style.animationPlayState="paused")}
-                onMouseLeave={e => (e.currentTarget.style.animationPlayState="running")}>
-                {[...Array(3)].flatMap((_, ri) => row1.map((t, i) => (
-                  <Link key={`${ri}-${i}`} href={t.href}
-                    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold flex-shrink-0 transition-all duration-200 cursor-pointer select-none"
-                    style={{ background:t.bg, color:t.color, border:`1px solid ${t.color}22` }}
-                    onMouseEnter={e => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.transform="scale(1.1) translateY(-2px)";
-                      el.style.boxShadow=`0 6px 20px ${t.color}30`;
-                      el.style.background=`${t.color}18`;
-                      el.style.borderColor=`${t.color}50`;
-                    }}
-                    onMouseLeave={e => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.transform="scale(1) translateY(0)";
-                      el.style.boxShadow="none";
-                      el.style.background=t.bg;
-                      el.style.borderColor=`${t.color}22`;
-                    }}>
-                    <span>{t.icon}</span> {t.label}
-                    <span className="text-[9px] opacity-50">&rarr;</span>
-                  </Link>
-                )))}
-              </div>
-            );
-          })()}
-
-          {/* Row 2 – scrolls right, pauses on hover */}
-          {(() => {
-            const row2 = [
-              { label:"ROC Compliance",         icon:"✅", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/roc-compliance" },
-              { label:"Pitch Deck & DPR",       icon:"📈", color:"#EA580C", bg:"rgba(234,88,12,0.09)",  href:"/services/dpr" },
-              { label:"Startup Funding",         icon:"🚀", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/dpr" },
-              { label:"GST Filing",              icon:"🧾", color:"#2563EB", bg:"rgba(37,99,235,0.09)",  href:"/services/gst" },
-              { label:"Payroll Management",      icon:"💰", color:"#1E40AF", bg:"rgba(18,70,200,0.08)",  href:"/services/accounting" },
-              { label:"Business Restructuring",  icon:"🔄", color:"#0891B2", bg:"rgba(8,145,178,0.09)",  href:"/services/restructuring" },
-              { label:"Tax Audit",               icon:"🔎", color:"#7C3AED", bg:"rgba(124,58,237,0.09)", href:"/services/audit" },
-              { label:"MSME Registration",       icon:"🏭", color:"#059669", bg:"rgba(5,150,105,0.09)",  href:"/services/business-registration" },
-            ];
-            return (
-              <div className="flex gap-3 whitespace-nowrap"
-                style={{ animation:"marquee-reverse 28s linear infinite" }}
-                onMouseEnter={e => (e.currentTarget.style.animationPlayState="paused")}
-                onMouseLeave={e => (e.currentTarget.style.animationPlayState="running")}>
-                {[...Array(3)].flatMap((_, ri) => row2.map((t, i) => (
-                  <Link key={`${ri}-${i}`} href={t.href}
-                    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold flex-shrink-0 transition-all duration-200 cursor-pointer select-none"
-                    style={{ background:t.bg, color:t.color, border:`1px solid ${t.color}22` }}
-                    onMouseEnter={e => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.transform="scale(1.1) translateY(-2px)";
-                      el.style.boxShadow=`0 6px 20px ${t.color}30`;
-                      el.style.background=`${t.color}18`;
-                      el.style.borderColor=`${t.color}50`;
-                    }}
-                    onMouseLeave={e => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.transform="scale(1) translateY(0)";
-                      el.style.boxShadow="none";
-                      el.style.background=t.bg;
-                      el.style.borderColor=`${t.color}22`;
-                    }}>
-                    <span>{t.icon}</span> {t.label}
-                    <span className="text-[9px] opacity-50">&rarr;</span>
-                  </Link>
-                )))}
-              </div>
-            );
-          })()}
+        {/* Services nav strip */}
+        <div className="absolute top-[68px] inset-x-0 z-20 overflow-x-auto" style={{ background:"rgba(7,9,26,0.95)", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center gap-1 px-4 py-2 min-w-max">
+            {[
+              { label:"GST Registration", href:"/services/gst" },
+              { label:"Income Tax Return", href:"/services/income-tax" },
+              { label:"Company Registration", href:"/services/business-registration" },
+              { label:"ROC Compliance", href:"/services/roc-compliance" },
+              { label:"TDS Filing", href:"/services/compliance" },
+              { label:"Find Professionals", href:"/freelancers" },
+              { label:"Coworking Spaces", href:"/coworking" },
+              { label:"Virtual CFO", href:"/services/virtual-cfo" },
+              { label:"Pitch Deck & DPR", href:"/services/dpr" },
+              { label:"Business Audit", href:"/services/audit" },
+              { label:"MSME Registration", href:"/services/business-registration" },
+            ].map((s, i, arr) => (
+              <span key={s.label} className="flex items-center gap-1">
+                <Link href={s.href}
+                  className="text-[11px] font-medium px-3 py-1 rounded transition-colors whitespace-nowrap"
+                  style={{ color:"rgba(184,150,60,0.7)" }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color="#B8963C"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color="rgba(184,150,60,0.7)"}>
+                  {s.label}
+                </Link>
+                {i < arr.length - 1 && <span style={{ color:"rgba(255,255,255,0.1)", fontSize:"10px" }}>|</span>}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Main hero content */}
@@ -381,21 +315,20 @@ export function BusinessOSHomepage() {
           {/* Brand headline */}
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
             className="text-center mb-10">
-            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-[10px] font-black tracking-[0.3em] uppercase border mb-6 inline-block"
-              style={{ background:"rgba(201,168,76,0.08)", borderColor:"rgba(201,168,76,0.25)", color:"#C9A84C" }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded text-[10px] font-semibold tracking-[0.2em] uppercase border mb-6 inline-block"
+              style={{ background:"rgba(184,150,60,0.06)", borderColor:"rgba(184,150,60,0.2)", color:"#B8963C" }}>
               India&apos;s Business Platform
             </span>
-            <h1 className="font-black leading-[1.04] tracking-tight"
-              style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.2rem,5.5vw,4.8rem)", color:"#EDE8DC", letterSpacing:"-0.025em" }}>
+            <h1 className="font-bold leading-[1.06] tracking-tight"
+              style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.2rem,5vw,4.4rem)", color:"#E8E4DA", letterSpacing:"-0.02em" }}>
               The smarter way to
               <br/>
-              <span style={{ background:"linear-gradient(135deg,#C9A84C 0%,#E8C97A 50%,#C9A84C 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+              <span style={{ color:"#B8963C" }}>
                 run your business.
               </span>
             </h1>
-            <p className="text-base font-medium max-w-xl mx-auto mt-4" style={{ color:"#8A9BB8" }}>
-              Two things every Indian business needs — expert compliance and the right workspace. Both, right here.
+            <p className="text-base max-w-lg mx-auto mt-5" style={{ color:"rgba(122,139,168,0.85)", lineHeight:"1.7" }}>
+              Expert CA compliance, verified coworking spaces, and AI-powered accounting — everything your Indian business needs, in one place.
             </p>
           </motion.div>
 
@@ -404,54 +337,56 @@ export function BusinessOSHomepage() {
 
             {/* PILLAR 1 — COMPLIANCE */}
             <motion.div initial={{ opacity:0, x:-24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.2, duration:0.5 }}>
-              <div className="relative rounded-3xl overflow-hidden h-full transition-all hover:scale-[1.01] hover:shadow-2xl"
-                style={{ background:"linear-gradient(160deg,#08112A 0%,#0D1A42 100%)", border:"1px solid rgba(37,99,235,0.3)", boxShadow:"0 8px 48px rgba(37,99,235,0.15)" }}>
-                <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#2563EB,#4F46E5,#0EA5E9)" }} />
+              <div className="relative rounded-xl overflow-hidden h-full transition-all hover:border-white/10"
+                style={{ background:"#0D1228", border:"1px solid rgba(255,255,255,0.07)" }}>
+                <div className="h-[2px]" style={{ background:"linear-gradient(90deg,rgba(184,150,60,0.6),rgba(184,150,60,0.2),transparent)" }} />
                 <div className="p-7 md:p-8">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
-                      style={{ background:"rgba(37,99,235,0.12)", border:"1px solid rgba(37,99,235,0.28)" }}>📋</div>
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background:"rgba(184,150,60,0.1)", border:"1px solid rgba(184,150,60,0.2)" }}>
+                      <FileText className="w-5 h-5" style={{ color:"#B8963C" }} />
+                    </div>
                     <div>
-                      <p className="text-[9px] font-black tracking-[0.3em] uppercase" style={{ color:"#60A5FA" }}>Compliance & Legal</p>
-                      <p className="text-[11px] font-semibold" style={{ color:"rgba(148,163,184,0.5)" }}>Expert CAs &amp; Lawyers</p>
+                      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase" style={{ color:"#B8963C" }}>Compliance & Legal</p>
+                      <p className="text-[11px]" style={{ color:"rgba(122,139,168,0.6)" }}>Expert CAs &amp; Lawyers</p>
                     </div>
                   </div>
-                  <h2 className="font-black mb-3 leading-[1.1]"
-                    style={{ fontSize:"clamp(1.7rem,3vw,2.5rem)", color:"#EDE8DC", letterSpacing:"-0.02em" }}>
-                    Register. File.<br/>Comply.
+                  <h2 className="font-bold mb-3 leading-[1.1]"
+                    style={{ fontSize:"clamp(1.6rem,2.8vw,2.2rem)", color:"#E8E4DA", letterSpacing:"-0.015em" }}>
+                    Register. File. Comply.
                   </h2>
-                  <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(148,163,184,0.7)" }}>
-                    From company registration to GST, income tax, ROC and MSME — verified CAs handle everything end-to-end, online.
+                  <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(122,139,168,0.85)" }}>
+                    Company registration, GST, income tax, ROC and MSME — verified Chartered Accountants handle everything end-to-end.
                   </p>
                   {/* Pricing tiers */}
                   <div className="flex gap-2 mb-5">
                     {[
-                      { price:"₹999", label:"Basic", services:"GST Reg · MSME · PAN/TAN", color:"#60A5FA" },
-                      { price:"₹1,999", label:"Standard", services:"ITR Filing · GST Filing · TDS", color:"#818CF8", popular:true },
-                      { price:"₹2,999", label:"Pro", services:"ROC · MCA · Company Reg", color:"#A78BFA" },
+                      { price:"₹999", label:"Basic", services:"GST Reg · MSME · PAN/TAN" },
+                      { price:"₹1,999", label:"Standard", services:"ITR Filing · GST Filing · TDS", popular:true },
+                      { price:"₹2,999", label:"Pro", services:"ROC · MCA · Company Reg" },
                     ].map(p => (
                       <a key={p.label} href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%27m%20interested%20in%20the%20${p.label}%20plan%20(${encodeURIComponent(p.price)}).`}
                         target="_blank" rel="noopener noreferrer"
-                        className="flex-1 rounded-xl p-2.5 text-center transition-all hover:scale-[1.03]"
-                        style={{ background: p.popular ? "rgba(129,140,248,0.13)" : "rgba(37,99,235,0.07)", border:`1px solid ${p.popular ? "rgba(129,140,248,0.4)" : "rgba(37,99,235,0.15)"}`, position:"relative" }}>
-                        {p.popular && <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-black px-2 py-0.5 rounded-full" style={{ background:"#818CF8", color:"#fff", whiteSpace:"nowrap" }}>Popular</div>}
-                        <div className="text-base font-black leading-none mb-0.5" style={{ color:p.color }}>{p.price}</div>
-                        <div className="text-[9px] font-bold mb-1" style={{ color:"rgba(203,213,225,0.9)" }}>{p.label}</div>
-                        <div className="text-[8px] leading-tight" style={{ color:"rgba(148,163,184,0.55)" }}>{p.services}</div>
+                        className="flex-1 rounded-lg p-2.5 text-center transition-all hover:border-white/15"
+                        style={{ background:"rgba(255,255,255,0.03)", border:`1px solid ${p.popular ? "rgba(184,150,60,0.3)" : "rgba(255,255,255,0.07)"}`, position:"relative" }}>
+                        {p.popular && <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-semibold px-2 py-0.5 rounded" style={{ background:"rgba(184,150,60,0.9)", color:"#07091A", whiteSpace:"nowrap" }}>Popular</div>}
+                        <div className="text-sm font-bold leading-none mb-0.5" style={{ color:"#B8963C" }}>{p.price}</div>
+                        <div className="text-[9px] font-semibold mb-1" style={{ color:"rgba(232,228,218,0.8)" }}>{p.label}</div>
+                        <div className="text-[8px] leading-tight" style={{ color:"rgba(122,139,168,0.6)" }}>{p.services}</div>
                       </a>
                     ))}
                   </div>
                   <div className="flex gap-2.5">
                     <Link href="/services/compliance"
-                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all hover:opacity-90"
-                      style={{ background:"linear-gradient(135deg,#2563EB,#1E40AF)", color:"#fff", boxShadow:"0 4px 20px rgba(37,99,235,0.4)" }}>
+                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+                      style={{ background:"#B8963C", color:"#07091A" }}>
                       Explore Services <ArrowRight className="w-4 h-4" />
                     </Link>
                     <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%20need%20help%20with%20compliance%20services.`}
                       target="_blank" rel="noopener noreferrer"
-                      className="px-4 py-3 rounded-2xl text-xs font-bold border flex items-center gap-1.5 transition-all hover:opacity-90"
-                      style={{ borderColor:"rgba(37,211,102,0.3)", color:"#25D366", background:"rgba(37,211,102,0.06)" }}>
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 flex-shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                      className="px-4 py-3 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition-all hover:border-white/15"
+                      style={{ borderColor:"rgba(255,255,255,0.08)", color:"rgba(122,139,168,0.8)", background:"rgba(255,255,255,0.03)" }}>
+                      <svg viewBox="0 0 24 24" fill="#25D366" className="w-4 h-4 flex-shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                       Free Advice
                     </a>
                   </div>
@@ -462,62 +397,65 @@ export function BusinessOSHomepage() {
             {/* PILLAR 2 — FREPILOT */}
             <motion.div initial={{ opacity:0, x:24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.25, duration:0.5 }}>
               <button onClick={handleFrePilotClick} className="w-full h-full text-left group" style={{ background:"none", border:"none", padding:0, cursor:"pointer" }}>
-                <div className="relative rounded-3xl overflow-hidden h-full transition-all hover:scale-[1.01] hover:shadow-2xl"
-                  style={{ background:"linear-gradient(160deg,#0C1005 0%,#141A02 100%)", border:"1px solid rgba(201,168,76,0.32)", boxShadow:"0 8px 48px rgba(201,168,76,0.1)" }}>
-                  <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#C9A84C,#E8C97A,#C9A84C)" }} />
-                  {/* NEW badge banner */}
-                  <div className="relative flex items-center justify-between gap-4 px-6 py-4 overflow-hidden"
-                    style={{ background:"linear-gradient(110deg,rgba(201,168,76,0.18) 0%,rgba(201,168,76,0.06) 60%,rgba(201,168,76,0.12) 100%)", borderBottom:"1px solid rgba(201,168,76,0.2)" }}>
+                <div className="relative rounded-xl overflow-hidden h-full transition-all hover:border-white/10"
+                  style={{ background:"#0D1228", border:"1px solid rgba(184,150,60,0.2)" }}>
+                  <div className="h-[2px]" style={{ background:"linear-gradient(90deg,rgba(184,150,60,0.6),rgba(184,150,60,0.2),transparent)" }} />
+                  {/* Header bar */}
+                  <div className="flex items-center justify-between gap-4 px-6 py-3.5 border-b" style={{ borderColor:"rgba(255,255,255,0.06)" }}>
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-                        style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", boxShadow:"0 4px 14px rgba(201,168,76,0.4)" }}>🛩️</div>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background:"rgba(184,150,60,0.12)", border:"1px solid rgba(184,150,60,0.25)" }}>
+                        <span style={{ fontSize:"1rem" }}>🛩️</span>
+                      </div>
                       <div>
-                        <p className="text-sm font-black leading-none mb-0.5" style={{ color:"#E8C97A" }}>FrePilot — AI Accountant</p>
-                        <p className="text-[11px]" style={{ color:"rgba(201,168,76,0.55)" }}>You Build, We Pilot · ₹499/month</p>
+                        <p className="text-sm font-semibold leading-none mb-0.5" style={{ color:"#D4AC5A" }}>FrePilot — AI Accountant</p>
+                        <p className="text-[11px]" style={{ color:"rgba(184,150,60,0.5)" }}>You Build, We Pilot · ₹2,999/month</p>
                       </div>
                     </div>
-                    <span className="text-[9px] font-black px-2.5 py-1 rounded-full flex-shrink-0"
-                      style={{ background:"rgba(201,168,76,0.15)", color:"#C9A84C", border:"1px solid rgba(201,168,76,0.3)" }}>NEW</span>
+                    <span className="text-[9px] font-semibold px-2 py-0.5 rounded flex-shrink-0"
+                      style={{ background:"rgba(184,150,60,0.1)", color:"#B8963C", border:"1px solid rgba(184,150,60,0.2)" }}>NEW</span>
                   </div>
                   <div className="p-7 md:p-8">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
-                        style={{ background:"rgba(201,168,76,0.12)", border:"1px solid rgba(201,168,76,0.28)" }}>🤖</div>
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background:"rgba(184,150,60,0.1)", border:"1px solid rgba(184,150,60,0.2)" }}>
+                        <Rocket className="w-5 h-5" style={{ color:"#B8963C" }} />
+                      </div>
                       <div>
-                        <p className="text-[9px] font-black tracking-[0.3em] uppercase" style={{ color:"#C9A84C" }}>AI-Powered Accounting</p>
-                        <p className="text-[11px] font-semibold" style={{ color:"rgba(148,163,184,0.5)" }}>Built for Indian SMBs</p>
+                        <p className="text-[10px] font-semibold tracking-[0.15em] uppercase" style={{ color:"#B8963C" }}>AI-Powered Accounting</p>
+                        <p className="text-[11px]" style={{ color:"rgba(122,139,168,0.6)" }}>Built for Indian SMBs</p>
                       </div>
                     </div>
-                    <h2 className="font-black mb-3 leading-[1.1]"
-                      style={{ fontSize:"clamp(1.7rem,3vw,2.5rem)", color:"#EDE8DC", letterSpacing:"-0.02em" }}>
-                      Your books.<br/><span style={{ color:"#C9A84C" }}>Done right.</span>
+                    <h2 className="font-bold mb-3 leading-[1.1]"
+                      style={{ fontSize:"clamp(1.6rem,2.8vw,2.2rem)", color:"#E8E4DA", letterSpacing:"-0.015em" }}>
+                      Your books. Done right.
                     </h2>
-                    <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(148,163,184,0.7)" }}>
-                      GST invoicing, TDS tracking, P&amp;L reports and an AI CA co-pilot — all in one place. No accountant needed.
+                    <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(122,139,168,0.85)" }}>
+                      GST invoicing, TDS tracking, P&amp;L reports, and an AI accounting assistant — all in one platform built for India.
                     </p>
                     <div className="grid grid-cols-2 gap-y-2 gap-x-3 mb-6">
-                      {["GST Invoicing","AI Chat (Claude)","TDS Tracker","P&L & Balance Sheet","Journal Entries","Tally Export"].map(s => (
-                        <div key={s} className="flex items-center gap-2 text-xs font-semibold" style={{ color:"rgba(203,213,225,0.7)" }}>
-                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background:"#C9A84C" }} />{s}
+                      {["GST Invoicing","AI Chat Assistant","TDS Tracker","P&L & Balance Sheet","Journal Entries","Tally Export"].map(s => (
+                        <div key={s} className="flex items-center gap-2 text-xs" style={{ color:"rgba(184,184,200,0.65)" }}>
+                          <Check className="w-3 h-3 flex-shrink-0" style={{ color:"#B8963C" }} />{s}
                         </div>
                       ))}
                     </div>
-                    <div className="flex gap-0 mb-6 rounded-2xl overflow-hidden border" style={{ borderColor:"rgba(201,168,76,0.14)", background:"rgba(201,168,76,0.07)" }}>
-                      {[["₹499","Per Month"],["∞","Transactions"],["AI","Powered"]].map(([n,l],i,arr) => (
-                        <div key={l} className="flex-1 text-center py-3" style={{ borderRight:i<arr.length-1?"1px solid rgba(201,168,76,0.12)":"none" }}>
-                          <p className="text-sm font-black leading-none" style={{ color:"#C9A84C" }}>{n}</p>
-                          <p className="text-[9px] font-semibold mt-0.5" style={{ color:"rgba(148,163,184,0.45)" }}>{l}</p>
+                    <div className="flex gap-0 mb-6 rounded-lg overflow-hidden border" style={{ borderColor:"rgba(255,255,255,0.07)" }}>
+                      {[["₹2,999","Per Month"],["Unlimited","Transactions"],["AI","Powered"]].map(([n,l],i,arr) => (
+                        <div key={l} className="flex-1 text-center py-3" style={{ borderRight:i<arr.length-1?"1px solid rgba(255,255,255,0.06)":"none" }}>
+                          <p className="text-sm font-bold leading-none" style={{ color:"#B8963C" }}>{n}</p>
+                          <p className="text-[9px] font-medium mt-0.5" style={{ color:"rgba(122,139,168,0.5)" }}>{l}</p>
                         </div>
                       ))}
                     </div>
                     <div className="flex gap-2.5">
-                      <span className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all group-hover:opacity-90"
-                        style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff", boxShadow:"0 4px 20px rgba(201,168,76,0.35)" }}>
+                      <span className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all group-hover:opacity-90"
+                        style={{ background:"#B8963C", color:"#07091A" }}>
                         {loggedIn ? "Open FrePilot" : "Get Started"} <ArrowRight className="w-4 h-4" />
                       </span>
                       {!loggedIn && (
-                        <span className="px-4 py-3 rounded-2xl text-xs font-bold border flex items-center gap-1.5"
-                          style={{ borderColor:"rgba(201,168,76,0.25)", color:"rgba(201,168,76,0.6)", background:"rgba(201,168,76,0.05)" }}>
+                        <span className="px-4 py-3 rounded-lg text-xs font-medium border flex items-center gap-1.5"
+                          style={{ borderColor:"rgba(255,255,255,0.08)", color:"rgba(122,139,168,0.7)", background:"rgba(255,255,255,0.03)" }}>
                           Google Sign-in
                         </span>
                       )}
@@ -530,35 +468,36 @@ export function BusinessOSHomepage() {
 
           {/* ═══ COWORKING — compact card below ═══ */}
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3, duration:0.5 }} className="mb-10">
-            <div className="relative rounded-3xl overflow-hidden transition-all hover:scale-[1.005] hover:shadow-2xl"
-              style={{ background:"linear-gradient(160deg,#100D02 0%,#1C1600 100%)", border:"1px solid rgba(201,168,76,0.22)", boxShadow:"0 8px 48px rgba(201,168,76,0.08)" }}>
-              <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#C9A84C,#E8C97A,#C9A84C)" }} />
-              <div className="p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
-                  style={{ background:"rgba(201,168,76,0.12)", border:"1px solid rgba(201,168,76,0.28)" }}>🏛️</div>
+            <div className="relative rounded-xl overflow-hidden transition-all"
+              style={{ background:"#0D1228", border:"1px solid rgba(255,255,255,0.07)" }}>
+              <div className="p-6 md:p-7 flex flex-col md:flex-row items-start md:items-center gap-6">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background:"rgba(184,150,60,0.1)", border:"1px solid rgba(184,150,60,0.2)" }}>
+                  <MapPin className="w-5 h-5" style={{ color:"#B8963C" }} />
+                </div>
                 <div className="flex-1">
-                  <p className="text-[9px] font-black tracking-[0.3em] uppercase mb-1" style={{ color:"#C9A84C" }}>Premium Coworking</p>
-                  <h3 className="font-black mb-2 leading-tight" style={{ fontSize:"clamp(1.2rem,2.5vw,1.6rem)", color:"#EDE8DC", letterSpacing:"-0.02em" }}>
-                    Your Ideal Workspace.
+                  <p className="text-[10px] font-semibold tracking-[0.15em] uppercase mb-1" style={{ color:"#B8963C" }}>Premium Coworking</p>
+                  <h3 className="font-bold mb-2 leading-tight" style={{ fontSize:"clamp(1.1rem,2vw,1.4rem)", color:"#E8E4DA" }}>
+                    Your Ideal Workspace — 8 Indian Cities
                   </h3>
-                  <div className="flex flex-wrap gap-x-5 gap-y-1 mb-0">
-                    {["Hot Desks from ₹350/day","Private Cabins","Meeting Rooms","8 Cities","200+ Spaces"].map(s => (
-                      <span key={s} className="text-xs flex items-center gap-1.5" style={{ color:"rgba(201,168,76,0.6)" }}>
-                        <span className="w-1 h-1 rounded-full" style={{ background:"#C9A84C", display:"inline-block" }} />{s}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                    {["Hot Desks from ₹350/day","Private Cabins","Meeting Rooms","200+ Verified Spaces"].map(s => (
+                      <span key={s} className="text-xs flex items-center gap-1.5" style={{ color:"rgba(122,139,168,0.7)" }}>
+                        <span className="w-1 h-1 rounded-full" style={{ background:"#B8963C", display:"inline-block" }} />{s}
                       </span>
                     ))}
                   </div>
                 </div>
                 <div className="flex gap-2.5 flex-shrink-0">
                   <Link href="/coworking"
-                    className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold transition-all hover:opacity-90"
-                    style={{ background:"linear-gradient(135deg,#C9A84C,#A07C2E)", color:"#fff", boxShadow:"0 4px 16px rgba(201,168,76,0.3)" }}>
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+                    style={{ background:"#B8963C", color:"#07091A" }}>
                     Find a Space <ArrowRight className="w-4 h-4" />
                   </Link>
                   <Link href="/coworking/list"
-                    className="px-4 py-3 rounded-2xl text-xs font-bold border flex items-center gap-1.5 transition-all hover:opacity-90"
-                    style={{ borderColor:"rgba(201,168,76,0.25)", color:"rgba(201,168,76,0.7)", background:"rgba(201,168,76,0.05)" }}>
-                    List Free →
+                    className="px-4 py-2.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-all hover:border-white/15"
+                    style={{ borderColor:"rgba(255,255,255,0.08)", color:"rgba(122,139,168,0.7)", background:"rgba(255,255,255,0.03)" }}>
+                    List Free
                   </Link>
                 </div>
               </div>
@@ -593,93 +532,83 @@ export function BusinessOSHomepage() {
 
 
       {/* --- PLATFORM OVERVIEW --- */}
-      <section className="py-20 px-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #08112A 0%, #0F2044 55%, #0D1040 100%)" }}>
-        <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position:"absolute", left:"-5%", top:"-20%", width:600, height:600, borderRadius:"50%", background:"radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 60%)", filter:"blur(80px)" }} />
-          <div style={{ position:"absolute", right:"-5%", bottom:"-20%", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle, rgba(124,58,237,0.14) 0%, transparent 60%)", filter:"blur(80px)" }} />
-          <div style={{ position:"absolute", left:"40%", top:"30%", width:300, height:300, borderRadius:"50%", background:"radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 60%)", filter:"blur(60px)" }} />
-          <div style={{ position:"absolute", inset:0, opacity:0.03, backgroundImage:"radial-gradient(rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize:"24px 24px" }} />
-        </div>
-
+      <section className="py-20 px-4 relative" style={{ background: "#07091A", borderTop:"1px solid rgba(255,255,255,0.05)" }}>
         <div className="container max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-12">
-            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: "#60A5FA" }}>One Platform · Five Business Essentials</p>
-            <h2 className="font-black leading-tight" style={{ fontFamily: "var(--font-plus-jakarta),sans-serif", fontSize: "clamp(1.8rem,4vw,2.8rem)", color: "#FFFFFF" }}>
-              Not just tax. Everything your
-              <br/>
-              <span style={{ background: "linear-gradient(135deg,#60A5FA 0%,#A78BFA 50%,#34D399 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>business needs.</span>
+            <p className="text-[10px] font-semibold tracking-[0.25em] uppercase mb-3" style={{ color: "#B8963C" }}>One Platform · Five Business Essentials</p>
+            <h2 className="font-bold leading-tight" style={{ fontFamily: "var(--font-plus-jakarta),sans-serif", fontSize: "clamp(1.8rem,4vw,2.6rem)", color: "#E8E4DA" }}>
+              Not just tax. Everything your business needs.
             </h2>
-            <p className="mt-3 text-sm max-w-lg mx-auto" style={{ color: "rgba(148,163,184,0.85)" }}>
-              FreWork is India&apos;s complete business platform — from day 1 incorporation to ongoing compliance, hiring, workspace and funding.
+            <p className="mt-3 text-sm max-w-lg mx-auto" style={{ color: "rgba(122,139,168,0.75)" }}>
+              From day 1 incorporation to ongoing compliance, hiring, workspace and funding — all in one platform.
             </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { emoji: "🏢", title: "Start", sub: "Register & Set Up", stat: "7-day", statLabel: "setup", items: ["Company Registration", "GST Number", "MSME Certificate"], color: "#34D399", border: "rgba(52,211,153,0.22)", bg: "rgba(52,211,153,0.07)", href: "/services/business-registration" },
-              { emoji: "✅", title: "Comply", sub: "Tax & Compliance", stat: "₹499", statLabel: "from", items: ["GST Filing", "ITR Filing", "ROC / MCA"], color: "#60A5FA", border: "rgba(96,165,250,0.22)", bg: "rgba(96,165,250,0.07)", href: "/services/compliance" },
-              { emoji: "👥", title: "Hire", sub: "Talent & Experts", stat: "24hr", statLabel: "match", items: ["Professionals", "Developers", "Designers"], color: "#C084FC", border: "rgba(192,132,252,0.22)", bg: "rgba(192,132,252,0.07)", href: "/freelancers" },
-              { emoji: "🏛️", title: "Work", sub: "Coworking Spaces", stat: "200+", statLabel: "spaces", items: ["Hot Desks", "Private Cabins", "8 Cities"], color: "#FB923C", border: "rgba(251,146,60,0.22)", bg: "rgba(251,146,60,0.07)", href: "/coworking" },
-              { emoji: "🚀", title: "Grow", sub: "Funding & Scale", stat: "500+", statLabel: "clients", items: ["Pitch Decks", "DPR / Business Plan", "Investor Connect"], color: "#FCD34D", border: "rgba(252,211,77,0.22)", bg: "rgba(252,211,77,0.07)", href: "/services/dpr" },
-            ].map(p => (
+              { icon: Building2, title: "Start", sub: "Register & Set Up", stat: "7-day", statLabel: "setup", items: ["Company Registration", "GST Number", "MSME Certificate"], href: "/services/business-registration" },
+              { icon: FileText, title: "Comply", sub: "Tax & Compliance", stat: "₹499", statLabel: "from", items: ["GST Filing", "ITR Filing", "ROC / MCA"], href: "/services/compliance" },
+              { icon: Users, title: "Hire", sub: "Talent & Experts", stat: "24hr", statLabel: "match", items: ["Professionals", "Developers", "Designers"], href: "/freelancers" },
+              { icon: MapPin, title: "Work", sub: "Coworking Spaces", stat: "200+", statLabel: "spaces", items: ["Hot Desks", "Private Cabins", "8 Cities"], href: "/coworking" },
+              { icon: TrendingUp, title: "Grow", sub: "Funding & Scale", stat: "500+", statLabel: "clients", items: ["Pitch Decks", "DPR / Business Plan", "Investor Connect"], href: "/services/dpr" },
+            ].map(p => {
+              const Icon = p.icon;
+              return (
               <Link key={p.title} href={p.href}
-                className="group relative rounded-2xl p-5 border transition-all duration-200 hover:scale-[1.03] hover:-translate-y-1 cursor-pointer block"
-                style={{ background: p.bg, borderColor: p.border, boxShadow: "0 4px 24px rgba(0,0,0,0.25)" }}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="text-3xl">{p.emoji}</div>
+                className="group relative rounded-xl p-5 border transition-all duration-200 hover:border-white/10 cursor-pointer block"
+                style={{ background: "#0D1228", borderColor: "rgba(255,255,255,0.07)" }}>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background:"rgba(184,150,60,0.1)", border:"1px solid rgba(184,150,60,0.15)" }}>
+                    <Icon className="w-4 h-4" style={{ color:"#B8963C" }} />
+                  </div>
                   <div className="text-right">
-                    <p className="text-sm font-black leading-none" style={{ color: p.color }}>{p.stat}</p>
-                    <p className="text-[9px] font-medium" style={{ color: "rgba(148,163,184,0.55)" }}>{p.statLabel}</p>
+                    <p className="text-sm font-bold leading-none" style={{ color: "#B8963C" }}>{p.stat}</p>
+                    <p className="text-[9px]" style={{ color: "rgba(122,139,168,0.5)" }}>{p.statLabel}</p>
                   </div>
                 </div>
-                <p className="font-black text-base mb-0.5" style={{ color: p.color }}>{p.title}</p>
-                <p className="text-[11px] font-semibold mb-3" style={{ color: "rgba(148,163,184,0.7)" }}>{p.sub}</p>
+                <p className="font-bold text-sm mb-0.5" style={{ color: "#E8E4DA" }}>{p.title}</p>
+                <p className="text-[11px] mb-3" style={{ color: "rgba(122,139,168,0.65)" }}>{p.sub}</p>
                 <ul className="space-y-1">
                   {p.items.map(item => (
-                    <li key={item} className="text-[11px] flex items-center gap-1.5" style={{ color: "rgba(203,213,225,0.6)" }}>
-                      <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: p.color, opacity: 0.7 }} />
+                    <li key={item} className="text-[11px] flex items-center gap-1.5" style={{ color: "rgba(184,184,200,0.55)" }}>
+                      <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: "#B8963C", opacity: 0.6 }} />
                       {item}
                     </li>
                   ))}
                 </ul>
                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ChevronRight className="w-4 h-4" style={{ color: p.color }} />
+                  <ChevronRight className="w-4 h-4" style={{ color: "#B8963C" }} />
                 </div>
               </Link>
-            ))}
+            );
+            })}
           </div>
         </div>
       </section>
 
       {/* --- COWORKING SPOTLIGHT --- */}
-      <section className="py-28 px-4 relative overflow-hidden" style={{ background: "linear-gradient(160deg,#0B1428 0%,#080D1C 50%,#0D1020 100%)", borderTop: `1px solid ${L.borderLight}` }}>
-        <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position: "absolute", right: "-10%", top: "-20%", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,76,0.07) 0%, transparent 65%)", filter: "blur(60px)" }} />
-          <div style={{ position: "absolute", left: "-5%", bottom: "-10%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 60%)", filter: "blur(50px)" }} />
-        </div>
+      <section className="py-20 px-4 relative" style={{ background: "#0A0D20", borderTop: `1px solid rgba(255,255,255,0.05)` }}>
+        <div className="absolute inset-0 pointer-events-none" />
 
         <div className="container max-w-6xl mx-auto relative z-10">
           <div className="flex items-center gap-3 mb-14">
-            <div className="h-px w-10" style={{ background: `linear-gradient(90deg, ${L.gold}, transparent)` }} />
-            <span className="text-[10px] font-black tracking-[0.3em] uppercase" style={{ color: L.gold }}>Featured Module</span>
-            <div className="h-px flex-1" style={{ background: `rgba(184,144,58,0.12)` }} />
+            <div className="h-px w-10" style={{ background: `rgba(184,150,60,0.4)` }} />
+            <span className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: "#B8963C" }}>Coworking</span>
+            <div className="h-px flex-1" style={{ background: `rgba(255,255,255,0.05)` }} />
           </div>
 
           <div className="grid lg:grid-cols-2 gap-20 items-start">
             {/* Left */}
             <div>
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase mb-6 border"
-                style={{ background: "rgba(18,70,200,0.06)", borderColor: "rgba(18,70,200,0.2)", color: "#1246C8" }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-semibold tracking-[0.15em] uppercase mb-6 border"
+                style={{ background: "rgba(184,150,60,0.06)", borderColor: "rgba(184,150,60,0.2)", color: "#B8963C" }}>
                 Now Live
               </span>
 
-              <h2 className="font-black leading-[1.05] mb-5"
-                style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(2rem, 4vw, 3.2rem)", color: L.text }}>
+              <h2 className="font-bold leading-[1.05] mb-5"
+                style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", color: L.text }}>
                 Your perfect office,<br />
-                <span style={{ background: "linear-gradient(135deg, #2563EB 0%, #4F46E5 50%, #0EA5E9 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                  wherever you work.
-                </span>
+                <span style={{ color: "#B8963C" }}>wherever you work.</span>
               </h2>
 
               <p className="text-base leading-relaxed mb-8" style={{ color: L.textSub }}>
@@ -712,17 +641,17 @@ export function BusinessOSHomepage() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-0 mb-8 rounded-2xl overflow-hidden border" style={{ borderColor: "rgba(37,99,235,0.12)", background: "rgba(37,99,235,0.03)" }}>{[{n:"200+",l:"Spaces"},{n:"8",l:"Cities"},{n:"₹350",l:"From /day"}].map((s,idx) => (<div key={s.l} className="flex-1 text-center py-3 px-2" style={{ borderRight: idx<2 ? "1px solid rgba(37,99,235,0.1)" : "none" }}><p className="text-base font-black" style={{ color: "#2563EB" }}>{s.n}</p><p className="text-[10px] font-semibold" style={{ color: L.textMuted }}>{s.l}</p></div>))}</div>
+              <div className="flex items-center gap-0 mb-8 rounded-lg overflow-hidden border" style={{ borderColor: "rgba(255,255,255,0.07)" }}>{[{n:"200+",l:"Spaces"},{n:"8",l:"Cities"},{n:"₹350",l:"From /day"}].map((s,idx) => (<div key={s.l} className="flex-1 text-center py-3 px-2" style={{ borderRight: idx<2 ? "1px solid rgba(255,255,255,0.06)" : "none" }}><p className="text-base font-bold" style={{ color: "#B8963C" }}>{s.n}</p><p className="text-[10px]" style={{ color: L.textMuted }}>{s.l}</p></div>))}</div>
 
               <div className="flex gap-3 flex-wrap">
                 <Link href="/coworking"
-                  className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all hover:scale-[1.03] hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, #2563EB, #1E40AF)", color: "#fff", boxShadow: "0 4px 20px rgba(37,99,235,0.28)" }}>
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+                  style={{ background: "#B8963C", color: "#07091A" }}>
                   Explore Spaces <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link href="/coworking"
-                  className="flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold border transition-all hover:scale-[1.03]"
-                  style={{ borderColor: "rgba(37,99,235,0.2)", color: "#1E40AF", background: L.bgCard, boxShadow: L.shadow }}>
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-medium border transition-all hover:border-white/15"
+                  style={{ borderColor: "rgba(255,255,255,0.08)", color: L.textSub, background: L.bgCard }}>
                   List your space – Free
                 </Link>
               </div>
@@ -730,9 +659,9 @@ export function BusinessOSHomepage() {
 
             {/* Right – Interactive plan card */}
             <div className="relative">
-              <div className="rounded-3xl overflow-hidden border"
-                style={{ background: L.bgCard, borderColor: "rgba(37,99,235,0.12)", boxShadow: "0 24px 64px rgba(37,99,235,0.1), 0 4px 16px rgba(0,0,0,0.04)" }}>
-                <div className="h-[3px]" style={{ background: "linear-gradient(90deg, #2563EB, #4F46E5, #0EA5E9)" }} />
+              <div className="rounded-xl overflow-hidden border"
+                style={{ background: L.bgCard, borderColor: "rgba(255,255,255,0.07)" }}>
+                <div className="h-[2px]" style={{ background: "linear-gradient(90deg,rgba(184,150,60,0.5),rgba(184,150,60,0.15),transparent)" }} />
 
                 <div className="px-6 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(37,99,235,0.08)" }}>
                   <div className="flex items-center gap-3">
@@ -760,14 +689,13 @@ export function BusinessOSHomepage() {
                       <button key={plan.key} onClick={() => setSelectedPlan(plan.key)}
                         className="rounded-2xl p-3.5 text-left border cursor-pointer transition-all duration-200"
                         style={selectedPlan === plan.key ? {
-                          borderColor: "rgba(234,88,12,0.35)", background: "rgba(234,88,12,0.05)",
-                          boxShadow: "0 4px 16px rgba(234,88,12,0.1)", transform: "scale(1.02)"
+                          borderColor: "rgba(184,150,60,0.35)", background: "rgba(184,150,60,0.06)",
                         } : {
-                          borderColor: L.borderLight, background: L.bgAlt
+                          borderColor: "rgba(255,255,255,0.06)", background: L.bgAlt
                         }}>
                         <p className="text-xl mb-1">{plan.emoji}</p>
-                        <p className="text-[11px] font-bold mb-0.5" style={{ color: selectedPlan === plan.key ? "#1E40AF" : L.textSub }}>{plan.label}</p>
-                        <p className="text-xs font-black" style={{ color: selectedPlan === plan.key ? "#2563EB" : L.textMuted }}>
+                        <p className="text-[11px] font-semibold mb-0.5" style={{ color: selectedPlan === plan.key ? "#D4AC5A" : L.textSub }}>{plan.label}</p>
+                        <p className="text-xs font-bold" style={{ color: selectedPlan === plan.key ? "#B8963C" : L.textMuted }}>
                           {plan.price}<span className="font-normal text-[10px]">{plan.per}</span>
                         </p>
                       </button>
@@ -788,9 +716,9 @@ export function BusinessOSHomepage() {
                   </AnimatePresence>
 
                   <Link href="/coworking"
-                    className="w-full py-3 rounded-2xl text-sm font-bold text-center block transition-all hover:opacity-90 hover:scale-[1.01]"
-                    style={{ background: "linear-gradient(135deg, #2563EB, #1E40AF)", color: "#fff", boxShadow: "0 4px 20px rgba(37,99,235,0.3)" }}>
-                    Book a Visit â†'
+                    className="w-full py-3 rounded-lg text-sm font-semibold text-center block transition-all hover:opacity-90"
+                    style={{ background: "#B8963C", color: "#07091A" }}>
+                    Book a Visit →
                   </Link>
                 </div>
               </div>
@@ -810,18 +738,14 @@ export function BusinessOSHomepage() {
       {/* --- 8 MODULES (interactive click-to-expand) --- */}
       <section className="py-28 px-4 relative" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-6xl mx-auto relative z-10">
-          <div className="text-center mb-6">
-            <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.gold }}>8 Modules · One Platform</p>
-            <GoldDivider />
-            <h2 className="font-black mb-3 leading-tight mt-4"
-              style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 3rem)", color: L.text }}>
+          <div className="text-center mb-8">
+            <p className="text-[10px] font-semibold tracking-[0.2em] uppercase mb-3" style={{ color: "#B8963C" }}>Services · One Platform</p>
+            <h2 className="font-bold mb-3 leading-tight"
+              style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: L.text }}>
               Everything your business needs
             </h2>
-            <p className="text-base max-w-md mx-auto mb-3" style={{ color: L.textSub }}>
-              From day one of registration to raising your Series A
-            </p>
-            <p className="text-xs font-semibold" style={{ color: L.textMuted }}>
-              👆 Click any module to learn more
+            <p className="text-sm max-w-md mx-auto" style={{ color: L.textSub }}>
+              From day one of registration to raising your Series A — click any card to learn more.
             </p>
           </div>
 
@@ -1066,9 +990,9 @@ export function BusinessOSHomepage() {
 
           <div className="grid md:grid-cols-3 gap-5">
             {[
-              { icon: Shield, c: "#059669", t: "One account, everything done", d: "Company registration, GST filing, ITR, coworking space booking and hiring — all from one account, one dashboard.", extra: "No more juggling 10 different portals. FreWork handles company formation, all tax filings, workspace booking and professional hiring in one place." },
-              { icon: Clock, c: "#2563EB", t: "From day 1 to growth", d: "Register your company, get GST, hire your team, find a workspace, raise funding — FreWork covers every stage of your business journey.", extra: "Whether you are just starting out or scaling up, FreWork has the tools and experts you need. Our platform grows with your business." },
-              { icon: Star, c: "#1E40AF", t: "Built for Indian business", d: "Indian compliance, Indian cities, Indian pricing. We understand the real challenges of SMEs, startups and solo founders in India.", extra: "Our platform is built by a team that includes practicing CAs, former startup founders and operations experts — people who have faced the same problems." },
+              { icon: Shield, t: "One account, everything done", d: "Company registration, GST filing, ITR, coworking space booking and hiring — all from one account, one dashboard.", extra: "No more juggling 10 different portals. FreWork handles company formation, all tax filings, workspace booking and professional hiring in one place." },
+              { icon: Clock, t: "From day 1 to growth", d: "Register your company, get GST, hire your team, find a workspace, raise funding — FreWork covers every stage of your business journey.", extra: "Whether you are just starting out or scaling up, FreWork has the tools and experts you need. Our platform grows with your business." },
+              { icon: Star, t: "Built for Indian business", d: "Indian compliance, Indian cities, Indian pricing. We understand the real challenges of SMEs, startups and solo founders in India.", extra: "Our platform is built by a team that includes practicing CAs, former startup founders and operations experts — people who have faced the same problems." },
             ].map((item, i) => {
               const Icon = item.icon;
               const [open, setOpen] = useState(false);
@@ -1076,16 +1000,16 @@ export function BusinessOSHomepage() {
                 <motion.div key={item.t}
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
                   <button className="w-full text-left" onClick={() => setOpen(!open)}>
-                    <div className="p-7 rounded-2xl border transition-all duration-300 relative overflow-hidden"
-                      style={{ background: L.bgCard, borderColor: open ? `${item.c}30` : L.borderLight, boxShadow: open ? L.shadowHover : L.shadow, transform: open ? "translateY(-2px)" : "none" }}>
-                      <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: `linear-gradient(90deg, ${item.c}, ${item.c}50)` }} />
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
-                        style={{ background: `${item.c}08`, border: `1px solid ${item.c}20` }}>
-                        <Icon className="w-6 h-6" style={{ color: item.c }} />
+                    <div className="p-6 rounded-xl border transition-all duration-300 relative overflow-hidden"
+                      style={{ background: L.bgCard, borderColor: open ? "rgba(184,150,60,0.2)" : L.borderLight }}>
+                      <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: `linear-gradient(90deg, rgba(184,150,60,0.5), transparent)` }} />
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
+                        style={{ background: "rgba(184,150,60,0.08)", border: "1px solid rgba(184,150,60,0.15)" }}>
+                        <Icon className="w-5 h-5" style={{ color: "#B8963C" }} />
                       </div>
-                      <h3 className="font-bold mb-2.5 text-base" style={{ color: L.text }}>{item.t}</h3>
+                      <h3 className="font-semibold mb-2 text-base" style={{ color: L.text }}>{item.t}</h3>
                       <p className="text-sm leading-relaxed mb-3" style={{ color: L.textSub }}>{item.d}</p>
-                      <span className="text-xs font-semibold" style={{ color: item.c }}>{open ? "Show less â†'" : "Read more ↓"}</span>
+                      <span className="text-xs font-medium" style={{ color: "#B8963C" }}>{open ? "Show less" : "Read more"}</span>
                       <AnimatePresence>
                         {open && (
                           <motion.p
@@ -1148,27 +1072,26 @@ export function BusinessOSHomepage() {
           <p className="text-center text-[10px] font-black tracking-[0.35em] uppercase mb-10" style={{ color: L.textMuted }}>Popular on FreWork</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { icon: Building2, label: "Company Registration", href: "/services/business-registration", color: "#059669" },
-              { icon: MapPin, label: "Find Coworking Space", href: "/coworking", color: "#EA580C" },
-              { icon: Users, label: "Hire Talent", href: "/freelancers", color: "#7C3AED" },
-              { icon: Presentation, label: "Pitch Deck & DPR", href: "/services/dpr", color: "#D97706" },
-              { icon: GraduationCap, label: "Business Training", href: "/services/training", color: "#1E40AF" },
-              { icon: FileText, label: "GST Registration", href: "/services/compliance", color: "#2563EB" },
-              { icon: Briefcase, label: "Income Tax (ITR)", href: "/services/compliance", color: "#2563EB" },
-              { icon: BarChart3, label: "Virtual Accountant", href: "/services/accounting", color: "#059669" },
+              { icon: Building2, label: "Company Registration", href: "/services/business-registration" },
+              { icon: MapPin, label: "Find Coworking Space", href: "/coworking" },
+              { icon: Users, label: "Hire Talent", href: "/freelancers" },
+              { icon: Presentation, label: "Pitch Deck & DPR", href: "/services/dpr" },
+              { icon: GraduationCap, label: "Business Training", href: "/services/training" },
+              { icon: FileText, label: "GST Registration", href: "/services/compliance" },
+              { icon: Briefcase, label: "Income Tax (ITR)", href: "/services/compliance" },
+              { icon: BarChart3, label: "Virtual Accountant", href: "/services/accounting" },
             ].map(s => {
               const Icon = s.icon;
               return (
                 <Link key={s.label} href={s.href}
-                  className="flex items-center gap-3 p-3.5 rounded-xl border transition-all group hover:scale-[1.03] hover:-translate-y-0.5 relative overflow-hidden"
-                  style={{ background: `${s.color}04`, borderColor: `${s.color}1A`, boxShadow: L.shadow }}>
-                  <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: `linear-gradient(90deg, ${s.color}, ${s.color}40)` }} />
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: `${s.color}08`, border: `1px solid ${s.color}18` }}>
-                    <Icon className="w-4 h-4" style={{ color: s.color }} />
+                  className="flex items-center gap-3 p-3.5 rounded-lg border transition-all group hover:border-white/12"
+                  style={{ background: L.bgCard, borderColor: "rgba(255,255,255,0.06)" }}>
+                  <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
+                    style={{ background: "rgba(184,150,60,0.08)", border: "1px solid rgba(184,150,60,0.12)" }}>
+                    <Icon className="w-3.5 h-3.5" style={{ color: "#B8963C" }} />
                   </div>
-                  <span className="text-xs font-semibold leading-tight" style={{ color: L.textSub }}>{s.label}</span>
-                  <ArrowRight className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: s.color }} />
+                  <span className="text-xs font-medium leading-tight" style={{ color: L.textSub }}>{s.label}</span>
+                  <ArrowRight className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "#B8963C" }} />
                 </Link>
               );
             })}
@@ -1177,40 +1100,32 @@ export function BusinessOSHomepage() {
       </section>
 
       {/* --- CTA --- */}
-      <section className="py-28 px-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #08112A 0%, #0F2044 55%, #1A0A3D 100%)" }}>
-        <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position:"absolute", left:"10%", top:"-30%", width:700, height:700, borderRadius:"50%", background:"radial-gradient(circle, rgba(37,99,235,0.2) 0%, transparent 60%)", filter:"blur(80px)" }} />
-          <div style={{ position:"absolute", right:"5%", bottom:"-20%", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 60%)", filter:"blur(70px)" }} />
-          <div style={{ position:"absolute", inset:0, opacity:0.025, backgroundImage:"radial-gradient(rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize:"24px 24px" }} />
-        </div>
-        <div className="container max-w-3xl mx-auto text-center relative z-10">
-          <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-5" style={{ color: "#60A5FA" }}>Ready to start?</p>
-          <h2 className="font-black mb-5 leading-tight"
-            style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "#FFFFFF" }}>
-            India&apos;s complete<br/>
-            <span style={{ background: "linear-gradient(135deg, #60A5FA, #A78BFA, #34D399)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              business platform.
-            </span>
+      <section className="py-24 px-4 relative" style={{ background: "#07091A", borderTop:"1px solid rgba(255,255,255,0.05)" }}>
+        <div className="container max-w-3xl mx-auto text-center">
+          <p className="text-[10px] font-semibold tracking-[0.25em] uppercase mb-4" style={{ color: "#B8963C" }}>Ready to start?</p>
+          <h2 className="font-bold mb-4 leading-tight"
+            style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: "clamp(2rem, 4.5vw, 3rem)", color: "#E8E4DA" }}>
+            India&apos;s complete business platform.
           </h2>
-          <p className="text-base mb-10 max-w-md mx-auto" style={{ color: "rgba(148,163,184,0.9)" }}>
+          <p className="text-base mb-10 max-w-md mx-auto" style={{ color: "rgba(122,139,168,0.8)" }}>
             Join founders, SMEs, and professionals building their business with FreWork.
           </p>
           <div className="flex flex-wrap gap-3 justify-center mb-10">
             <Link href="/register"
-              className="flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-sm transition-all hover:scale-[1.03]"
-              style={{ background: "linear-gradient(135deg, #2563EB, #4F46E5)", color: "#fff", boxShadow: "0 8px 32px rgba(37,99,235,0.45)" }}>
+              className="flex items-center gap-2 px-8 py-3.5 rounded-lg font-semibold text-sm transition-all hover:opacity-90"
+              style={{ background: "#B8963C", color: "#07091A" }}>
               Get Started Free <ChevronRight className="w-4 h-4" />
             </Link>
             <a href={`tel:${SUPPORT_PHONE}`}
-              className="flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-sm border transition-all hover:scale-[1.03]"
-              style={{ borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)", background: "rgba(255,255,255,0.06)" }}>
-              <Phone className="w-4 h-4" style={{ color: "#34D399" }} /> {SUPPORT_PHONE}
+              className="flex items-center gap-2 px-8 py-3.5 rounded-lg font-semibold text-sm border transition-all hover:border-white/15"
+              style={{ borderColor: "rgba(255,255,255,0.1)", color: "rgba(232,228,218,0.75)", background: "rgba(255,255,255,0.04)" }}>
+              <Phone className="w-4 h-4" style={{ color: "#B8963C" }} /> {SUPPORT_PHONE}
             </a>
           </div>
           <div className="flex items-center justify-center gap-6 flex-wrap">
             {["Company Registration", "GST Filing", "Coworking", "Hire Talent", "Pitch Decks"].map(s => (
-              <span key={s} className="flex items-center gap-1.5 text-xs" style={{ color: "rgba(148,163,184,0.5)" }}>
-                <span className="w-1 h-1 rounded-full" style={{ background: "#34D399" }} />{s}
+              <span key={s} className="flex items-center gap-1.5 text-xs" style={{ color: "rgba(122,139,168,0.45)" }}>
+                <span className="w-1 h-1 rounded-full" style={{ background: "#B8963C", opacity:0.5 }} />{s}
               </span>
             ))}
           </div>
@@ -1222,11 +1137,10 @@ export function BusinessOSHomepage() {
       </div>
 
       <style jsx global>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+        @keyframes marquee-reverse {
+          0% { transform: translateX(-50%); }
+          100% { transform: translateX(0); }
         }
-        .animate-marquee { animation: marquee 30s linear infinite; }
       `}</style>
 
       {/* Sticky floating WhatsApp button */}
