@@ -17,7 +17,7 @@ export default function TallyPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_$user.id`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label,start_date,end_date,is_current").eq("business_id", saved).order("start_date", { ascending: false });
@@ -47,7 +47,7 @@ export default function TallyPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>â€º</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Tally Bridge</span>
       </nav>
 
@@ -61,9 +61,9 @@ export default function TallyPage() {
           {[
             "Download the XML file from FreWork",
             "Open Tally Prime / Tally ERP 9",
-            'Go to: Gateway of Tally â†’ Import â†’ Vouchers',
+            'Go to: Gateway of Tally → Import → Vouchers',
             "Select the downloaded XML file",
-            'Click "Import" â€” all vouchers will be created',
+            'Click "Import" — all vouchers will be created',
           ].map((step, i) => (
             <div key={i} style={{ display: "flex", gap: "0.75rem", marginBottom: "0.4rem" }}>
               <span style={{ background: "#C9A84C", color: "#070C1A", width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.7rem", flexShrink: 0 }}>{i + 1}</span>
@@ -97,9 +97,9 @@ export default function TallyPage() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "1rem", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1.5rem" }}>
-            <span style={{ fontSize: "1.5rem" }}>ðŸ“’</span>
+            <span style={{ fontSize: "1.5rem" }}>📒</span>
             <div>
-              <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>{journalCount ?? "â€”"} posted journal entries</div>
+              <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>{journalCount ?? "—"} posted journal entries</div>
               <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)" }}>Ready for export as Tally XML vouchers</div>
             </div>
           </div>
@@ -109,7 +109,7 @@ export default function TallyPage() {
               display: "block", textAlign: "center", background: "#C9A84C", color: "#070C1A",
               padding: "12px 28px", borderRadius: 8, fontWeight: 700, textDecoration: "none", fontSize: "0.95rem",
             }}>
-              â¬‡ Download Tally XML
+              ⬇ Download Tally XML
             </a>
           )}
           <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "rgba(237,232,220,0.3)", textAlign: "center" }}>
@@ -120,10 +120,10 @@ export default function TallyPage() {
         {/* Info boxes */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "1.5rem" }}>
           {[
-            { icon: "ðŸ”„", title: "Two-way sync", desc: "Export from FreWork â†’ import into Tally. Use FreWork as your primary entry point." },
-            { icon: "âœ…", title: "All voucher types", desc: "Sales, Purchase, Payment, Receipt, Journal, Contra â€” all exported correctly." },
-            { icon: "ðŸ·ï¸", title: "Ledger names matched", desc: "Account names in FreWork must match your Tally ledger names for clean import." },
-            { icon: "ðŸ“…", title: "Date range filter", desc: "Export specific months or quarters for GST reconciliation." },
+            { icon: "🔄", title: "Two-way sync", desc: "Export from FreWork → import into Tally. Use FreWork as your primary entry point." },
+            { icon: "✅", title: "All voucher types", desc: "Sales, Purchase, Payment, Receipt, Journal, Contra — all exported correctly." },
+            { icon: "🏷️", title: "Ledger names matched", desc: "Account names in FreWork must match your Tally ledger names for clean import." },
+            { icon: "📅", title: "Date range filter", desc: "Export specific months or quarters for GST reconciliation." },
           ].map(tip => (
             <div key={tip.title} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 10, padding: "1rem" }}>
               <div style={{ fontSize: "1.2rem", marginBottom: "0.4rem" }}>{tip.icon}</div>
@@ -136,4 +136,3 @@ export default function TallyPage() {
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -44,7 +44,7 @@ export default function AIReviewPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_$user.id`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       loadSuggestions(saved);
@@ -342,4 +342,3 @@ export default function AIReviewPage() {
     </div>
   );
 }
-

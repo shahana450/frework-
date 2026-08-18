@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -48,7 +48,7 @@ export default function ChartOfAccountsPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_$user.id`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data } = await supabase.from("fw_fin_chart_of_accounts").select("*").eq("business_id", saved).order("sort_order");
@@ -223,4 +223,3 @@ export default function ChartOfAccountsPage() {
     </div>
   );
 }
-

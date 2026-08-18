@@ -8,52 +8,52 @@ const NAV_GROUPS = [
   {
     label: "Overview",
     items: [
-      { icon: "ðŸ ", label: "Dashboard", href: "/finance" },
-      { icon: "ðŸ”", label: "AI Insights", href: "/finance/insights" },
-      { icon: "ðŸ›©ï¸", label: "FrePilot", href: "/finance/virtual-ca" },
+      { icon: "🏠", label: "Dashboard", href: "/finance" },
+      { icon: "🔍", label: "AI Insights", href: "/finance/insights" },
+      { icon: "🛩️", label: "FrePilot", href: "/finance/virtual-ca" },
     ],
   },
   {
     label: "Transactions",
     items: [
-      { icon: "ðŸ“¤", label: "Upload Documents", href: "/finance/upload" },
-      { icon: "ðŸ¤–", label: "AI Review Queue", href: "/finance/ai-review" },
-      { icon: "ðŸ§¾", label: "Sales Invoice", href: "/finance/sales/new" },
-      { icon: "ðŸ“¦", label: "Purchase Bill", href: "/finance/purchases/new" },
-      { icon: "ðŸ’¸", label: "Record Expense", href: "/finance/expenses" },
-      { icon: "ðŸ’³", label: "Payment Entry", href: "/finance/payment" },
-      { icon: "ðŸ”´", label: "Credit Note", href: "/finance/credit-note" },
-      { icon: "ðŸŸ¢", label: "Debit Note", href: "/finance/debit-note" },
+      { icon: "📤", label: "Upload Documents", href: "/finance/upload" },
+      { icon: "🤖", label: "AI Review Queue", href: "/finance/ai-review" },
+      { icon: "🧾", label: "Sales Invoice", href: "/finance/sales/new" },
+      { icon: "📦", label: "Purchase Bill", href: "/finance/purchases/new" },
+      { icon: "💸", label: "Record Expense", href: "/finance/expenses" },
+      { icon: "💳", label: "Payment Entry", href: "/finance/payment" },
+      { icon: "🔴", label: "Credit Note", href: "/finance/credit-note" },
+      { icon: "🟢", label: "Debit Note", href: "/finance/debit-note" },
     ],
   },
   {
     label: "Books",
     items: [
-      { icon: "ðŸ§¾", label: "Sales List", href: "/finance/sales" },
-      { icon: "ðŸ“‹", label: "Journal Entries", href: "/finance/journals" },
-      { icon: "ðŸ“’", label: "Account Ledger", href: "/finance/ledger" },
-      { icon: "ðŸ“¥", label: "Receivables (AR)", href: "/finance/receivables" },
-      { icon: "ðŸ“¤", label: "Payables (AP)", href: "/finance/payables" },
+      { icon: "🧾", label: "Sales List", href: "/finance/sales" },
+      { icon: "📋", label: "Journal Entries", href: "/finance/journals" },
+      { icon: "📒", label: "Account Ledger", href: "/finance/ledger" },
+      { icon: "📥", label: "Receivables (AR)", href: "/finance/receivables" },
+      { icon: "📤", label: "Payables (AP)", href: "/finance/payables" },
     ],
   },
   {
     label: "Reports",
     items: [
-      { icon: "ðŸ“ˆ", label: "Financial Reports", href: "/finance/reports" },
-      { icon: "ðŸ›ï¸", label: "GST Returns", href: "/finance/gst" },
-      { icon: "ðŸ”–", label: "TDS Tracker", href: "/finance/tds" },
-      { icon: "ðŸ¦", label: "Bank Reconciliation", href: "/finance/banking" },
-      { icon: "ðŸ”„", label: "Tally Export", href: "/finance/tally" },
+      { icon: "📈", label: "Financial Reports", href: "/finance/reports" },
+      { icon: "🏛️", label: "GST Returns", href: "/finance/gst" },
+      { icon: "🔖", label: "TDS Tracker", href: "/finance/tds" },
+      { icon: "🏦", label: "Bank Reconciliation", href: "/finance/banking" },
+      { icon: "🔄", label: "Tally Export", href: "/finance/tally" },
     ],
   },
   {
     label: "Setup",
     items: [
-      { icon: "ðŸ“Š", label: "Chart of Accounts", href: "/finance/chart-of-accounts" },
-      { icon: "ðŸ‘¥", label: "Contacts", href: "/finance/contacts" },
-      { icon: "ðŸ“…", label: "Financial Years", href: "/finance/fy" },
-      { icon: "ðŸ«‚", label: "Team & Access", href: "/finance/team" },
-      { icon: "âš™ï¸", label: "Business Setup", href: "/finance/setup" },
+      { icon: "📊", label: "Chart of Accounts", href: "/finance/chart-of-accounts" },
+      { icon: "👥", label: "Contacts", href: "/finance/contacts" },
+      { icon: "📅", label: "Financial Years", href: "/finance/fy" },
+      { icon: "🫂", label: "Team & Access", href: "/finance/team" },
+      { icon: "⚙️", label: "Business Setup", href: "/finance/setup" },
     ],
   },
 ];
@@ -67,7 +67,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
-      const saved = (localStorage.getItem(`fw_fin_biz_$user.id`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
       if (saved) {
         const { data } = await supabase.from("fw_fin_businesses").select("name").eq("id", saved).single();
         if (data) setBizName(data.name);
@@ -93,12 +93,12 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         <div style={{ padding: "0 12px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(237,232,220,0.07)", flexShrink: 0 }}>
           {!collapsed && (
             <Link href="/finance" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "1.1rem" }}>ðŸ›©ï¸</span>
+              <span style={{ fontSize: "1.1rem" }}>🛩️</span>
               <span style={{ fontWeight: 900, fontSize: "0.88rem", color: "#C9A84C", letterSpacing: "-0.02em" }}>FrePilot</span>
             </Link>
           )}
           <button onClick={() => setCollapsed(c => !c)} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.3)", cursor: "pointer", padding: 4, borderRadius: 4, fontSize: "0.9rem", marginLeft: collapsed ? "auto" : 0, marginRight: collapsed ? "auto" : 0 }}>
-            {collapsed ? "â†’" : "â†"}
+            {collapsed ? "→" : "←"}
           </button>
         </div>
 
@@ -145,7 +145,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         {/* Bottom links */}
         <div style={{ borderTop: "1px solid rgba(237,232,220,0.07)", padding: "8px 0", flexShrink: 0 }}>
           <Link href="/dashboard" title={collapsed ? "Main Dashboard" : undefined} style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : 8, padding: collapsed ? "8px 0" : "6px 14px", justifyContent: collapsed ? "center" : "flex-start", textDecoration: "none", color: "rgba(237,232,220,0.3)", fontSize: "0.75rem" }}>
-            <span>ðŸ </span>{!collapsed && <span>Main Dashboard</span>}
+            <span>🏠</span>{!collapsed && <span>Main Dashboard</span>}
           </Link>
         </div>
       </aside>
@@ -157,4 +157,3 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
     </div>
   );
 }
-

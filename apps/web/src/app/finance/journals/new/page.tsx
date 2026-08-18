@@ -39,7 +39,7 @@ export default function NewJournalPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_$user.id`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const [coaRes, fyRes] = await Promise.all([
@@ -89,7 +89,7 @@ export default function NewJournalPage() {
   async function save(status: "draft" | "posted") {
     if (!bizId) return;
     if (lines.some(l => !l.account_id)) { setError("All lines must have an account selected"); return; }
-    if (!balanced) { setError(`Entry is unbalanced by â‚¹${Math.abs(diff).toFixed(2)}. Debit must equal Credit.`); return; }
+    if (!balanced) { setError(`Entry is unbalanced by ₹${Math.abs(diff).toFixed(2)}. Debit must equal Credit.`); return; }
     setSaving(true); setError("");
 
     try {
@@ -133,9 +133,9 @@ export default function NewJournalPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }} onClick={() => setShowDropdown(null)}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>â€º</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <Link href="/finance/journals" style={{ color: "rgba(237,232,220,0.5)", fontSize: "0.85rem", textDecoration: "none" }}>Journal Entries</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>â€º</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>New Entry</span>
       </nav>
 
@@ -170,8 +170,8 @@ export default function NewJournalPage() {
             <thead>
               <tr style={{ background: "rgba(255,255,255,0.02)" }}>
                 <th style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", width: "40%" }}>Account</th>
-                <th style={{ padding: "0.6rem 1rem", textAlign: "right", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", width: "18%" }}>Debit (â‚¹)</th>
-                <th style={{ padding: "0.6rem 1rem", textAlign: "right", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", width: "18%" }}>Credit (â‚¹)</th>
+                <th style={{ padding: "0.6rem 1rem", textAlign: "right", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", width: "18%" }}>Debit (₹)</th>
+                <th style={{ padding: "0.6rem 1rem", textAlign: "right", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", width: "18%" }}>Credit (₹)</th>
                 <th style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Narration</th>
                 <th style={{ width: 36 }}></th>
               </tr>
@@ -185,7 +185,7 @@ export default function NewJournalPage() {
                       value={search[i] ?? line.account_name}
                       onChange={e => { setSearch(prev => ({ ...prev, [i]: e.target.value })); setShowDropdown(i); }}
                       onFocus={() => setShowDropdown(i)}
-                      placeholder="Search accountâ€¦"
+                      placeholder="Search account…"
                       style={{ ...inp, width: "100%", boxSizing: "border-box" }}
                     />
                     {showDropdown === i && filteredAccounts(i).length > 0 && (
@@ -216,7 +216,7 @@ export default function NewJournalPage() {
                       style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
                   </td>
                   <td style={{ padding: "0.5rem 0.5rem" }}>
-                    <button onClick={() => removeLine(i)} disabled={lines.length <= 2} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.3)", cursor: "pointer", fontSize: "1rem", opacity: lines.length <= 2 ? 0.3 : 1 }}>Ã—</button>
+                    <button onClick={() => removeLine(i)} disabled={lines.length <= 2} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.3)", cursor: "pointer", fontSize: "1rem", opacity: lines.length <= 2 ? 0.3 : 1 }}>×</button>
                   </td>
                 </tr>
               ))}
@@ -227,7 +227,7 @@ export default function NewJournalPage() {
                 <td style={{ padding: "0.6rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#EDE8DC" }}>{totalDr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                 <td style={{ padding: "0.6rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#EDE8DC" }}>{totalCr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                 <td colSpan={2} style={{ padding: "0.6rem 1rem", fontSize: "0.78rem", color: balanced ? "#4ade80" : "#f87171", fontWeight: 600, textAlign: "right" }}>
-                  {balanced ? "âœ“ Balanced" : `âš  Difference: â‚¹${Math.abs(diff).toFixed(2)}`}
+                  {balanced ? "✓ Balanced" : `⚠ Difference: ₹${Math.abs(diff).toFixed(2)}`}
                 </td>
               </tr>
             </tfoot>
@@ -244,11 +244,10 @@ export default function NewJournalPage() {
           <Link href="/finance/journals" style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "10px 24px", borderRadius: 8, textDecoration: "none", fontSize: "0.9rem" }}>Cancel</Link>
           <button onClick={() => save("draft")} disabled={saving} style={{ background: "rgba(237,232,220,0.08)", border: "1px solid rgba(237,232,220,0.15)", color: "#EDE8DC", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem" }}>Save as Draft</button>
           <button onClick={() => save("posted")} disabled={saving || !balanced} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: (!balanced || saving) ? 0.6 : 1 }}>
-            {saving ? "Postingâ€¦" : "Post Entry"}
+            {saving ? "Posting…" : "Post Entry"}
           </button>
         </div>
       </div>
     </div>
   );
 }
-

@@ -47,9 +47,8 @@ export default function GSTPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const raw = localStorage.getItem(`fw_fin_biz_${user.id}`);
-      if (!raw) { router.push("/finance/setup"); return; }
-      const saved = raw.replace(/^﻿/, "").trim();
+      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
+      if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data } = await supabase.from("fw_fin_businesses").select("name,gstin").eq("id", saved).single();
       if (data) { setBizName(data.name); setGstin(data.gstin ?? ""); }
@@ -63,9 +62,7 @@ export default function GSTPage() {
   async function fetchSummary(bid: string, month: string) {
     setLoading(true); setError("");
     try {
-      const cleanBid = bid.replace(/﻿/g, "").trim();
-      const cleanMonth = month.replace(/﻿/g, "").trim();
-      const res = await fetch(`/api/finance/gst?business_id=${cleanBid}&month=${cleanMonth}&report=summary`);
+      const res = await fetch(`/api/finance/gst?business_id=${bid}&month=${month}&report=summary`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setSummary(data);

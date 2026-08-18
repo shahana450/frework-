@@ -43,7 +43,7 @@ export default function ExpensesPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_$user.id`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
 
@@ -154,7 +154,7 @@ export default function ExpensesPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>â€º</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Record Expense</span>
       </nav>
 
@@ -162,7 +162,7 @@ export default function ExpensesPage() {
         {/* Main Form */}
         <div>
           <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Record Expense</h1>
-          <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Quick expense entry â€” journal is auto-created</p>
+          <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Quick expense entry — journal is auto-created</p>
 
           {/* Presets */}
           <div style={{ marginBottom: "1.25rem" }}>
@@ -177,7 +177,7 @@ export default function ExpensesPage() {
           </div>
 
           {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
-          {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>âœ“ {success}</div>}
+          {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
@@ -210,7 +210,7 @@ export default function ExpensesPage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div>
-                <label style={labelStyle}>Base Amount (â‚¹)</label>
+                <label style={labelStyle}>Base Amount (₹)</label>
                 <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" style={{ ...inputStyle, textAlign: "right" }} />
               </div>
               <div>
@@ -222,14 +222,14 @@ export default function ExpensesPage() {
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>GST Amount (â‚¹)</label>
+                <label style={labelStyle}>GST Amount (₹)</label>
                 <input type="number" value={gstAmount} onChange={e => setGstAmount(e.target.value)} placeholder="0.00" disabled={gstType === "none"} style={{ ...inputStyle, textAlign: "right", opacity: gstType === "none" ? 0.4 : 1 }} />
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div>
-                <label style={labelStyle}>TDS Deducted (â‚¹)</label>
+                <label style={labelStyle}>TDS Deducted (₹)</label>
                 <input type="number" value={tds} onChange={e => setTds(e.target.value)} placeholder="0.00" style={{ ...inputStyle, textAlign: "right" }} />
               </div>
               <div>
@@ -243,17 +243,17 @@ export default function ExpensesPage() {
 
             <div style={{ marginBottom: "1rem" }}>
               <label style={labelStyle}>Narration</label>
-              <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder="Description of expenseâ€¦" rows={2} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.55 }} />
+              <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder="Description of expense…" rows={2} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.55 }} />
             </div>
 
             {/* Summary */}
             {baseAmount > 0 && (
               <div style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.15)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
                 <div style={{ display: "flex", gap: "2rem", fontSize: "0.82rem" }}>
-                  <div><span style={{ color: "rgba(237,232,220,0.4)" }}>Base: </span><span style={{ fontVariantNumeric: "tabular-nums" }}>â‚¹{fmt(baseAmount)}</span></div>
-                  {gstAmt > 0 && <div><span style={{ color: "rgba(237,232,220,0.4)" }}>GST ITC: </span><span style={{ color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>â‚¹{fmt(gstAmt)}</span></div>}
-                  {tdsAmt > 0 && <div><span style={{ color: "rgba(237,232,220,0.4)" }}>TDS: </span><span style={{ color: "#f87171", fontVariantNumeric: "tabular-nums" }}>â‚¹{fmt(tdsAmt)}</span></div>}
-                  <div style={{ marginLeft: "auto", fontWeight: 800 }}><span style={{ color: "rgba(237,232,220,0.4)" }}>Net Payable: </span><span style={{ color: "#C9A84C", fontSize: "1rem", fontVariantNumeric: "tabular-nums" }}>â‚¹{fmt(netPayable)}</span></div>
+                  <div><span style={{ color: "rgba(237,232,220,0.4)" }}>Base: </span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(baseAmount)}</span></div>
+                  {gstAmt > 0 && <div><span style={{ color: "rgba(237,232,220,0.4)" }}>GST ITC: </span><span style={{ color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>₹{fmt(gstAmt)}</span></div>}
+                  {tdsAmt > 0 && <div><span style={{ color: "rgba(237,232,220,0.4)" }}>TDS: </span><span style={{ color: "#f87171", fontVariantNumeric: "tabular-nums" }}>₹{fmt(tdsAmt)}</span></div>}
+                  <div style={{ marginLeft: "auto", fontWeight: 800 }}><span style={{ color: "rgba(237,232,220,0.4)" }}>Net Payable: </span><span style={{ color: "#C9A84C", fontSize: "1rem", fontVariantNumeric: "tabular-nums" }}>₹{fmt(netPayable)}</span></div>
                 </div>
               </div>
             )}
@@ -261,13 +261,13 @@ export default function ExpensesPage() {
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button onClick={() => handleSave("draft")} disabled={saving} style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
               <button onClick={() => handleSave("post")} disabled={saving} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
-                {saving ? "Savingâ€¦" : "Post Expense"}
+                {saving ? "Saving…" : "Post Expense"}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Sidebar â€” Recent Expenses */}
+        {/* Sidebar — Recent Expenses */}
         <div>
           <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Expenses</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -278,17 +278,16 @@ export default function ExpensesPage() {
                   <span style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.3)" }}>{new Date(e.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                 </div>
                 <div style={{ fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.narration}</div>
-                <div style={{ fontSize: "0.82rem", color: "#f87171", fontVariantNumeric: "tabular-nums", marginTop: "0.2rem" }}>â‚¹{fmt(e.total_debit)}</div>
+                <div style={{ fontSize: "0.82rem", color: "#f87171", fontVariantNumeric: "tabular-nums", marginTop: "0.2rem" }}>₹{fmt(e.total_debit)}</div>
               </div>
             ))}
             {recentExpenses.length === 0 && (
               <div style={{ color: "rgba(237,232,220,0.25)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No expenses recorded yet</div>
             )}
-            <Link href="/finance/journals?type=expense" style={{ color: "#C9A84C", fontSize: "0.78rem", textAlign: "center", padding: "0.5rem", textDecoration: "none" }}>View all expenses â†’</Link>
+            <Link href="/finance/journals?type=expense" style={{ color: "#C9A84C", fontSize: "0.78rem", textAlign: "center", padding: "0.5rem", textDecoration: "none" }}>View all expenses →</Link>
           </div>
         </div>
       </div>
     </div>
   );
 }
-

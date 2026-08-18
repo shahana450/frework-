@@ -21,7 +21,7 @@ export default function FinancialYearPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_$user.id`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       load(saved);
@@ -94,7 +94,7 @@ export default function FinancialYearPage() {
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>â€º</span>
+        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Financial Years</span>
         <div style={{ flex: 1 }} />
         <button onClick={() => setShowNew(s => !s)} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "7px 16px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.82rem" }}>
@@ -107,7 +107,7 @@ export default function FinancialYearPage() {
         <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Manage your accounting periods, switch active year, or close a completed year</p>
 
         {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
-        {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>âœ“ {success}</div>}
+        {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
         {/* New FY form */}
         {showNew && (
@@ -126,7 +126,7 @@ export default function FinancialYearPage() {
             </div>
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button onClick={createFY} disabled={saving} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "8px 20px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>
-                {saving ? "Creatingâ€¦" : "Create"}
+                {saving ? "Creating…" : "Create"}
               </button>
               <button onClick={() => setShowNew(false)} style={{ background: "rgba(237,232,220,0.05)", border: "1px solid rgba(237,232,220,0.1)", color: "rgba(237,232,220,0.5)", padding: "8px 16px", borderRadius: 7, cursor: "pointer", fontSize: "0.85rem" }}>
                 Cancel
@@ -155,7 +155,7 @@ export default function FinancialYearPage() {
                 </div>
                 <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>
                   {new Date(fy.start_date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
-                  {" â€” "}
+                  {" — "}
                   {new Date(fy.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
                 </div>
               </div>
@@ -176,10 +176,9 @@ export default function FinancialYearPage() {
         </div>
 
         <div style={{ marginTop: "2rem", background: "rgba(96,165,250,0.05)", border: "1px solid rgba(96,165,250,0.12)", borderRadius: 10, padding: "1rem 1.25rem", fontSize: "0.8rem", color: "rgba(237,232,220,0.45)", lineHeight: 1.65 }}>
-          <strong style={{ color: "#60a5fa" }}>Note:</strong> Indian FY runs from April 1 to March 31. Closing a year marks it read-only â€” all journals in that period are locked. You can have multiple open years, but only one can be active at a time.
+          <strong style={{ color: "#60a5fa" }}>Note:</strong> Indian FY runs from April 1 to March 31. Closing a year marks it read-only — all journals in that period are locked. You can have multiple open years, but only one can be active at a time.
         </div>
       </div>
     </div>
   );
 }
-

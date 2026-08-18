@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -51,7 +51,7 @@ export default function UploadPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
       setUserId(user.id);
-      const saved = localStorage.getItem(`fw_fin_biz_${user.id}`);
+      const saved = (localStorage.getItem() ?? "").replace(/﻿/g, "").trim();
       if (saved) {
         const { data } = await supabase.from("fw_fin_businesses").select("id,name").eq("id", saved).single();
         if (data) { setBizId(data.id); setBizName(data.name); }
