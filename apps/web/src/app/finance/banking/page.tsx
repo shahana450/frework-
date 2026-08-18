@@ -14,10 +14,12 @@ type BankTxn = {
   matched: boolean;
   journal_id: string | null;
 };
+type Account = { id: string; name: string; code: string };
 
 export default function BankingPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
+  const [fyId, setFyId] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<BankTxn[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -29,6 +31,10 @@ export default function BankingPage() {
   const [parseError, setParseError] = useState("");
   const [previewRows, setPreviewRows] = useState<BankTxn[]>([]);
   const [step, setStep] = useState<"upload" | "preview" | "done">("upload");
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [bankAccountId, setBankAccountId] = useState<string>("");
+  const [suspenseAccountId, setSuspenseAccountId] = useState<string>("");
+  const [postResult, setPostResult] = useState<{ posted: number; failed: number } | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -36,6 +42,20 @@ export default function BankingPage() {
       const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
+      // Load accounts and current FY
+      const [acRes, fyRes] = await Promise.all([
+        supabase.from("fw_fin_accounts").select("id,name,code").eq("business_id", saved).order("code"),
+        supabase.from("fw_fin_financial_years").select("id").eq("business_id", saved).eq("is_current", true).single(),
+      ]);
+      if (acRes.data) {
+        setAccounts(acRes.data);
+        // Auto-select bank account (cash/bank group) and suspense
+        const bankAc = acRes.data.find((a: Account) => /bank|hdfc|sbi|icici|axis|kotak|current|savings/i.test(a.name));
+        const suspAc = acRes.data.find((a: Account) => /suspense/i.test(a.name));
+        if (bankAc) setBankAccountId(bankAc.id);
+        if (suspAc) setSuspenseAccountId(suspAc.id);
+      }
+      if (fyRes.data) setFyId(fyRes.data.id);
     });
   }, []);
 
@@ -89,7 +109,6 @@ export default function BankingPage() {
   async function importTransactions() {
     if (!bizId) return;
     setUploading(true);
-    // For each transaction, create a document record and AI suggestion
     for (const txn of previewRows) {
       await supabase.from("fw_fin_documents").insert({
         business_id: bizId,
@@ -105,6 +124,54 @@ export default function BankingPage() {
         },
       });
     }
+    setTransactions(previewRows);
+    setStep("done");
+    setUploading(false);
+  }
+
+  async function postAsJournals() {
+    if (!bizId || !bankAccountId || !suspenseAccountId) return;
+    setUploading(true);
+    let posted = 0; let failed = 0;
+    for (const txn of previewRows) {
+      try {
+        const { data: j, error: jErr } = await supabase.from("fw_fin_journals").insert({
+          business_id: bizId,
+          financial_year_id: fyId,
+          entry_no: `BANK/${txn.date}/${Date.now()}`,
+          date: txn.date,
+          narration: txn.narration,
+          type: "journal",
+          status: "posted",
+          total_debit: txn.amount,
+          total_credit: txn.amount,
+          ai_generated: false,
+        }).select("id").single();
+        if (jErr) throw jErr;
+        // Credit (deposit): Dr Bank, Cr Suspense
+        // Debit (withdrawal): Dr Suspense, Cr Bank
+        await supabase.from("fw_fin_journal_lines").insert([
+          {
+            journal_id: j.id,
+            account_id: txn.type === "credit" ? bankAccountId : suspenseAccountId,
+            dr_amount: txn.amount,
+            cr_amount: 0,
+            narration: txn.narration,
+            sort_order: 0,
+          },
+          {
+            journal_id: j.id,
+            account_id: txn.type === "credit" ? suspenseAccountId : bankAccountId,
+            dr_amount: 0,
+            cr_amount: txn.amount,
+            narration: txn.narration,
+            sort_order: 1,
+          },
+        ]);
+        posted++;
+      } catch { failed++; }
+    }
+    setPostResult({ posted, failed });
     setTransactions(previewRows);
     setStep("done");
     setUploading(false);
@@ -202,10 +269,37 @@ export default function BankingPage() {
               </div>
             </div>
 
+            {/* Account selectors for direct posting */}
+            <div style={{ background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 10, padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#C9A84C", marginBottom: "0.75rem" }}>Post Directly to Journals</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "0.75rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Bank / Cash Account</label>
+                  <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} style={{ width: "100%", background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.15)", color: "#EDE8DC", padding: "8px 10px", borderRadius: 6, fontSize: "0.83rem" }}>
+                    <option value="">— select —</option>
+                    {accounts.map(a => <option key={a.id} value={a.id}>{a.code} {a.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>Contra / Suspense Account</label>
+                  <select value={suspenseAccountId} onChange={e => setSuspenseAccountId(e.target.value)} style={{ width: "100%", background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.15)", color: "#EDE8DC", padding: "8px 10px", borderRadius: 6, fontSize: "0.83rem" }}>
+                    <option value="">— select —</option>
+                    {accounts.map(a => <option key={a.id} value={a.id}>{a.code} {a.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.35)", marginBottom: "0.75rem" }}>
+                Deposits: Dr Bank, Cr Suspense &nbsp;|&nbsp; Withdrawals: Dr Suspense, Cr Bank. You can reclassify accounts in the journal later.
+              </div>
+              <button onClick={postAsJournals} disabled={uploading || !bankAccountId || !suspenseAccountId} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: (uploading || !bankAccountId || !suspenseAccountId) ? 0.5 : 1 }}>
+                {uploading ? "Posting…" : `Post ${previewRows.length} Transactions to Dashboard →`}
+              </button>
+            </div>
+
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button onClick={() => setStep("upload")} style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem" }}>← Back</button>
-              <button onClick={importTransactions} disabled={uploading} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: uploading ? 0.7 : 1 }}>
-                {uploading ? "Importing…" : `Import ${previewRows.length} Transactions →`}
+              <button onClick={importTransactions} disabled={uploading} style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.15)", color: "#EDE8DC", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem", opacity: uploading ? 0.7 : 1 }}>
+                {uploading ? "Saving…" : `Save to AI Review Queue`}
               </button>
             </div>
           </>
@@ -213,14 +307,25 @@ export default function BankingPage() {
 
         {step === "done" && (
           <div style={{ textAlign: "center", padding: "3rem" }}>
-            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✅</div>
-            <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: "0.5rem" }}>Bank Statement Imported</div>
-            <div style={{ color: "rgba(237,232,220,0.5)", marginBottom: "2rem" }}>{transactions.length} transactions imported. Review AI suggestions to post journal entries.</div>
+            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>{postResult ? (postResult.failed === 0 ? "✅" : "⚠️") : "✅"}</div>
+            <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: "0.5rem" }}>
+              {postResult ? `${postResult.posted} Transactions Posted to Dashboard` : "Bank Statement Saved to AI Review"}
+            </div>
+            <div style={{ color: "rgba(237,232,220,0.5)", marginBottom: "2rem" }}>
+              {postResult
+                ? `${postResult.posted} posted successfully${postResult.failed > 0 ? `, ${postResult.failed} failed` : ""}. They now appear on your dashboard.`
+                : `${transactions.length} transactions saved. Review AI suggestions to post journal entries.`}
+            </div>
             <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
-              <Link href="/finance/ai-review" style={{ background: "#C9A84C", color: "#070C1A", padding: "10px 24px", borderRadius: 8, fontWeight: 700, textDecoration: "none" }}>
-                Review AI Suggestions →
+              <Link href="/finance" style={{ background: "#C9A84C", color: "#070C1A", padding: "10px 24px", borderRadius: 8, fontWeight: 700, textDecoration: "none" }}>
+                View Dashboard →
               </Link>
-              <button onClick={() => { setCsvText(""); setStep("upload"); setPreviewRows([]); }} style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}>
+              {!postResult && (
+                <Link href="/finance/ai-review" style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.1)", color: "#EDE8DC", padding: "10px 24px", borderRadius: 8, textDecoration: "none" }}>
+                  AI Review Queue →
+                </Link>
+              )}
+              <button onClick={() => { setCsvText(""); setStep("upload"); setPreviewRows([]); setPostResult(null); }} style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}>
                 Import Another
               </button>
             </div>
