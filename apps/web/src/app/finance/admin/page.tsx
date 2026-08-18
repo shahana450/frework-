@@ -50,11 +50,12 @@ export default function AdminPortal() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user?.email) { router.replace("/login"); return; }
-      if (!ADMIN_EMAILS.includes(user.email)) { router.replace("/finance"); return; }
+    supabase.auth.getUser().then(async ({ data: { user }, error }) => {
+      if (error) { setMsg(`Auth error: ${error.message}`); setLoading(false); return; }
+      if (!user?.email) { setMsg("Not logged in — please sign in at /login first"); setLoading(false); return; }
+      if (!ADMIN_EMAILS.includes(user.email)) { setMsg(`Access denied for ${user.email}`); setLoading(false); return; }
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { router.replace("/login"); return; }
+      if (!session) { setMsg("Session missing — please sign in again at /login"); setLoading(false); return; }
       setToken(session.access_token);
       load(session.access_token);
     });
@@ -82,9 +83,10 @@ export default function AdminPortal() {
 
   const inp: React.CSSProperties = { background: "rgba(237,232,220,0.05)", border: "1px solid rgba(237,232,220,0.15)", color: "#EDE8DC", padding: "7px 10px", borderRadius: 6, fontSize: "0.83rem", outline: "none" };
 
-  if (!token && loading) return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", display: "flex", alignItems: "center", justifyContent: "center", color: "#8AA0C8", fontFamily: "system-ui,sans-serif" }}>
-      Checking auth…
+  if (!token) return (
+    <div style={{ minHeight: "100vh", background: "#070C1A", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, fontFamily: "system-ui,sans-serif" }}>
+      <div style={{ color: "#8AA0C8", fontSize: "0.9rem" }}>{loading ? "Checking auth…" : "Not authorised"}</div>
+      {!loading && <a href="/login" style={{ color: "#3B82F6", fontSize: "0.85rem" }}>Go to Login →</a>}
     </div>
   );
 
