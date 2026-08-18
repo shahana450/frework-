@@ -5,6 +5,17 @@ import { supabase } from "@/lib/supabase";
 
 import Link from "next/link";
 
+type HistoryDoc = {
+  id: string;
+  file_name: string;
+  doc_type: string;
+  status: string;
+  created_at: string;
+  file_size: number | null;
+  ai_summary: { vendor?: string; amount?: number; date?: string; narration?: string } | null;
+  journal_id: string | null;
+};
+
 type DocFile = {
   id: string;
   file: File;
@@ -46,6 +57,8 @@ export default function UploadPage() {
   const [files, setFiles] = useState<DocFile[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [history, setHistory] = useState<HistoryDoc[]>([]);
+  const [histLoading, setHistLoading] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -54,14 +67,26 @@ export default function UploadPage() {
       const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (saved) {
         const { data } = await supabase.from("fw_fin_businesses").select("id,name").eq("id", saved).single();
-        if (data) { setBizId(data.id); setBizName(data.name); }
+        if (data) { setBizId(data.id); setBizName(data.name); loadHistory(data.id); }
       } else {
         const { data } = await supabase.from("fw_fin_businesses").select("id,name").eq("owner_id", user.id).eq("is_active", true).limit(1).single();
-        if (data) { setBizId(data.id); setBizName(data.name); if (user) localStorage.setItem(`fw_fin_biz_${user.id}`, data.id); }
+        if (data) { setBizId(data.id); setBizName(data.name); if (user) localStorage.setItem(`fw_fin_biz_${user.id}`, data.id); loadHistory(data.id); }
         else router.push("/finance/setup");
       }
     });
   }, []);
+
+  async function loadHistory(bid: string) {
+    setHistLoading(true);
+    const { data } = await supabase
+      .from("fw_fin_documents")
+      .select("id,file_name,doc_type,status,created_at,file_size,ai_summary,journal_id")
+      .eq("business_id", bid)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setHistory(data ?? []);
+    setHistLoading(false);
+  }
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const arr = Array.from(incoming);
@@ -382,6 +407,71 @@ export default function UploadPage() {
             ))}
           </div>
         )}
+
+        {/* Upload History */}
+        <div style={{ marginTop: "2.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+            <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>Upload History</h2>
+            {bizId && <button onClick={() => loadHistory(bizId)} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.4)", cursor: "pointer", fontSize: "0.78rem" }}>Refresh</button>}
+          </div>
+          {histLoading ? (
+            <div style={{ color: "rgba(237,232,220,0.3)", fontSize: "0.85rem", textAlign: "center", padding: "2rem" }}>Loading…</div>
+          ) : history.length === 0 ? (
+            <div style={{ color: "rgba(237,232,220,0.25)", fontSize: "0.85rem", textAlign: "center", padding: "2rem", border: "1px dashed rgba(237,232,220,0.08)", borderRadius: 10 }}>No documents uploaded yet</div>
+          ) : (
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(237,232,220,0.07)" }}>
+                    {["Document", "Type", "Vendor / Amount", "Date", "Status", ""].map(h => (
+                      <th key={h} style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((doc, i) => {
+                    const statusColor = doc.status === "posted" ? "#4ade80" : doc.status === "reviewed" ? "#C9A84C" : doc.status === "processing" ? "#60a5fa" : "rgba(237,232,220,0.35)";
+                    const statusLabel = doc.status === "posted" ? "Posted" : doc.status === "reviewed" ? "AI Reviewed" : doc.status === "processing" ? "Processing" : doc.status;
+                    const docIcon = DOC_TYPES.find(d => d.value === doc.doc_type)?.icon ?? "📄";
+                    const docLabel = DOC_TYPES.find(d => d.value === doc.doc_type)?.label ?? doc.doc_type;
+                    return (
+                      <tr key={doc.id} style={{ borderTop: i === 0 ? "none" : "1px solid rgba(237,232,220,0.05)" }}>
+                        <td style={{ padding: "0.65rem 1rem", maxWidth: 220 }}>
+                          <div style={{ fontSize: "0.82rem", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.file_name}</div>
+                          {doc.file_size && <div style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.3)", marginTop: 2 }}>{(doc.file_size / 1024).toFixed(0)} KB</div>}
+                        </td>
+                        <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", color: "rgba(237,232,220,0.55)", whiteSpace: "nowrap" }}>{docIcon} {docLabel}</td>
+                        <td style={{ padding: "0.65rem 1rem" }}>
+                          {doc.ai_summary ? (
+                            <div>
+                              {doc.ai_summary.vendor && <div style={{ fontSize: "0.8rem", fontWeight: 600 }}>{doc.ai_summary.vendor}</div>}
+                              {doc.ai_summary.amount && <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.5)" }}>₹{doc.ai_summary.amount.toLocaleString("en-IN")}</div>}
+                            </div>
+                          ) : <span style={{ color: "rgba(237,232,220,0.2)", fontSize: "0.78rem" }}>—</span>}
+                        </td>
+                        <td style={{ padding: "0.65rem 1rem", fontSize: "0.78rem", color: "rgba(237,232,220,0.4)", whiteSpace: "nowrap" }}>
+                          {new Date(doc.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        </td>
+                        <td style={{ padding: "0.65rem 1rem" }}>
+                          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: statusColor, background: `${statusColor}18`, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap" }}>
+                            {statusLabel}
+                          </span>
+                        </td>
+                        <td style={{ padding: "0.65rem 1rem" }}>
+                          {doc.journal_id ? (
+                            <a href={`/finance/journals`} style={{ fontSize: "0.72rem", color: "#C9A84C", textDecoration: "none" }}>View Journal</a>
+                          ) : doc.status === "reviewed" ? (
+                            <a href="/finance/ai-review" style={{ fontSize: "0.72rem", color: "#60a5fa", textDecoration: "none" }}>Review →</a>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
