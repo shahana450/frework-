@@ -211,7 +211,7 @@ export default function PricingPage() {
                   onClick={() => handleBuy(plan)}
                   disabled={paying !== null || isCurrent}
                   style={{
-                    marginTop: "1.5rem", width: "100%", padding: "12px", borderRadius: 10, border: "none", cursor: "pointer",
+                    marginTop: "1.5rem", width: "100%", padding: "12px", borderRadius: 10, cursor: "pointer",
                     fontWeight: 700, fontSize: "0.9rem",
                     background: isCurrent ? "rgba(74,222,128,0.15)" : isPopular ? "#C9A84C" : `rgba(${plan.id === "enterprise" ? "167,139,250" : "201,168,76"},0.15)`,
                     color: isCurrent ? "#4ade80" : isPopular ? "#070C1A" : plan.color,
