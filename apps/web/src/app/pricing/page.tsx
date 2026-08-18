@@ -29,41 +29,51 @@ type Plan = {
 
 const PLANS: Plan[] = [
   {
-    name: "Free",
+    name: "Starter",
     icon: Zap,
-    price: { monthly: 0, yearly: 0 },
-    tagline: "Try before you commit",
-    desc: "Perfect for individuals exploring the platform.",
+    price: { monthly: 2999, yearly: 1949 },
+    tagline: "Compliance + Accounting basics",
+    desc: "GST registration, basic filings and accounting software for solo founders and micro businesses.",
     color: {
       border: "border-white/10",
-      iconBg: "bg-white/6", iconText: "text-white/40",
-      glow: "rgba(255,255,255,0.03)",
+      iconBg: "bg-white/6", iconText: "text-white/50",
+      glow: "rgba(255,255,255,0.04)",
       highlight: "text-white",
-      cta: "border border-white/15 text-white/60 hover:border-white/30 hover:text-white/90 transition-all",
+      cta: "border border-white/15 text-white/70 hover:border-white/30 hover:text-white transition-all",
     },
     sections: [
       {
-        heading: "Platform Access",
-        icon: Search,
+        heading: "Compliance Services (CA-assisted)",
+        icon: FileText,
         items: [
-          { text: "Browse all listings & job board" },
-          { text: "1 active listing / profile" },
-          { text: "Basic public profile" },
-          { text: "5 job applications per month" },
-          { text: "Community forum access" },
-          { text: "Email support (48 hr response)" },
+          { text: "GST Registration", note: "one-time" },
+          { text: "Monthly GST Filing — GSTR-1 & GSTR-3B" },
+          { text: "Income Tax Return (ITR-1 / ITR-4)" },
+          { text: "TDS advisory" },
+          { text: "MSME / Udyam registration" },
+        ],
+      },
+      {
+        heading: "FrePilot Accounting Software",
+        icon: BookOpen,
+        items: [
+          { text: "GST invoicing & purchase bills" },
+          { text: "Journal entries & ledger" },
+          { text: "Bank reconciliation (CSV import)" },
+          { text: "Basic P&L report" },
+          { text: "1 business · unlimited transactions" },
         ],
       },
     ],
-    notIncluded: ["Verified Badge", "Priority Search", "Analytics", "Professional Services", "Team Seats", "API Access"],
-    cta: "Get Started — Free",
+    notIncluded: ["AI FrePilot chat", "ROC / MCA filing", "TDS filing", "Audit", "Team seats"],
+    cta: "Get Started",
   },
   {
     name: "Professional",
     icon: Rocket,
-    price: { monthly: 999, yearly: 649 },
-    tagline: "Most popular for freelancers & CAs",
-    desc: "Everything you need to grow your professional practice.",
+    price: { monthly: 3999, yearly: 2599 },
+    tagline: "Most popular for SMBs",
+    desc: "Full GST + TDS compliance with CA filing, and complete accounting software with AI co-pilot.",
     popular: true,
     color: {
       border: "border-[#C9A84C]/50",
@@ -76,39 +86,38 @@ const PLANS: Plan[] = [
     },
     sections: [
       {
-        heading: "Platform",
-        icon: BadgeCheck,
+        heading: "Compliance Services (CA-assisted)",
+        icon: FileText,
         items: [
-          { text: "Unlimited listings & applications" },
-          { text: "Verified Profile Badge" },
-          { text: "Priority search ranking" },
-          { text: "Portfolio showcase (up to 20 items)" },
-          { text: "Analytics dashboard" },
-          { text: "AI Proposal assistant" },
-          { text: "Escrow payment protection" },
-          { text: "24/7 chat support" },
+          { text: "Everything in Starter" },
+          { text: "TDS Return Filing (Form 24Q / 26Q)" },
+          { text: "Advance tax computation & challan" },
+          { text: "GST Annual Return (GSTR-9)" },
+          { text: "ROC annual filing (Form AOC-4 / MGT-7)" },
         ],
       },
       {
-        heading: "Professional Services",
-        icon: FileText,
+        heading: "FrePilot Accounting + AI",
+        icon: BookOpen,
         items: [
-          { text: "GST Registration", note: "One-time" },
-          { text: "Monthly GST Filing (GSTR-1 & 3B)" },
-          { text: "Income Tax Return (ITR-1 / ITR-4)" },
-          { text: "TDS advisory & compliance" },
+          { text: "Everything in Starter" },
+          { text: "AI FrePilot — ask anything about your books" },
+          { text: "GST Returns auto-prep (GSTR-1, 3B)" },
+          { text: "TDS tracker (section-wise)" },
+          { text: "Tally XML export" },
+          { text: "3 businesses" },
         ],
       },
     ],
-    notIncluded: ["Team Seats", "Bookkeeping", "Audit", "API Access"],
-    cta: "Start 14-Day Free Trial",
+    notIncluded: ["Statutory audit", "Transfer pricing", "Team seats", "Virtual CFO"],
+    cta: "Start Free Trial",
   },
   {
     name: "Growth",
     icon: TrendingUp,
-    price: { monthly: 2999, yearly: 1949 },
-    tagline: "Built for growing SMEs & agencies",
-    desc: "Team tools, financial management and compliance in one place.",
+    price: { monthly: 4999, yearly: 3249 },
+    tagline: "For growing companies",
+    desc: "Company registration, full compliance suite, and AI accounting for scaling businesses.",
     color: {
       border: "border-blue-500/25",
       iconBg: "bg-blue-500/12", iconText: "text-blue-400",
@@ -118,37 +127,38 @@ const PLANS: Plan[] = [
     },
     sections: [
       {
-        heading: "Everything in Professional, plus",
-        icon: Users,
+        heading: "Compliance Services (CA-assisted)",
+        icon: FileText,
         items: [
-          { text: "5 team seats" },
-          { text: "Client portal with shared workspace" },
-          { text: "Custom contracts & e-signatures" },
-          { text: "Branded proposals & templates" },
-          { text: "Revenue & pipeline analytics" },
+          { text: "Everything in Professional" },
+          { text: "Company / LLP Registration" },
+          { text: "Director KYC & DSC renewal" },
+          { text: "PF / ESI registration & returns" },
+          { text: "Shop & Establishment registration" },
         ],
       },
       {
-        heading: "Accounting & Compliance",
+        heading: "FrePilot Accounting + AI",
         icon: BookOpen,
         items: [
-          { text: "Monthly bookkeeping (up to 200 txns)" },
-          { text: "P&L and balance sheet reports" },
-          { text: "Quarterly advance tax computation" },
-          { text: "ROC annual filing (Form AOC-4)" },
-          { text: "MSME / Udyam registration" },
+          { text: "Everything in Professional" },
+          { text: "AI document analysis (invoices, bills)" },
+          { text: "AI Insights & cash flow predictions" },
+          { text: "Team access — 3 seats" },
+          { text: "P&L, Balance Sheet, Cash Flow reports" },
+          { text: "Unlimited businesses" },
         ],
       },
     ],
-    notIncluded: ["Internal Audit", "Annual Audit", "Dedicated Manager", "API Access"],
+    notIncluded: ["Statutory audit", "Transfer pricing", "Virtual CFO"],
     cta: "Start Growth Trial",
   },
   {
     name: "Business",
     icon: Building2,
-    price: { monthly: 4999, yearly: 3249 },
-    tagline: "For established businesses & firms",
-    desc: "Full audit suite, dedicated manager, and advanced integrations.",
+    price: { monthly: 5999, yearly: 3899 },
+    tagline: "For established firms",
+    desc: "Internal audit, statutory audit, dedicated CA manager, and full team accounting access.",
     color: {
       border: "border-violet-500/25",
       iconBg: "bg-violet-500/12", iconText: "text-violet-400",
@@ -158,38 +168,38 @@ const PLANS: Plan[] = [
     },
     sections: [
       {
-        heading: "Everything in Growth, plus",
-        icon: Building2,
+        heading: "Compliance Services (CA-assisted)",
+        icon: FileText,
         items: [
-          { text: "20 team seats" },
-          { text: "Dedicated Account Manager" },
-          { text: "Priority dispute resolution (4 hr SLA)" },
-          { text: "API access (50K calls/month)" },
-          { text: "Custom integrations (Tally, Zoho, etc.)" },
-          { text: "White-label proposal builder" },
+          { text: "Everything in Growth" },
+          { text: "Internal audit (quarterly)" },
+          { text: "Statutory / annual audit" },
+          { text: "Tax audit (Form 3CA / 3CB)" },
+          { text: "DPR & CMA data preparation" },
+          { text: "Dedicated Account Manager (CA)" },
         ],
       },
       {
-        heading: "Audit & Advisory",
-        icon: ShieldCheck,
+        heading: "FrePilot Accounting + AI",
+        icon: BookOpen,
         items: [
-          { text: "Internal audit (quarterly)" },
-          { text: "Statutory / annual audit" },
-          { text: "Tax audit (Form 3CA/3CB)" },
-          { text: "Transfer pricing advisory" },
-          { text: "DPR & CMA data preparation" },
+          { text: "Everything in Growth" },
+          { text: "Team access — 10 seats" },
+          { text: "Custom integrations (Tally, Zoho)" },
+          { text: "Priority support (4 hr SLA)" },
+          { text: "Custom reports & export" },
         ],
       },
     ],
-    notIncluded: ["Unlimited API", "White-label Platform", "SSO/SAML"],
+    notIncluded: ["Transfer pricing advisory", "M&A advisory", "Virtual CFO"],
     cta: "Start Business Trial",
   },
   {
     name: "Enterprise",
     icon: Crown,
-    price: { monthly: 9999, yearly: 6499 },
-    tagline: "For large corporates & CA firms",
-    desc: "Custom infrastructure, unlimited seats and white-label solution.",
+    price: { monthly: 6999, yearly: 4549 },
+    tagline: "For large businesses & CA firms",
+    desc: "Virtual CFO, transfer pricing, M&A advisory, unlimited team, and white-label FrePilot.",
     color: {
       border: "border-emerald-500/25",
       iconBg: "bg-emerald-500/12", iconText: "text-emerald-400",
@@ -199,28 +209,26 @@ const PLANS: Plan[] = [
     },
     sections: [
       {
-        heading: "Everything in Business, plus",
-        icon: Crown,
+        heading: "Compliance Services (CA-assisted)",
+        icon: FileText,
         items: [
-          { text: "Unlimited team members" },
-          { text: "White-label platform (your brand)" },
-          { text: "Custom domain & subdomain" },
-          { text: "SSO / SAML 2.0 authentication" },
-          { text: "Unlimited API + webhook access" },
-          { text: "Custom ERP / accounting integrations" },
-          { text: "99.9% uptime SLA" },
-          { text: "On-premise deployment option" },
+          { text: "Everything in Business" },
+          { text: "Transfer pricing advisory" },
+          { text: "M&A and restructuring advisory" },
+          { text: "Virtual CFO (monthly advisory)" },
+          { text: "Custom compliance reporting" },
         ],
       },
       {
-        heading: "Premium Advisory",
-        icon: Headphones,
+        heading: "FrePilot Accounting + AI",
+        icon: BookOpen,
         items: [
-          { text: "Dedicated Customer Success team" },
-          { text: "Custom compliance reporting" },
-          { text: "Virtual CFO advisory (monthly)" },
-          { text: "M&A and restructuring advisory" },
-          { text: "Custom training & onboarding" },
+          { text: "Everything in Business" },
+          { text: "Unlimited team seats" },
+          { text: "White-label FrePilot (your brand)" },
+          { text: "Custom domain & subdomain" },
+          { text: "99.9% uptime SLA" },
+          { text: "Dedicated onboarding & training" },
         ],
       },
     ],
@@ -230,12 +238,13 @@ const PLANS: Plan[] = [
 ];
 
 const FAQS = [
-  { q: "Can I switch plans anytime?", a: "Yes — upgrade or downgrade instantly. Upgrades are prorated; downgrades take effect at the next billing cycle." },
-  { q: "Is there really a 14-day free trial?", a: "Yes. Professional, Growth, and Business plans include a full 14-day trial with no credit card required. You won't be charged until the trial ends." },
-  { q: "What Professional Services are included?", a: "GST filing, ITR filing, bookkeeping, internal audit, and annual audit are performed by our qualified expert team — not automated tools. Scope varies by plan." },
-  { q: "What payment methods do you accept?", a: "UPI, all major credit/debit cards (Visa, Mastercard, RuPay), Net Banking, EMI, and bank transfer for annual plans — via PhonePe." },
-  { q: "How does the yearly billing discount work?", a: "Choosing yearly billing saves you up to 35% compared to monthly. You're billed for 12 months upfront at the discounted monthly rate." },
-  { q: "Can I get a custom quote for my firm?", a: "Enterprise plans are fully customisable. Contact us and our team responds within 1 business day with a tailored proposal." },
+  { q: "What is included in CA Compliance services?", a: "Every plan includes CA-assisted filings — GST, ITR, TDS, ROC and more depending on your plan tier. These are performed by qualified Chartered Accountants, not automated tools." },
+  { q: "What is FrePilot Accounting Software?", a: "FrePilot is our AI-powered accounting platform: invoicing, journal entries, bank reconciliation, GST returns prep, TDS tracker, reports, and an AI chat assistant for your books. Higher plans include team access, Tally export, and more." },
+  { q: "Is there a free trial?", a: "Yes — Professional, Growth, and Business plans include a 14-day free trial with no credit card required. You won't be charged until the trial ends." },
+  { q: "Can I switch plans anytime?", a: "Yes — upgrade or downgrade anytime. Upgrades are prorated; downgrades take effect at the next billing cycle." },
+  { q: "What payment methods do you accept?", a: "UPI, all major credit/debit cards (Visa, Mastercard, RuPay), Net Banking, EMI, and bank transfer for annual plans — via Razorpay." },
+  { q: "How does yearly billing work?", a: "Choosing yearly billing saves up to 35% compared to monthly. You're billed for 12 months upfront at the discounted rate." },
+  { q: "Can I get a custom quote for my CA firm?", a: "Enterprise plans are fully customisable. Contact us and our team responds within 1 business day with a tailored proposal." },
 ];
 
 const TRUST = [
@@ -257,19 +266,17 @@ export default function PricingPage() {
 
   const handlePlanClick = (plan: Plan) => {
     const key = plan.name.toLowerCase();
-    if (loggedIn) {
-      if (key === "free") router.push("/dashboard");
-      else if (key === "enterprise") router.push("/contact?plan=enterprise");
-      else router.push(`/subscribe?plan=${key}`);
-    } else {
-      router.push(key === "free" ? "/register" : `/register?plan=${key}`);
+    if (key === "enterprise") {
+      window.open("https://wa.me/918590874681?text=Hi%2C+I%27m+interested+in+the+Enterprise+plan", "_blank");
+      return;
     }
+    if (loggedIn) router.push(`/finance/pricing`);
+    else router.push(`/register?plan=${key}`);
   };
 
   const ctaLabel = (plan: Plan) => {
     const key = plan.name.toLowerCase();
     if (key === "enterprise") return "Contact Sales";
-    if (key === "free") return loggedIn ? "Go to Dashboard" : "Get Started — Free";
     return loggedIn ? "Subscribe Now" : plan.cta;
   };
 
@@ -286,13 +293,13 @@ export default function PricingPage() {
           </div>
           <h1 className="text-5xl sm:text-7xl font-bold text-white leading-[1.05] mb-5"
             style={{ fontFamily: "var(--font-cormorant), serif" }}>
-            Invest in your<br />
+            CA Compliance +<br />
             <span style={{ background: "linear-gradient(135deg,#F0D78A,#C9A84C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              professional growth.
+              FrePilot Accounting
             </span>
           </h1>
           <p className="text-white/45 text-lg mb-10 leading-relaxed">
-            Professional Services, workspace, talent, and compliance —<br className="hidden sm:block" /> all in one platform. Cancel anytime.
+            GST · ITR · TDS · ROC filings by qualified CAs, combined with<br className="hidden sm:block" /> full-stack AI accounting software. One plan, everything included.
           </p>
 
           {/* Trust pills */}
