@@ -82,8 +82,8 @@ function buildVoucherXML(journals: {
 function extractCompanyName(xml: string): string {
   // Try tags in priority order
   const patterns = [
-    /<BASICCOMPANYNAME[^>]*>([^<]+)<\/BASICCOMPANYNAME>/i,
     /<COMPANYNAME[^>]*>([^<]+)<\/COMPANYNAME>/i,
+    /<BASICCOMPANYNAME[^>]*>([^<]+)<\/BASICCOMPANYNAME>/i,
     /<COMPANY[^>]*>\s*<NAME[^>]*>([^<]+)<\/NAME>/i,
     // NAME.LIST > NAME (multiline)
     /<NAME\.LIST[^>]*>[\s\S]*?<NAME>([^<]+)<\/NAME>/i,
@@ -181,7 +181,8 @@ export default function TallyPage() {
   async function testConnection() {
     setConnStatus("connecting"); setConnMsg(""); setSyncResult(null); setRawDebug("");
     try {
-      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>List of Companies</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
+      // TDL query to get current company name — works in Tally Prime and ERP 9
+      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>FP_CoRpt</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><REPORT NAME="FP_CoRpt"><FORMS>FP_CoForm</FORMS></REPORT><FORM NAME="FP_CoForm"><PARTS>FP_CoPart</PARTS></FORM><PART NAME="FP_CoPart"><LINES>FP_CoLine</LINES></PART><LINE NAME="FP_CoLine"><FIELDS>FP_CoFld</FIELDS></LINE><FIELD NAME="FP_CoFld"><SET>$$CurrentCompany</SET><XMLTAG>COMPANYNAME</XMLTAG></FIELD></TDLMESSAGE></TDL></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
       const res = await fetch(tallyUrl, {
         method: "POST",
         headers: { "Content-Type": "text/xml" },
@@ -240,21 +241,15 @@ export default function TallyPage() {
     if (!bizId || connStatus !== "connected") return;
     setSyncing("import"); setSyncResult(null);
     try {
-      // Try "List of Ledger" — works in Tally ERP 9 and Prime
-      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>List of Ledger</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
-      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(15000) });
+      // Full TDL REPORT + COLLECTION — works in Tally Prime and ERP 9
+      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>FP_LedRpt</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><REPORT NAME="FP_LedRpt"><FORMS>FP_LedForm</FORMS></REPORT><FORM NAME="FP_LedForm"><PARTS>FP_LedPart</PARTS></FORM><PART NAME="FP_LedPart"><LINES>FP_LedLine</LINES><REPEAT>FP_LedLine:FP_LedColl</REPEAT><SCROLLED>Vertical</SCROLLED></PART><LINE NAME="FP_LedLine"><FIELDS>FP_FldName,FP_FldParent</FIELDS></LINE><FIELD NAME="FP_FldName"><SET>$Name</SET><XMLTAG>NAME</XMLTAG></FIELD><FIELD NAME="FP_FldParent"><SET>$Parent</SET><XMLTAG>PARENT</XMLTAG></FIELD><COLLECTION NAME="FP_LedColl"><TYPE>Ledger</TYPE></COLLECTION></TDLMESSAGE></TDL></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
+      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(20000) });
       const text = await res.text();
-      setRawDebug(text.slice(0, 800));
+      setRawDebug(text.slice(0, 1000));
       const ledgers = parseTallyLedgers(text);
       if (!ledgers.length) {
-        // Fallback: try TDL Collection approach
-        const xml2 = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FPLedgers" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent</FETCH></COLLECTION></TDLMESSAGE></TDL></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
-        const res2 = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml2, signal: AbortSignal.timeout(15000) });
-        const text2 = await res2.text();
-        setRawDebug(text2.slice(0, 800));
-        const ledgers2 = parseTallyLedgers(text2);
-        if (!ledgers2.length) { setSyncResult({ ok: false, msg: "No ledgers found. Make sure a company is open in Tally and the HTTP server is enabled." }); setSyncing(null); return; }
-        ledgers.push(...ledgers2);
+        setSyncResult({ ok: false, msg: `No ledgers found. Open the Raw response above to see what Tally returned.` });
+        setSyncing(null); return;
       }
 
       // Upsert into fw_fin_accounts (by name + business_id)
@@ -448,7 +443,7 @@ export default function TallyPage() {
             </div>
           )}
 
-          {/* Debug panel — shown when company name missing or import returned 0 */}
+          {/* Debug panel — always shown when connected and we have a response */}
           {connStatus === "connected" && rawDebug && (
             <details style={{ marginBottom: "1rem" }}>
               <summary style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.3)", cursor: "pointer" }}>🔍 Raw Tally response (for debugging)</summary>
