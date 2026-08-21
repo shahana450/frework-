@@ -246,13 +246,21 @@ export default function TallyPage() {
             <div style={{ fontSize: "0.62rem", fontWeight: 800, color: "#3B82F6", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Step 1 — One-time setup</div>
             <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>Download Bridge</div>
             <p style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.5)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
-              Browser security blocks direct calls to Tally. Run this tiny local script to bridge them.
+              Browser security blocks direct calls to Tally. Download and double-click the launcher below.
             </p>
-            <a href="/tally-bridge.js" download="tally-bridge.js"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", background: "#3B82F6", color: "#fff", borderRadius: 7, padding: "7px 0", fontWeight: 700, fontSize: "0.78rem", textDecoration: "none" }}>
-              ⬇ tally-bridge.js
-            </a>
-            <p style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.3)", margin: "0.5rem 0 0", lineHeight: 1.5 }}>Requires Node.js. Run once: <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 3 }}>node tally-bridge.js</code></p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <a href="/run-tally-bridge.bat" download="run-tally-bridge.bat"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", background: "#3B82F6", color: "#fff", borderRadius: 7, padding: "8px 0", fontWeight: 700, fontSize: "0.82rem", textDecoration: "none" }}>
+                ⬇ Download &amp; Run (Windows .bat)
+              </a>
+              <a href="/tally-bridge.js" download="tally-bridge.js"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", background: "rgba(59,130,246,0.1)", color: "#60A5FA", borderRadius: 7, padding: "6px 0", fontWeight: 600, fontSize: "0.75rem", textDecoration: "none", border: "1px solid rgba(59,130,246,0.25)" }}>
+                ⬇ tally-bridge.js (manual)
+              </a>
+            </div>
+            <p style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.3)", margin: "0.5rem 0 0", lineHeight: 1.5 }}>
+              Download both files to the same folder. Double-click the .bat file — keep the window open while syncing. Requires <a href="https://nodejs.org" target="_blank" rel="noopener noreferrer" style={{ color: "#60A5FA" }}>Node.js</a>.
+            </p>
           </div>
 
           {/* Step 2 */}
