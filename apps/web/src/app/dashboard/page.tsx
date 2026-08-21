@@ -237,12 +237,13 @@ export default function DashboardPage() {
         name: u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email?.split("@")[0] ?? "User",
         avatar: u.user_metadata?.avatar_url,
       });
-      const [{ data: startupData }, { data: subData }, { data: fwUser }, { data: spacesData }, { data: coworkData }] = await Promise.all([
+      const [{ data: startupData }, { data: subData }, { data: fwUser }, { data: spacesData }, { data: coworkData }, { data: finSub }] = await Promise.all([
         supabase.from("fw_startups").select("id, slug, name, tagline, sector, stage, status").eq("user_id", u.id).order("created_at", { ascending: false }),
         supabase.from("fw_subscriptions").select("plan, billing, status, started_at").eq("user_id", u.id).maybeSingle(),
         supabase.from("fw_users").select("role").eq("id", u.id).maybeSingle(),
         supabase.from("fw_workspaces").select("id, name, city, type, price_per_day, price_per_month, status, created_at").eq("user_id", u.id).order("created_at", { ascending: false }),
         supabase.from("coworking_spaces").select("id").eq("owner_id", u.id).limit(1).maybeSingle(),
+        supabase.from("fw_fin_subscriptions").select("status").eq("user_id", u.id).maybeSingle(),
       ]);
       setStartups(startupData ?? []);
       setSubscription(subData);
@@ -254,6 +255,12 @@ export default function DashboardPage() {
       if (adminEmails.includes(u.email ?? "")) {
         localStorage.removeItem(`fw_purpose_${u.id}`);
       } else {
+        // If user has a Finance trial/subscription, send them to Finance — ignore stored purpose
+        const hasFinAccess = finSub && ["trial", "active"].includes(finSub.status);
+        if (hasFinAccess) {
+          router.replace("/finance");
+          return;
+        }
         const chosen = localStorage.getItem(`fw_purpose_${u.id}`);
         if (!chosen) {
           setShowPurpose(true);
