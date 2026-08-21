@@ -151,6 +151,7 @@ export default function TallyPage() {
   const [connStatus, setConnStatus] = useState<ConnStatus>("idle");
   const [connMsg, setConnMsg] = useState("");
   const [companyName, setCompanyName] = useState<string>("");
+  const [rawDebug, setRawDebug] = useState<string>("");
   const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | "import" | null>(null);
   const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
@@ -178,9 +179,9 @@ export default function TallyPage() {
   // ── Test connection ──────────────────────────────────────────────────────
 
   async function testConnection() {
-    setConnStatus("connecting"); setConnMsg(""); setSyncResult(null);
+    setConnStatus("connecting"); setConnMsg(""); setSyncResult(null); setRawDebug("");
     try {
-      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>List of Companies</REPORTNAME></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
+      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>List of Companies</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
       const res = await fetch(tallyUrl, {
         method: "POST",
         headers: { "Content-Type": "text/xml" },
@@ -190,6 +191,7 @@ export default function TallyPage() {
       if (res.ok) {
         const text = await res.text();
         const found = extractCompanyName(text);
+        setRawDebug(text.slice(0, 600)); // keep first 600 chars for debug
         setCompanyName(found);
         setConnStatus("connected");
         setConnMsg(found ? `Connected — ${found}` : "Connected to Tally");
@@ -238,11 +240,22 @@ export default function TallyPage() {
     if (!bizId || connStatus !== "connected") return;
     setSyncing("import"); setSyncResult(null);
     try {
-      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>List of Accounts</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
+      // Try "List of Ledger" — works in Tally ERP 9 and Prime
+      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>List of Ledger</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
       const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(15000) });
       const text = await res.text();
+      setRawDebug(text.slice(0, 800));
       const ledgers = parseTallyLedgers(text);
-      if (!ledgers.length) { setSyncResult({ ok: false, msg: "No ledgers found in Tally response. Make sure a company is open in Tally." }); setSyncing(null); return; }
+      if (!ledgers.length) {
+        // Fallback: try TDL Collection approach
+        const xml2 = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FPLedgers" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent</FETCH></COLLECTION></TDLMESSAGE></TDL></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
+        const res2 = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml2, signal: AbortSignal.timeout(15000) });
+        const text2 = await res2.text();
+        setRawDebug(text2.slice(0, 800));
+        const ledgers2 = parseTallyLedgers(text2);
+        if (!ledgers2.length) { setSyncResult({ ok: false, msg: "No ledgers found. Make sure a company is open in Tally and the HTTP server is enabled." }); setSyncing(null); return; }
+        ledgers.push(...ledgers2);
+      }
 
       // Upsert into fw_fin_accounts (by name + business_id)
       const rows = ledgers.map(l => ({
@@ -433,6 +446,16 @@ export default function TallyPage() {
             <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)", marginBottom: "1rem", background: "rgba(255,255,255,0.02)", borderRadius: 8, padding: "0.6rem 0.9rem" }}>
               💡 Make sure <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 3 }}>node tally-bridge.js</code> is running in a terminal on this PC, and Tally is open.
             </div>
+          )}
+
+          {/* Debug panel — shown when company name missing or import returned 0 */}
+          {connStatus === "connected" && rawDebug && (
+            <details style={{ marginBottom: "1rem" }}>
+              <summary style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.3)", cursor: "pointer" }}>🔍 Raw Tally response (for debugging)</summary>
+              <pre style={{ marginTop: "0.5rem", fontSize: "0.68rem", color: "rgba(237,232,220,0.5)", background: "rgba(0,0,0,0.3)", padding: "0.75rem", borderRadius: 8, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                {rawDebug}
+              </pre>
+            </details>
           )}
 
           {/* Date range */}
