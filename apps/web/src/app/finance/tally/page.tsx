@@ -96,6 +96,7 @@ export default function TallyPage() {
   const [tallyPort, setTallyPort] = useState("7001");
   const [connStatus, setConnStatus] = useState<ConnStatus>("idle");
   const [connMsg, setConnMsg] = useState("");
+  const [companyName, setCompanyName] = useState<string>("");
   const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | null>(null);
   const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
@@ -134,9 +135,17 @@ export default function TallyPage() {
       });
       if (res.ok) {
         const text = await res.text();
-        const match = text.match(/<COMPANY>(.*?)<\/COMPANY>/i) ?? text.match(/<NAME>(.*?)<\/NAME>/i);
+        // Try multiple tag patterns Tally uses for company name
+        const nameMatch =
+          text.match(/<BASICCOMPANYNAME[^>]*>(.*?)<\/BASICCOMPANYNAME>/i) ??
+          text.match(/<COMPANY[^>]*>\s*<NAME[^>]*>(.*?)<\/NAME>/is) ??
+          text.match(/<NAME\.LIST[^>]*>.*?<NAME>(.*?)<\/NAME>/is) ??
+          text.match(/<NAME>(.*?)<\/NAME>/i) ??
+          text.match(/<COMPANY>(.*?)<\/COMPANY>/i);
+        const found = nameMatch ? nameMatch[1].trim() : "";
+        setCompanyName(found);
         setConnStatus("connected");
-        setConnMsg(match ? `Connected — Company: ${match[1]}` : "Connected to Tally");
+        setConnMsg(found ? `Connected — Active Company: ${found}` : "Connected to Tally");
       } else {
         setConnStatus("error"); setConnMsg(`Tally responded with HTTP ${res.status}`);
       }
@@ -309,8 +318,25 @@ export default function TallyPage() {
             </button>
           </div>
 
-          {connMsg && (
-            <div style={{ fontSize: "0.8rem", color: connStatus === "connected" ? "#4ade80" : "#f87171", background: connStatus === "connected" ? "rgba(74,222,128,0.07)" : "rgba(248,113,113,0.07)", border: `1px solid ${connStatus === "connected" ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}`, borderRadius: 8, padding: "0.6rem 0.9rem", marginBottom: "1rem" }}>
+          {connStatus === "connected" && companyName && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", borderRadius: 10, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
+              <span style={{ fontSize: "1.5rem" }}>🏢</span>
+              <div>
+                <div style={{ fontSize: "0.62rem", color: "rgba(74,222,128,0.6)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Connected Tally Company</div>
+                <div style={{ fontSize: "1rem", fontWeight: 800, color: "#4ade80", marginTop: 2 }}>{companyName}</div>
+              </div>
+              <span style={{ marginLeft: "auto", fontSize: "0.72rem", color: "rgba(74,222,128,0.6)" }}>● Live</span>
+            </div>
+          )}
+
+          {connStatus === "connected" && !companyName && (
+            <div style={{ fontSize: "0.8rem", color: "#4ade80", background: "rgba(74,222,128,0.07)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 8, padding: "0.6rem 0.9rem", marginBottom: "1rem" }}>
+              ✓ Connected to Tally (company name not returned — check Tally is in a company)
+            </div>
+          )}
+
+          {connStatus === "error" && connMsg && (
+            <div style={{ fontSize: "0.8rem", color: "#f87171", background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 8, padding: "0.6rem 0.9rem", marginBottom: "1rem" }}>
               {connMsg}
             </div>
           )}
