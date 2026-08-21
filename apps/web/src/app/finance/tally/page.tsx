@@ -83,9 +83,9 @@ function extractCompanyName(xml: string): string {
   // Try tags in priority order
   const patterns = [
     /<COMPANYNAME[^>]*>([^<]+)<\/COMPANYNAME>/i,
+    /<SVCURRENTCOMPANY[^>]*>([^<]+)<\/SVCURRENTCOMPANY>/i,
     /<BASICCOMPANYNAME[^>]*>([^<]+)<\/BASICCOMPANYNAME>/i,
     /<COMPANY[^>]*>\s*<NAME[^>]*>([^<]+)<\/NAME>/i,
-    // NAME.LIST > NAME (multiline)
     /<NAME\.LIST[^>]*>[\s\S]*?<NAME>([^<]+)<\/NAME>/i,
     /<NAME>([^<]+)<\/NAME>/i,
   ];
@@ -99,19 +99,42 @@ function extractCompanyName(xml: string): string {
 // ── Import ledgers FROM Tally → fw_fin_accounts ──────────────────────────────
 
 function parseTallyLedgers(xml: string): { name: string; parent: string }[] {
+  const seen = new Set<string>();
   const results: { name: string; parent: string }[] = [];
-  // Match each <LEDGER> element
-  const ledgerRe = /<LEDGER[^>]*>([\s\S]*?)<\/LEDGER>/gi;
-  let m;
-  while ((m = ledgerRe.exec(xml)) !== null) {
-    const block = m[1];
-    const nameMatch = block.match(/<NAME\.LIST[^>]*>[\s\S]*?<NAME>([^<]+)<\/NAME>/i)
-      ?? block.match(/<NAME>([^<]+)<\/NAME>/i);
-    const parentMatch = block.match(/<PARENT>([^<]+)<\/PARENT>/i);
-    const name = nameMatch?.[1]?.trim() ?? "";
-    const parent = parentMatch?.[1]?.trim() ?? "";
-    if (name) results.push({ name, parent });
+
+  // Method 1: <LEDGER NAME="..."> attributes (Trial Balance / XML export format)
+  // Track the enclosing group as parent
+  const groupParentStack: string[] = [];
+  const lines = xml.split("\n");
+  for (const line of lines) {
+    const groupAttr = line.match(/<(?:ACCOUNTBLOCK|GROUP|GROUPENTRY)[^>]*NAME="([^"]+)"/i);
+    if (groupAttr) { groupParentStack.push(groupAttr[1]); continue; }
+    if (line.match(/<\/(?:ACCOUNTBLOCK|GROUP|GROUPENTRY)>/i)) { groupParentStack.pop(); continue; }
+    const ledgerAttr = line.match(/<LEDGER[^>]*NAME="([^"]+)"/i);
+    if (ledgerAttr) {
+      const name = ledgerAttr[1].trim();
+      if (name && !seen.has(name)) {
+        seen.add(name);
+        results.push({ name, parent: groupParentStack[groupParentStack.length - 1] ?? "" });
+      }
+    }
   }
+
+  // Method 2: <LEDGER>...<NAME>...</NAME>...<PARENT>...</PARENT>... (master export format)
+  if (!results.length) {
+    const ledgerRe = /<LEDGER[^>]*>([\s\S]*?)<\/LEDGER>/gi;
+    let m;
+    while ((m = ledgerRe.exec(xml)) !== null) {
+      const block = m[1];
+      const nameMatch = block.match(/<NAME\.LIST[^>]*>[\s\S]*?<NAME>([^<]+)<\/NAME>/i)
+        ?? block.match(/<NAME>([^<]+)<\/NAME>/i);
+      const parentMatch = block.match(/<PARENT>([^<]+)<\/PARENT>/i);
+      const name = nameMatch?.[1]?.trim() ?? "";
+      const parent = parentMatch?.[1]?.trim() ?? "";
+      if (name && !seen.has(name)) { seen.add(name); results.push({ name, parent }); }
+    }
+  }
+
   return results;
 }
 
@@ -181,8 +204,10 @@ export default function TallyPage() {
   async function testConnection() {
     setConnStatus("connecting"); setConnMsg(""); setSyncResult(null); setRawDebug("");
     try {
-      // TDL query to get current company name — works in Tally Prime and ERP 9
-      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>FP_CoRpt</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><REPORT NAME="FP_CoRpt"><FORMS>FP_CoForm</FORMS></REPORT><FORM NAME="FP_CoForm"><PARTS>FP_CoPart</PARTS></FORM><PART NAME="FP_CoPart"><LINES>FP_CoLine</LINES></PART><LINE NAME="FP_CoLine"><FIELDS>FP_CoFld</FIELDS></LINE><FIELD NAME="FP_CoFld"><SET>$$CurrentCompany</SET><XMLTAG>COMPANYNAME</XMLTAG></FIELD></TDLMESSAGE></TDL></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
+      // Use built-in "Trial Balance" report — works in Tally Prime and ERP 9
+      // The response includes SVCURRENTCOMPANY with the open company name
+      const today = new Date().toISOString().slice(0,10).replace(/-/g,"");
+      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>Trial Balance</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${today}</SVFROMDATE><SVTODATE>${today}</SVTODATE></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
       const res = await fetch(tallyUrl, {
         method: "POST",
         headers: { "Content-Type": "text/xml" },
@@ -241,8 +266,9 @@ export default function TallyPage() {
     if (!bizId || connStatus !== "connected") return;
     setSyncing("import"); setSyncResult(null);
     try {
-      // Full TDL REPORT + COLLECTION — works in Tally Prime and ERP 9
-      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>FP_LedRpt</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><REPORT NAME="FP_LedRpt"><FORMS>FP_LedForm</FORMS></REPORT><FORM NAME="FP_LedForm"><PARTS>FP_LedPart</PARTS></FORM><PART NAME="FP_LedPart"><LINES>FP_LedLine</LINES><REPEAT>FP_LedLine:FP_LedColl</REPEAT><SCROLLED>Vertical</SCROLLED></PART><LINE NAME="FP_LedLine"><FIELDS>FP_FldName,FP_FldParent</FIELDS></LINE><FIELD NAME="FP_FldName"><SET>$Name</SET><XMLTAG>NAME</XMLTAG></FIELD><FIELD NAME="FP_FldParent"><SET>$Parent</SET><XMLTAG>PARENT</XMLTAG></FIELD><COLLECTION NAME="FP_LedColl"><TYPE>Ledger</TYPE></COLLECTION></TDLMESSAGE></TDL></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
+      // Use Trial Balance — built-in report, works in Tally Prime and ERP 9
+      // Contains all ledger names as NAME attributes in the XML
+      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>Trial Balance</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>20000101</SVFROMDATE><SVTODATE>20991231</SVTODATE></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
       const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(20000) });
       const text = await res.text();
       setRawDebug(text.slice(0, 1000));
