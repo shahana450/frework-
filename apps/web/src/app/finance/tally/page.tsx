@@ -93,7 +93,7 @@ export default function TallyPage() {
   const [journalCount, setJournalCount] = useState<number | null>(null);
 
   // Connector state
-  const [tallyPort, setTallyPort] = useState("9000");
+  const [tallyPort, setTallyPort] = useState("7001");
   const [connStatus, setConnStatus] = useState<ConnStatus>("idle");
   const [connMsg, setConnMsg] = useState("");
   const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | null>(null);
@@ -144,9 +144,9 @@ export default function TallyPage() {
       setConnStatus("error");
       const msg = e instanceof Error ? e.message : "Unknown error";
       if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
-        setConnMsg("Cannot reach Tally. Make sure Tally is open and ODBC/HTTP server is enabled on port " + tallyPort + ".");
+        setConnMsg("Cannot reach bridge on port " + tallyPort + ". Run: node tally-bridge.js in a terminal, then try again.");
       } else if (msg.includes("timeout") || msg.includes("aborted")) {
-        setConnMsg("Connection timed out. Is Tally running on this PC?");
+        setConnMsg("Connection timed out. Is the bridge script running? Run: node tally-bridge.js");
       } else {
         setConnMsg(msg);
       }
@@ -237,7 +237,47 @@ export default function TallyPage() {
 
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "2rem" }}>
         <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800 }}>Tally Bridge</h1>
-        <p style={{ margin: "0 0 2rem", color: "rgba(237,232,220,0.5)", fontSize: "0.88rem" }}>Push ledgers and vouchers directly into Tally — no XML import needed. Tally must be open on this PC.</p>
+        <p style={{ margin: "0 0 2rem", color: "rgba(237,232,220,0.5)", fontSize: "0.88rem" }}>Push ledgers and vouchers directly into Tally — no XML import needed. Follow the 3 steps below.</p>
+
+        {/* ── SETUP STEPS ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", marginBottom: "1.5rem" }}>
+          {/* Step 1 */}
+          <div style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: 12, padding: "1rem" }}>
+            <div style={{ fontSize: "0.62rem", fontWeight: 800, color: "#3B82F6", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Step 1 — One-time setup</div>
+            <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>Download Bridge</div>
+            <p style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.5)", margin: "0 0 0.75rem", lineHeight: 1.5 }}>
+              Browser security blocks direct calls to Tally. Run this tiny local script to bridge them.
+            </p>
+            <a href="/tally-bridge.js" download="tally-bridge.js"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", background: "#3B82F6", color: "#fff", borderRadius: 7, padding: "7px 0", fontWeight: 700, fontSize: "0.78rem", textDecoration: "none" }}>
+              ⬇ tally-bridge.js
+            </a>
+            <p style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.3)", margin: "0.5rem 0 0", lineHeight: 1.5 }}>Requires Node.js. Run once: <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 3 }}>node tally-bridge.js</code></p>
+          </div>
+
+          {/* Step 2 */}
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, padding: "1rem" }}>
+            <div style={{ fontSize: "0.62rem", fontWeight: 800, color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Step 2 — In Tally</div>
+            <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>Enable HTTP Server</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+              {["Open Tally Prime", "F12 → Client/Server configuration", "TallyPrime acts as → Both or Server", "Enable ODBC → Yes · Port → 9000", "Press Escape to save"].map((s, i) => (
+                <div key={i} style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+                  <span style={{ background: "rgba(237,232,220,0.12)", color: "rgba(237,232,220,0.6)", width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.6rem", flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
+                  <span style={{ fontSize: "0.73rem", color: "rgba(237,232,220,0.55)", lineHeight: 1.4 }}>{s}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div style={{ background: "rgba(74,222,128,0.04)", border: "1px solid rgba(74,222,128,0.15)", borderRadius: 12, padding: "1rem" }}>
+            <div style={{ fontSize: "0.62rem", fontWeight: 800, color: "rgba(74,222,128,0.6)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Step 3 — Here</div>
+            <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: "0.4rem" }}>Connect &amp; Sync</div>
+            <p style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.5)", margin: "0", lineHeight: 1.5 }}>
+              With the bridge running (port 7001) and Tally open, click <strong style={{ color: "#4ade80" }}>Connect to Tally</strong> below, then sync ledgers and push vouchers.
+            </p>
+          </div>
+        </div>
 
         {/* ── LIVE CONNECTOR ── */}
         <div style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: 14, padding: "1.5rem", marginBottom: "2rem" }}>
@@ -252,8 +292,8 @@ export default function TallyPage() {
           {/* Port + connect */}
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", marginBottom: "1rem", flexWrap: "wrap" }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.3rem" }}>Tally Port</label>
-              <input value={tallyPort} onChange={e => setTallyPort(e.target.value)} style={{ ...inp, width: 100 }} placeholder="9000" />
+              <label style={{ display: "block", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.3rem" }}>Bridge Port</label>
+              <input value={tallyPort} onChange={e => setTallyPort(e.target.value)} style={{ ...inp, width: 100 }} placeholder="7001" />
             </div>
             <button onClick={testConnection} disabled={connStatus === "connecting"}
               style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: "#3B82F6", color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", opacity: connStatus === "connecting" ? 0.6 : 1 }}>
@@ -267,25 +307,10 @@ export default function TallyPage() {
             </div>
           )}
 
-          {/* Enable Tally guide */}
-          {(connStatus === "idle" || connStatus === "error") && (
-            <details style={{ marginBottom: "1rem" }}>
-              <summary style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)", cursor: "pointer", userSelect: "none" }}>How to enable Tally HTTP server →</summary>
-              <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                {[
-                  "Open Tally Prime / ERP 9",
-                  "Go to: F12 (Configure) → Advanced Configuration",
-                  'Enable "TallyPrime Acts As ODBC Server" → Yes',
-                  "Port: 9000 (default) — or change above if different",
-                  "Press Escape to save, then click Connect",
-                ].map((s, i) => (
-                  <div key={i} style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
-                    <span style={{ background: "#3B82F6", color: "#fff", width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.65rem", flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
-                    <span style={{ fontSize: "0.8rem", color: "rgba(237,232,220,0.6)" }}>{s}</span>
-                  </div>
-                ))}
-              </div>
-            </details>
+          {(connStatus === "error") && (
+            <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)", marginBottom: "1rem", background: "rgba(255,255,255,0.02)", borderRadius: 8, padding: "0.6rem 0.9rem" }}>
+              💡 Make sure <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 3 }}>node tally-bridge.js</code> is running in a terminal on this PC, and Tally is open.
+            </div>
           )}
 
           {/* Date range */}
