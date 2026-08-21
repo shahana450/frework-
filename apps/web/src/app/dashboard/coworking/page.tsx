@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -42,7 +42,7 @@ export default function CoworkingAdminPage() {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) { router.push("/login"); return; }
       // allow only the owner email
-      const adminEmails = ["admin.frework@gmail.com", "auditmanagercswa@gmail.com"];
+      const adminEmails = ["admin.frework@gmail.com", "admin.frework@gmail.com"];
       if (!adminEmails.includes(data.user.email ?? "")) {
         router.push("/dashboard");
         return;
@@ -250,3 +250,4 @@ export default function CoworkingAdminPage() {
     </div>
   );
 }
+

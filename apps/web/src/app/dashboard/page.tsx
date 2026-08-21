@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -122,7 +122,7 @@ export default function DashboardPage() {
       setMySpaces(spacesData ?? []);
       setHasCoworkingListing(!!coworkData);
       // Show purpose selector only for non-admin users who haven't chosen yet
-      const adminEmails = ["admin.frework@gmail.com", "auditmanagercswa@gmail.com"];
+      const adminEmails = ["admin.frework@gmail.com", "admin.frework@gmail.com"];
       if (!adminEmails.includes(u.email ?? "")) {
         const chosen = localStorage.getItem(`fw_purpose_${u.id}`);
         if (!chosen) {
@@ -142,7 +142,7 @@ export default function DashboardPage() {
     router.replace("/");
   };
 
-  const ADMIN_EMAILS = ["admin.frework@gmail.com", "auditmanagercswa@gmail.com"];
+  const ADMIN_EMAILS = ["admin.frework@gmail.com", "admin.frework@gmail.com"];
   const isAdmin = ADMIN_EMAILS.includes(user?.email ?? "");
 
   if (loading) {
@@ -861,3 +861,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

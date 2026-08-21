@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -23,7 +23,7 @@ interface Order {
   notes: string | null;
 }
 
-const ADMIN_EMAILS = ["admin.frework@gmail.com", "auditmanagercswa@gmail.com"];
+const ADMIN_EMAILS = ["admin.frework@gmail.com", "admin.frework@gmail.com"];
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
   paid:    { color: "#10B981", bg: "rgba(16,185,129,0.1)",  border: "rgba(16,185,129,0.3)" },
@@ -225,3 +225,4 @@ export default function OrdersAdminPage() {
     </div>
   );
 }
+

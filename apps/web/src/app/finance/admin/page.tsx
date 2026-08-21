@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const ADMIN_EMAILS = ["auditmanagercswa@gmail.com"];
+const ADMIN_EMAILS = ["admin.frework@gmail.com"];
 const PLANS = ["starter", "professional", "enterprise"];
 
 type Sub = {
@@ -208,4 +208,5 @@ export default function AdminPortal() {
     </div>
   );
 }
+
 

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -189,7 +189,7 @@ ALTER TABLE fw_fin_virtual_ca_chats ENABLE ROW LEVEL SECURITY;
 -- Policies (IF NOT EXISTS workaround: drop and recreate)
 DO $$ BEGIN
   DROP POLICY IF EXISTS "biz_owner" ON fw_fin_businesses;
-  CREATE POLICY "biz_owner" ON fw_fin_businesses FOR ALL USING (owner_id = auth.uid() OR auth.email() IN ('admin.frework@gmail.com','auditmanagercswa@gmail.com'));
+  CREATE POLICY "biz_owner" ON fw_fin_businesses FOR ALL USING (owner_id = auth.uid() OR auth.email() IN ('admin.frework@gmail.com','admin.frework@gmail.com'));
 
   DROP POLICY IF EXISTS "fy_owner" ON fw_fin_financial_years;
   CREATE POLICY "fy_owner" ON fw_fin_financial_years FOR ALL USING (business_id IN (SELECT id FROM fw_fin_businesses WHERE owner_id = auth.uid()));
@@ -235,7 +235,7 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser(token);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const adminEmails = ["admin.frework@gmail.com", "auditmanagercswa@gmail.com"];
+    const adminEmails = ["admin.frework@gmail.com", "admin.frework@gmail.com"];
     if (!adminEmails.includes(user.email ?? "")) {
       return NextResponse.json({ error: "Admin only" }, { status: 403 });
     }
@@ -279,3 +279,4 @@ export async function GET() {
     },
   });
 }
+

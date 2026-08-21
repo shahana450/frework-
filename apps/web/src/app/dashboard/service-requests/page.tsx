@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -11,7 +11,7 @@ import {
   ChevronDown, ChevronUp, Phone, Mail, FileText,
 } from "lucide-react";
 
-const ADMIN_EMAILS = ["admin.frework@gmail.com", "auditmanagercswa@gmail.com"];
+const ADMIN_EMAILS = ["admin.frework@gmail.com", "admin.frework@gmail.com"];
 
 const PACKAGES = [
   { key: "gst-registration",    label: "GST Registration",        price: "₹999",         color: "#059669" },
@@ -574,3 +574,4 @@ export default function ServiceRequestsAdminPage() {
     </div>
   );
 }
+
