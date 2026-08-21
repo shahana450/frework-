@@ -490,24 +490,24 @@ export default function DashboardPage() {
         </div>
 
         {/* ── FINANCE BANNER ── */}
-        <Link href="/finance" className="block mb-6 rounded-2xl overflow-hidden border transition-all hover:shadow-lg hover:scale-[1.01]"
-          style={{ borderColor: "rgba(201,168,76,0.3)", background: "linear-gradient(135deg,rgba(201,168,76,0.12) 0%,rgba(7,12,26,0.8) 100%)", backdropFilter: "blur(8px)" }}>
+        <Link href="/finance" className="block mb-6 rounded-2xl overflow-hidden border transition-all hover:shadow-xl hover:scale-[1.01]"
+          style={{ borderColor: "rgba(59,130,246,0.5)", background: "linear-gradient(135deg,#1D4ED8 0%,#1e3a8a 60%,#0f172a 100%)" }}>
           <div className="px-6 py-5 flex items-center gap-5">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
-              style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)", boxShadow: "0 4px 20px rgba(201,168,76,0.35)" }}>
-              📊
+              style={{ background: "rgba(255,255,255,0.15)", boxShadow: "0 4px 20px rgba(59,130,246,0.4)" }}>
+              🛩️
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-black" style={{ background: "rgba(201,168,76,0.15)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.3)" }}>NEW</span>
-                <span className="font-black text-base" style={{ color: "#EDE8DC" }}>FreWork Finance — AI Bookkeeping</span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-black" style={{ background: "rgba(255,255,255,0.2)", color: "#ffffff", border: "1px solid rgba(255,255,255,0.35)" }}>NEW</span>
+                <span className="font-black text-base" style={{ color: "#ffffff" }}>FrePilot Finance — AI Bookkeeping</span>
               </div>
-              <p className="text-xs leading-relaxed" style={{ color: "#8A9BB8" }}>
-                Upload invoices, bills, and bank statements · AI extracts and posts journal entries · GST returns, P&amp;L, Balance Sheet, FrePilot
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
+                Upload invoices, bills &amp; bank statements · AI posts journal entries · GST returns, P&amp;L, Balance Sheet
               </p>
             </div>
             <div className="flex-shrink-0 flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-sm"
-              style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)", color: "#070C1A" }}>
+              style={{ background: "#ffffff", color: "#1D4ED8" }}>
               Open Finance <ArrowRight className="w-4 h-4" />
             </div>
           </div>
