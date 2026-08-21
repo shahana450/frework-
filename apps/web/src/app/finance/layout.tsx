@@ -165,8 +165,19 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
         {/* Bottom links */}
         <div style={{ borderTop: "1px solid rgba(237,232,220,0.07)", padding: "8px 0", flexShrink: 0 }}>
-          <Link href="/dashboard" title={collapsed ? "Main Dashboard" : undefined} style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : 8, padding: collapsed ? "8px 0" : "6px 14px", justifyContent: collapsed ? "center" : "flex-start", textDecoration: "none", color: "rgba(237,232,220,0.3)", fontSize: "0.75rem" }}>
-            <span>🏠</span>{!collapsed && <span>Main Dashboard</span>}
+          <Link href="/dashboard" title={collapsed ? "Main Dashboard" : undefined} style={{
+            display: "flex", alignItems: "center", gap: collapsed ? 0 : 8,
+            padding: collapsed ? "8px 0" : "7px 14px",
+            justifyContent: collapsed ? "center" : "flex-start",
+            textDecoration: "none", fontSize: "0.78rem", fontWeight: 600,
+            color: "rgba(237,232,220,0.7)",
+            background: "rgba(255,255,255,0.04)",
+            borderLeft: "2px solid rgba(59,130,246,0.4)",
+            margin: "0 0 4px",
+            transition: "all 0.15s",
+          }}>
+            <span style={{ fontSize: "0.9rem" }}>🏠</span>
+            {!collapsed && <span>← Main Dashboard</span>}
           </Link>
         </div>
       </aside>
