@@ -77,6 +77,60 @@ function buildVoucherXML(journals: {
   return `<ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME><STATICVARIABLES><SVCURRENTCOMPANY></SVCURRENTCOMPANY></STATICVARIABLES></REQUESTDESC><REQUESTDATA>${entries}</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
 }
 
+// ── Parse company name from any Tally XML response ───────────────────────────
+
+function extractCompanyName(xml: string): string {
+  // Try tags in priority order
+  const patterns = [
+    /<BASICCOMPANYNAME[^>]*>([^<]+)<\/BASICCOMPANYNAME>/i,
+    /<COMPANYNAME[^>]*>([^<]+)<\/COMPANYNAME>/i,
+    /<COMPANY[^>]*>\s*<NAME[^>]*>([^<]+)<\/NAME>/i,
+    // NAME.LIST > NAME (multiline)
+    /<NAME\.LIST[^>]*>[\s\S]*?<NAME>([^<]+)<\/NAME>/i,
+    /<NAME>([^<]+)<\/NAME>/i,
+  ];
+  for (const re of patterns) {
+    const m = xml.match(re);
+    if (m?.[1]?.trim()) return m[1].trim();
+  }
+  return "";
+}
+
+// ── Import ledgers FROM Tally → fw_fin_accounts ──────────────────────────────
+
+function parseTallyLedgers(xml: string): { name: string; parent: string }[] {
+  const results: { name: string; parent: string }[] = [];
+  // Match each <LEDGER> element
+  const ledgerRe = /<LEDGER[^>]*>([\s\S]*?)<\/LEDGER>/gi;
+  let m;
+  while ((m = ledgerRe.exec(xml)) !== null) {
+    const block = m[1];
+    const nameMatch = block.match(/<NAME\.LIST[^>]*>[\s\S]*?<NAME>([^<]+)<\/NAME>/i)
+      ?? block.match(/<NAME>([^<]+)<\/NAME>/i);
+    const parentMatch = block.match(/<PARENT>([^<]+)<\/PARENT>/i);
+    const name = nameMatch?.[1]?.trim() ?? "";
+    const parent = parentMatch?.[1]?.trim() ?? "";
+    if (name) results.push({ name, parent });
+  }
+  return results;
+}
+
+function tallyParentToType(parent: string): string {
+  const p = parent.toLowerCase();
+  if (p.includes("bank")) return "bank";
+  if (p.includes("cash")) return "cash";
+  if (p.includes("sales") || p.includes("income") || p.includes("revenue")) return "income";
+  if (p.includes("purchase") || p.includes("direct exp") || p.includes("cost")) return "cost_of_goods";
+  if (p.includes("indirect exp") || p.includes("expense")) return "expense";
+  if (p.includes("capital") || p.includes("reserve") || p.includes("equity")) return "equity";
+  if (p.includes("loan") || p.includes("borrowing")) return "loan";
+  if (p.includes("duties") || p.includes("tax")) return "tax";
+  if (p.includes("fixed asset") || p.includes("plant") || p.includes("machinery")) return "fixed_asset";
+  if (p.includes("current asset") || p.includes("sundry debt") || p.includes("receivable")) return "asset";
+  if (p.includes("current liab") || p.includes("sundry cred") || p.includes("payable")) return "liability";
+  return "expense";
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type ConnStatus = "idle" | "connecting" | "connected" | "error";
@@ -97,7 +151,7 @@ export default function TallyPage() {
   const [connStatus, setConnStatus] = useState<ConnStatus>("idle");
   const [connMsg, setConnMsg] = useState("");
   const [companyName, setCompanyName] = useState<string>("");
-  const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | null>(null);
+  const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | "import" | null>(null);
   const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const tallyUrl = `http://localhost:${tallyPort}`;
@@ -135,17 +189,10 @@ export default function TallyPage() {
       });
       if (res.ok) {
         const text = await res.text();
-        // Try multiple tag patterns Tally uses for company name
-        const nameMatch =
-          text.match(/<BASICCOMPANYNAME[^>]*>(.*?)<\/BASICCOMPANYNAME>/i) ??
-          text.match(/<COMPANY[^>]*>\s*<NAME[^>]*>(.*?)<\/NAME>/is) ??
-          text.match(/<NAME\.LIST[^>]*>.*?<NAME>(.*?)<\/NAME>/is) ??
-          text.match(/<NAME>(.*?)<\/NAME>/i) ??
-          text.match(/<COMPANY>(.*?)<\/COMPANY>/i);
-        const found = nameMatch ? nameMatch[1].trim() : "";
+        const found = extractCompanyName(text);
         setCompanyName(found);
         setConnStatus("connected");
-        setConnMsg(found ? `Connected — Active Company: ${found}` : "Connected to Tally");
+        setConnMsg(found ? `Connected — ${found}` : "Connected to Tally");
       } else {
         setConnStatus("error"); setConnMsg(`Tally responded with HTTP ${res.status}`);
       }
@@ -179,6 +226,47 @@ export default function TallyPage() {
       const text = await res.text();
       const errors = (text.match(/LINEERROR/gi) ?? []).length;
       setSyncResult({ ok: errors === 0, msg: errors === 0 ? `${accounts.length} ledgers pushed to Tally successfully.` : `Pushed ${accounts.length} ledgers — ${errors} already exist or had name mismatch (normal if already created).` });
+    } catch (e: unknown) {
+      setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
+    }
+    setSyncing(null);
+  }, [bizId, connStatus, tallyUrl]);
+
+  // ── Import ledgers FROM Tally → FrePilot Chart of Accounts ──────────────────
+
+  const importLedgers = useCallback(async () => {
+    if (!bizId || connStatus !== "connected") return;
+    setSyncing("import"); setSyncResult(null);
+    try {
+      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>List of Accounts</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
+      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(15000) });
+      const text = await res.text();
+      const ledgers = parseTallyLedgers(text);
+      if (!ledgers.length) { setSyncResult({ ok: false, msg: "No ledgers found in Tally response. Make sure a company is open in Tally." }); setSyncing(null); return; }
+
+      // Upsert into fw_fin_accounts (by name + business_id)
+      const rows = ledgers.map(l => ({
+        business_id: bizId,
+        name: l.name,
+        type: tallyParentToType(l.parent),
+        parent_group: l.parent || null,
+        opening_balance: 0,
+        is_active: true,
+      }));
+
+      // Insert in batches of 50
+      let inserted = 0;
+      for (let i = 0; i < rows.length; i += 50) {
+        const { error } = await supabase
+          .from("fw_fin_accounts")
+          .upsert(rows.slice(i, i + 50), { onConflict: "business_id,name", ignoreDuplicates: true });
+        if (!error) inserted += Math.min(50, rows.length - i);
+      }
+      setSyncResult({ ok: true, msg: `Imported ${inserted} ledgers from Tally into Chart of Accounts.` });
+
+      // Refresh journal count
+      const { count } = await supabase.from("fw_fin_journals").select("id", { count: "exact", head: true }).eq("business_id", bizId).eq("status", "posted");
+      setJournalCount(count ?? 0);
     } catch (e: unknown) {
       setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
     }
@@ -360,10 +448,18 @@ export default function TallyPage() {
           </div>
 
           {/* Action buttons */}
+          <div style={{ marginBottom: "0.5rem", fontSize: "0.65rem", fontWeight: 700, color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Tally → FrePilot</div>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+            <button onClick={importLedgers} disabled={connStatus !== "connected" || !!syncing}
+              style={{ flex: 1, minWidth: 220, padding: "13px 0", borderRadius: 10, border: "1px solid rgba(74,222,128,0.35)", background: "rgba(74,222,128,0.08)", color: connStatus === "connected" ? "#4ade80" : "rgba(74,222,128,0.3)", fontWeight: 700, fontSize: "0.88rem", cursor: connStatus === "connected" ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+              {syncing === "import" ? "⏳ Importing…" : "⬇ Import Ledgers from Tally"}
+            </button>
+          </div>
+          <div style={{ marginBottom: "0.5rem", fontSize: "0.65rem", fontWeight: 700, color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.1em" }}>FrePilot → Tally</div>
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
             <button onClick={syncLedgers} disabled={connStatus !== "connected" || !!syncing}
               style={{ flex: 1, minWidth: 180, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(59,130,246,0.35)", background: "rgba(59,130,246,0.1)", color: connStatus === "connected" ? "#60A5FA" : "rgba(96,165,250,0.35)", fontWeight: 700, fontSize: "0.88rem", cursor: connStatus === "connected" ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
-              {syncing === "ledgers" ? "⏳ Syncing Ledgers…" : "📒 Sync Ledgers (Chart of Accounts)"}
+              {syncing === "ledgers" ? "⏳ Syncing Ledgers…" : "📒 Push Ledgers to Tally"}
             </button>
             <button onClick={pushVouchers} disabled={connStatus !== "connected" || !!syncing}
               style={{ flex: 1, minWidth: 180, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(129,140,248,0.35)", background: "rgba(129,140,248,0.1)", color: connStatus === "connected" ? "#818CF8" : "rgba(129,140,248,0.35)", fontWeight: 700, fontSize: "0.88rem", cursor: connStatus === "connected" ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
