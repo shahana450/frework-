@@ -88,6 +88,75 @@ function EmptyState({ icon: Icon, title, desc, cta, href }: {
   );
 }
 
+function TrialGrantWidget() {
+  const [userId, setUserId] = useState("");
+  const [plan, setPlan] = useState("professional");
+  const [days, setDays] = useState(7);
+  const [working, setWorking] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function grant(type: "trial" | "active") {
+    if (!userId.trim()) { setMsg("Enter a user ID or email"); return; }
+    setWorking(true); setMsg("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setMsg("Not logged in"); setWorking(false); return; }
+      const res = await fetch("/api/finance/subscription/admin", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ action: type === "trial" ? "grant_trial" : "activate", user_id: userId.trim(), plan, trial_days: days }),
+      });
+      const data = await res.json();
+      setMsg(data.ok ? `✓ Done${data.ends_at ? " — expires " + new Date(data.ends_at).toLocaleDateString("en-IN") : ""}` : data.error ?? "Error");
+      if (data.ok) setUserId("");
+    } catch { setMsg("Network error"); }
+    setWorking(false);
+  }
+
+  const inp: React.CSSProperties = { background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)", color: "#EDE8DC", padding: "8px 12px", borderRadius: 8, fontSize: "0.83rem", outline: "none", width: "100%" };
+
+  return (
+    <div className="rounded-2xl mb-8 p-6" style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)" }}>
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg">🛩️</span>
+        <p className="font-black text-sm" style={{ color: "#60A5FA" }}>Grant FrePilot Access</p>
+        <Link href="/finance/admin" className="ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: "rgba(129,140,248,0.12)", color: "#818CF8", border: "1px solid rgba(129,140,248,0.2)" }}>
+          Full Admin →
+        </Link>
+      </div>
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="flex-1 min-w-[220px]">
+          <label className="block text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>User ID or Email</label>
+          <input value={userId} onChange={e => setUserId(e.target.value)} placeholder="uuid or email from Supabase" style={inp} />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>Plan</label>
+          <select value={plan} onChange={e => setPlan(e.target.value)} style={{ ...inp, width: "auto", cursor: "pointer" }}>
+            {["starter","professional","growth","business","enterprise"].map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>Trial Days</label>
+          <select value={days} onChange={e => setDays(Number(e.target.value))} style={{ ...inp, width: "auto", cursor: "pointer" }}>
+            {[1,3,7,14,30].map(d => <option key={d} value={d}>{d} days</option>)}
+          </select>
+        </div>
+        <button onClick={() => grant("trial")} disabled={working}
+          className="px-5 py-2 rounded-xl font-black text-sm transition-all hover:opacity-90"
+          style={{ background: "linear-gradient(135deg,#3B82F6,#1D4ED8)", color: "#fff", opacity: working ? 0.6 : 1 }}>
+          Grant Trial
+        </button>
+        <button onClick={() => grant("active")} disabled={working}
+          className="px-5 py-2 rounded-xl font-black text-sm transition-all hover:opacity-90"
+          style={{ background: "rgba(74,222,128,0.15)", border: "1px solid rgba(74,222,128,0.3)", color: "#4ade80", opacity: working ? 0.6 : 1 }}>
+          Activate
+        </button>
+      </div>
+      {msg && <p className="mt-3 text-xs font-semibold" style={{ color: msg.startsWith("✓") ? "#4ade80" : "#f87171" }}>{msg}</p>}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -262,7 +331,11 @@ export default function DashboardPage() {
 
         <div className="max-w-5xl mx-auto px-4 py-10">
           <h1 className="text-2xl font-black mb-1" style={{ color: "#EDE8DC" }}>Admin Panel</h1>
-          <p className="text-sm mb-10" style={{ color: "#8A9BB8" }}>Manage FreWork — approve spaces, review orders, monitor platform.</p>
+          <p className="text-sm mb-8" style={{ color: "#8A9BB8" }}>Manage FreWork — approve spaces, review orders, monitor platform.</p>
+
+          {/* Quick Trial Grant */}
+          <TrialGrantWidget />
+
 
           {(() => {
             type Card = { icon: string; title: string; desc: string; href: string; color: string; border: string; bg: string; badge: string; external?: boolean };
