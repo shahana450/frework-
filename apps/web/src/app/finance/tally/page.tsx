@@ -1,23 +1,110 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+
+// ── Tally XML helpers ────────────────────────────────────────────────────────
+
+function tallyDate(iso: string) {
+  // Tally expects YYYYMMDD
+  return iso.slice(0, 10).replace(/-/g, "");
+}
+
+function ledgerGroupForType(type: string): string {
+  const map: Record<string, string> = {
+    asset: "Current Assets",
+    bank: "Bank Accounts",
+    cash: "Cash-in-Hand",
+    liability: "Current Liabilities",
+    equity: "Capital Account",
+    income: "Sales Accounts",
+    expense: "Indirect Expenses",
+    cost_of_goods: "Direct Expenses",
+    tax: "Duties & Taxes",
+    loan: "Loans (Liability)",
+    fixed_asset: "Fixed Assets",
+  };
+  return map[type] ?? "Indirect Expenses";
+}
+
+function buildLedgerXML(accounts: { name: string; type: string }[]) {
+  const entries = accounts.map(a => `
+  <TALLYMESSAGE xmlns:UDF="TallyUDF">
+   <LEDGER NAME="${a.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")}" ACTION="Create">
+    <NAME>${a.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</NAME>
+    <PARENT>${ledgerGroupForType(a.type)}</PARENT>
+    <ISBILLWISEON>No</ISBILLWISEON>
+    <ISCOSTCENTRESON>No</ISCOSTCENTRESON>
+   </LEDGER>
+  </TALLYMESSAGE>`).join("");
+  return `<ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME><STATICVARIABLES><SVCURRENTCOMPANY></SVCURRENTCOMPANY></STATICVARIABLES></REQUESTDESC><REQUESTDATA>${entries}</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
+}
+
+function voucherType(jtype: string) {
+  const m: Record<string, string> = {
+    sales: "Sales", purchase: "Purchase", payment: "Payment",
+    receipt: "Receipt", contra: "Contra", journal: "Journal",
+    debit_note: "Debit Note", credit_note: "Credit Note",
+  };
+  return m[jtype] ?? "Journal";
+}
+
+function buildVoucherXML(journals: {
+  date: string; narration: string; voucher_type: string;
+  lines: { account_name: string; dr_amount: number; cr_amount: number }[];
+}[]) {
+  const entries = journals.map(j => {
+    const allLedgers = j.lines.map(l => {
+      const amt = l.dr_amount > 0 ? l.dr_amount : l.cr_amount;
+      const isDr = l.dr_amount > 0;
+      return `<ALLLEDGERENTRIES.LIST>
+       <LEDGERNAME>${l.account_name.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</LEDGERNAME>
+       <ISDEEMEDPOSITIVE>${isDr ? "Yes" : "No"}</ISDEEMEDPOSITIVE>
+       <AMOUNT>${isDr ? -amt : amt}</AMOUNT>
+      </ALLLEDGERENTRIES.LIST>`;
+    }).join("");
+    return `<TALLYMESSAGE xmlns:UDF="TallyUDF">
+   <VOUCHER VCHTYPE="${voucherType(j.voucher_type)}" ACTION="Create">
+    <DATE>${tallyDate(j.date)}</DATE>
+    <NARRATION>${(j.narration ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")}</NARRATION>
+    <VOUCHERTYPENAME>${voucherType(j.voucher_type)}</VOUCHERTYPENAME>
+    <VOUCHERNUMBER></VOUCHERNUMBER>
+    ${allLedgers}
+   </VOUCHER>
+  </TALLYMESSAGE>`;
+  }).join("");
+  return `<ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME><STATICVARIABLES><SVCURRENTCOMPANY></SVCURRENTCOMPANY></STATICVARIABLES></REQUESTDESC><REQUESTDATA>${entries}</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
+}
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+type ConnStatus = "idle" | "connecting" | "connected" | "error";
+
+// ── Component ────────────────────────────────────────────────────────────────
 
 export default function TallyPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
   const [fyId, setFyId] = useState<string | null>(null);
-  const [financialYears, setFinancialYears] = useState<{ id: string; label: string }[]>([]);
+  const [financialYears, setFinancialYears] = useState<{ id: string; label: string; start_date: string; end_date: string; is_current: boolean }[]>([]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [journalCount, setJournalCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+
+  // Connector state
+  const [tallyPort, setTallyPort] = useState("9000");
+  const [connStatus, setConnStatus] = useState<ConnStatus>("idle");
+  const [connMsg, setConnMsg] = useState("");
+  const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | null>(null);
+  const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const tallyUrl = `http://localhost:${tallyPort}`;
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label,start_date,end_date,is_current").eq("business_id", saved).order("start_date", { ascending: false });
@@ -33,6 +120,101 @@ export default function TallyPage() {
     });
   }, []);
 
+  // ── Test connection ──────────────────────────────────────────────────────
+
+  async function testConnection() {
+    setConnStatus("connecting"); setConnMsg(""); setSyncResult(null);
+    try {
+      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>List of Companies</REPORTNAME></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
+      const res = await fetch(tallyUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/xml" },
+        body: xml,
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) {
+        const text = await res.text();
+        const match = text.match(/<COMPANY>(.*?)<\/COMPANY>/i) ?? text.match(/<NAME>(.*?)<\/NAME>/i);
+        setConnStatus("connected");
+        setConnMsg(match ? `Connected — Company: ${match[1]}` : "Connected to Tally");
+      } else {
+        setConnStatus("error"); setConnMsg(`Tally responded with HTTP ${res.status}`);
+      }
+    } catch (e: unknown) {
+      setConnStatus("error");
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+        setConnMsg("Cannot reach Tally. Make sure Tally is open and ODBC/HTTP server is enabled on port " + tallyPort + ".");
+      } else if (msg.includes("timeout") || msg.includes("aborted")) {
+        setConnMsg("Connection timed out. Is Tally running on this PC?");
+      } else {
+        setConnMsg(msg);
+      }
+    }
+  }
+
+  // ── Sync ledgers ─────────────────────────────────────────────────────────
+
+  const syncLedgers = useCallback(async () => {
+    if (!bizId || connStatus !== "connected") return;
+    setSyncing("ledgers"); setSyncResult(null);
+    const { data: accounts } = await supabase
+      .from("fw_fin_accounts")
+      .select("name,type")
+      .eq("business_id", bizId)
+      .order("name");
+    if (!accounts?.length) { setSyncResult({ ok: false, msg: "No accounts found in Chart of Accounts." }); setSyncing(null); return; }
+    const xml = buildLedgerXML(accounts);
+    try {
+      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(15000) });
+      const text = await res.text();
+      const errors = (text.match(/LINEERROR/gi) ?? []).length;
+      setSyncResult({ ok: errors === 0, msg: errors === 0 ? `${accounts.length} ledgers pushed to Tally successfully.` : `Pushed ${accounts.length} ledgers — ${errors} already exist or had name mismatch (normal if already created).` });
+    } catch (e: unknown) {
+      setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
+    }
+    setSyncing(null);
+  }, [bizId, connStatus, tallyUrl]);
+
+  // ── Push vouchers ─────────────────────────────────────────────────────────
+
+  const pushVouchers = useCallback(async () => {
+    if (!bizId || connStatus !== "connected") return;
+    setSyncing("vouchers"); setSyncResult(null);
+    let query = supabase
+      .from("fw_fin_journals")
+      .select("id,date,narration,voucher_type,fw_fin_journal_lines(dr_amount,cr_amount,fw_fin_accounts(name))")
+      .eq("business_id", bizId)
+      .eq("status", "posted");
+    if (from) query = query.gte("date", from);
+    if (to) query = query.lte("date", to);
+    const { data: journals } = await query.order("date");
+    if (!journals?.length) { setSyncResult({ ok: false, msg: "No posted journals in this date range." }); setSyncing(null); return; }
+
+    // Shape data
+    const shaped = journals.map((j: Record<string, unknown>) => ({
+      date: j.date as string,
+      narration: j.narration as string ?? "",
+      voucher_type: j.voucher_type as string ?? "journal",
+      lines: ((j.fw_fin_journal_lines as Record<string, unknown>[]) ?? []).map((l: Record<string, unknown>) => ({
+        account_name: (l.fw_fin_accounts as Record<string, unknown> | null)?.name as string ?? "Unknown",
+        dr_amount: Number(l.dr_amount) || 0,
+        cr_amount: Number(l.cr_amount) || 0,
+      })),
+    }));
+
+    const xml = buildVoucherXML(shaped);
+    try {
+      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(30000) });
+      const text = await res.text();
+      const errors = (text.match(/LINEERROR/gi) ?? []).length;
+      setSyncResult({ ok: errors === 0, msg: errors === 0 ? `${shaped.length} vouchers pushed to Tally successfully.` : `Pushed ${shaped.length} vouchers — ${errors} had errors (check ledger names match Tally).` });
+    } catch (e: unknown) {
+      setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
+    }
+    setSyncing(null);
+  }, [bizId, connStatus, tallyUrl, from, to]);
+
   function buildExportUrl() {
     const params = new URLSearchParams({ business_id: bizId! });
     if (fyId) params.set("fy_id", fyId);
@@ -42,95 +224,136 @@ export default function TallyPage() {
   }
 
   const inp: React.CSSProperties = { background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "8px 12px", borderRadius: 6, fontSize: "0.85rem", outline: "none" };
+  const statusColors: Record<ConnStatus, string> = { idle: "#8A9BB8", connecting: "#F59E0B", connected: "#4ade80", error: "#f87171" };
+  const statusLabels: Record<ConnStatus, string> = { idle: "Not connected", connecting: "Connecting…", connected: "Connected", error: "Error" };
 
   return (
     <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+      <nav style={{ borderBottom: "1px solid rgba(59,130,246,0.15)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#3B82F6", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
         <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
         <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Tally Bridge</span>
       </nav>
 
-      <div style={{ maxWidth: 700, margin: "0 auto", padding: "2rem" }}>
-        <h1 style={{ margin: "0 0 0.4rem", fontSize: "1.4rem", fontWeight: 800 }}>Tally Bridge</h1>
-        <p style={{ margin: "0 0 2rem", color: "rgba(237,232,220,0.5)", fontSize: "0.88rem" }}>Export your posted journal entries as Tally-compatible XML. Import directly into Tally Prime or Tally ERP 9.</p>
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "2rem" }}>
+        <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800 }}>Tally Bridge</h1>
+        <p style={{ margin: "0 0 2rem", color: "rgba(237,232,220,0.5)", fontSize: "0.88rem" }}>Push ledgers and vouchers directly into Tally — no XML import needed. Tally must be open on this PC.</p>
 
-        {/* How to import */}
-        <div style={{ background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.15)", borderRadius: 12, padding: "1.25rem", marginBottom: "2rem" }}>
-          <div style={{ fontWeight: 700, color: "#C9A84C", marginBottom: "0.75rem", fontSize: "0.88rem" }}>How to Import into Tally</div>
-          {[
-            "Download the XML file from FreWork",
-            "Open Tally Prime / Tally ERP 9",
-            'Go to: Gateway of Tally → Import → Vouchers',
-            "Select the downloaded XML file",
-            'Click "Import" — all vouchers will be created',
-          ].map((step, i) => (
-            <div key={i} style={{ display: "flex", gap: "0.75rem", marginBottom: "0.4rem" }}>
-              <span style={{ background: "#C9A84C", color: "#070C1A", width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.7rem", flexShrink: 0 }}>{i + 1}</span>
-              <span style={{ fontSize: "0.85rem", color: "rgba(237,232,220,0.7)" }}>{step}</span>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, padding: "1.5rem" }}>
-          <div style={{ fontWeight: 700, marginBottom: "1.25rem" }}>Export Settings</div>
-
-          <div style={{ marginBottom: "1.25rem" }}>
-            <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Financial Year</label>
-            <select value={fyId ?? ""} onChange={e => {
-              setFyId(e.target.value);
-              const fy = financialYears.find(f => f.id === e.target.value);
-            }} style={{ ...inp, width: "100%", boxSizing: "border-box", cursor: "pointer" }}>
-              {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
-            </select>
+        {/* ── LIVE CONNECTOR ── */}
+        <div style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: 14, padding: "1.5rem", marginBottom: "2rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1.25rem" }}>
+            <span style={{ fontSize: "1.3rem" }}>🔌</span>
+            <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#60A5FA" }}>Live Tally Connector</span>
+            <span style={{ marginLeft: "auto", fontSize: "0.72rem", fontWeight: 700, padding: "2px 10px", borderRadius: 20, background: `${statusColors[connStatus]}18`, color: statusColors[connStatus], border: `1px solid ${statusColors[connStatus]}40` }}>
+              ● {statusLabels[connStatus]}
+            </span>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
+          {/* Port + connect */}
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", marginBottom: "1rem", flexWrap: "wrap" }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>From Date (optional)</label>
+              <label style={{ display: "block", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.3rem" }}>Tally Port</label>
+              <input value={tallyPort} onChange={e => setTallyPort(e.target.value)} style={{ ...inp, width: 100 }} placeholder="9000" />
+            </div>
+            <button onClick={testConnection} disabled={connStatus === "connecting"}
+              style={{ padding: "9px 22px", borderRadius: 8, border: "none", background: "#3B82F6", color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", opacity: connStatus === "connecting" ? 0.6 : 1 }}>
+              {connStatus === "connecting" ? "Testing…" : connStatus === "connected" ? "Re-test" : "Connect to Tally"}
+            </button>
+          </div>
+
+          {connMsg && (
+            <div style={{ fontSize: "0.8rem", color: connStatus === "connected" ? "#4ade80" : "#f87171", background: connStatus === "connected" ? "rgba(74,222,128,0.07)" : "rgba(248,113,113,0.07)", border: `1px solid ${connStatus === "connected" ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}`, borderRadius: 8, padding: "0.6rem 0.9rem", marginBottom: "1rem" }}>
+              {connMsg}
+            </div>
+          )}
+
+          {/* Enable Tally guide */}
+          {(connStatus === "idle" || connStatus === "error") && (
+            <details style={{ marginBottom: "1rem" }}>
+              <summary style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)", cursor: "pointer", userSelect: "none" }}>How to enable Tally HTTP server →</summary>
+              <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                {[
+                  "Open Tally Prime / ERP 9",
+                  "Go to: F12 (Configure) → Advanced Configuration",
+                  'Enable "TallyPrime Acts As ODBC Server" → Yes',
+                  "Port: 9000 (default) — or change above if different",
+                  "Press Escape to save, then click Connect",
+                ].map((s, i) => (
+                  <div key={i} style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
+                    <span style={{ background: "#3B82F6", color: "#fff", width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.65rem", flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
+                    <span style={{ fontSize: "0.8rem", color: "rgba(237,232,220,0.6)" }}>{s}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+
+          {/* Date range */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1.25rem" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.3rem" }}>From Date</label>
               <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>To Date (optional)</label>
+              <label style={{ display: "block", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.3rem" }}>To Date</label>
               <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1.5rem" }}>
-            <span style={{ fontSize: "1.5rem" }}>📒</span>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>{journalCount ?? "—"} posted journal entries</div>
-              <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)" }}>Ready for export as Tally XML vouchers</div>
-            </div>
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <button onClick={syncLedgers} disabled={connStatus !== "connected" || !!syncing}
+              style={{ flex: 1, minWidth: 180, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(59,130,246,0.35)", background: "rgba(59,130,246,0.1)", color: connStatus === "connected" ? "#60A5FA" : "rgba(96,165,250,0.35)", fontWeight: 700, fontSize: "0.88rem", cursor: connStatus === "connected" ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+              {syncing === "ledgers" ? "⏳ Syncing Ledgers…" : "📒 Sync Ledgers (Chart of Accounts)"}
+            </button>
+            <button onClick={pushVouchers} disabled={connStatus !== "connected" || !!syncing}
+              style={{ flex: 1, minWidth: 180, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(129,140,248,0.35)", background: "rgba(129,140,248,0.1)", color: connStatus === "connected" ? "#818CF8" : "rgba(129,140,248,0.35)", fontWeight: 700, fontSize: "0.88rem", cursor: connStatus === "connected" ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+              {syncing === "vouchers" ? "⏳ Pushing Vouchers…" : `🧾 Push Vouchers (${journalCount ?? "—"} entries)`}
+            </button>
           </div>
 
-          {bizId && (
-            <a href={buildExportUrl()} download style={{
-              display: "block", textAlign: "center", background: "#C9A84C", color: "#070C1A",
-              padding: "12px 28px", borderRadius: 8, fontWeight: 700, textDecoration: "none", fontSize: "0.95rem",
-            }}>
-              ⬇ Download Tally XML
-            </a>
+          {syncResult && (
+            <div style={{ marginTop: "1rem", fontSize: "0.82rem", fontWeight: 600, color: syncResult.ok ? "#4ade80" : "#fbbf24", background: syncResult.ok ? "rgba(74,222,128,0.07)" : "rgba(251,191,36,0.07)", border: `1px solid ${syncResult.ok ? "rgba(74,222,128,0.2)" : "rgba(251,191,36,0.2)"}`, borderRadius: 8, padding: "0.7rem 1rem" }}>
+              {syncResult.ok ? "✓ " : "⚠ "}{syncResult.msg}
+            </div>
           )}
-          <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "rgba(237,232,220,0.3)", textAlign: "center" }}>
-            Compatible with Tally Prime 3.0+, Tally ERP 9, Tally.ERP
-          </div>
         </div>
 
-        {/* Info boxes */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "1.5rem" }}>
+        {/* ── TIPS ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "2rem" }}>
           {[
-            { icon: "🔄", title: "Two-way sync", desc: "Export from FreWork → import into Tally. Use FreWork as your primary entry point." },
-            { icon: "✅", title: "All voucher types", desc: "Sales, Purchase, Payment, Receipt, Journal, Contra — all exported correctly." },
-            { icon: "🏷️", title: "Ledger names matched", desc: "Account names in FreWork must match your Tally ledger names for clean import." },
-            { icon: "📅", title: "Date range filter", desc: "Export specific months or quarters for GST reconciliation." },
-          ].map(tip => (
-            <div key={tip.title} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 10, padding: "1rem" }}>
-              <div style={{ fontSize: "1.2rem", marginBottom: "0.4rem" }}>{tip.icon}</div>
-              <div style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: "0.25rem" }}>{tip.title}</div>
-              <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", lineHeight: 1.5 }}>{tip.desc}</div>
+            { icon: "1️⃣", title: "Sync Ledgers First", desc: "Always push Chart of Accounts before pushing vouchers — Tally needs ledgers to exist first." },
+            { icon: "🏢", title: "Active Company", desc: "Vouchers are pushed into whichever company is currently open in Tally. Switch company in Tally if needed." },
+            { icon: "🔁", title: "Duplicates", desc: "Tally does not deduplicate vouchers. Push once per date range to avoid double entries." },
+            { icon: "🌐", title: "Same PC only", desc: "The browser must be on the same PC as Tally. Won't work from mobile or another device." },
+          ].map(t => (
+            <div key={t.title} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 10, padding: "0.9rem 1rem" }}>
+              <div style={{ fontSize: "1.1rem", marginBottom: "0.35rem" }}>{t.icon}</div>
+              <div style={{ fontWeight: 700, fontSize: "0.82rem", marginBottom: "0.2rem" }}>{t.title}</div>
+              <div style={{ fontSize: "0.74rem", color: "rgba(237,232,220,0.4)", lineHeight: 1.5 }}>{t.desc}</div>
             </div>
           ))}
+        </div>
+
+        {/* ── XML EXPORT (kept as fallback) ── */}
+        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, padding: "1.25rem 1.5rem" }}>
+          <div style={{ fontWeight: 700, marginBottom: "0.25rem", fontSize: "0.88rem" }}>⬇ Manual XML Export (fallback)</div>
+          <p style={{ margin: "0 0 1rem", fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>If the live connector doesn&apos;t work, download XML and import manually via Gateway of Tally → Import → Vouchers.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1rem" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.3rem" }}>Financial Year</label>
+              <select value={fyId ?? ""} onChange={e => setFyId(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box", cursor: "pointer" }}>
+                {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end" }}>
+              {bizId && (
+                <a href={buildExportUrl()} download style={{ display: "block", width: "100%", textAlign: "center", background: "rgba(237,232,220,0.08)", color: "#EDE8DC", padding: "9px 0", borderRadius: 8, fontWeight: 700, textDecoration: "none", fontSize: "0.85rem", border: "1px solid rgba(237,232,220,0.12)" }}>
+                  Download Tally XML
+                </a>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
