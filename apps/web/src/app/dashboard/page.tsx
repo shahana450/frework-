@@ -190,14 +190,15 @@ export default function DashboardPage() {
       setUserRole(fwUser?.role ?? "client");
       setMySpaces(spacesData ?? []);
       setHasCoworkingListing(!!coworkData);
-      // Show purpose selector only for non-admin users who haven't chosen yet
-      const adminEmails = ["admin.frework@gmail.com", "admin.frework@gmail.com"];
-      if (!adminEmails.includes(u.email ?? "")) {
+      // Admins always see the admin panel — clear any stale purpose redirect
+      const adminEmails = ["admin.frework@gmail.com"];
+      if (adminEmails.includes(u.email ?? "")) {
+        localStorage.removeItem(`fw_purpose_${u.id}`);
+      } else {
         const chosen = localStorage.getItem(`fw_purpose_${u.id}`);
         if (!chosen) {
           setShowPurpose(true);
         } else {
-          // Already chose — redirect immediately
           router.replace(chosen);
           return;
         }
@@ -211,7 +212,7 @@ export default function DashboardPage() {
     router.replace("/");
   };
 
-  const ADMIN_EMAILS = ["admin.frework@gmail.com", "admin.frework@gmail.com"];
+  const ADMIN_EMAILS = ["admin.frework@gmail.com"];
   const isAdmin = ADMIN_EMAILS.includes(user?.email ?? "");
 
   if (loading) {
