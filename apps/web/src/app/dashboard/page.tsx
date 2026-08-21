@@ -88,6 +88,65 @@ function EmptyState({ icon: Icon, title, desc, cta, href }: {
   );
 }
 
+type AdminCard = { icon: string; title: string; desc: string; href: string; color: string; border: string; bg: string; badge: string; external?: boolean };
+
+const PLATFORM_CARDS: AdminCard[] = [
+  { icon: "🏛️", title: "Coworking Submissions", desc: "Review and approve space listings submitted by owners", href: "/dashboard/coworking", color: "#F59E0B", border: "rgba(245,158,11,0.25)", bg: "rgba(245,158,11,0.07)", badge: "Approve / Reject" },
+  { icon: "📋", title: "Service Orders", desc: "View all paid service orders from customers", href: "/dashboard/orders", color: "#2563EB", border: "rgba(37,99,235,0.25)", bg: "rgba(37,99,235,0.07)", badge: "Manage Orders" },
+  { icon: "📂", title: "Service Requests", desc: "Review uploaded docs and grant service packages to users", href: "/dashboard/service-requests", color: "#F59E0B", border: "rgba(245,158,11,0.25)", bg: "rgba(245,158,11,0.07)", badge: "Approve Packages" },
+  { icon: "👥", title: "Freelancer Profiles", desc: "Review and approve freelancer profile submissions", href: "/dashboard/freelancer", color: "#059669", border: "rgba(5,150,105,0.25)", bg: "rgba(5,150,105,0.07)", badge: "Review Profiles" },
+  { icon: "🚀", title: "Startup Listings", desc: "Manage startup profiles and funding listings", href: "/dashboard/startup", color: "#7C3AED", border: "rgba(124,58,237,0.25)", bg: "rgba(124,58,237,0.07)", badge: "View Startups" },
+  { icon: "💬", title: "Support Messages", desc: "Customer queries and WhatsApp conversations", href: "https://wa.me/918590874681", color: "#25D366", border: "rgba(37,211,102,0.25)", bg: "rgba(37,211,102,0.07)", badge: "Open WhatsApp", external: true },
+  { icon: "🌐", title: "Live Website", desc: "View the public-facing FreWork website", href: "/", color: "#0891B2", border: "rgba(8,145,178,0.25)", bg: "rgba(8,145,178,0.07)", badge: "Open Site" },
+];
+
+const FINANCE_CARDS: AdminCard[] = [
+  { icon: "🛩️", title: "Finance Dashboard", desc: "Overview — P&L snapshot, pending tasks, quick actions", href: "/finance", color: "#3B82F6", border: "rgba(59,130,246,0.25)", bg: "rgba(59,130,246,0.07)", badge: "Dashboard" },
+  { icon: "🔑", title: "FrePilot Admin", desc: "Grant trials, activate or revoke FrePilot subscriptions", href: "/finance/admin", color: "#818CF8", border: "rgba(129,140,248,0.25)", bg: "rgba(129,140,248,0.07)", badge: "Manage Subs" },
+  { icon: "🧾", title: "Sales Invoices", desc: "Create and manage sales invoices for clients", href: "/finance/sales/new", color: "#3B82F6", border: "rgba(59,130,246,0.2)", bg: "rgba(59,130,246,0.06)", badge: "New Invoice" },
+  { icon: "📦", title: "Purchase Bills", desc: "Record vendor bills and purchase entries", href: "/finance/purchases/new", color: "#60A5FA", border: "rgba(96,165,250,0.2)", bg: "rgba(96,165,250,0.06)", badge: "New Bill" },
+  { icon: "💸", title: "Expenses", desc: "Record and categorise business expenses", href: "/finance/expenses", color: "#818CF8", border: "rgba(129,140,248,0.2)", bg: "rgba(129,140,248,0.06)", badge: "Record" },
+  { icon: "💳", title: "Payment Entry", desc: "Record receipts and payments against invoices", href: "/finance/payment", color: "#38BDF8", border: "rgba(56,189,248,0.2)", bg: "rgba(56,189,248,0.06)", badge: "Pay / Receive" },
+  { icon: "📤", title: "Upload Documents", desc: "Upload invoices & bank statements for AI extraction", href: "/finance/upload", color: "#3B82F6", border: "rgba(59,130,246,0.2)", bg: "rgba(59,130,246,0.06)", badge: "Upload" },
+  { icon: "🤖", title: "AI Review Queue", desc: "Review and approve AI-extracted journal entries", href: "/finance/ai-review", color: "#818CF8", border: "rgba(129,140,248,0.2)", bg: "rgba(129,140,248,0.06)", badge: "Review AI" },
+  { icon: "📒", title: "Journal Entries", desc: "Double-entry ledger — Dr = Cr enforced", href: "/finance/journals", color: "#60A5FA", border: "rgba(96,165,250,0.2)", bg: "rgba(96,165,250,0.06)", badge: "Journals" },
+  { icon: "📒", title: "Account Ledger", desc: "Account-wise ledger with opening & closing balances", href: "/finance/ledger", color: "#38BDF8", border: "rgba(56,189,248,0.2)", bg: "rgba(56,189,248,0.06)", badge: "Ledger" },
+  { icon: "📥", title: "Receivables (AR)", desc: "Who owes you money — customer aging report", href: "/finance/receivables", color: "#3B82F6", border: "rgba(59,130,246,0.2)", bg: "rgba(59,130,246,0.06)", badge: "AR" },
+  { icon: "📤", title: "Payables (AP)", desc: "Who you owe — vendor aging report", href: "/finance/payables", color: "#818CF8", border: "rgba(129,140,248,0.2)", bg: "rgba(129,140,248,0.06)", badge: "AP" },
+  { icon: "📈", title: "Financial Reports", desc: "P&L, Balance Sheet, Cash Flow for the business", href: "/finance/reports", color: "#60A5FA", border: "rgba(96,165,250,0.2)", bg: "rgba(96,165,250,0.06)", badge: "Reports" },
+  { icon: "🏛️", title: "GST Returns", desc: "GSTR-1, GSTR-3B — auto-prepared from books", href: "/finance/gst", color: "#38BDF8", border: "rgba(56,189,248,0.2)", bg: "rgba(56,189,248,0.06)", badge: "GST" },
+  { icon: "🔖", title: "TDS Tracker", desc: "Section-wise TDS deductions, due dates & challan", href: "/finance/tds", color: "#3B82F6", border: "rgba(59,130,246,0.2)", bg: "rgba(59,130,246,0.06)", badge: "TDS" },
+  { icon: "🏦", title: "Bank Reconciliation", desc: "Import CSV, auto-match bank transactions", href: "/finance/banking", color: "#818CF8", border: "rgba(129,140,248,0.2)", bg: "rgba(129,140,248,0.06)", badge: "BRS" },
+  { icon: "🔄", title: "Tally Export", desc: "Export books as Tally-compatible XML", href: "/finance/tally", color: "#60A5FA", border: "rgba(96,165,250,0.2)", bg: "rgba(96,165,250,0.06)", badge: "Export" },
+  { icon: "📊", title: "Chart of Accounts", desc: "Indian account heads — Assets, Liabilities, Income, Expense", href: "/finance/chart-of-accounts", color: "#38BDF8", border: "rgba(56,189,248,0.2)", bg: "rgba(56,189,248,0.06)", badge: "COA" },
+  { icon: "👤", title: "Contacts", desc: "Manage customers and vendors with opening balances", href: "/finance/contacts", color: "#3B82F6", border: "rgba(59,130,246,0.2)", bg: "rgba(59,130,246,0.06)", badge: "Contacts" },
+  { icon: "📅", title: "Financial Years", desc: "Create and manage financial years per business", href: "/finance/fy", color: "#818CF8", border: "rgba(129,140,248,0.2)", bg: "rgba(129,140,248,0.06)", badge: "FY" },
+  { icon: "🫂", title: "Team & Access", desc: "Add team members and set access permissions", href: "/finance/team", color: "#60A5FA", border: "rgba(96,165,250,0.2)", bg: "rgba(96,165,250,0.06)", badge: "Team" },
+  { icon: "⚙️", title: "Business Setup", desc: "Configure GSTIN, bank accounts and business details", href: "/finance/setup", color: "#38BDF8", border: "rgba(56,189,248,0.2)", bg: "rgba(56,189,248,0.06)", badge: "Setup" },
+];
+
+function AdminCardGrid({ cards }: { cards: AdminCard[] }) {
+  return (
+    <>
+      {cards.map(item => (
+        <Link key={item.title} href={item.href} target={item.external ? "_blank" : undefined} rel={item.external ? "noopener noreferrer" : undefined}
+          className="rounded-2xl border p-5 flex flex-col gap-3 transition-all hover:scale-[1.02] hover:opacity-90"
+          style={{ background: item.bg, borderColor: item.border }}>
+          <div className="flex items-start justify-between">
+            <span className="text-2xl">{item.icon}</span>
+            <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: item.bg, color: item.color, border: `1px solid ${item.border}` }}>{item.badge}</span>
+          </div>
+          <div>
+            <h3 className="font-black text-sm mb-1" style={{ color: "#EDE8DC" }}>{item.title}</h3>
+            <p className="text-xs leading-relaxed" style={{ color: "#8A9BB8" }}>{item.desc}</p>
+          </div>
+          <div className="flex items-center gap-1 text-xs font-bold mt-auto" style={{ color: item.color }}>Open <ArrowRight className="w-3.5 h-3.5" /></div>
+        </Link>
+      ))}
+    </>
+  );
+}
+
 function TrialGrantWidget() {
   const [userId, setUserId] = useState("");
   const [plan, setPlan] = useState("professional");
@@ -338,71 +397,18 @@ export default function DashboardPage() {
           <TrialGrantWidget />
 
 
-          {(() => {
-            type Card = { icon: string; title: string; desc: string; href: string; color: string; border: string; bg: string; badge: string; external?: boolean };
-            const platformCards: Card[] = [
-              { icon: "🏛️", title: "Coworking Submissions", desc: "Review and approve space listings submitted by owners", href: "/dashboard/coworking", color: "#F59E0B", border: "rgba(245,158,11,0.25)", bg: "rgba(245,158,11,0.07)", badge: "Approve / Reject" },
-              { icon: "📋", title: "Service Orders", desc: "View all paid service orders from customers", href: "/dashboard/orders", color: "#2563EB", border: "rgba(37,99,235,0.25)", bg: "rgba(37,99,235,0.07)", badge: "Manage Orders" },
-              { icon: "📂", title: "Service Requests", desc: "Review uploaded docs and grant service packages to users", href: "/dashboard/service-requests", color: "#F59E0B", border: "rgba(245,158,11,0.25)", bg: "rgba(245,158,11,0.07)", badge: "Approve Packages" },
-              { icon: "👥", title: "Freelancer Profiles", desc: "Review and approve freelancer profile submissions", href: "/dashboard/freelancer", color: "#059669", border: "rgba(5,150,105,0.25)", bg: "rgba(5,150,105,0.07)", badge: "Review Profiles" },
-              { icon: "🚀", title: "Startup Listings", desc: "Manage startup profiles and funding listings", href: "/dashboard/startup", color: "#7C3AED", border: "rgba(124,58,237,0.25)", bg: "rgba(124,58,237,0.07)", badge: "View Startups" },
-              { icon: "💬", title: "Support Messages", desc: "Customer queries and WhatsApp conversations", href: "https://wa.me/918590874681", color: "#25D366", border: "rgba(37,211,102,0.25)", bg: "rgba(37,211,102,0.07)", badge: "Open WhatsApp", external: true },
-              { icon: "🌐", title: "Live Website", desc: "View the public-facing FreWork website", href: "/", color: "#0891B2", border: "rgba(8,145,178,0.25)", bg: "rgba(8,145,178,0.07)", badge: "Open Site" },
-            ];
-            const financeCards: Card[] = [
-              { icon: "🛩️", title: "Finance Dashboard", desc: "Overview — P&L snapshot, pending tasks, quick actions", href: "/finance", color: "#3B82F6", border: "rgba(59,130,246,0.25)", bg: "rgba(59,130,246,0.07)", badge: "Dashboard" },
-              { icon: "🔑", title: "FrePilot Admin", desc: "Grant trials, activate or revoke FrePilot subscriptions", href: "/finance/admin", color: "#818CF8", border: "rgba(129,140,248,0.25)", bg: "rgba(129,140,248,0.07)", badge: "Manage Subs" },
-              { icon: "🧾", title: "Sales Invoices", desc: "Create and manage sales invoices for clients", href: "/finance/sales/new", color: "#3B82F6", border: "rgba(59,130,246,0.2)", bg: "rgba(59,130,246,0.06)", badge: "New Invoice" },
-              { icon: "📦", title: "Purchase Bills", desc: "Record vendor bills and purchase entries", href: "/finance/purchases/new", color: "#60A5FA", border: "rgba(96,165,250,0.2)", bg: "rgba(96,165,250,0.06)", badge: "New Bill" },
-              { icon: "💸", title: "Expenses", desc: "Record and categorise business expenses", href: "/finance/expenses", color: "#818CF8", border: "rgba(129,140,248,0.2)", bg: "rgba(129,140,248,0.06)", badge: "Record" },
-              { icon: "💳", title: "Payment Entry", desc: "Record receipts and payments against invoices", href: "/finance/payment", color: "#38BDF8", border: "rgba(56,189,248,0.2)", bg: "rgba(56,189,248,0.06)", badge: "Pay / Receive" },
-              { icon: "📤", title: "Upload Documents", desc: "Upload invoices & bank statements for AI extraction", href: "/finance/upload", color: "#3B82F6", border: "rgba(59,130,246,0.2)", bg: "rgba(59,130,246,0.06)", badge: "Upload" },
-              { icon: "🤖", title: "AI Review Queue", desc: "Review and approve AI-extracted journal entries", href: "/finance/ai-review", color: "#818CF8", border: "rgba(129,140,248,0.2)", bg: "rgba(129,140,248,0.06)", badge: "Review AI" },
-              { icon: "📒", title: "Journal Entries", desc: "Double-entry ledger — Dr = Cr enforced", href: "/finance/journals", color: "#60A5FA", border: "rgba(96,165,250,0.2)", bg: "rgba(96,165,250,0.06)", badge: "Journals" },
-              { icon: "📒", title: "Account Ledger", desc: "Account-wise ledger with opening & closing balances", href: "/finance/ledger", color: "#38BDF8", border: "rgba(56,189,248,0.2)", bg: "rgba(56,189,248,0.06)", badge: "Ledger" },
-              { icon: "📥", title: "Receivables (AR)", desc: "Who owes you money — customer aging report", href: "/finance/receivables", color: "#3B82F6", border: "rgba(59,130,246,0.2)", bg: "rgba(59,130,246,0.06)", badge: "AR" },
-              { icon: "📤", title: "Payables (AP)", desc: "Who you owe — vendor aging report", href: "/finance/payables", color: "#818CF8", border: "rgba(129,140,248,0.2)", bg: "rgba(129,140,248,0.06)", badge: "AP" },
-              { icon: "📈", title: "Financial Reports", desc: "P&L, Balance Sheet, Cash Flow for the business", href: "/finance/reports", color: "#60A5FA", border: "rgba(96,165,250,0.2)", bg: "rgba(96,165,250,0.06)", badge: "Reports" },
-              { icon: "🏛️", title: "GST Returns", desc: "GSTR-1, GSTR-3B — auto-prepared from books", href: "/finance/gst", color: "#38BDF8", border: "rgba(56,189,248,0.2)", bg: "rgba(56,189,248,0.06)", badge: "GST" },
-              { icon: "🔖", title: "TDS Tracker", desc: "Section-wise TDS deductions, due dates & challan", href: "/finance/tds", color: "#3B82F6", border: "rgba(59,130,246,0.2)", bg: "rgba(59,130,246,0.06)", badge: "TDS" },
-              { icon: "🏦", title: "Bank Reconciliation", desc: "Import CSV, auto-match bank transactions", href: "/finance/banking", color: "#818CF8", border: "rgba(129,140,248,0.2)", bg: "rgba(129,140,248,0.06)", badge: "BRS" },
-              { icon: "🔄", title: "Tally Export", desc: "Export books as Tally-compatible XML", href: "/finance/tally", color: "#60A5FA", border: "rgba(96,165,250,0.2)", bg: "rgba(96,165,250,0.06)", badge: "Export" },
-              { icon: "📊", title: "Chart of Accounts", desc: "Indian account heads — Assets, Liabilities, Income, Expense", href: "/finance/chart-of-accounts", color: "#38BDF8", border: "rgba(56,189,248,0.2)", bg: "rgba(56,189,248,0.06)", badge: "COA" },
-              { icon: "👤", title: "Contacts", desc: "Manage customers and vendors with opening balances", href: "/finance/contacts", color: "#3B82F6", border: "rgba(59,130,246,0.2)", bg: "rgba(59,130,246,0.06)", badge: "Contacts" },
-              { icon: "📅", title: "Financial Years", desc: "Create and manage financial years per business", href: "/finance/fy", color: "#818CF8", border: "rgba(129,140,248,0.2)", bg: "rgba(129,140,248,0.06)", badge: "FY" },
-              { icon: "🫂", title: "Team & Access", desc: "Add team members and set access permissions", href: "/finance/team", color: "#60A5FA", border: "rgba(96,165,250,0.2)", bg: "rgba(96,165,250,0.06)", badge: "Team" },
-              { icon: "⚙️", title: "Business Setup", desc: "Configure GSTIN, bank accounts and business details", href: "/finance/setup", color: "#38BDF8", border: "rgba(56,189,248,0.2)", bg: "rgba(56,189,248,0.06)", badge: "Setup" },
-            ];
-            const renderCards = (list: Card[]) => list.map(item => (
-              <Link key={item.title} href={item.href} target={item.external ? "_blank" : undefined} rel={item.external ? "noopener noreferrer" : undefined}
-                className="rounded-2xl border p-5 flex flex-col gap-3 transition-all hover:scale-[1.02] hover:opacity-90"
-                style={{ background: item.bg, borderColor: item.border }}>
-                <div className="flex items-start justify-between">
-                  <span className="text-2xl">{item.icon}</span>
-                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: item.bg, color: item.color, border: `1px solid ${item.border}` }}>{item.badge}</span>
-                </div>
-                <div>
-                  <h3 className="font-black text-sm mb-1" style={{ color: "#EDE8DC" }}>{item.title}</h3>
-                  <p className="text-xs leading-relaxed" style={{ color: "#8A9BB8" }}>{item.desc}</p>
-                </div>
-                <div className="flex items-center gap-1 text-xs font-bold mt-auto" style={{ color: item.color }}>Open <ArrowRight className="w-3.5 h-3.5" /></div>
-              </Link>
-            ));
-            return (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-                <div className="col-span-full mb-1">
-                  <p className="text-[10px] font-black tracking-[0.2em] uppercase mb-1" style={{ color: "rgba(245,158,11,0.6)" }}>Platform Management</p>
-                  <div className="h-px" style={{ background: "rgba(245,158,11,0.15)" }} />
-                </div>
-                {renderCards(platformCards)}
-                <div className="col-span-full mt-6 mb-1">
-                  <p className="text-[10px] font-black tracking-[0.2em] uppercase mb-1" style={{ color: "rgba(59,130,246,0.6)" }}>FrePilot Finance</p>
-                  <div className="h-px" style={{ background: "rgba(59,130,246,0.15)" }} />
-                </div>
-                {renderCards(financeCards)}
-              </div>
-            );
-          })()}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="col-span-full mb-1">
+              <p className="text-[10px] font-black tracking-[0.2em] uppercase mb-1" style={{ color: "rgba(245,158,11,0.6)" }}>Platform Management</p>
+              <div className="h-px" style={{ background: "rgba(245,158,11,0.15)" }} />
+            </div>
+            <AdminCardGrid cards={PLATFORM_CARDS} />
+            <div className="col-span-full mt-6 mb-1">
+              <p className="text-[10px] font-black tracking-[0.2em] uppercase mb-1" style={{ color: "rgba(59,130,246,0.6)" }}>FrePilot Finance</p>
+              <div className="h-px" style={{ background: "rgba(59,130,246,0.15)" }} />
+            </div>
+            <AdminCardGrid cards={FINANCE_CARDS} />
+          </div>
         </div>
       </div>
     );

@@ -31,7 +31,16 @@ export async function POST(req: NextRequest) {
   const email = await getCallerEmail(req);
   if (!email || !ADMIN_EMAILS.includes(email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { action, user_id, plan, trial_days } = await req.json();
+  const { action, user_id: rawUserId, plan, trial_days } = await req.json();
+
+  // Resolve email → UUID if needed
+  let user_id = rawUserId;
+  if (rawUserId && rawUserId.includes("@")) {
+    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    const match = users.find((u) => u.email === rawUserId);
+    if (!match) return NextResponse.json({ error: `No user found with email ${rawUserId}` }, { status: 404 });
+    user_id = match.id;
+  }
 
   if (action === "grant_trial") {
     const endsAt = new Date();
