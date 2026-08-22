@@ -195,14 +195,15 @@ export default function TallyPage() {
         setFrom(cur.start_date);
         setTo(cur.end_date);
       }
-      const { count } = await supabase.from("fw_fin_journals").select("id", { count: "exact", head: true }).eq("business_id", saved).eq("status", "posted");
+      const { count, data: jData } = await supabase.from("fw_fin_journals").select("id,entry_no,date,narration,type,total_debit,total_credit", { count: "exact" }).eq("business_id", saved).eq("status", "posted").order("date");
       setJournalCount(count ?? 0);
+      if (jData?.length) { setJournals(jData); setPreviewOpen(true); }
     });
   }, []);
 
   async function loadJournalPreview() {
     if (!bizId) return;
-    setPreviewLoading(true); setPreviewOpen(true);
+    setPreviewLoading(true); setPreviewOpen(true); setSyncResult(null);
     let query = supabase
       .from("fw_fin_journals")
       .select("id,entry_no,date,narration,type,total_debit,total_credit")
@@ -212,6 +213,7 @@ export default function TallyPage() {
     if (to) query = query.lte("date", to);
     const { data } = await query.order("date");
     setJournals(data ?? []);
+    setJournalCount(data?.length ?? 0);
     setPreviewLoading(false);
   }
 
