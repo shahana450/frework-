@@ -297,7 +297,7 @@ export default function TallyPage() {
       setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
     }
     setSyncing(null);
-  }, [bizId, connStatus, tallyUrl]);
+  }, [bizId, connStatus, tallyUrl, from, to]);
 
   // ── Import ledgers FROM Tally → FrePilot Chart of Accounts ──────────────────
 
@@ -352,7 +352,7 @@ export default function TallyPage() {
       setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
     }
     setSyncing(null);
-  }, [bizId, connStatus, tallyUrl]);
+  }, [bizId, connStatus, tallyUrl, from, to]);
 
   // ── Push vouchers ─────────────────────────────────────────────────────────
 
