@@ -236,7 +236,7 @@ export default function TallyPage() {
     if (!bizId || connStatus !== "connected") return;
     setSyncing("ledgers"); setSyncResult(null);
     const { data: accounts } = await supabase
-      .from("fw_fin_accounts")
+      .from("fw_fin_chart_of_accounts")
       .select("name,type")
       .eq("business_id", bizId)
       .order("name");
@@ -270,25 +270,34 @@ export default function TallyPage() {
         setSyncing(null); return;
       }
 
-      // Upsert into fw_fin_accounts (by name + business_id)
-      const rows = ledgers.map(l => ({
-        business_id: bizId,
-        name: l.name,
-        type: tallyParentToType(l.parent),
-        parent_group: l.parent || null,
-        opening_balance: 0,
-        is_active: true,
-      }));
+      // Fetch existing account names to avoid duplicates
+      const { data: existing } = await supabase
+        .from("fw_fin_chart_of_accounts")
+        .select("name")
+        .eq("business_id", bizId);
+      const existingNames = new Set((existing ?? []).map(a => a.name));
 
-      // Insert in batches of 50
+      const rows = ledgers
+        .filter(l => !existingNames.has(l.name))
+        .map((l, idx) => ({
+          business_id: bizId,
+          code: `TL${String(idx + 1).padStart(3, "0")}`,
+          name: l.name,
+          type: tallyParentToType(l.parent),
+          description: l.parent ? `Imported from Tally — ${l.parent}` : "Imported from Tally",
+          is_system: false,
+          is_group: false,
+          sort_order: (existing?.length ?? 0) + idx + 1,
+        }));
+
       let inserted = 0;
       for (let i = 0; i < rows.length; i += 50) {
         const { error } = await supabase
-          .from("fw_fin_accounts")
-          .upsert(rows.slice(i, i + 50), { onConflict: "business_id,name", ignoreDuplicates: true });
+          .from("fw_fin_chart_of_accounts")
+          .insert(rows.slice(i, i + 50));
         if (!error) inserted += Math.min(50, rows.length - i);
       }
-      setSyncResult({ ok: true, msg: `Imported ${inserted} ledgers from Tally into Chart of Accounts.` });
+      setSyncResult({ ok: true, msg: `Imported ${inserted} new ledgers from Tally into Chart of Accounts (${existingNames.size} already existed).` });
 
       // Refresh journal count
       const { count } = await supabase.from("fw_fin_journals").select("id", { count: "exact", head: true }).eq("business_id", bizId).eq("status", "posted");
@@ -306,7 +315,7 @@ export default function TallyPage() {
     setSyncing("vouchers"); setSyncResult(null);
     let query = supabase
       .from("fw_fin_journals")
-      .select("id,date,narration,voucher_type,fw_fin_journal_lines(dr_amount,cr_amount,fw_fin_accounts(name))")
+      .select("id,date,narration,voucher_type,fw_fin_journal_lines(dr_amount,cr_amount,fw_fin_chart_of_accounts(name))")
       .eq("business_id", bizId)
       .eq("status", "posted");
     if (from) query = query.gte("date", from);
@@ -320,7 +329,7 @@ export default function TallyPage() {
       narration: j.narration as string ?? "",
       voucher_type: j.voucher_type as string ?? "journal",
       lines: ((j.fw_fin_journal_lines as Record<string, unknown>[]) ?? []).map((l: Record<string, unknown>) => ({
-        account_name: (l.fw_fin_accounts as Record<string, unknown> | null)?.name as string ?? "Unknown",
+        account_name: (l.fw_fin_chart_of_accounts as Record<string, unknown> | null)?.name as string ?? "Unknown",
         dr_amount: Number(l.dr_amount) || 0,
         cr_amount: Number(l.cr_amount) || 0,
       })),
