@@ -102,36 +102,39 @@ function parseTallyLedgers(xml: string): { name: string; parent: string }[] {
   const seen = new Set<string>();
   const results: { name: string; parent: string }[] = [];
 
-  // Method 1: <LEDGER NAME="..."> attributes (Trial Balance / XML export format)
-  // Track the enclosing group as parent
-  const groupParentStack: string[] = [];
-  const lines = xml.split("\n");
-  for (const line of lines) {
-    const groupAttr = line.match(/<(?:ACCOUNTBLOCK|GROUP|GROUPENTRY)[^>]*NAME="([^"]+)"/i);
-    if (groupAttr) { groupParentStack.push(groupAttr[1]); continue; }
-    if (line.match(/<\/(?:ACCOUNTBLOCK|GROUP|GROUPENTRY)>/i)) { groupParentStack.pop(); continue; }
-    const ledgerAttr = line.match(/<LEDGER[^>]*NAME="([^"]+)"/i);
-    if (ledgerAttr) {
-      const name = ledgerAttr[1].trim();
-      if (name && !seen.has(name)) {
-        seen.add(name);
-        results.push({ name, parent: groupParentStack[groupParentStack.length - 1] ?? "" });
-      }
-    }
+  // Method 1: Tally Prime collection format — <LEDGER NAME="...">...<PARENT.LIST><PARENT>...</PARENT>
+  const ledgerBlockRe = /<LEDGER\s+NAME="([^"]+)"[^>]*>([\s\S]*?)<\/LEDGER>/gi;
+  let m;
+  while ((m = ledgerBlockRe.exec(xml)) !== null) {
+    const name = m[1].trim();
+    const block = m[2];
+    const parentMatch = block.match(/<PARENT\.LIST[^>]*>[\s\S]*?<PARENT>([^<]+)<\/PARENT>/i)
+      ?? block.match(/<PARENT>([^<]+)<\/PARENT>/i);
+    const parent = parentMatch?.[1]?.trim() ?? "";
+    if (name && !seen.has(name)) { seen.add(name); results.push({ name, parent }); }
   }
 
-  // Method 2: <LEDGER>...<NAME>...</NAME>...<PARENT>...</PARENT>... (master export format)
+  // Method 2: <LEDGER>...<NAME>...</NAME>...<PARENT>... (older Tally master export format)
   if (!results.length) {
     const ledgerRe = /<LEDGER[^>]*>([\s\S]*?)<\/LEDGER>/gi;
-    let m;
     while ((m = ledgerRe.exec(xml)) !== null) {
       const block = m[1];
       const nameMatch = block.match(/<NAME\.LIST[^>]*>[\s\S]*?<NAME>([^<]+)<\/NAME>/i)
         ?? block.match(/<NAME>([^<]+)<\/NAME>/i);
-      const parentMatch = block.match(/<PARENT>([^<]+)<\/PARENT>/i);
+      const parentMatch = block.match(/<PARENT\.LIST[^>]*>[\s\S]*?<PARENT>([^<]+)<\/PARENT>/i)
+        ?? block.match(/<PARENT>([^<]+)<\/PARENT>/i);
       const name = nameMatch?.[1]?.trim() ?? "";
       const parent = parentMatch?.[1]?.trim() ?? "";
       if (name && !seen.has(name)) { seen.add(name); results.push({ name, parent }); }
+    }
+  }
+
+  // Method 3: NAME attribute only — no parent info (minimal fallback)
+  if (!results.length) {
+    const simpleRe = /<LEDGER\s+NAME="([^"]+)"/gi;
+    while ((m = simpleRe.exec(xml)) !== null) {
+      const name = m[1].trim();
+      if (name && !seen.has(name)) { seen.add(name); results.push({ name, parent: "" }); }
     }
   }
 
@@ -268,7 +271,7 @@ export default function TallyPage() {
       const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ledgers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ledgers" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
       const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(20000) });
       const text = await res.text();
-      setRawDebug(text.slice(0, 1000));
+      setRawDebug(text.slice(0, 2000));
       const ledgers = parseTallyLedgers(text);
       if (!ledgers.length) {
         setSyncResult({ ok: false, msg: `No ledgers found. Open the Raw response above to see what Tally returned.` });
@@ -466,8 +469,8 @@ export default function TallyPage() {
             </div>
           )}
 
-          {/* Debug panel — always shown when connected and we have a response */}
-          {connStatus === "connected" && rawDebug && (
+          {/* Debug panel — shown when we have any Tally response */}
+          {rawDebug && (
             <details style={{ marginBottom: "1rem" }}>
               <summary style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.3)", cursor: "pointer" }}>🔍 Raw Tally response (for debugging)</summary>
               <pre style={{ marginTop: "0.5rem", fontSize: "0.68rem", color: "rgba(237,232,220,0.5)", background: "rgba(0,0,0,0.3)", padding: "0.75rem", borderRadius: 8, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
