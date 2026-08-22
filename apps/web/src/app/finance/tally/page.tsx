@@ -359,18 +359,20 @@ export default function TallyPage() {
   const pushVouchers = useCallback(async () => {
     if (!bizId || connStatus !== "connected") return;
     setSyncing("vouchers"); setSyncResult(null);
-    let query = supabase
+
+    // Use the IDs already loaded in the preview — avoids stale date-range issues
+    const previewIds = journals.map(j => j.id);
+    if (!previewIds.length) { setSyncResult({ ok: false, msg: "No journals in preview. Click Refresh Preview first." }); setSyncing(null); return; }
+
+    const { data: fullJournals } = await supabase
       .from("fw_fin_journals")
       .select("id,date,narration,voucher_type,fw_fin_journal_lines(dr_amount,cr_amount,fw_fin_chart_of_accounts(name))")
-      .eq("business_id", bizId)
-      .eq("status", "posted");
-    if (from) query = query.gte("date", from);
-    if (to) query = query.lte("date", to);
-    const { data: journals } = await query.order("date");
-    if (!journals?.length) { setSyncResult({ ok: false, msg: "No posted journals in this date range." }); setSyncing(null); return; }
+      .in("id", previewIds)
+      .order("date");
+    if (!fullJournals?.length) { setSyncResult({ ok: false, msg: "Could not load journal lines. Try Refresh Preview." }); setSyncing(null); return; }
 
     // Shape data
-    const shaped = journals.map((j: Record<string, unknown>) => ({
+    const shaped = fullJournals.map((j: Record<string, unknown>) => ({
       date: j.date as string,
       narration: j.narration as string ?? "",
       voucher_type: j.voucher_type as string ?? "journal",
@@ -391,7 +393,7 @@ export default function TallyPage() {
       setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
     }
     setSyncing(null);
-  }, [bizId, connStatus, tallyUrl, from, to]);
+  }, [bizId, connStatus, tallyUrl, journals]);
 
   function buildExportUrl() {
     const params = new URLSearchParams({ business_id: bizId! });
