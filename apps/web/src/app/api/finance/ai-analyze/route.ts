@@ -159,11 +159,10 @@ export async function POST(req: NextRequest) {
         business_id,
         document_id: doc_id,
         suggested_type: t.suggested_type ?? "payment",
-        suggested_narration: t.narration ?? t.description,
+        suggested_narration: `[${t.date}] ${t.narration ?? t.description}${t.debit ? ` DR ₹${t.debit}` : t.credit ? ` CR ₹${t.credit}` : ""}`,
         suggested_lines: t.journal_lines ?? [],
         confidence: 0.88,
         status: "pending",
-        metadata: { date: t.date, debit: t.debit, credit: t.credit, balance: t.balance, description: t.description },
       }));
 
       // Insert in batches of 20
