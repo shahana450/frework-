@@ -178,7 +178,6 @@ export default function UploadPage() {
           if (aiData.bank_statement) {
             aiResult = {
               vendor: aiData.bank_name ?? "Bank",
-              amount: null,
               narration: `Bank statement — ${aiData.transaction_count ?? 0} transactions extracted`,
               confidence: 0.92,
               type: "bank_statement",
