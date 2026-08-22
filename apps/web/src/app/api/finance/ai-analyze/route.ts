@@ -9,7 +9,12 @@ const supabase = createClient(
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-const SINGLE_DOC_PROMPT = `You are an expert Indian chartered accountant. Analyze the document and extract financial information.
+function buildSingleDocPrompt(existingAccounts: { name: string; type: string }[]) {
+  const accountList = existingAccounts.length
+    ? `\n\nEXISTING LEDGERS IN THIS COMPANY'S CHART OF ACCOUNTS:\n${existingAccounts.map(a => `- ${a.name} (${a.type})`).join("\n")}\n\nIMPORTANT: For journal_lines, use exact names from the above list where possible. For the vendor/supplier ledger, use the vendor's own name if it exists in the list above, otherwise use the vendor's name directly (e.g., "Exports Essentials LLP" not "Accounts Payable (Creditors)"). Same for customers — use their specific name, not a generic debtors account.`
+    : "\n\nFor the vendor/supplier ledger use the vendor's actual name (e.g. the company name on the invoice), not a generic 'Accounts Payable (Creditors)'. For customers use their actual name, not 'Accounts Receivable (Debtors)'.";
+
+  return `You are an expert Indian chartered accountant. Analyze the document and extract financial information.${accountList}
 
 Return ONLY valid JSON (no markdown, no explanation):
 {
@@ -31,14 +36,14 @@ Return ONLY valid JSON (no markdown, no explanation):
   "narration": "one-line description for journal entry",
   "suggested_type": "sales|purchase|expense|payment|receipt|contra",
   "journal_lines": [
-    {"account_name": "exact Indian chart of accounts name", "dr": number, "cr": number}
+    {"account_name": "vendor/customer name or exact ledger from existing accounts", "dr": number, "cr": number}
   ],
   "confidence": number 0-1,
   "items": [{"description": "string", "qty": number, "rate": number, "amount": number}]
 }
 
-Common account names: "Accounts Receivable (Debtors)", "Accounts Payable (Creditors)", "Sales / Revenue", "GST Payable - CGST", "GST Payable - SGST", "GST Payable - IGST", "GST Input Tax Credit", "Cash in Hand", "Bank Accounts", "TDS Payable", "TDS Receivable".
 Journal entries must balance: total debits = total credits.`;
+}
 
 function buildBankStatementPrompt(existingAccounts: { name: string; type: string }[]) {
   const accountList = existingAccounts.length
@@ -195,10 +200,17 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Single document (invoice / bill / receipt etc.) ────────────────────────
+    // Fetch COA so Claude can match to real ledger names
+    const { data: coaSingle } = await supabase
+      .from("fw_fin_chart_of_accounts")
+      .select("name,type")
+      .eq("business_id", business_id)
+      .order("name");
+
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 2048,
-      system: SINGLE_DOC_PROMPT,
+      system: buildSingleDocPrompt((coaSingle ?? []) as { name: string; type: string }[]),
       messages: [{ role: "user", content: userContent as Parameters<typeof anthropic.messages.create>[0]["messages"][0]["content"] }],
     });
 
