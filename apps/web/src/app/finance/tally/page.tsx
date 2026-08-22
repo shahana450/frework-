@@ -163,6 +163,12 @@ export default function TallyPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [journalCount, setJournalCount] = useState<number | null>(null);
+  const [journals, setJournals] = useState<{
+    id: string; date: string; narration: string; type: string;
+    entry_no: string; total_debit: number; total_credit: number;
+  }[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Connector state
   const [tallyPort, setTallyPort] = useState("7001");
@@ -193,6 +199,21 @@ export default function TallyPage() {
       setJournalCount(count ?? 0);
     });
   }, []);
+
+  async function loadJournalPreview() {
+    if (!bizId) return;
+    setPreviewLoading(true); setPreviewOpen(true);
+    let query = supabase
+      .from("fw_fin_journals")
+      .select("id,entry_no,date,narration,type,total_debit,total_credit")
+      .eq("business_id", bizId)
+      .eq("status", "posted");
+    if (from) query = query.gte("date", from);
+    if (to) query = query.lte("date", to);
+    const { data } = await query.order("date");
+    setJournals(data ?? []);
+    setPreviewLoading(false);
+  }
 
   // ── Test connection ──────────────────────────────────────────────────────
 
@@ -500,7 +521,62 @@ export default function TallyPage() {
               {syncing === "import" ? "⏳ Importing…" : "⬇ Import Ledgers from Tally"}
             </button>
           </div>
-          <div style={{ marginBottom: "0.5rem", fontSize: "0.65rem", fontWeight: 700, color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.1em" }}>FrePilot → Tally</div>
+          {/* Journal Preview */}
+          <div style={{ marginBottom: "0.75rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+              <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.1em" }}>FrePilot → Tally</div>
+              <button onClick={loadJournalPreview} style={{ background: "none", border: "1px solid rgba(237,232,220,0.15)", color: "rgba(237,232,220,0.55)", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontSize: "0.75rem", fontWeight: 600 }}>
+                {previewOpen ? "↺ Refresh Preview" : "👁 Preview Journals"}
+              </button>
+            </div>
+
+            {previewOpen && (
+              <div style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, marginBottom: "1rem", overflow: "hidden" }}>
+                {previewLoading ? (
+                  <div style={{ padding: "1rem", textAlign: "center", color: "rgba(237,232,220,0.35)", fontSize: "0.8rem" }}>Loading journals…</div>
+                ) : journals.length === 0 ? (
+                  <div style={{ padding: "1rem", textAlign: "center", color: "rgba(237,232,220,0.3)", fontSize: "0.8rem" }}>No posted journals in this date range.</div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+                      <thead>
+                        <tr style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(237,232,220,0.08)" }}>
+                          {["Entry No", "Date", "Type", "Narration", "DR (₹)", "CR (₹)"].map(h => (
+                            <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: "left", color: "rgba(237,232,220,0.35)", fontWeight: 700, fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.07em", whiteSpace: "nowrap" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {journals.map((j, i) => {
+                          const typeColor: Record<string, string> = { sales: "#4ade80", purchase: "#60a5fa", expense: "#f59e0b", payment: "#a78bfa", receipt: "#34d399", journal: "rgba(237,232,220,0.4)" };
+                          return (
+                            <tr key={j.id} style={{ borderTop: i === 0 ? "none" : "1px solid rgba(237,232,220,0.05)" }}>
+                              <td style={{ padding: "0.5rem 0.75rem", fontFamily: "monospace", color: "rgba(237,232,220,0.4)", whiteSpace: "nowrap" }}>{j.entry_no}</td>
+                              <td style={{ padding: "0.5rem 0.75rem", whiteSpace: "nowrap", color: "rgba(237,232,220,0.6)" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                              <td style={{ padding: "0.5rem 0.75rem" }}>
+                                <span style={{ fontSize: "0.65rem", fontWeight: 700, color: typeColor[j.type] ?? "rgba(237,232,220,0.4)", background: `${typeColor[j.type] ?? "rgba(237,232,220,0.1)"}18`, padding: "2px 7px", borderRadius: 10, whiteSpace: "nowrap" }}>{j.type}</span>
+                              </td>
+                              <td style={{ padding: "0.5rem 0.75rem", color: "rgba(237,232,220,0.7)", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
+                              <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "#4ade80", whiteSpace: "nowrap" }}>₹{Number(j.total_debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                              <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "#60a5fa", whiteSpace: "nowrap" }}>₹{Number(j.total_credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr style={{ borderTop: "1px solid rgba(237,232,220,0.12)", background: "rgba(255,255,255,0.02)" }}>
+                          <td colSpan={4} style={{ padding: "0.5rem 0.75rem", fontWeight: 700, fontSize: "0.72rem", color: "rgba(237,232,220,0.5)" }}>{journals.length} journal{journals.length !== 1 ? "s" : ""} ready to push</td>
+                          <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontWeight: 700, color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>₹{journals.reduce((s, j) => s + Number(j.total_debit), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                          <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontWeight: 700, color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>₹{journals.reduce((s, j) => s + Number(j.total_credit), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
             <button onClick={syncLedgers} disabled={connStatus !== "connected" || !!syncing}
               style={{ flex: 1, minWidth: 180, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(59,130,246,0.35)", background: "rgba(59,130,246,0.1)", color: connStatus === "connected" ? "#60A5FA" : "rgba(96,165,250,0.35)", fontWeight: 700, fontSize: "0.88rem", cursor: connStatus === "connected" ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
