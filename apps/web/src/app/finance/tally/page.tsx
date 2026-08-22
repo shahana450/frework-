@@ -222,8 +222,8 @@ export default function TallyPage() {
   async function testConnection() {
     setConnStatus("connecting"); setConnMsg(""); setSyncResult(null); setRawDebug("");
     try {
-      // Tally Prime format: VERSION + TYPE=Collection + DESC (not EXPORTDATA)
-      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+      // Fetch company info + current period dates
+      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,StartingFrom,EndingAt</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
       const res = await fetch(tallyUrl, {
         method: "POST",
         headers: { "Content-Type": "text/xml" },
@@ -233,10 +233,33 @@ export default function TallyPage() {
       if (res.ok) {
         const text = await res.text();
         const found = extractCompanyName(text);
-        setRawDebug(text.slice(0, 600)); // keep first 600 chars for debug
+        setRawDebug(text.slice(0, 800));
         setCompanyName(found);
         setConnStatus("connected");
         setConnMsg(found ? `Connected — ${found}` : "Connected to Tally");
+
+        // Parse Tally's current period dates (format: YYYYMMDD or DD-Mon-YYYY)
+        const startMatch = text.match(/<STARTINGFROM[^>]*>([^<]+)<\/STARTINGFROM>/i)
+          ?? text.match(/<STARTDATE[^>]*>([^<]+)<\/STARTDATE>/i);
+        const endMatch = text.match(/<ENDINGAT[^>]*>([^<]+)<\/ENDINGAT>/i)
+          ?? text.match(/<ENDDATE[^>]*>([^<]+)<\/ENDDATE>/i);
+
+        function tallyDateToISO(d: string): string | null {
+          d = d.trim();
+          // YYYYMMDD
+          if (/^\d{8}$/.test(d)) return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+          // DD-Mon-YYYY or D-Mon-YY
+          const months: Record<string,string> = { jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12" };
+          const m = d.match(/(\d{1,2})[- ]([A-Za-z]{3})[- ](\d{2,4})/);
+          if (m) {
+            const yr = m[3].length === 2 ? `20${m[3]}` : m[3];
+            return `${yr}-${months[m[2].toLowerCase()] ?? "01"}-${m[1].padStart(2,"0")}`;
+          }
+          return null;
+        }
+
+        if (startMatch) { const iso = tallyDateToISO(startMatch[1]); if (iso) setFrom(iso); }
+        if (endMatch)   { const iso = tallyDateToISO(endMatch[1]);   if (iso) setTo(iso);   }
       } else {
         setConnStatus("error"); setConnMsg(`Tally responded with HTTP ${res.status}`);
       }
