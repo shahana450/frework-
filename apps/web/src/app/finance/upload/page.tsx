@@ -174,16 +174,27 @@ export default function UploadPage() {
         });
         if (aiRes.ok) {
           const aiData = await aiRes.json();
-          aiResult = {
-            vendor: aiData.vendor ?? aiData.customer,
-            amount: aiData.amount,
-            gst: aiData.gst_amount,
-            date: aiData.date,
-            narration: aiData.narration,
-            confidence: aiData.confidence ?? 0.85,
-            type: aiData.doc_type ?? docFile.docType,
-            items: aiData.items,
-          };
+          // Bank statement returns transaction_count not a single vendor/amount
+          if (aiData.bank_statement) {
+            aiResult = {
+              vendor: aiData.bank_name ?? "Bank",
+              amount: null,
+              narration: `Bank statement — ${aiData.transaction_count ?? 0} transactions extracted`,
+              confidence: 0.92,
+              type: "bank_statement",
+            };
+          } else {
+            aiResult = {
+              vendor: aiData.result?.vendor ?? aiData.result?.customer,
+              amount: aiData.result?.amount,
+              gst: aiData.result?.gst_amount,
+              date: aiData.result?.date,
+              narration: aiData.result?.narration,
+              confidence: aiData.result?.confidence ?? 0.85,
+              type: aiData.result?.doc_type ?? docFile.docType,
+              items: aiData.result?.items,
+            };
+          }
         } else {
           throw new Error("AI unavailable");
         }
@@ -192,22 +203,14 @@ export default function UploadPage() {
         aiResult = simulateAI(docFile.file.name, docFile.docType);
       }
 
-      // Save AI summary to document
-      await supabase.from("fw_fin_documents").update({
-        status: "reviewed",
-        ai_summary: aiResult,
-      }).eq("id", doc.id);
-
-      // Create AI suggestion
-      await supabase.from("fw_fin_ai_suggestions").insert({
-        business_id: bizId,
-        document_id: doc.id,
-        suggested_type: docFile.docType === "invoice" ? "sales" : docFile.docType === "bill" ? "purchase" : "expense",
-        suggested_narration: aiResult.narration,
-        suggested_lines: generateSuggestedLines(docFile.docType, { amount: aiResult?.amount, gst: aiResult?.gst }),
-        confidence: aiResult.confidence ?? 0.85,
-        status: "pending",
-      });
+      // The API route already saved summary + created suggestions in DB.
+      // Only update document status if it wasn't already handled by the API.
+      if (!aiResult?.type || aiResult.type !== "bank_statement") {
+        await supabase.from("fw_fin_documents").update({
+          status: "reviewed",
+          ai_summary: aiResult,
+        }).eq("id", doc.id);
+      }
 
       setFiles(prev => prev.map(f => f.id === docFile.id ? { ...f, status: "done", aiResult: aiResult ?? undefined } : f));
     } catch (err: unknown) {

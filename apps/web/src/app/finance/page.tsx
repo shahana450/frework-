@@ -68,11 +68,17 @@ export default function FrePilotDashboard() {
     if (fyRes.data) setFyLabel(fyRes.data.label);
     const journals = journalsRes.data ?? [];
     const posted = journals.filter(j => j.status === "posted");
-    const salesRev = posted.filter(j => j.type === "sales").reduce((s, j) => s + (j.total_credit || 0), 0);
-    const expTotal = posted.filter(j => j.type === "purchase" || j.type === "journal").reduce((s, j) => s + (j.total_debit || 0), 0);
+    // Revenue = sales + receipt credits
+    const salesRev = posted
+      .filter(j => j.type === "sales" || j.type === "receipt")
+      .reduce((s, j) => s + (j.total_credit || 0), 0);
+    // Expenses = purchase + expense + payment debits
+    const expTotal = posted
+      .filter(j => j.type === "purchase" || j.type === "expense" || j.type === "payment" || j.type === "journal")
+      .reduce((s, j) => s + (j.total_debit || 0), 0);
     setStats({
       sales: posted.filter(j => j.type === "sales").length,
-      expenses: posted.filter(j => j.type === "purchase").length,
+      expenses: posted.filter(j => j.type === "purchase" || j.type === "expense" || j.type === "payment").length,
       drafts: journals.filter(j => j.status === "draft").length,
       pendingTds: 0,
       revenue: salesRev,
