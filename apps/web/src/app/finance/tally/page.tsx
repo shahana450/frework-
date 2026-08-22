@@ -364,22 +364,27 @@ export default function TallyPage() {
     if (!previewIds.length) { setSyncResult({ ok: false, msg: "No journals in preview. Click Refresh Preview first." }); setSyncing(null); return; }
 
     try {
-      // Call server-side API — uses service role key, bypasses RLS on journal lines
-      const res = await fetch("/api/finance/tally-push", {
+      // Step 1: Get XML from server (service role fetches journal lines, bypassing RLS)
+      const apiRes = await fetch("/api/finance/tally-push", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          journal_ids: previewIds,
-          business_id: bizId,
-          tally_url: tallyUrl,
-          company_name: companyName,
-        }),
+        body: JSON.stringify({ journal_ids: previewIds, business_id: bizId, company_name: companyName }),
       });
-      const data = await res.json();
-      if (!res.ok) { setSyncResult({ ok: false, msg: data.error ?? "Push failed" }); setSyncing(null); return; }
-      setSyncResult({ ok: data.ok, msg: data.msg });
+      const apiData = await apiRes.json();
+      if (!apiRes.ok || !apiData.xml) { setSyncResult({ ok: false, msg: apiData.error ?? "Failed to build voucher XML" }); setSyncing(null); return; }
+
+      // Step 2: Browser sends XML to local Tally bridge (Vercel can't reach localhost)
+      const tallyRes = await fetch(tallyUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/xml" },
+        body: apiData.xml,
+        signal: AbortSignal.timeout(30000),
+      });
+      const tallyText = await tallyRes.text();
+      const errors = (tallyText.match(/LINEERROR/gi) ?? []).length;
+      setSyncResult({ ok: errors === 0, msg: errors === 0 ? `${apiData.count} vouchers pushed to Tally successfully.` : `Pushed ${apiData.count} vouchers — ${errors} had errors (check ledger names match Tally).` });
     } catch (e: unknown) {
-      setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
+      setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error reaching Tally bridge" });
     }
     setSyncing(null);
   }, [bizId, connStatus, tallyUrl, companyName, journals]);

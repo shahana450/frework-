@@ -22,7 +22,7 @@ const TALLY_VOUCHER_TYPE: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { journal_ids, business_id, tally_url, company_name } = await req.json();
+    const { journal_ids, business_id, company_name } = await req.json();
 
     if (!journal_ids?.length || !business_id) {
       return NextResponse.json({ error: "journal_ids and business_id required" }, { status: 400 });
@@ -101,26 +101,9 @@ export async function POST(req: NextRequest) {
   </BODY>
 </ENVELOPE>`;
 
-    // Forward to Tally via bridge
-    const tallyRes = await fetch(tally_url ?? "http://localhost:7001", {
-      method: "POST",
-      headers: { "Content-Type": "text/xml" },
-      body: xml,
-      signal: AbortSignal.timeout(30000),
-    });
-
-    const tallyText = await tallyRes.text();
-    const errors = (tallyText.match(/LINEERROR/gi) ?? []).length;
-
-    return NextResponse.json({
-      ok: errors === 0,
-      pushed: journals.length,
-      errors,
-      msg: errors === 0
-        ? `${journals.length} vouchers pushed to Tally successfully.`
-        : `Pushed ${journals.length} vouchers — ${errors} had errors (check ledger names match Tally).`,
-      tally_response: tallyText.slice(0, 500),
-    });
+    // Return XML to browser — browser must send it to the local Tally bridge
+    // (Vercel servers cannot reach localhost on the user's machine)
+    return NextResponse.json({ xml, count: journals.length });
   } catch (e: unknown) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
