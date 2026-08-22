@@ -144,23 +144,33 @@ export default function UploadPage() {
 
       if (docErr) throw new Error(docErr.message);
 
-      // AI Analysis — extract text then call Claude
+      // AI Analysis — send actual file bytes to Claude
       setFiles(prev => prev.map(f => f.id === docFile.id ? { ...f, status: "analyzing" } : f));
-
-      let extractedText = `Document: ${docFile.file.name}\nType: ${docFile.docType}\n`;
-      // For images, use a description; for PDFs we send filename context
-      if (docFile.file.type.startsWith("image/")) {
-        extractedText += `[Image file - ${docFile.file.name}] Please analyse based on document type: ${docFile.docType}`;
-      } else {
-        extractedText += `[PDF/Document file - ${docFile.file.name}] Document type hint: ${docFile.docType}`;
-      }
 
       let aiResult;
       try {
+        // Convert file to base64 so Claude can actually read it
+        const fileBase64: string = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]); // strip "data:...;base64," prefix
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(docFile.file);
+        });
+
         const aiRes = await fetch("/api/finance/ai-analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: extractedText, doc_id: doc.id, business_id: bizId }),
+          body: JSON.stringify({
+            file_data: fileBase64,
+            mime_type: docFile.file.type || "application/octet-stream",
+            file_name: docFile.file.name,
+            doc_type_hint: docFile.docType,
+            doc_id: doc.id,
+            business_id: bizId,
+          }),
         });
         if (aiRes.ok) {
           const aiData = await aiRes.json();

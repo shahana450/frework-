@@ -44,21 +44,49 @@ Journal entries must always balance: total debits must equal total credits.`;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { text, doc_id, business_id } = body;
+    const { text, file_data, mime_type, file_name, doc_type_hint, doc_id, business_id } = body;
 
-    if (!text || !doc_id || !business_id) {
-      return NextResponse.json({ error: "text, doc_id, and business_id required" }, { status: 400 });
+    if (!doc_id || !business_id) {
+      return NextResponse.json({ error: "doc_id and business_id required" }, { status: 400 });
+    }
+
+    // Build message content — prefer actual file bytes over plain text
+    type ContentBlock =
+      | { type: "text"; text: string }
+      | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
+      | { type: "document"; source: { type: "base64"; media_type: string; data: string } };
+
+    let userContent: ContentBlock[];
+    const hint = doc_type_hint ?? "unknown";
+
+    if (file_data) {
+      const isImage = (mime_type as string || "").startsWith("image/");
+      const isPDF = (mime_type as string || "") === "application/pdf";
+
+      if (isImage) {
+        userContent = [
+          { type: "text", text: `Analyze this ${hint} document image and extract all financial data:` },
+          { type: "image", source: { type: "base64", media_type: mime_type as string, data: file_data as string } },
+        ];
+      } else if (isPDF) {
+        userContent = [
+          { type: "text", text: `Analyze this ${hint} PDF document and extract all financial data (transactions, amounts, dates, vendors):` },
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: file_data as string } },
+        ];
+      } else {
+        // Excel/CSV — treat as text hint (client-side parsing not implemented yet)
+        userContent = [{ type: "text", text: `Document name: ${file_name ?? "unknown"}\nType hint: ${hint}\n\nExtract financial data. This is an Excel/CSV bank statement — infer structure from the filename and type.` }];
+      }
+    } else {
+      userContent = [{ type: "text", text: `Analyze this document and extract financial data:\n\n${(text as string || "").slice(0, 4000)}` }];
     }
 
     // Call Claude AI
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: SYSTEM_PROMPT,
-      messages: [{
-        role: "user",
-        content: `Analyze this document and extract financial data:\n\n${text.slice(0, 4000)}`,
-      }],
+      messages: [{ role: "user", content: userContent as Parameters<typeof anthropic.messages.create>[0]["messages"][0]["content"] }],
     });
 
     const rawText = message.content[0].type === "text" ? message.content[0].text : "{}";
