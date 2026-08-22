@@ -469,11 +469,11 @@ export default function TallyPage() {
             </div>
           )}
 
-          {/* Debug panel — shown when we have any Tally response */}
+          {/* Debug panel — always expanded so we can see what Tally returns */}
           {rawDebug && (
-            <details style={{ marginBottom: "1rem" }}>
-              <summary style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.3)", cursor: "pointer" }}>🔍 Raw Tally response (for debugging)</summary>
-              <pre style={{ marginTop: "0.5rem", fontSize: "0.68rem", color: "rgba(237,232,220,0.5)", background: "rgba(0,0,0,0.3)", padding: "0.75rem", borderRadius: 8, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+            <details open style={{ marginBottom: "1rem" }}>
+              <summary style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", cursor: "pointer", marginBottom: "0.4rem" }}>🔍 Raw Tally response</summary>
+              <pre style={{ marginTop: "0.25rem", fontSize: "0.66rem", color: "rgba(237,232,220,0.55)", background: "rgba(0,0,0,0.4)", padding: "0.75rem", borderRadius: 8, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", maxHeight: 200, overflowY: "auto" }}>
                 {rawDebug}
               </pre>
             </details>
