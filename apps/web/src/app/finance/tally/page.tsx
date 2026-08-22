@@ -360,40 +360,29 @@ export default function TallyPage() {
     if (!bizId || connStatus !== "connected") return;
     setSyncing("vouchers"); setSyncResult(null);
 
-    // Use the IDs already loaded in the preview — avoids stale date-range issues
     const previewIds = journals.map(j => j.id);
     if (!previewIds.length) { setSyncResult({ ok: false, msg: "No journals in preview. Click Refresh Preview first." }); setSyncing(null); return; }
 
-    const { data: fullJournals } = await supabase
-      .from("fw_fin_journals")
-      .select("id,date,narration,voucher_type,fw_fin_journal_lines(dr_amount,cr_amount,fw_fin_chart_of_accounts(name))")
-      .in("id", previewIds)
-      .order("date");
-    if (!fullJournals?.length) { setSyncResult({ ok: false, msg: "Could not load journal lines. Try Refresh Preview." }); setSyncing(null); return; }
-
-    // Shape data
-    const shaped = fullJournals.map((j: Record<string, unknown>) => ({
-      date: j.date as string,
-      narration: j.narration as string ?? "",
-      voucher_type: j.voucher_type as string ?? "journal",
-      lines: ((j.fw_fin_journal_lines as Record<string, unknown>[]) ?? []).map((l: Record<string, unknown>) => ({
-        account_name: (l.fw_fin_chart_of_accounts as Record<string, unknown> | null)?.name as string ?? "Unknown",
-        dr_amount: Number(l.dr_amount) || 0,
-        cr_amount: Number(l.cr_amount) || 0,
-      })),
-    }));
-
-    const xml = buildVoucherXML(shaped);
     try {
-      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(30000) });
-      const text = await res.text();
-      const errors = (text.match(/LINEERROR/gi) ?? []).length;
-      setSyncResult({ ok: errors === 0, msg: errors === 0 ? `${shaped.length} vouchers pushed to Tally successfully.` : `Pushed ${shaped.length} vouchers — ${errors} had errors (check ledger names match Tally).` });
+      // Call server-side API — uses service role key, bypasses RLS on journal lines
+      const res = await fetch("/api/finance/tally-push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          journal_ids: previewIds,
+          business_id: bizId,
+          tally_url: tallyUrl,
+          company_name: companyName,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setSyncResult({ ok: false, msg: data.error ?? "Push failed" }); setSyncing(null); return; }
+      setSyncResult({ ok: data.ok, msg: data.msg });
     } catch (e: unknown) {
       setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
     }
     setSyncing(null);
-  }, [bizId, connStatus, tallyUrl, journals]);
+  }, [bizId, connStatus, tallyUrl, companyName, journals]);
 
   function buildExportUrl() {
     const params = new URLSearchParams({ business_id: bizId! });
