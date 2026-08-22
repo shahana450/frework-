@@ -103,38 +103,30 @@ function parseTallyLedgers(xml: string): { name: string; parent: string }[] {
   const results: { name: string; parent: string }[] = [];
 
   // Method 1: Tally Prime collection format — <LEDGER NAME="...">...<PARENT.LIST><PARENT>...</PARENT>
+  // Tally Prime format: <LEDGER NAME="..."><PARENT TYPE="String">GroupName</PARENT>
   const ledgerBlockRe = /<LEDGER\s+NAME="([^"]+)"[^>]*>([\s\S]*?)<\/LEDGER>/gi;
   let m;
   while ((m = ledgerBlockRe.exec(xml)) !== null) {
     const name = m[1].trim();
+    if (!name || name === "0") continue; // skip system/empty ledgers
     const block = m[2];
-    const parentMatch = block.match(/<PARENT\.LIST[^>]*>[\s\S]*?<PARENT>([^<]+)<\/PARENT>/i)
-      ?? block.match(/<PARENT>([^<]+)<\/PARENT>/i);
+    // PARENT tag may have attributes like TYPE="String" — match with [^>]*
+    const parentMatch = block.match(/<PARENT[^>]*>([^<]+)<\/PARENT>/i);
     const parent = parentMatch?.[1]?.trim() ?? "";
-    if (name && !seen.has(name)) { seen.add(name); results.push({ name, parent }); }
+    if (!seen.has(name)) { seen.add(name); results.push({ name, parent }); }
   }
 
-  // Method 2: <LEDGER>...<NAME>...</NAME>...<PARENT>... (older Tally master export format)
+  // Fallback: child element format
   if (!results.length) {
     const ledgerRe = /<LEDGER[^>]*>([\s\S]*?)<\/LEDGER>/gi;
     while ((m = ledgerRe.exec(xml)) !== null) {
       const block = m[1];
       const nameMatch = block.match(/<NAME\.LIST[^>]*>[\s\S]*?<NAME>([^<]+)<\/NAME>/i)
         ?? block.match(/<NAME>([^<]+)<\/NAME>/i);
-      const parentMatch = block.match(/<PARENT\.LIST[^>]*>[\s\S]*?<PARENT>([^<]+)<\/PARENT>/i)
-        ?? block.match(/<PARENT>([^<]+)<\/PARENT>/i);
+      const parentMatch = block.match(/<PARENT[^>]*>([^<]+)<\/PARENT>/i);
       const name = nameMatch?.[1]?.trim() ?? "";
       const parent = parentMatch?.[1]?.trim() ?? "";
-      if (name && !seen.has(name)) { seen.add(name); results.push({ name, parent }); }
-    }
-  }
-
-  // Method 3: NAME attribute only — no parent info (minimal fallback)
-  if (!results.length) {
-    const simpleRe = /<LEDGER\s+NAME="([^"]+)"/gi;
-    while ((m = simpleRe.exec(xml)) !== null) {
-      const name = m[1].trim();
-      if (name && !seen.has(name)) { seen.add(name); results.push({ name, parent: "" }); }
+      if (name && name !== "0" && !seen.has(name)) { seen.add(name); results.push({ name, parent }); }
     }
   }
 
