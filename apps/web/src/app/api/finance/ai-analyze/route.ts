@@ -40,7 +40,12 @@ Return ONLY valid JSON (no markdown, no explanation):
 Common account names: "Accounts Receivable (Debtors)", "Accounts Payable (Creditors)", "Sales / Revenue", "GST Payable - CGST", "GST Payable - SGST", "GST Payable - IGST", "GST Input Tax Credit", "Cash in Hand", "Bank Accounts", "TDS Payable", "TDS Receivable".
 Journal entries must balance: total debits = total credits.`;
 
-const BANK_STATEMENT_PROMPT = `You are an expert Indian chartered accountant analyzing a bank statement. Extract EVERY individual transaction.
+function buildBankStatementPrompt(existingAccounts: { name: string; type: string }[]) {
+  const accountList = existingAccounts.length
+    ? `\n\nEXISTING LEDGERS IN THIS COMPANY'S CHART OF ACCOUNTS (use these exact names where applicable):\n${existingAccounts.map(a => `- ${a.name} (${a.type})`).join("\n")}\n\nFor each transaction, prefer matching to one of the above ledgers. Only use a generic name if no existing ledger fits.`
+    : "";
+
+  return `You are an expert Indian chartered accountant analyzing a bank statement. Extract EVERY individual transaction.${accountList}
 
 Return ONLY valid JSON (no markdown, no explanation):
 {
@@ -60,18 +65,19 @@ Return ONLY valid JSON (no markdown, no explanation):
       "narration": "short journal narration",
       "suggested_type": "payment|receipt|contra|expense|sales",
       "journal_lines": [
-        {"account_name": "account name", "dr": number, "cr": number}
+        {"account_name": "exact ledger name from existing accounts or best match", "dr": number, "cr": number}
       ]
     }
   ]
 }
 
-For each transaction:
-- Credit entry (money IN) → DR Bank Accounts, CR appropriate income/receipt account
-- Debit entry (money OUT) → DR appropriate expense/payment account, CR Bank Accounts
-- Use "Bank Accounts" as the bank ledger name.
-- Journal lines must balance for each transaction.
-- Extract ALL transactions visible in the statement, not just a sample.`;
+Rules:
+- Credit entry (money IN) → DR the bank ledger, CR appropriate income/receipt account
+- Debit entry (money OUT) → DR appropriate expense/payment account, CR the bank ledger
+- Use the bank's own ledger name from existing accounts if available, else "Bank Accounts"
+- Journal lines must balance (total DR = total CR) for each transaction
+- Extract ALL transactions from every page, not just a sample`;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -115,10 +121,18 @@ export async function POST(req: NextRequest) {
 
     // ── Bank statement: extract all transactions ──────────────────────────────
     if (isBankStatement) {
+      // Fetch existing chart of accounts so Claude can match to real ledger names
+      const { data: coaData } = await supabase
+        .from("fw_fin_chart_of_accounts")
+        .select("name,type")
+        .eq("business_id", business_id)
+        .order("name");
+      const existingAccounts = (coaData ?? []) as { name: string; type: string }[];
+
       const message = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 8000,
-        system: BANK_STATEMENT_PROMPT,
+        system: buildBankStatementPrompt(existingAccounts),
         messages: [{ role: "user", content: userContent as Parameters<typeof anthropic.messages.create>[0]["messages"][0]["content"] }],
       });
 
