@@ -713,12 +713,26 @@ export default function TallyPage() {
                 <tbody>
                   {pushResults.map((r, i) => (
                     <tr key={r.id} style={{ borderTop: i === 0 ? "none" : "1px solid rgba(237,232,220,0.05)" }}>
-                      <td style={{ padding: "0.45rem 0.9rem", width: 22, textAlign: "center", fontSize: "0.9rem" }}>{r.ok ? "✅" : "❌"}</td>
+                      <td style={{ padding: "0.45rem 0.75rem", width: 22, textAlign: "center", fontSize: "0.9rem" }}>{r.ok ? "✅" : "❌"}</td>
                       <td style={{ padding: "0.45rem 0.5rem", fontFamily: "monospace", color: "rgba(237,232,220,0.4)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>{r.entry_no}</td>
                       <td style={{ padding: "0.45rem 0.5rem", color: "rgba(237,232,220,0.5)", whiteSpace: "nowrap", fontSize: "0.72rem" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
-                      <td style={{ padding: "0.45rem 0.5rem", color: r.ok ? "rgba(237,232,220,0.65)" : "#fbbf24", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.45rem 0.5rem", color: r.ok ? "rgba(237,232,220,0.65)" : "#fbbf24", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {r.ok ? r.narration : (r.error || "Tally rejected — check ledger names")}
                       </td>
+                      {!r.ok && (
+                        <td style={{ padding: "0.45rem 0.5rem", whiteSpace: "nowrap" }}>
+                          <a href={`/finance/journals/${r.id}/edit`} style={{ fontSize: "0.68rem", color: "#60a5fa", marginRight: 8, textDecoration: "none" }}>✏ Edit</a>
+                          <button onClick={async () => {
+                            if (!confirm(`Delete journal ${r.entry_no}? This cannot be undone.`)) return;
+                            await supabase.from("fw_fin_journal_lines").delete().eq("journal_id", r.id);
+                            await supabase.from("fw_fin_journals").delete().eq("id", r.id);
+                            setPushResults(prev => prev.filter(x => x.id !== r.id));
+                            setJournals(prev => prev.filter(x => x.id !== r.id));
+                            setJournalCount(prev => (prev ?? 1) - 1);
+                          }} style={{ fontSize: "0.68rem", color: "#f87171", background: "none", border: "none", cursor: "pointer", padding: 0 }}>🗑 Delete</button>
+                        </td>
+                      )}
+                      {r.ok && <td />}
                     </tr>
                   ))}
                 </tbody>

@@ -11,7 +11,9 @@ function escapeXml(s: string) {
 }
 
 function formatTallyDate(iso: string) {
-  return iso.replace(/-/g, "");
+  if (!iso) return new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  // Take only the date part (strip time component if present e.g. "2026-08-04T00:00:00")
+  return iso.slice(0, 10).replace(/-/g, "");
 }
 
 const TALLY_VOUCHER_TYPE: Record<string, string> = {
