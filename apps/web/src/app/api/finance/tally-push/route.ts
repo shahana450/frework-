@@ -77,6 +77,7 @@ function buildVoucherXML(j: JRow, coName: string): string {
         <TALLYMESSAGE xmlns:UDF="TallyUDF">
           <VOUCHER VCHTYPE="${vtype}" ACTION="Create" OBJVIEW="Accounting Voucher View">
             <DATE>${formatTallyDate(j.date)}</DATE>
+            <EFFECTIVEDATE>${formatTallyDate(j.date)}</EFFECTIVEDATE>
             <VOUCHERTYPENAME>${vtype}</VOUCHERTYPENAME>
             <NARRATION>${escapeXml((j.narration ?? "").replace(/[₹—]/g, "").slice(0, 80))}</NARRATION>${ledgerEntries}
           </VOUCHER>
