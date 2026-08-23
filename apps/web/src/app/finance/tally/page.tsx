@@ -456,6 +456,26 @@ export default function TallyPage() {
       if (!apiRes.ok || !apiData.vouchers) { setSyncResult({ ok: false, msg: apiData.error ?? "Failed to build voucher XML" }); setSyncing(null); return; }
       if (apiData.all_ledger_names) setAllLedgerNames(apiData.all_ledger_names);
 
+      // Step 1.5: Auto-create all ledgers used by these journals in Tally before pushing
+      if (apiData.all_ledger_names?.length) {
+        const ledgerXml = `<?xml version="1.0" encoding="utf-8"?>
+<ENVELOPE>
+  <HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
+  <BODY><IMPORTDATA>
+    <REQUESTDESC><REPORTNAME>All Masters</REPORTNAME>${companyName ? `<STATICVARIABLES><SVCURRENTCOMPANY>${companyName.replace(/&/g,"&amp;")}</SVCURRENTCOMPANY></STATICVARIABLES>` : ""}</REQUESTDESC>
+    <REQUESTDATA>
+      ${(apiData.all_ledger_names as { name: string; type: string }[]).map(a => {
+        const safeName = a.name.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+        return `<TALLYMESSAGE><LEDGER NAME="${safeName}" ACTION="Create"><NAME>${safeName}</NAME><PARENT>${ledgerGroupForType(a.type)}</PARENT></LEDGER></TALLYMESSAGE>`;
+      }).join("")}
+    </REQUESTDATA>
+  </IMPORTDATA></BODY>
+</ENVELOPE>`;
+        try {
+          await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: ledgerXml, signal: AbortSignal.timeout(15000) });
+        } catch { /* ledger pre-create failed — continue anyway, push will surface real errors */ }
+      }
+
       // Step 2: Push each voucher individually to local Tally bridge, track per-entry results
       const results: typeof pushResults = [];
       for (const v of apiData.vouchers as { id: string; entry_no: string; date: string; narration: string; xml: string }[]) {
