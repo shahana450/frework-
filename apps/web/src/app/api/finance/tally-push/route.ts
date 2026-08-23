@@ -15,9 +15,16 @@ function formatTallyDate(iso: string) {
 }
 
 const TALLY_VOUCHER_TYPE: Record<string, string> = {
-  journal: "Journal", payment: "Payment", receipt: "Receipt",
-  sales: "Sales", purchase: "Purchase", contra: "Contra",
-  expense: "Payment", debit_note: "Debit Note", credit_note: "Credit Note",
+  journal: "Journal",
+  payment: "Payment",
+  receipt: "Receipt",
+  contra: "Contra",
+  // Sales/Purchase require PARTYLEDGERNAME in Tally — use Journal to avoid rejection
+  sales: "Journal",
+  purchase: "Journal",
+  expense: "Payment",
+  debit_note: "Journal",
+  credit_note: "Journal",
 };
 
 type JLine = { dr_amount: number; cr_amount: number; narration: string | null; fw_fin_chart_of_accounts: { name: string } | null };

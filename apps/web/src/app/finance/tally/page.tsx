@@ -631,6 +631,11 @@ export default function TallyPage() {
               <div style={{ padding: "0.6rem 0.9rem", fontSize: "0.65rem", fontWeight: 700, color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", borderBottom: "1px solid rgba(237,232,220,0.06)" }}>
                 Push Results — {pushResults.filter(r => r.ok).length} success · {pushResults.filter(r => !r.ok).length} failed
               </div>
+              {pushResults.some(r => r.error.toLowerCase().includes("does not exist")) && (
+                <div style={{ padding: "0.6rem 1rem", background: "rgba(251,191,36,0.07)", borderBottom: "1px solid rgba(251,191,36,0.15)", fontSize: "0.78rem", color: "#fbbf24" }}>
+                  💡 <strong>Fix:</strong> Click <strong>Push Ledgers to Tally</strong> first to create missing ledgers, then click Push Vouchers again.
+                </div>
+              )}
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
                 <tbody>
                   {pushResults.map((r, i) => (
