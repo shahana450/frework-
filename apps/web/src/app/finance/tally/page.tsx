@@ -334,8 +334,8 @@ export default function TallyPage() {
           return null;
         }
 
+        // Only use Tally's start date for FROM; keep FY end date for TO (Tally's ENDINGAT is last entry date, not FY end)
         if (startMatch) { const iso = tallyDateToISO(startMatch[1]); if (iso) setFrom(iso); }
-        if (endMatch)   { const iso = tallyDateToISO(endMatch[1]);   if (iso) setTo(iso);   }
       } else {
         setConnStatus("error"); setConnMsg(`Tally responded with HTTP ${res.status}`);
       }
