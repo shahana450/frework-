@@ -176,7 +176,7 @@ export default function TallyPage() {
   }[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [pushResults, setPushResults] = useState<{ id: string; entry_no: string; date: string; narration: string; ok: boolean; error: string }[]>([]);
+  const [pushResults, setPushResults] = useState<{ id: string; entry_no: string; date: string; narration: string; ok: boolean; error: string; xml?: string; tallyResponse?: string }[]>([]);
   const [creatingLedgers, setCreatingLedgers] = useState(false);
   const [createLedgerResult, setCreateLedgerResult] = useState<string | null>(null);
   const [allLedgerNames, setAllLedgerNames] = useState<{ name: string; type: string }[]>([]);
@@ -466,9 +466,9 @@ export default function TallyPage() {
           const errMatch = text.match(/<LINEERROR[^>]*>([^<]+)<\/LINEERROR>/i);
           const rawErr = errMatch?.[1]?.trim() ?? "";
           const decodedErr = rawErr.replace(/&apos;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
-          results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: !hasError, error: decodedErr });
+          results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: !hasError, error: decodedErr, xml: v.xml, tallyResponse: text.slice(0, 2000) });
         } catch (e) {
-          results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: false, error: e instanceof Error ? e.message : "Network error" });
+          results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: false, error: e instanceof Error ? e.message : "Network error", xml: v.xml });
         }
       }
       setPushResults(results);
@@ -750,6 +750,16 @@ export default function TallyPage() {
                         </td>
                       )}
                       {r.ok && <td />}
+                    </tr>
+                    {!r.ok && (r.xml || r.tallyResponse) && (
+                      <tr style={{ borderTop: "none" }}>
+                        <td colSpan={5} style={{ padding: "0 0.75rem 0.5rem 2.5rem" }}>
+                          <details style={{ fontSize: "0.65rem" }}>
+                            <summary style={{ color: "rgba(237,232,220,0.3)", cursor: "pointer", marginBottom: "0.25rem" }}>🔍 Debug: XML sent / Tally response</summary>
+                            {r.xml && <><div style={{ color: "rgba(237,232,220,0.3)", marginBottom: "0.2rem", marginTop: "0.3rem" }}>XML sent to Tally:</div><pre style={{ background: "rgba(0,0,0,0.4)", padding: "0.5rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#93c5fd", maxHeight: 150, overflowY: "auto" }}>{r.xml}</pre></>}
+                            {r.tallyResponse && <><div style={{ color: "rgba(237,232,220,0.3)", marginBottom: "0.2rem", marginTop: "0.3rem" }}>Tally raw response:</div><pre style={{ background: "rgba(0,0,0,0.4)", padding: "0.5rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#fca5a5", maxHeight: 150, overflowY: "auto" }}>{r.tallyResponse}</pre></>}
+                          </details>
+                        </td>
                     </tr>
                   ))}
                 </tbody>
