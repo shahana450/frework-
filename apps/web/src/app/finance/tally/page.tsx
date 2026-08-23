@@ -465,7 +465,12 @@ export default function TallyPage() {
           const hasError = /LINEERROR/i.test(text);
           const errMatch = text.match(/<LINEERROR[^>]*>([^<]+)<\/LINEERROR>/i);
           const rawErr = errMatch?.[1]?.trim() ?? "";
-          const decodedErr = rawErr.replace(/&apos;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+          let decodedErr = rawErr.replace(/&apos;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+          // "Voucher date is missing" is Tally's misleading error for missing ledgers — show actual ledger names instead
+          if (hasError && decodedErr.toLowerCase().includes("voucher date is missing")) {
+            const ledgerNames = [...v.xml.matchAll(/<LEDGERNAME>([^<]+)<\/LEDGERNAME>/g)].map(m => m[1]);
+            if (ledgerNames.length) decodedErr = `Missing ledgers in Tally: ${ledgerNames.join(", ")} — click ⚡ Create Missing Ledgers`;
+          }
           results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: !hasError, error: decodedErr, xml: v.xml, tallyResponse: text.slice(0, 2000) });
         } catch (e) {
           results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: false, error: e instanceof Error ? e.message : "Network error", xml: v.xml });
