@@ -53,7 +53,7 @@ function buildVoucherXML(j: JRow, coName: string): string {
     <IMPORTDATA>
       <REQUESTDESC>
         <REPORTNAME>Vouchers</REPORTNAME>
-        <STATICVARIABLES><SVCURRENTCOMPANY>${coName}</SVCURRENTCOMPANY></STATICVARIABLES>
+        <STATICVARIABLES>${coName ? `<SVCURRENTCOMPANY>${coName}</SVCURRENTCOMPANY>` : ""}</STATICVARIABLES>
       </REQUESTDESC>
       <REQUESTDATA>
         <TALLYMESSAGE xmlns:UDF="TallyUDF">
@@ -94,7 +94,14 @@ export async function POST(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!journals?.length) return NextResponse.json({ error: "No journals found for given IDs" }, { status: 404 });
 
-    const coName = escapeXml(company_name ?? "Company");
+    // Use provided company name, or fall back to business legal name, or omit (Tally uses active company)
+    let coName = (company_name ?? "").trim();
+    if (!coName) {
+      const { data: biz } = await supabase.from("fw_fin_businesses").select("name,legal_name").eq("id", business_id).single();
+      coName = escapeXml(biz?.legal_name ?? biz?.name ?? "");
+    } else {
+      coName = escapeXml(coName);
+    }
 
     // Return one XML envelope per journal so the browser can push individually and track per-entry results
     const vouchers = (journals as unknown as JRow[]).map(j => ({
