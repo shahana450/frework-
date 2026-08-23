@@ -80,14 +80,13 @@ function buildVoucherXML(journals: {
 // ── Parse company name from any Tally XML response ───────────────────────────
 
 function extractCompanyName(xml: string): string {
-  // Try tags in priority order
+  // Try specific company tags only — avoid generic <NAME> which matches ledger names
   const patterns = [
     /<COMPANYNAME[^>]*>([^<]+)<\/COMPANYNAME>/i,
     /<SVCURRENTCOMPANY[^>]*>([^<]+)<\/SVCURRENTCOMPANY>/i,
     /<BASICCOMPANYNAME[^>]*>([^<]+)<\/BASICCOMPANYNAME>/i,
-    /<COMPANY[^>]*>\s*<NAME[^>]*>([^<]+)<\/NAME>/i,
-    /<NAME\.LIST[^>]*>[\s\S]*?<NAME>([^<]+)<\/NAME>/i,
-    /<NAME>([^<]+)<\/NAME>/i,
+    // NAME inside a COMPANY block
+    /<COMPANY[^>]*NAME="([^"]+)"/i,
   ];
   for (const re of patterns) {
     const m = xml.match(re);
@@ -177,7 +176,12 @@ export default function TallyPage() {
   const [tallyPort, setTallyPort] = useState("7001");
   const [connStatus, setConnStatus] = useState<ConnStatus>("idle");
   const [connMsg, setConnMsg] = useState("");
-  const [companyName, setCompanyName] = useState<string>(() => typeof window !== "undefined" ? (localStorage.getItem("fw_tally_company") ?? "") : "");
+  const [companyName, setCompanyName] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    const stored = localStorage.getItem("fw_tally_company") ?? "";
+    // Reject obviously wrong values (single short words like "abc" that came from ledger name parsing bug)
+    return stored.length > 4 ? stored : "";
+  });
   const [rawDebug, setRawDebug] = useState<string>("");
   const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | "import" | null>(null);
   const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -676,7 +680,7 @@ export default function TallyPage() {
             </button>
             <button onClick={pushVouchers} disabled={connStatus !== "connected" || !!syncing}
               style={{ flex: 1, minWidth: 180, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(129,140,248,0.35)", background: "rgba(129,140,248,0.1)", color: connStatus === "connected" ? "#818CF8" : "rgba(129,140,248,0.35)", fontWeight: 700, fontSize: "0.88rem", cursor: connStatus === "connected" ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
-              {syncing === "vouchers" ? "⏳ Pushing Vouchers…" : `🧾 Push Vouchers (${journalCount ?? "—"} entries)`}
+              {syncing === "vouchers" ? "⏳ Pushing Vouchers…" : `🧾 Push Vouchers (${journalCount ?? "—"} entries)${companyName ? ` → ${companyName}` : ""}`}
             </button>
           </div>
 
