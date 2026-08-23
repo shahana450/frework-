@@ -170,6 +170,8 @@ export default function TallyPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [pushResults, setPushResults] = useState<{ id: string; entry_no: string; date: string; narration: string; ok: boolean; error: string }[]>([]);
+  const [creatingLedgers, setCreatingLedgers] = useState(false);
+  const [createLedgerResult, setCreateLedgerResult] = useState<string | null>(null);
 
   // Connector state
   const [tallyPort, setTallyPort] = useState("7001");
@@ -216,6 +218,63 @@ export default function TallyPage() {
     setJournals(data ?? []);
     setJournalCount(data?.length ?? 0);
     setPreviewLoading(false);
+  }
+
+  async function createMissingLedgers() {
+    const missingNames = [...new Set(
+      pushResults
+        .filter(r => !r.ok && r.error.toLowerCase().includes("does not exist"))
+        .map(r => { const m = r.error.match(/Ledger '([^']+)' does not exist/i); return m?.[1] ?? null; })
+        .filter(Boolean) as string[]
+    )];
+    if (!missingNames.length) return;
+    setCreatingLedgers(true); setCreateLedgerResult(null);
+
+    // Map FrePilot account type → Tally parent group
+    const PARENT_MAP: Record<string, string> = {
+      "Indirect Expenses": "Indirect Expenses",
+      "Direct Expenses": "Direct Expenses",
+      "Miscellaneous": "Indirect Expenses",
+      "Bank Accounts": "Bank Accounts",
+      "Cash": "Cash-in-Hand",
+      "Sundry Creditors": "Sundry Creditors",
+      "Sundry Debtors": "Sundry Debtors",
+    };
+
+    let ledgerXml = `<?xml version="1.0" encoding="utf-8"?>
+<ENVELOPE>
+  <HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
+  <BODY>
+    <IMPORTDATA>
+      <REQUESTDESC><REPORTNAME>All Masters</REPORTNAME></REQUESTDESC>
+      <REQUESTDATA>`;
+    for (const name of missingNames) {
+      const parent = PARENT_MAP[name] ?? "Indirect Expenses";
+      ledgerXml += `
+        <TALLYMESSAGE>
+          <LEDGER NAME="${name.replace(/&/g,"&amp;").replace(/</g,"&lt;")}" ACTION="Create">
+            <NAME>${name.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</NAME>
+            <PARENT>${parent}</PARENT>
+          </LEDGER>
+        </TALLYMESSAGE>`;
+    }
+    ledgerXml += `
+      </REQUESTDATA>
+    </IMPORTDATA>
+  </BODY>
+</ENVELOPE>`;
+
+    try {
+      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: ledgerXml, signal: AbortSignal.timeout(15000) });
+      const text = await res.text();
+      const errors = (text.match(/LINEERROR/gi) ?? []).length;
+      setCreateLedgerResult(errors === 0
+        ? `✓ Created ${missingNames.length} ledger(s) in Tally: ${missingNames.join(", ")}. Now click Push Vouchers again.`
+        : `⚠ Some ledgers may already exist in Tally — click Push Vouchers to retry.`);
+    } catch (e) {
+      setCreateLedgerResult(`❌ ${e instanceof Error ? e.message : "Network error"}`);
+    }
+    setCreatingLedgers(false);
   }
 
   // ── Test connection ──────────────────────────────────────────────────────
@@ -632,8 +691,17 @@ export default function TallyPage() {
                 Push Results — {pushResults.filter(r => r.ok).length} success · {pushResults.filter(r => !r.ok).length} failed
               </div>
               {pushResults.some(r => r.error.toLowerCase().includes("does not exist")) && (
-                <div style={{ padding: "0.6rem 1rem", background: "rgba(251,191,36,0.07)", borderBottom: "1px solid rgba(251,191,36,0.15)", fontSize: "0.78rem", color: "#fbbf24" }}>
-                  💡 <strong>Fix:</strong> Click <strong>Push Ledgers to Tally</strong> first to create missing ledgers, then click Push Vouchers again.
+                <div style={{ padding: "0.7rem 1rem", background: "rgba(251,191,36,0.06)", borderBottom: "1px solid rgba(251,191,36,0.15)", fontSize: "0.78rem", color: "#fbbf24", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                  <span style={{ flex: 1 }}>💡 Missing ledgers detected in Tally</span>
+                  <button onClick={createMissingLedgers} disabled={creatingLedgers || connStatus !== "connected"}
+                    style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "5px 14px", borderRadius: 6, fontWeight: 700, fontSize: "0.75rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+                    {creatingLedgers ? "Creating…" : "⚡ Create Missing Ledgers in Tally"}
+                  </button>
+                </div>
+              )}
+              {createLedgerResult && (
+                <div style={{ padding: "0.6rem 1rem", background: createLedgerResult.startsWith("✓") ? "rgba(74,222,128,0.07)" : "rgba(251,191,36,0.07)", borderBottom: "1px solid rgba(237,232,220,0.06)", fontSize: "0.78rem", color: createLedgerResult.startsWith("✓") ? "#4ade80" : "#fbbf24" }}>
+                  {createLedgerResult}
                 </div>
               )}
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
