@@ -169,6 +169,7 @@ export default function TallyPage() {
   }[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [pushResults, setPushResults] = useState<{ id: string; entry_no: string; date: string; narration: string; ok: boolean; error: string }[]>([]);
 
   // Connector state
   const [tallyPort, setTallyPort] = useState("7001");
@@ -363,26 +364,34 @@ export default function TallyPage() {
     const previewIds = journals.map(j => j.id);
     if (!previewIds.length) { setSyncResult({ ok: false, msg: "No journals in preview. Click Refresh Preview first." }); setSyncing(null); return; }
 
+    setPushResults([]);
     try {
-      // Step 1: Get XML from server (service role fetches journal lines, bypassing RLS)
+      // Step 1: Get per-voucher XML from server (service role bypasses RLS)
       const apiRes = await fetch("/api/finance/tally-push", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ journal_ids: previewIds, business_id: bizId, company_name: companyName }),
       });
       const apiData = await apiRes.json();
-      if (!apiRes.ok || !apiData.xml) { setSyncResult({ ok: false, msg: apiData.error ?? "Failed to build voucher XML" }); setSyncing(null); return; }
+      if (!apiRes.ok || !apiData.vouchers) { setSyncResult({ ok: false, msg: apiData.error ?? "Failed to build voucher XML" }); setSyncing(null); return; }
 
-      // Step 2: Browser sends XML to local Tally bridge (Vercel can't reach localhost)
-      const tallyRes = await fetch(tallyUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/xml" },
-        body: apiData.xml,
-        signal: AbortSignal.timeout(30000),
-      });
-      const tallyText = await tallyRes.text();
-      const errors = (tallyText.match(/LINEERROR/gi) ?? []).length;
-      setSyncResult({ ok: errors === 0, msg: errors === 0 ? `${apiData.count} vouchers pushed to Tally successfully.` : `Pushed ${apiData.count} vouchers — ${errors} had errors (check ledger names match Tally).` });
+      // Step 2: Push each voucher individually to local Tally bridge, track per-entry results
+      const results: typeof pushResults = [];
+      for (const v of apiData.vouchers as { id: string; entry_no: string; date: string; narration: string; xml: string }[]) {
+        try {
+          const tallyRes = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: v.xml, signal: AbortSignal.timeout(15000) });
+          const text = await tallyRes.text();
+          const hasError = /LINEERROR/i.test(text);
+          const errMatch = text.match(/<LINEERROR[^>]*>([^<]+)<\/LINEERROR>/i);
+          results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: !hasError, error: errMatch?.[1]?.trim() ?? "" });
+        } catch (e) {
+          results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: false, error: e instanceof Error ? e.message : "Network error" });
+        }
+      }
+      setPushResults(results);
+      const succeeded = results.filter(r => r.ok).length;
+      const failed = results.filter(r => !r.ok).length;
+      setSyncResult({ ok: failed === 0, msg: failed === 0 ? `✓ All ${succeeded} vouchers pushed to Tally successfully.` : `${succeeded} pushed ✓ · ${failed} failed ✗ — see details below.` });
     } catch (e: unknown) {
       setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error reaching Tally bridge" });
     }
@@ -612,6 +621,28 @@ export default function TallyPage() {
           {syncResult && (
             <div style={{ marginTop: "1rem", fontSize: "0.82rem", fontWeight: 600, color: syncResult.ok ? "#4ade80" : "#fbbf24", background: syncResult.ok ? "rgba(74,222,128,0.07)" : "rgba(251,191,36,0.07)", border: `1px solid ${syncResult.ok ? "rgba(74,222,128,0.2)" : "rgba(251,191,36,0.2)"}`, borderRadius: 8, padding: "0.7rem 1rem" }}>
               {syncResult.ok ? "✓ " : "⚠ "}{syncResult.msg}
+            </div>
+          )}
+
+          {pushResults.length > 0 && (
+            <div style={{ marginTop: "0.75rem", background: "rgba(0,0,0,0.2)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, overflow: "hidden" }}>
+              <div style={{ padding: "0.6rem 0.9rem", fontSize: "0.65rem", fontWeight: 700, color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", borderBottom: "1px solid rgba(237,232,220,0.06)" }}>
+                Push Results — {pushResults.filter(r => r.ok).length} success · {pushResults.filter(r => !r.ok).length} failed
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+                <tbody>
+                  {pushResults.map((r, i) => (
+                    <tr key={r.id} style={{ borderTop: i === 0 ? "none" : "1px solid rgba(237,232,220,0.05)" }}>
+                      <td style={{ padding: "0.45rem 0.9rem", width: 22, textAlign: "center", fontSize: "0.9rem" }}>{r.ok ? "✅" : "❌"}</td>
+                      <td style={{ padding: "0.45rem 0.5rem", fontFamily: "monospace", color: "rgba(237,232,220,0.4)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>{r.entry_no}</td>
+                      <td style={{ padding: "0.45rem 0.5rem", color: "rgba(237,232,220,0.5)", whiteSpace: "nowrap", fontSize: "0.72rem" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
+                      <td style={{ padding: "0.45rem 0.5rem", color: r.ok ? "rgba(237,232,220,0.65)" : "#fbbf24", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {r.ok ? r.narration : (r.error || "Tally rejected — check ledger names")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

@@ -20,6 +20,56 @@ const TALLY_VOUCHER_TYPE: Record<string, string> = {
   expense: "Payment", debit_note: "Debit Note", credit_note: "Credit Note",
 };
 
+type JLine = { dr_amount: number; cr_amount: number; narration: string | null; fw_fin_chart_of_accounts: { name: string } | null };
+type JRow  = { id: string; entry_no: string; date: string; narration: string; type: string; fw_fin_journal_lines: JLine[] };
+
+function buildVoucherXML(j: JRow, coName: string): string {
+  const vtype = TALLY_VOUCHER_TYPE[j.type] ?? "Journal";
+  const lines = j.fw_fin_journal_lines ?? [];
+  let ledgerEntries = "";
+  for (const line of lines) {
+    const acc = escapeXml(line.fw_fin_chart_of_accounts?.name ?? "Miscellaneous");
+    if (line.dr_amount > 0) {
+      ledgerEntries += `
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>${acc}</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+              <AMOUNT>-${Number(line.dr_amount).toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>`;
+    }
+    if (line.cr_amount > 0) {
+      ledgerEntries += `
+            <ALLLEDGERENTRIES.LIST>
+              <LEDGERNAME>${acc}</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+              <AMOUNT>${Number(line.cr_amount).toFixed(2)}</AMOUNT>
+            </ALLLEDGERENTRIES.LIST>`;
+    }
+  }
+  return `<?xml version="1.0" encoding="utf-8"?>
+<ENVELOPE>
+  <HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
+  <BODY>
+    <IMPORTDATA>
+      <REQUESTDESC>
+        <REPORTNAME>Vouchers</REPORTNAME>
+        <STATICVARIABLES><SVCURRENTCOMPANY>${coName}</SVCURRENTCOMPANY></STATICVARIABLES>
+      </REQUESTDESC>
+      <REQUESTDATA>
+        <TALLYMESSAGE xmlns:UDF="TallyUDF">
+          <VOUCHER VCHTYPE="${vtype}" ACTION="Create">
+            <DATE>${formatTallyDate(j.date)}</DATE>
+            <VOUCHERTYPENAME>${vtype}</VOUCHERTYPENAME>
+            <VOUCHERNUMBER>${escapeXml(j.entry_no)}</VOUCHERNUMBER>
+            <NARRATION>${escapeXml(j.narration ?? "")}</NARRATION>${ledgerEntries}
+          </VOUCHER>
+        </TALLYMESSAGE>
+      </REQUESTDATA>
+    </IMPORTDATA>
+  </BODY>
+</ENVELOPE>`;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { journal_ids, business_id, company_name } = await req.json();
@@ -28,7 +78,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "journal_ids and business_id required" }, { status: 400 });
     }
 
-    // Fetch full journal data with lines — runs as service role, bypasses RLS
     const { data: journals, error } = await supabase
       .from("fw_fin_journals")
       .select(`
@@ -47,63 +96,18 @@ export async function POST(req: NextRequest) {
 
     const coName = escapeXml(company_name ?? "Company");
 
-    let xml = `<?xml version="1.0" encoding="utf-8"?>
-<ENVELOPE>
-  <HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
-  <BODY>
-    <IMPORTDATA>
-      <REQUESTDESC>
-        <REPORTNAME>Vouchers</REPORTNAME>
-        <STATICVARIABLES><SVCURRENTCOMPANY>${coName}</SVCURRENTCOMPANY></STATICVARIABLES>
-      </REQUESTDESC>
-      <REQUESTDATA>`;
+    // Return one XML envelope per journal so the browser can push individually and track per-entry results
+    const vouchers = (journals as unknown as JRow[]).map(j => ({
+      id: j.id,
+      entry_no: j.entry_no,
+      date: j.date,
+      narration: j.narration,
+      type: j.type,
+      line_count: (j.fw_fin_journal_lines ?? []).length,
+      xml: buildVoucherXML(j, coName),
+    }));
 
-    for (const j of journals as unknown as {
-      id: string; entry_no: string; date: string; narration: string; type: string;
-      fw_fin_journal_lines: { dr_amount: number; cr_amount: number; narration: string | null; fw_fin_chart_of_accounts: { name: string } | null }[];
-    }[]) {
-      const vtype = TALLY_VOUCHER_TYPE[j.type] ?? "Journal";
-      const lines = j.fw_fin_journal_lines ?? [];
-      xml += `
-        <TALLYMESSAGE xmlns:UDF="TallyUDF">
-          <VOUCHER VCHTYPE="${vtype}" ACTION="Create">
-            <DATE>${formatTallyDate(j.date)}</DATE>
-            <VOUCHERTYPENAME>${vtype}</VOUCHERTYPENAME>
-            <VOUCHERNUMBER>${escapeXml(j.entry_no)}</VOUCHERNUMBER>
-            <NARRATION>${escapeXml(j.narration ?? "")}</NARRATION>`;
-      for (const line of lines) {
-        const acc = escapeXml(line.fw_fin_chart_of_accounts?.name ?? "Miscellaneous");
-        if (line.dr_amount > 0) {
-          xml += `
-            <ALLLEDGERENTRIES.LIST>
-              <LEDGERNAME>${acc}</LEDGERNAME>
-              <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
-              <AMOUNT>-${line.dr_amount.toFixed(2)}</AMOUNT>
-            </ALLLEDGERENTRIES.LIST>`;
-        }
-        if (line.cr_amount > 0) {
-          xml += `
-            <ALLLEDGERENTRIES.LIST>
-              <LEDGERNAME>${acc}</LEDGERNAME>
-              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-              <AMOUNT>${line.cr_amount.toFixed(2)}</AMOUNT>
-            </ALLLEDGERENTRIES.LIST>`;
-        }
-      }
-      xml += `
-          </VOUCHER>
-        </TALLYMESSAGE>`;
-    }
-
-    xml += `
-      </REQUESTDATA>
-    </IMPORTDATA>
-  </BODY>
-</ENVELOPE>`;
-
-    // Return XML to browser — browser must send it to the local Tally bridge
-    // (Vercel servers cannot reach localhost on the user's machine)
-    return NextResponse.json({ xml, count: journals.length });
+    return NextResponse.json({ vouchers });
   } catch (e: unknown) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
