@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
@@ -729,7 +729,8 @@ export default function TallyPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
                 <tbody>
                   {pushResults.map((r, i) => (
-                    <tr key={r.id} style={{ borderTop: i === 0 ? "none" : "1px solid rgba(237,232,220,0.05)" }}>
+                    <React.Fragment key={r.id}>
+                    <tr style={{ borderTop: i === 0 ? "none" : "1px solid rgba(237,232,220,0.05)" }}>
                       <td style={{ padding: "0.45rem 0.75rem", width: 22, textAlign: "center", fontSize: "0.9rem" }}>{r.ok ? "✅" : "❌"}</td>
                       <td style={{ padding: "0.45rem 0.5rem", fontFamily: "monospace", color: "rgba(237,232,220,0.4)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>{r.entry_no}</td>
                       <td style={{ padding: "0.45rem 0.5rem", color: "rgba(237,232,220,0.5)", whiteSpace: "nowrap", fontSize: "0.72rem" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
@@ -752,15 +753,17 @@ export default function TallyPage() {
                       {r.ok && <td />}
                     </tr>
                     {!r.ok && (r.xml || r.tallyResponse) && (
-                      <tr style={{ borderTop: "none" }}>
+                      <tr key={`${r.id}-debug`} style={{ borderTop: "none" }}>
                         <td colSpan={5} style={{ padding: "0 0.75rem 0.5rem 2.5rem" }}>
                           <details style={{ fontSize: "0.65rem" }}>
                             <summary style={{ color: "rgba(237,232,220,0.3)", cursor: "pointer", marginBottom: "0.25rem" }}>🔍 Debug: XML sent / Tally response</summary>
-                            {r.xml && <><div style={{ color: "rgba(237,232,220,0.3)", marginBottom: "0.2rem", marginTop: "0.3rem" }}>XML sent to Tally:</div><pre style={{ background: "rgba(0,0,0,0.4)", padding: "0.5rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#93c5fd", maxHeight: 150, overflowY: "auto" }}>{r.xml}</pre></>}
-                            {r.tallyResponse && <><div style={{ color: "rgba(237,232,220,0.3)", marginBottom: "0.2rem", marginTop: "0.3rem" }}>Tally raw response:</div><pre style={{ background: "rgba(0,0,0,0.4)", padding: "0.5rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#fca5a5", maxHeight: 150, overflowY: "auto" }}>{r.tallyResponse}</pre></>}
+                            {r.xml && <><div style={{ color: "rgba(237,232,220,0.3)", marginBottom: "0.2rem", marginTop: "0.3rem" }}>XML sent:</div><pre style={{ background: "rgba(0,0,0,0.4)", padding: "0.5rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#93c5fd", maxHeight: 150, overflowY: "auto" }}>{r.xml}</pre></>}
+                            {r.tallyResponse && <><div style={{ color: "rgba(237,232,220,0.3)", marginBottom: "0.2rem", marginTop: "0.3rem" }}>Tally response:</div><pre style={{ background: "rgba(0,0,0,0.4)", padding: "0.5rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#fca5a5", maxHeight: 150, overflowY: "auto" }}>{r.tallyResponse}</pre></>}
                           </details>
                         </td>
-                    </tr>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
