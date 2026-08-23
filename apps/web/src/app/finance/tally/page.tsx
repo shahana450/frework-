@@ -225,39 +225,50 @@ export default function TallyPage() {
   }
 
   async function createMissingLedgers() {
-    const missingNames = [...new Set(
-      pushResults
-        .filter(r => !r.ok && r.error.toLowerCase().includes("does not exist"))
-        .map(r => { const m = r.error.match(/Ledger '([^']+)' does not exist/i); return m?.[1] ?? null; })
-        .filter(Boolean) as string[]
-    )];
-    if (!missingNames.length) return;
     setCreatingLedgers(true); setCreateLedgerResult(null);
 
-    // Map FrePilot account type → Tally parent group
-    const PARENT_MAP: Record<string, string> = {
-      "Indirect Expenses": "Indirect Expenses",
-      "Direct Expenses": "Direct Expenses",
-      "Miscellaneous": "Indirect Expenses",
-      "Bank Accounts": "Bank Accounts",
-      "Cash": "Cash-in-Hand",
-      "Sundry Creditors": "Sundry Creditors",
-      "Sundry Debtors": "Sundry Debtors",
-    };
+    const failingIds = pushResults.filter(r => !r.ok).map(r => r.id);
+
+    // 1. Collect names from error messages ("Ledger 'X' does not exist")
+    const fromErrors = pushResults
+      .filter(r => !r.ok)
+      .map(r => { const m = r.error.match(/Ledger '([^']+)' does not exist/i); return m?.[1] ?? null; })
+      .filter(Boolean) as string[];
+
+    // 2. Also fetch account names from DB for all failing journals (catches "Voucher date is missing" = missing ledger)
+    let fromDB: { name: string; type: string }[] = [];
+    if (failingIds.length && bizId) {
+      const { data } = await supabase
+        .from("fw_fin_journal_lines")
+        .select("fw_fin_chart_of_accounts(name,type)")
+        .in("journal_id", failingIds);
+      fromDB = (data ?? []).map((l: Record<string, unknown>) => {
+        const coa = l.fw_fin_chart_of_accounts as { name: string; type: string } | null;
+        return coa ?? null;
+      }).filter(Boolean) as { name: string; type: string }[];
+    }
+
+    const allNames = [...new Set([...fromErrors, ...fromDB.map(a => a.name)])];
+    if (!allNames.length) { setCreateLedgerResult("No ledger names found — try pushing again."); setCreatingLedgers(false); return; }
+
+    // Build a type→Tally parent map using ledgerGroupForType
+    const nameTypeMap = new Map(fromDB.map(a => [a.name, a.type]));
 
     let ledgerXml = `<?xml version="1.0" encoding="utf-8"?>
 <ENVELOPE>
   <HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
   <BODY>
     <IMPORTDATA>
-      <REQUESTDESC><REPORTNAME>All Masters</REPORTNAME></REQUESTDESC>
+      <REQUESTDESC><REPORTNAME>All Masters</REPORTNAME>${companyName ? `<STATICVARIABLES><SVCURRENTCOMPANY>${companyName.replace(/&/g,"&amp;")}</SVCURRENTCOMPANY></STATICVARIABLES>` : ""}</REQUESTDESC>
       <REQUESTDATA>`;
-    for (const name of missingNames) {
-      const parent = PARENT_MAP[name] ?? "Indirect Expenses";
+    for (const name of allNames) {
+      const accType = nameTypeMap.get(name) ?? "expense";
+      const parent = ledgerGroupForType(accType);
+      const safeName = name.replace(/&/g,"&amp;").replace(/</g,"&lt;");
       ledgerXml += `
         <TALLYMESSAGE>
-          <LEDGER NAME="${name.replace(/&/g,"&amp;").replace(/</g,"&lt;")}" ACTION="Create">
-            <NAME>${name.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</NAME>
+          <LEDGER NAME="${safeName}" ACTION="Create">
+            <NAME>${safeName}</NAME>
             <PARENT>${parent}</PARENT>
           </LEDGER>
         </TALLYMESSAGE>`;
@@ -273,8 +284,8 @@ export default function TallyPage() {
       const text = await res.text();
       const errors = (text.match(/LINEERROR/gi) ?? []).length;
       setCreateLedgerResult(errors === 0
-        ? `✓ Created ${missingNames.length} ledger(s) in Tally: ${missingNames.join(", ")}. Now click Push Vouchers again.`
-        : `⚠ Some ledgers may already exist in Tally — click Push Vouchers to retry.`);
+        ? `✓ Created/verified ${allNames.length} ledger(s) in Tally. Now click Push Vouchers again.`
+        : `⚠ Some ledgers may already exist (that's OK). Click Push Vouchers to retry.`);
     } catch (e) {
       setCreateLedgerResult(`❌ ${e instanceof Error ? e.message : "Network error"}`);
     }
@@ -695,9 +706,9 @@ export default function TallyPage() {
               <div style={{ padding: "0.6rem 0.9rem", fontSize: "0.65rem", fontWeight: 700, color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", borderBottom: "1px solid rgba(237,232,220,0.06)" }}>
                 Push Results — {pushResults.filter(r => r.ok).length} success · {pushResults.filter(r => !r.ok).length} failed
               </div>
-              {pushResults.some(r => r.error.toLowerCase().includes("does not exist")) && (
+              {pushResults.some(r => !r.ok) && (
                 <div style={{ padding: "0.7rem 1rem", background: "rgba(251,191,36,0.06)", borderBottom: "1px solid rgba(251,191,36,0.15)", fontSize: "0.78rem", color: "#fbbf24", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                  <span style={{ flex: 1 }}>💡 Missing ledgers detected in Tally</span>
+                  <span style={{ flex: 1 }}>💡 Failed vouchers may have ledger names missing in Tally — create them first, then push again.</span>
                   <button onClick={createMissingLedgers} disabled={creatingLedgers || connStatus !== "connected"}
                     style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "5px 14px", borderRadius: 6, fontWeight: 700, fontSize: "0.75rem", cursor: "pointer", whiteSpace: "nowrap" }}>
                     {creatingLedgers ? "Creating…" : "⚡ Create Missing Ledgers in Tally"}
