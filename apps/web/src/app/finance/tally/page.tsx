@@ -148,6 +148,14 @@ function tallyParentToType(parent: string): string {
   return "expense";
 }
 
+// ── Derive Indian FY end date from any start date ────────────────────────────
+function fyEnd(startIso: string): string {
+  const [y, m] = startIso.split("-").map(Number);
+  // Indian FY: Apr–Mar. If start month >= 4, FY ends 31-Mar of (year+1)
+  const endYear = m >= 4 ? y + 1 : y;
+  return `${endYear}-03-31`;
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type ConnStatus = "idle" | "connecting" | "connected" | "error";
@@ -200,7 +208,7 @@ export default function TallyPage() {
         const cur = fys.find(f => f.is_current) ?? fys[0];
         setFyId(cur.id);
         setFrom(cur.start_date);
-        setTo(cur.end_date);
+        setTo(fyEnd(cur.start_date));
       }
       const { count, data: jData } = await supabase.from("fw_fin_journals").select("id,entry_no,date,narration,type,total_debit,total_credit", { count: "exact" }).eq("business_id", saved).eq("status", "posted").order("date");
       setJournalCount(count ?? 0);
@@ -334,8 +342,8 @@ export default function TallyPage() {
           return null;
         }
 
-        // Only use Tally's start date for FROM; keep FY end date for TO (Tally's ENDINGAT is last entry date, not FY end)
-        if (startMatch) { const iso = tallyDateToISO(startMatch[1]); if (iso) setFrom(iso); }
+        // Set FROM from Tally's start date; derive TO as the Indian FY end (31 Mar) from that start
+        if (startMatch) { const iso = tallyDateToISO(startMatch[1]); if (iso) { setFrom(iso); setTo(fyEnd(iso)); } }
       } else {
         setConnStatus("error"); setConnMsg(`Tally responded with HTTP ${res.status}`);
       }
