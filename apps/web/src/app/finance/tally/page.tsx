@@ -214,6 +214,22 @@ export default function TallyPage() {
       const { count, data: jData } = await supabase.from("fw_fin_journals").select("id,entry_no,date,narration,type,total_debit,total_credit", { count: "exact" }).eq("business_id", saved).eq("status", "posted").order("date");
       setJournalCount(count ?? 0);
       if (jData?.length) { setJournals(jData); setPreviewOpen(true); }
+
+      // Auto-reconnect if Tally was previously connected
+      const storedCompany = localStorage.getItem("fw_tally_company") ?? "";
+      const storedPort = localStorage.getItem("fw_tally_port") ?? "7001";
+      if (storedCompany.length > 4) {
+        setTallyPort(storedPort);
+        // Silently test connection in background
+        try {
+          const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,StartingFrom,EndingAt</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+          const res = await fetch(`http://localhost:${storedPort}`, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(3000) });
+          if (res.ok) {
+            setConnStatus("connected");
+            setConnMsg(`Connected — ${storedCompany}`);
+          }
+        } catch { /* bridge not running — stay idle, user will click Connect */ }
+      }
     });
   }, []);
 
@@ -318,6 +334,7 @@ export default function TallyPage() {
         if (found) localStorage.setItem("fw_tally_company", found);
         setConnStatus("connected");
         setConnMsg(found ? `Connected — ${found}` : "Connected to Tally");
+        localStorage.setItem("fw_tally_port", tallyPort);
 
         // Parse Tally's current period dates (format: YYYYMMDD or DD-Mon-YYYY)
         const startMatch = text.match(/<STARTINGFROM[^>]*>([^<]+)<\/STARTINGFROM>/i)
