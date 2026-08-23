@@ -78,6 +78,7 @@ function buildVoucherXML(j: JRow, coName: string): string {
           <VOUCHER VCHTYPE="${vtype}" ACTION="Create" OBJVIEW="Accounting Voucher View">
             <DATE>${formatTallyDate(j.date)}</DATE>
             <EFFECTIVEDATE>${formatTallyDate(j.date)}</EFFECTIVEDATE>
+            <ISINVOICE>No</ISINVOICE>
             <VOUCHERTYPENAME>${vtype}</VOUCHERTYPENAME>
             <NARRATION>${escapeXml((j.narration ?? "").replace(/[₹—]/g, "").slice(0, 80))}</NARRATION>${ledgerEntries}
           </VOUCHER>
