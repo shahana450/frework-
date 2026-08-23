@@ -50,6 +50,7 @@ function buildVoucherXML(j: JRow, coName: string): string {
             <ALLLEDGERENTRIES.LIST>
               <LEDGERNAME>${acc}</LEDGERNAME>
               <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+              <ISPARTYLEDGER>No</ISPARTYLEDGER>
               <AMOUNT>-${Number(line.dr_amount).toFixed(2)}</AMOUNT>
             </ALLLEDGERENTRIES.LIST>`;
     }
@@ -58,6 +59,7 @@ function buildVoucherXML(j: JRow, coName: string): string {
             <ALLLEDGERENTRIES.LIST>
               <LEDGERNAME>${acc}</LEDGERNAME>
               <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+              <ISPARTYLEDGER>No</ISPARTYLEDGER>
               <AMOUNT>${Number(line.cr_amount).toFixed(2)}</AMOUNT>
             </ALLLEDGERENTRIES.LIST>`;
     }
@@ -77,7 +79,7 @@ function buildVoucherXML(j: JRow, coName: string): string {
             <DATE>${formatTallyDate(j.date)}</DATE>
             <VOUCHERTYPENAME>${vtype}</VOUCHERTYPENAME>
             <VOUCHERNUMBER>${escapeXml(j.entry_no)}</VOUCHERNUMBER>
-            <NARRATION>${escapeXml(j.narration ?? "")}</NARRATION>${ledgerEntries}
+            <NARRATION>${escapeXml((j.narration ?? "").slice(0, 100))}</NARRATION>${ledgerEntries}
           </VOUCHER>
         </TALLYMESSAGE>
       </REQUESTDATA>
