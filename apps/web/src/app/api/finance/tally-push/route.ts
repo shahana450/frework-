@@ -60,6 +60,7 @@ function buildVoucherXML(j: JRow, coName: string): string {
     <IMPORTDATA>
       <REQUESTDESC>
         <REPORTNAME>Vouchers</REPORTNAME>
+        ${coName ? `<STATICVARIABLES><SVCURRENTCOMPANY>${coName}</SVCURRENTCOMPANY></STATICVARIABLES>` : ""}
       </REQUESTDESC>
       <REQUESTDATA>
         <TALLYMESSAGE xmlns:UDF="TallyUDF">

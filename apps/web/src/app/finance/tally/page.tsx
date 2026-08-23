@@ -177,7 +177,7 @@ export default function TallyPage() {
   const [tallyPort, setTallyPort] = useState("7001");
   const [connStatus, setConnStatus] = useState<ConnStatus>("idle");
   const [connMsg, setConnMsg] = useState("");
-  const [companyName, setCompanyName] = useState<string>("");
+  const [companyName, setCompanyName] = useState<string>(() => typeof window !== "undefined" ? (localStorage.getItem("fw_tally_company") ?? "") : "");
   const [rawDebug, setRawDebug] = useState<string>("");
   const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | "import" | null>(null);
   const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -295,6 +295,7 @@ export default function TallyPage() {
         const found = extractCompanyName(text);
         setRawDebug(text.slice(0, 800));
         setCompanyName(found);
+        if (found) localStorage.setItem("fw_tally_company", found);
         setConnStatus("connected");
         setConnMsg(found ? `Connected — ${found}` : "Connected to Tally");
 
