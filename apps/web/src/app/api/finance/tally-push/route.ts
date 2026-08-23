@@ -32,9 +32,16 @@ const TALLY_VOUCHER_TYPE: Record<string, string> = {
 type JLine = { dr_amount: number; cr_amount: number; narration: string | null; fw_fin_chart_of_accounts: { name: string; type: string } | null };
 type JRow  = { id: string; entry_no: string; date: string; narration: string; type: string; fw_fin_journal_lines: JLine[] };
 
+const CASH_BANK_TYPES = new Set(["bank", "cash"]);
+
 function buildVoucherXML(j: JRow, coName: string): string {
-  const vtype = TALLY_VOUCHER_TYPE[j.type] ?? "Journal";
   const lines = j.fw_fin_journal_lines ?? [];
+  // Payment/Receipt require a cash/bank ledger — fall back to Journal if none present
+  let vtype = TALLY_VOUCHER_TYPE[j.type] ?? "Journal";
+  if (vtype === "Payment" || vtype === "Receipt") {
+    const hasCashBank = lines.some(l => CASH_BANK_TYPES.has(l.fw_fin_chart_of_accounts?.type ?? ""));
+    if (!hasCashBank) vtype = "Journal";
+  }
   let ledgerEntries = "";
   for (const line of lines) {
     const acc = escapeXml(line.fw_fin_chart_of_accounts?.name ?? "Miscellaneous");
