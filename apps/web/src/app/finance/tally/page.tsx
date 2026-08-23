@@ -179,6 +179,7 @@ export default function TallyPage() {
   const [pushResults, setPushResults] = useState<{ id: string; entry_no: string; date: string; narration: string; ok: boolean; error: string }[]>([]);
   const [creatingLedgers, setCreatingLedgers] = useState(false);
   const [createLedgerResult, setCreateLedgerResult] = useState<string | null>(null);
+  const [allLedgerNames, setAllLedgerNames] = useState<{ name: string; type: string }[]>([]);
 
   // Connector state
   const [tallyPort, setTallyPort] = useState("7001");
@@ -237,30 +238,26 @@ export default function TallyPage() {
 
     const failingIds = pushResults.filter(r => !r.ok).map(r => r.id);
 
-    // 1. Collect names from error messages ("Ledger 'X' does not exist")
+    // Use ledger names returned by the server API (service role, bypasses RLS) — stored during last push
+    // Also collect any names explicitly mentioned in error messages
     const fromErrors = pushResults
       .filter(r => !r.ok)
       .map(r => { const m = r.error.match(/Ledger '([^']+)' does not exist/i); return m?.[1] ?? null; })
       .filter(Boolean) as string[];
 
-    // 2. Also fetch account names from DB for all failing journals (catches "Voucher date is missing" = missing ledger)
-    let fromDB: { name: string; type: string }[] = [];
-    if (failingIds.length && bizId) {
-      const { data } = await supabase
-        .from("fw_fin_journal_lines")
-        .select("fw_fin_chart_of_accounts(name,type)")
-        .in("journal_id", failingIds);
-      fromDB = (data ?? []).map((l: Record<string, unknown>) => {
-        const coa = l.fw_fin_chart_of_accounts as { name: string; type: string } | null;
-        return coa ?? null;
-      }).filter(Boolean) as { name: string; type: string }[];
+    const nameTypeMap = new Map(allLedgerNames.map(a => [a.name, a.type]));
+    for (const n of fromErrors) if (!nameTypeMap.has(n)) nameTypeMap.set(n, "expense");
+
+    const allNames = Array.from(nameTypeMap.keys());
+    if (!allNames.length) {
+      // No ledger names yet — call push API to fetch them
+      const apiRes = await fetch("/api/finance/tally-push", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ journal_ids: failingIds, business_id: bizId, company_name: companyName }) });
+      const apiData = await apiRes.json();
+      if (apiData.all_ledger_names) { for (const a of apiData.all_ledger_names) nameTypeMap.set(a.name, a.type); }
     }
 
-    const allNames = [...new Set([...fromErrors, ...fromDB.map(a => a.name)])];
-    if (!allNames.length) { setCreateLedgerResult("No ledger names found — try pushing again."); setCreatingLedgers(false); return; }
-
-    // Build a type→Tally parent map using ledgerGroupForType
-    const nameTypeMap = new Map(fromDB.map(a => [a.name, a.type]));
+    const finalNames = Array.from(nameTypeMap.keys());
+    if (!finalNames.length) { setCreateLedgerResult("No ledger names found — click Push Vouchers first."); setCreatingLedgers(false); return; }
 
     let ledgerXml = `<?xml version="1.0" encoding="utf-8"?>
 <ENVELOPE>
@@ -269,7 +266,7 @@ export default function TallyPage() {
     <IMPORTDATA>
       <REQUESTDESC><REPORTNAME>All Masters</REPORTNAME>${companyName ? `<STATICVARIABLES><SVCURRENTCOMPANY>${companyName.replace(/&/g,"&amp;")}</SVCURRENTCOMPANY></STATICVARIABLES>` : ""}</REQUESTDESC>
       <REQUESTDATA>`;
-    for (const name of allNames) {
+    for (const name of finalNames) {
       const accType = nameTypeMap.get(name) ?? "expense";
       const parent = ledgerGroupForType(accType);
       const safeName = name.replace(/&/g,"&amp;").replace(/</g,"&lt;");
@@ -292,7 +289,7 @@ export default function TallyPage() {
       const text = await res.text();
       const errors = (text.match(/LINEERROR/gi) ?? []).length;
       setCreateLedgerResult(errors === 0
-        ? `✓ Created/verified ${allNames.length} ledger(s) in Tally. Now click Push Vouchers again.`
+        ? `✓ Created/verified ${finalNames.length} ledger(s) in Tally. Now click Push Vouchers again.`
         : `⚠ Some ledgers may already exist (that's OK). Click Push Vouchers to retry.`);
     } catch (e) {
       setCreateLedgerResult(`❌ ${e instanceof Error ? e.message : "Network error"}`);
@@ -457,6 +454,7 @@ export default function TallyPage() {
       });
       const apiData = await apiRes.json();
       if (!apiRes.ok || !apiData.vouchers) { setSyncResult({ ok: false, msg: apiData.error ?? "Failed to build voucher XML" }); setSyncing(null); return; }
+      if (apiData.all_ledger_names) setAllLedgerNames(apiData.all_ledger_names);
 
       // Step 2: Push each voucher individually to local Tally bridge, track per-entry results
       const results: typeof pushResults = [];

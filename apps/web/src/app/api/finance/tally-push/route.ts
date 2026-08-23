@@ -29,7 +29,7 @@ const TALLY_VOUCHER_TYPE: Record<string, string> = {
   credit_note: "Journal",
 };
 
-type JLine = { dr_amount: number; cr_amount: number; narration: string | null; fw_fin_chart_of_accounts: { name: string } | null };
+type JLine = { dr_amount: number; cr_amount: number; narration: string | null; fw_fin_chart_of_accounts: { name: string; type: string } | null };
 type JRow  = { id: string; entry_no: string; date: string; narration: string; type: string; fw_fin_journal_lines: JLine[] };
 
 function buildVoucherXML(j: JRow, coName: string): string {
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
         id, entry_no, date, narration, type,
         fw_fin_journal_lines(
           dr_amount, cr_amount, narration,
-          fw_fin_chart_of_accounts(name)
+          fw_fin_chart_of_accounts(name, type)
         )
       `)
       .in("id", journal_ids)
@@ -113,7 +113,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Return one XML envelope per journal so the browser can push individually and track per-entry results
-    const vouchers = (journals as unknown as JRow[]).map(j => ({
+    const rows = journals as unknown as JRow[];
+    const vouchers = rows.map(j => ({
       id: j.id,
       entry_no: j.entry_no,
       date: j.date,
@@ -123,7 +124,17 @@ export async function POST(req: NextRequest) {
       xml: buildVoucherXML(j, coName),
     }));
 
-    return NextResponse.json({ vouchers });
+    // Also return all unique ledger names + their account types so the browser can create missing ones
+    const ledgerMap = new Map<string, string>();
+    for (const j of rows) {
+      for (const l of (j.fw_fin_journal_lines ?? [])) {
+        const coa = l.fw_fin_chart_of_accounts;
+        if (coa?.name) ledgerMap.set(coa.name, coa.type ?? "expense");
+      }
+    }
+    const all_ledger_names = Array.from(ledgerMap.entries()).map(([name, type]) => ({ name, type }));
+
+    return NextResponse.json({ vouchers, all_ledger_names });
   } catch (e: unknown) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
