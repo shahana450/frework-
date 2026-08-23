@@ -56,8 +56,10 @@ function buildVoucherXML(j: JRow, coName: string): string {
       </REQUESTDESC>
       <REQUESTDATA>
         <TALLYMESSAGE xmlns:UDF="TallyUDF">
-          <VOUCHER VCHTYPE="${vtype}" ACTION="Create">
+          <VOUCHER VCHTYPE="${vtype}" ACTION="Create" DATE="${formatTallyDate(j.date)}">
             <DATE>${formatTallyDate(j.date)}</DATE>
+            <VOUCHERDATE>${formatTallyDate(j.date)}</VOUCHERDATE>
+            <EFFECTIVEDATE>${formatTallyDate(j.date)}</EFFECTIVEDATE>
             <VOUCHERTYPENAME>${vtype}</VOUCHERTYPENAME>
             <VOUCHERNUMBER>${escapeXml(j.entry_no)}</VOUCHERNUMBER>
             <NARRATION>${escapeXml(j.narration ?? "")}</NARRATION>${ledgerEntries}

@@ -383,7 +383,9 @@ export default function TallyPage() {
           const text = await tallyRes.text();
           const hasError = /LINEERROR/i.test(text);
           const errMatch = text.match(/<LINEERROR[^>]*>([^<]+)<\/LINEERROR>/i);
-          results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: !hasError, error: errMatch?.[1]?.trim() ?? "" });
+          const rawErr = errMatch?.[1]?.trim() ?? "";
+          const decodedErr = rawErr.replace(/&apos;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+          results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: !hasError, error: decodedErr });
         } catch (e) {
           results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: false, error: e instanceof Error ? e.message : "Network error" });
         }
