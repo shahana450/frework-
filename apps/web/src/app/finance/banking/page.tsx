@@ -1,419 +1,662 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
-type BankTxn = {
+/* ─── Types ─────────────────────────────────────────────── */
+type TxRow = {
   id: string;
   date: string;
-  narration: string;
-  amount: number;
-  type: "credit" | "debit";
+  description: string;
+  debit: number;
+  credit: number;
   balance: number;
-  categoryKey: string;
+  ledger_id: string | null;
+  ledger_name: string | null;
+  pushed: boolean;
+  error?: string;
 };
 
-type Category = {
-  key: string;
-  label: string;
-  type: "credit" | "debit";
-  accountHint: string;
-  accountId: string;
-  needsReview: boolean;
-  txns: BankTxn[];
+type CoaAccount = { id: string; name: string; type: string; code: string | null };
+
+/* ─── Helpers ────────────────────────────────────────────── */
+function uid() { return Math.random().toString(36).slice(2, 10); }
+function fmt(n: number) { return n ? n.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : ""; }
+function fmtDate(d: string) {
+  try { return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }); }
+  catch { return d; }
+}
+
+const ACC_TYPE_COLOR: Record<string, string> = {
+  bank: "#3B82F6", cash: "#10B981", income: "#34D399", expense: "#F59E0B",
+  asset: "#60A5FA", liability: "#A78BFA", equity: "#FB923C", receivable: "#34D399",
+  payable: "#F87171",
 };
 
-type Account = { id: string; name: string; code: string };
-
-// ─── Categorisation logic ────────────────────────────────────────────────────
-function categorise(narration: string, type: "credit" | "debit"): { label: string; accountHint: string; needsReview: boolean } {
-  const n = narration.toLowerCase();
-  if (type === "credit") {
-    if (/interest|int cr|interest earned/i.test(n))
-      return { label: "Bank Interest", accountHint: "Interest Income", needsReview: false };
-    if (/gst refund|tax refund|income tax refund/i.test(n))
-      return { label: "Tax Refund", accountHint: "GST Refund Receivable", needsReview: false };
-    if (/neft|rtgs|imps|upi|received|cr by|deposit|transfer in/i.test(n))
-      return { label: "Customer / NEFT Receipt", accountHint: "Sundry Debtors", needsReview: false };
-    if (/cash deposit|atm deposit/i.test(n))
-      return { label: "Cash Deposit", accountHint: "Cash in Hand", needsReview: false };
-    return { label: "Other Credit", accountHint: "", needsReview: true };
-  } else {
-    if (/rent|lease|office rent/i.test(n))
-      return { label: "Rent", accountHint: "Rent Expense", needsReview: false };
-    if (/salary|payroll|wages|staff pay|employee/i.test(n))
-      return { label: "Salaries & Wages", accountHint: "Salaries & Wages", needsReview: false };
-    if (/gst|igst|cgst|sgst|gst payment/i.test(n))
-      return { label: "GST Payment", accountHint: "GST Payable", needsReview: false };
-    if (/income tax|tds|advance tax|tax payment/i.test(n))
-      return { label: "Income Tax / TDS", accountHint: "Income Tax Payable", needsReview: false };
-    if (/loan|emi|repayment|term loan/i.test(n))
-      return { label: "Loan Repayment", accountHint: "Loan Payable", needsReview: false };
-    if (/bank charge|bank fee|commission|service charge|annual fee|processing fee/i.test(n))
-      return { label: "Bank Charges", accountHint: "Bank Charges", needsReview: false };
-    if (/electricity|power|msedcl|bescom|water|sewage/i.test(n))
-      return { label: "Electricity & Utilities", accountHint: "Electricity & Utilities", needsReview: false };
-    if (/airtel|bsnl|jio|vi |vodafone|telecom|broadband|internet/i.test(n))
-      return { label: "Telephone & Internet", accountHint: "Telephone & Internet Expense", needsReview: false };
-    if (/insurance|lic |medi/i.test(n))
-      return { label: "Insurance", accountHint: "Insurance Expense", needsReview: false };
-    if (/travel|hotel|flight|cab|ola|uber|makemy|irctc|railway/i.test(n))
-      return { label: "Travel & Conveyance", accountHint: "Travelling & Conveyance", needsReview: false };
-    if (/petrol|fuel|diesel/i.test(n))
-      return { label: "Fuel", accountHint: "Fuel Expense", needsReview: false };
-    if (/office|stationery|print|supply/i.test(n))
-      return { label: "Office Expenses", accountHint: "Office Expenses", needsReview: false };
-    if (/advertisement|marketing|google ads|facebook|meta/i.test(n))
-      return { label: "Marketing & Advertising", accountHint: "Advertising Expense", needsReview: false };
-    if (/neft|rtgs|imps|upi|payment to|paid to|transfer to/i.test(n))
-      return { label: "Vendor / NEFT Payment", accountHint: "Sundry Creditors", needsReview: false };
-    if (/cash withdrawal|atm/i.test(n))
-      return { label: "Cash Withdrawal", accountHint: "Cash in Hand", needsReview: false };
-    return { label: "Other Debit", accountHint: "", needsReview: true };
-  }
-}
-
-function buildCategories(txns: BankTxn[], accounts: Account[]): Category[] {
-  const map: Record<string, Category> = {};
-  for (const txn of txns) {
-    const key = txn.categoryKey;
-    if (!map[key]) {
-      const cat = categorise(txn.narration, txn.type);
-      // Try to find matching account in chart of accounts by hint
-      const hint = cat.accountHint.toLowerCase();
-      const matched = accounts.find(a =>
-        hint && (a.name.toLowerCase().includes(hint) || hint.includes(a.name.toLowerCase().split(" ")[0]))
-      );
-      map[key] = {
-        key,
-        label: cat.label,
-        type: txn.type,
-        accountHint: cat.accountHint,
-        accountId: matched?.id ?? "",
-        needsReview: cat.needsReview,
-        txns: [],
-      };
-    }
-    map[key].txns.push(txn);
-  }
-  return Object.values(map).sort((a, b) => {
-    if (a.needsReview !== b.needsReview) return a.needsReview ? -1 : 1;
-    return a.type === "credit" ? -1 : 1;
-  });
-}
-
+/* ─── Main Component ─────────────────────────────────────── */
 export default function BankingPage() {
-  const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
-  const [fyId, setFyId] = useState<string | null>(null);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [bankAccountId, setBankAccountId] = useState<string>("");
-  const [csvText, setCsvText] = useState("");
-  const [parseError, setParseError] = useState("");
-  const [step, setStep] = useState<"upload" | "review" | "posting" | "done">("upload");
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [rawTxns, setRawTxns] = useState<BankTxn[]>([]);
-  const [expandedCat, setExpandedCat] = useState<string | null>(null);
-  const [postResult, setPostResult] = useState<{ posted: number; failed: number } | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [coa, setCoa] = useState<CoaAccount[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<CoaAccount[]>([]);
 
+  // Upload / parse state
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Transactions
+  const [rows, setRows] = useState<TxRow[]>([]);
+
+  // Selected bank account for this statement
+  const [bankAccountId, setBankAccountId] = useState<string>("");
+
+  // Selection
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // Filter state
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "debit" | "credit">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "assigned" | "unassigned" | "pushed">("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+
+  // Bulk assign
+  const [bulkLedgerId, setBulkLedgerId] = useState("");
+  const [bulkSearch, setBulkSearch] = useState("");
+
+  // Push state
+  const [pushing, setPushing] = useState(false);
+  const [pushResult, setPushResult] = useState<{ created: number } | null>(null);
+
+  // Add new ledger inline
+  const [addLedgerRow, setAddLedgerRow] = useState<string | null>(null); // row id
+  const [newLedgerName, setNewLedgerName] = useState("");
+  const [newLedgerType, setNewLedgerType] = useState("expense");
+  const [addingLedger, setAddingLedger] = useState(false);
+
+  /* ── Init ── */
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
-      if (!saved) { router.push("/finance/setup"); return; }
+      if (!user) return;
+      setUserId(user.id);
+      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").trim();
+      if (!saved) return;
       setBizId(saved);
-      const [acRes, fyRes] = await Promise.all([
-        supabase.from("fw_fin_accounts").select("id,name,code").eq("business_id", saved).order("code"),
-        supabase.from("fw_fin_financial_years").select("id").eq("business_id", saved).eq("is_current", true).single(),
-      ]);
-      const accs: Account[] = acRes.data ?? [];
-      setAccounts(accs);
-      if (fyRes.data) setFyId(fyRes.data.id);
-      // Auto-pick bank account
-      const bankAc = accs.find(a => /bank|hdfc|sbi|icici|axis|kotak|current account|savings/i.test(a.name));
-      if (bankAc) setBankAccountId(bankAc.id);
+
+      const { data: accounts } = await supabase
+        .from("fw_fin_chart_of_accounts")
+        .select("id,name,type,code")
+        .eq("business_id", saved)
+        .eq("is_group", false)
+        .order("name");
+
+      const all = (accounts ?? []) as CoaAccount[];
+      setCoa(all);
+      const banks = all.filter(a => ["bank", "cash"].includes(a.type));
+      setBankAccounts(banks);
+      if (banks.length) setBankAccountId(banks[0].id);
     });
   }, []);
 
-  function parseCSV(text: string): BankTxn[] {
-    const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
-    if (lines.length < 2) throw new Error("CSV must have at least a header row and one data row");
-    const header = lines[0].toLowerCase().split(",").map(h => h.trim().replace(/"/g, ""));
-    const dateIdx = header.findIndex(h => h.includes("date"));
-    const narIdx = header.findIndex(h => h.includes("narr") || h.includes("desc") || h.includes("particular") || h.includes("detail") || h.includes("remarks") || h.includes("ref"));
-    const drIdx = header.findIndex(h => h.includes("debit") || h.includes("dr") || h.includes("withdraw"));
-    const crIdx = header.findIndex(h => h.includes("credit") || h.includes("cr") || h.includes("deposit"));
-    const balIdx = header.findIndex(h => h.includes("balance") || h.includes("bal"));
+  /* ── Parse Excel (client-side) ── */
+  async function parseExcel(file: File) {
+    const XLSX = await import("xlsx");
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array", cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const raw: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }) as unknown[][];
 
-    if (dateIdx < 0) throw new Error("Cannot find 'Date' column in CSV. Columns found: " + header.join(", "));
-    if (narIdx < 0) throw new Error("Cannot find narration/description column. Columns found: " + header.join(", "));
-
-    const rows: BankTxn[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(",").map(c => c.trim().replace(/"/g, ""));
-      const dr = parseFloat(cols[drIdx]?.replace(/,/g, "") || "0") || 0;
-      const cr = parseFloat(cols[crIdx]?.replace(/,/g, "") || "0") || 0;
-      const bal = parseFloat(cols[balIdx]?.replace(/,/g, "") || "0") || 0;
-      if (!dr && !cr) continue;
-      const dateStr = cols[dateIdx] ?? "";
-      const parsed = new Date(dateStr.replace(/(\d{2})[\/\-](\d{2})[\/\-](\d{2,4})/, "$3-$2-$1"));
-      const narration = cols[narIdx] ?? `Row ${i}`;
-      const type = dr > 0 ? "debit" : "credit";
-      const cat = categorise(narration, type);
-      rows.push({
-        id: `row_${i}`,
-        date: isNaN(parsed.getTime()) ? dateStr : parsed.toISOString().split("T")[0],
-        narration,
-        amount: dr || cr,
-        type,
-        balance: bal,
-        categoryKey: `${type}_${cat.label}`,
-      });
+    // Try to detect header row
+    const headerRow = raw.findIndex(r =>
+      r.some(c => /date/i.test(String(c))) && r.some(c => /desc|narr|part|detail/i.test(String(c)))
+    );
+    if (headerRow === -1) {
+      // Blind parse: assume col0=date, col1=desc, col2=debit, col3=credit, col4=balance
+      return raw.slice(1).filter(r => r[0]).map(r => ({
+        id: uid(), date: parseDate(r[0]), description: String(r[1] ?? ""),
+        debit: toNum(r[2]), credit: toNum(r[3]), balance: toNum(r[4]),
+        ledger_id: null, ledger_name: null, pushed: false,
+      }));
     }
-    return rows;
+
+    const headers = raw[headerRow].map(h => String(h).toLowerCase());
+    const col = (keywords: RegExp) => headers.findIndex(h => keywords.test(h));
+    const dateCol = col(/date/);
+    const descCol = col(/desc|narr|part|detail|particular/);
+    const drCol = col(/debit|dr|withdraw|paid/);
+    const crCol = col(/credit|cr|deposit|receiv/);
+    const balCol = col(/balance|bal/);
+
+    return raw.slice(headerRow + 1)
+      .filter(r => r[dateCol])
+      .map(r => ({
+        id: uid(),
+        date: parseDate(r[dateCol]),
+        description: String(r[descCol] ?? "").trim(),
+        debit: toNum(r[drCol] ?? 0),
+        credit: toNum(r[crCol] ?? 0),
+        balance: toNum(r[balCol] ?? 0),
+        ledger_id: null, ledger_name: null, pushed: false,
+      }));
   }
 
-  function handleParse() {
-    setParseError("");
+  function parseDate(v: unknown): string {
+    if (!v) return "";
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    const s = String(v).trim();
+    // DD-MM-YYYY or DD/MM/YYYY
+    const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (m1) {
+      const y = m1[3].length === 2 ? `20${m1[3]}` : m1[3];
+      return `${y}-${m1[2].padStart(2, "0")}-${m1[1].padStart(2, "0")}`;
+    }
+    try { return new Date(s).toISOString().slice(0, 10); } catch { return s; }
+  }
+
+  function toNum(v: unknown): number {
+    if (v === null || v === undefined || v === "") return 0;
+    if (typeof v === "number") return Math.abs(v);
+    const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ""));
+    return isNaN(n) ? 0 : Math.abs(n);
+  }
+
+  /* ── Parse PDF (server-side via Claude) ── */
+  async function parsePDF(file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/finance/parse-bank-pdf", { method: "POST", body: form });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? "PDF parse failed");
+    return (json.transactions as Omit<TxRow, "id" | "ledger_id" | "ledger_name" | "pushed">[]).map(t => ({
+      ...t, id: uid(), ledger_id: null, ledger_name: null, pushed: false,
+    }));
+  }
+
+  /* ── File drop / select ── */
+  async function handleFile(file: File) {
+    setParsing(true); setParseError(""); setRows([]); setSelected(new Set()); setPushResult(null);
     try {
-      const rows = parseCSV(csvText);
-      if (rows.length === 0) throw new Error("No transactions found. Check that Debit/Credit columns have values.");
-      setRawTxns(rows);
-      setCategories(buildCategories(rows, accounts));
-      setStep("review");
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+      let txs: TxRow[];
+      if (["xlsx", "xls", "csv"].includes(ext)) {
+        txs = await parseExcel(file);
+      } else if (ext === "pdf") {
+        txs = await parsePDF(file);
+      } else {
+        throw new Error("Unsupported file type. Upload PDF, Excel (.xlsx/.xls), or CSV.");
+      }
+      if (!txs.length) throw new Error("No transactions found in file.");
+      setRows(txs);
     } catch (e: unknown) {
-      setParseError(e instanceof Error ? e.message : "Parse error");
+      setParseError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setParsing(false);
     }
   }
 
-  function updateCatAccount(key: string, accountId: string) {
-    setCategories(prev => prev.map(c => c.key === key ? { ...c, accountId } : c));
+  function onFileInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (f) handleFile(f);
+    e.target.value = "";
   }
 
-  async function postAll() {
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  }
+
+  /* ── Filtered rows ── */
+  const filtered = useMemo(() => {
+    return rows.filter(r => {
+      if (filterType === "debit" && !r.debit) return false;
+      if (filterType === "credit" && !r.credit) return false;
+      if (filterStatus === "assigned" && !r.ledger_id) return false;
+      if (filterStatus === "unassigned" && r.ledger_id) return false;
+      if (filterStatus === "pushed" && !r.pushed) return false;
+      if (filterDateFrom && r.date < filterDateFrom) return false;
+      if (filterDateTo && r.date > filterDateTo) return false;
+      if (search && !r.description.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
+  }, [rows, filterType, filterStatus, filterDateFrom, filterDateTo, search]);
+
+  /* ── Selection ── */
+  const allFilteredSelected = filtered.length > 0 && filtered.every(r => selected.has(r.id));
+  function toggleAll() {
+    if (allFilteredSelected) {
+      setSelected(s => { const n = new Set(s); filtered.forEach(r => n.delete(r.id)); return n; });
+    } else {
+      setSelected(s => { const n = new Set(s); filtered.forEach(r => n.add(r.id)); return n; });
+    }
+  }
+  function toggleRow(id: string) {
+    setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  /* ── Assign ledger to a single row ── */
+  function assignLedger(rowId: string, ledgerId: string) {
+    const acct = coa.find(a => a.id === ledgerId);
+    setRows(r => r.map(x => x.id === rowId ? { ...x, ledger_id: ledgerId || null, ledger_name: acct?.name ?? null } : x));
+  }
+
+  /* ── Bulk assign ── */
+  function applyBulkAssign() {
+    if (!bulkLedgerId || selected.size === 0) return;
+    const acct = coa.find(a => a.id === bulkLedgerId);
+    setRows(r => r.map(x => selected.has(x.id) ? { ...x, ledger_id: bulkLedgerId, ledger_name: acct?.name ?? null } : x));
+    setSelected(new Set());
+    setBulkLedgerId("");
+    setBulkSearch("");
+  }
+
+  /* ── Add new ledger ── */
+  async function addLedger(forRowId: string) {
+    if (!bizId || !newLedgerName.trim()) return;
+    setAddingLedger(true);
+    try {
+      const { data, error } = await supabase
+        .from("fw_fin_chart_of_accounts")
+        .insert({ business_id: bizId, name: newLedgerName.trim(), type: newLedgerType, is_group: false, is_system: false })
+        .select("id,name,type,code")
+        .single();
+      if (error) throw error;
+      const newAcct = data as CoaAccount;
+      setCoa(c => [...c, newAcct]);
+      assignLedger(forRowId, newAcct.id);
+      setAddLedgerRow(null);
+      setNewLedgerName("");
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAddingLedger(false);
+    }
+  }
+
+  /* ── Push to journals ── */
+  async function pushToJournals() {
     if (!bizId || !bankAccountId) return;
-    const unresolved = categories.filter(c => !c.accountId);
-    if (unresolved.length > 0) {
-      alert(`Please assign a ledger account to all groups before posting. Missing: ${unresolved.map(c => c.label).join(", ")}`);
-      return;
-    }
-    setStep("posting");
-    let posted = 0; let failed = 0;
-    const catMap: Record<string, string> = {};
-    for (const cat of categories) catMap[cat.key] = cat.accountId;
-
-    for (const txn of rawTxns) {
-      const contraId = catMap[txn.categoryKey];
-      if (!contraId) { failed++; continue; }
-      try {
-        const { data: j, error: jErr } = await supabase.from("fw_fin_journals").insert({
+    const toPush = rows.filter(r => r.ledger_id && !r.pushed);
+    if (!toPush.length) return;
+    setPushing(true);
+    try {
+      const res = await fetch("/api/finance/bank-to-journals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           business_id: bizId,
-          financial_year_id: fyId,
-          entry_no: `BANK/${txn.date}/${Date.now()}`,
-          date: txn.date,
-          narration: txn.narration,
-          type: "journal",
-          status: "posted",
-          total_debit: txn.amount,
-          total_credit: txn.amount,
-          ai_generated: false,
-        }).select("id").single();
-        if (jErr) throw jErr;
-        // Credit (deposit): Dr Bank Account, Cr Contra (income/debtor)
-        // Debit (withdrawal): Dr Contra (expense/creditor), Cr Bank Account
-        await supabase.from("fw_fin_journal_lines").insert([
-          { journal_id: j.id, account_id: txn.type === "credit" ? bankAccountId : contraId, dr_amount: txn.amount, cr_amount: 0, narration: txn.narration, sort_order: 0 },
-          { journal_id: j.id, account_id: txn.type === "credit" ? contraId : bankAccountId, dr_amount: 0, cr_amount: txn.amount, narration: txn.narration, sort_order: 1 },
-        ]);
-        posted++;
-      } catch { failed++; }
+          bank_account_id: bankAccountId,
+          transactions: toPush.map(r => ({
+            id: r.id, date: r.date, description: r.description,
+            debit: r.debit, credit: r.credit, ledger_id: r.ledger_id,
+          })),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setPushResult({ created: json.created });
+      const pushedIds = new Set(toPush.map(r => r.id));
+      setRows(r => r.map(x => pushedIds.has(x.id) ? { ...x, pushed: true } : x));
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPushing(false);
     }
-    setPostResult({ posted, failed });
-    setStep("done");
   }
 
-  const totalCredits = rawTxns.filter(t => t.type === "credit").reduce((s, t) => s + t.amount, 0);
-  const totalDebits = rawTxns.filter(t => t.type === "debit").reduce((s, t) => s + t.amount, 0);
-  const fmt = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const unresolvedCount = categories.filter(c => !c.accountId).length;
+  /* ── COA filtered for bulk assign search ── */
+  const bulkCoa = useMemo(() =>
+    coa.filter(a => !bulkSearch || a.name.toLowerCase().includes(bulkSearch.toLowerCase())).slice(0, 40),
+    [coa, bulkSearch]);
 
-  const inp: React.CSSProperties = { background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "6px 10px", borderRadius: 6, fontSize: "0.8rem", width: "100%", boxSizing: "border-box" };
+  /* ── Summaries ── */
+  const totalDebit = rows.reduce((s, r) => s + r.debit, 0);
+  const totalCredit = rows.reduce((s, r) => s + r.credit, 0);
+  const assignedCount = rows.filter(r => r.ledger_id).length;
+  const unpushedAssigned = rows.filter(r => r.ledger_id && !r.pushed).length;
+
+  /* ─────────────────── JSX ─────────────────────────────── */
+  const inp: React.CSSProperties = {
+    background: "rgba(255,255,255,0.04)", border: "1px solid #1B2E4A", color: "#DEE8F5",
+    padding: "7px 10px", borderRadius: 7, fontSize: "0.82rem", outline: "none",
+    fontFamily: "'DM Sans',system-ui,sans-serif",
+  };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Bank Reconciliation</span>
-      </nav>
+    <div style={{ minHeight: "100vh", background: "#05091A", color: "#DEE8F5", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+        * { box-sizing: border-box; }
+        .bs-drop { transition: border-color 0.2s, background 0.2s; }
+        .bs-drop:hover { border-color: #3B82F6 !important; background: rgba(59,130,246,0.04) !important; }
+        .bs-row:hover td { background: rgba(255,255,255,0.015); }
+        .bs-row.pushed td { opacity: 0.45; }
+        .bs-sel { accent-color: #3B82F6; width: 14px; height: 14px; cursor: pointer; }
+        .bs-chip { font-size: 0.6rem; font-weight: 700; padding: 2px 7px; border-radius: 12px; white-space: nowrap; }
+        .bs-badge-dr { background: rgba(239,68,68,0.12); color: #FCA5A5; }
+        .bs-badge-cr { background: rgba(16,185,129,0.12); color: #34D399; }
+        .bs-btn { border: none; border-radius: 8px; font-family: inherit; font-weight: 700; cursor: pointer; transition: opacity 0.15s, transform 0.1s; display: inline-flex; align-items: center; gap: 0.4rem; }
+        .bs-btn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
+        .bs-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .bs-filter-btn { background: rgba(255,255,255,0.04); border: 1px solid #1B2E4A; color: #6E88A8; border-radius: 7px; padding: 5px 12px; font-size: 0.76rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+        .bs-filter-btn.active { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.4); color: #60A5FA; }
+        .ledger-sel { background: rgba(255,255,255,0.03); border: 1px solid #1B2E4A; color: #DEE8F5; padding: 4px 6px; border-radius: 6px; font-size: 0.72rem; outline: none; width: 100%; cursor: pointer; max-width: 200px; }
+        .ledger-sel:focus { border-color: #3B82F6; }
+        select option { background: #0B1428; }
+        input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
+        ::-webkit-scrollbar { width: 5px; height: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #1B2E4A; border-radius: 3px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { animation: spin 0.8s linear infinite; }
+      `}</style>
 
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "2rem" }}>
-        <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800 }}>Bank Statement Import</h1>
-        <p style={{ margin: "0 0 2rem", color: "rgba(237,232,220,0.5)", fontSize: "0.85rem" }}>
-          Paste your CSV. Transactions are auto-grouped by category. Assign ledger accounts and post directly to your books.
-        </p>
-
-        {/* ── Step 1: Upload ── */}
-        {step === "upload" && (
+      {/* ── Top bar ── */}
+      <div style={{ background: "rgba(5,9,26,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid #1B2E4A", padding: "0 1.5rem", height: 52, display: "flex", alignItems: "center", gap: "0.75rem", position: "sticky", top: 0, zIndex: 20 }}>
+        <Link href="/finance" style={{ color: "#4A6FA5", textDecoration: "none", fontSize: "0.82rem" }}>Finance</Link>
+        <span style={{ color: "#2A4060" }}>›</span>
+        <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Bank Statement Import</span>
+        {rows.length > 0 && (
           <>
-            {/* Bank account selector */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
-              <label style={{ display: "block", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.4rem" }}>Your Bank / Cash Account (Dr for deposits, Cr for payments)</label>
-              <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} style={{ ...inp, maxWidth: 360 }}>
-                <option value="">— select bank account —</option>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.code} {a.name}</option>)}
-              </select>
-            </div>
-
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, padding: "1.5rem", marginBottom: "1.25rem" }}>
-              <label style={{ display: "block", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Bank Statement CSV</label>
-              <textarea
-                value={csvText}
-                onChange={e => setCsvText(e.target.value)}
-                placeholder={`Paste CSV here. Expected columns: Date, Narration/Description, Debit, Credit, Balance\n\nExample:\nDate,Narration,Debit,Credit,Balance\n01-08-2025,NEFT from ABC Ltd,,50000.00,150000.00\n02-08-2025,Rent payment,30000.00,,120000.00\n03-08-2025,Bank charges,500.00,,119500.00`}
-                rows={10}
-                style={{ width: "100%", background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "12px", borderRadius: 6, fontSize: "0.82rem", fontFamily: "monospace", resize: "vertical", boxSizing: "border-box", lineHeight: 1.6 }}
-              />
-              {parseError && <div style={{ color: "#f87171", fontSize: "0.83rem", marginTop: "0.75rem" }}>{parseError}</div>}
-              <button onClick={handleParse} disabled={!csvText.trim() || !bankAccountId} style={{ marginTop: "1rem", background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: (!csvText.trim() || !bankAccountId) ? 0.5 : 1 }}>
-                Parse & Categorise →
-              </button>
-            </div>
+            <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#4A6FA5" }}>
+              {rows.length} transactions · {assignedCount} assigned · {rows.filter(r => r.pushed).length} pushed
+            </span>
+            <button onClick={() => { setRows([]); setSelected(new Set()); setPushResult(null); setParseError(""); }}
+              style={{ ...inp, padding: "5px 12px", fontSize: "0.75rem", cursor: "pointer", color: "#6E88A8" }}>
+              Clear ✕
+            </button>
           </>
         )}
+      </div>
 
-        {/* ── Step 2: Review categories ── */}
-        {step === "review" && (
-          <>
-            {/* Summary bar */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem", marginBottom: "1.75rem" }}>
-              {[
-                { label: "Transactions", value: rawTxns.length.toString(), color: "#EDE8DC" },
-                { label: "Total Deposits", value: fmt(totalCredits), color: "#4ade80" },
-                { label: "Total Withdrawals", value: fmt(totalDebits), color: "#f87171" },
-                { label: "Groups to Review", value: unresolvedCount.toString(), color: unresolvedCount > 0 ? "#fb923c" : "#4ade80" },
-              ].map(k => (
-                <div key={k.label} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, padding: "0.85rem 1rem" }}>
-                  <div style={{ fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.3rem" }}>{k.label}</div>
-                  <div style={{ fontSize: "1.2rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>{k.value}</div>
-                </div>
-              ))}
+      <div style={{ maxWidth: 1320, margin: "0 auto", padding: "1.5rem" }}>
+
+        {/* ── Upload area (shown when no rows) ── */}
+        {rows.length === 0 && (
+          <div>
+            <div style={{ marginBottom: "1.5rem" }}>
+              <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800, letterSpacing: "-0.02em" }}>Bank Statement Import</h1>
+              <p style={{ margin: 0, color: "#4A6FA5", fontSize: "0.88rem" }}>Upload your bank statement (PDF or Excel). Assign ledger accounts and push directly to Journal Entries → Ledger → Trial Balance → Financial Statements.</p>
             </div>
 
-            {unresolvedCount > 0 && (
-              <div style={{ background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.3)", borderRadius: 10, padding: "0.75rem 1.25rem", marginBottom: "1.25rem", fontSize: "0.83rem", color: "#fb923c" }}>
-                {unresolvedCount} group{unresolvedCount > 1 ? "s" : ""} need a ledger account assigned before you can post.
+            <div
+              className="bs-drop"
+              onDrop={onDrop} onDragOver={e => e.preventDefault()}
+              onClick={() => fileRef.current?.click()}
+              style={{ border: "2px dashed #1B2E4A", borderRadius: 16, padding: "3rem 2rem", textAlign: "center", cursor: "pointer", background: "#0B1428" }}
+            >
+              {parsing ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+                  <div className="spin" style={{ width: 36, height: 36, border: "3px solid #1B2E4A", borderTopColor: "#3B82F6", borderRadius: "50%" }} />
+                  <div style={{ color: "#4A6FA5" }}>Parsing statement…</div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📄</div>
+                  <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: "0.3rem" }}>Drop bank statement here</div>
+                  <div style={{ color: "#4A6FA5", fontSize: "0.84rem", marginBottom: "1rem" }}>PDF (parsed by AI) · Excel .xlsx / .xls · CSV</div>
+                  <div style={{ display: "inline-block", background: "#2563EB", color: "#fff", padding: "10px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.88rem" }}>
+                    Browse File
+                  </div>
+                </>
+              )}
+            </div>
+            <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={onFileInput} style={{ display: "none" }} />
+
+            {parseError && (
+              <div style={{ marginTop: "1rem", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 10, padding: "0.85rem 1rem", color: "#FCA5A5", fontSize: "0.85rem" }}>
+                ⚠ {parseError}
               </div>
             )}
-
-            {/* Category groups */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
-              {categories.map(cat => {
-                const catTotal = cat.txns.reduce((s, t) => s + t.amount, 0);
-                const expanded = expandedCat === cat.key;
-                const selectedAc = accounts.find(a => a.id === cat.accountId);
-                const missing = !cat.accountId;
-                return (
-                  <div key={cat.key} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${missing ? "rgba(251,146,60,0.4)" : cat.type === "credit" ? "rgba(74,222,128,0.15)" : "rgba(237,232,220,0.08)"}`, borderRadius: 12, overflow: "hidden" }}>
-                    {/* Header row */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.85rem 1.25rem" }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: cat.type === "credit" ? "#4ade80" : "#f87171" }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{cat.label}</div>
-                        <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", marginTop: 2 }}>
-                          {cat.txns.length} transaction{cat.txns.length !== 1 ? "s" : ""} · {cat.type === "credit" ? "Dr Bank" : "Cr Bank"}
-                        </div>
-                      </div>
-                      <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums", fontSize: "1rem", color: cat.type === "credit" ? "#4ade80" : "#f87171", flexShrink: 0 }}>
-                        {fmt(catTotal)}
-                      </div>
-                      {/* Account selector */}
-                      <div style={{ minWidth: 220, flexShrink: 0 }}>
-                        <select
-                          value={cat.accountId}
-                          onChange={e => updateCatAccount(cat.key, e.target.value)}
-                          style={{ ...inp, border: `1px solid ${missing ? "rgba(251,146,60,0.6)" : "rgba(237,232,220,0.15)"}`, color: missing ? "#fb923c" : "#EDE8DC" }}
-                        >
-                          <option value="">{cat.accountHint ? `Suggested: ${cat.accountHint}` : "— assign account —"}</option>
-                          {accounts.map(a => <option key={a.id} value={a.id}>{a.code} {a.name}</option>)}
-                        </select>
-                      </div>
-                      <button onClick={() => setExpandedCat(expanded ? null : cat.key)} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.35)", cursor: "pointer", fontSize: "0.85rem", flexShrink: 0, padding: "4px 8px" }}>
-                        {expanded ? "▲ Hide" : "▼ Show"} txns
-                      </button>
-                    </div>
-
-                    {/* Expanded transactions */}
-                    {expanded && (
-                      <div style={{ borderTop: "1px solid rgba(237,232,220,0.06)", maxHeight: 260, overflowY: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                          <thead>
-                            <tr style={{ background: "rgba(255,255,255,0.02)" }}>
-                              {["Date", "Narration", "Amount"].map(h => (
-                                <th key={h} style={{ padding: "0.45rem 1rem", textAlign: h === "Amount" ? "right" : "left", fontSize: "0.62rem", color: "rgba(237,232,220,0.3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {cat.txns.map(txn => (
-                              <tr key={txn.id} style={{ borderTop: "1px solid rgba(237,232,220,0.04)" }}>
-                                <td style={{ padding: "0.45rem 1rem", fontSize: "0.78rem", whiteSpace: "nowrap", color: "rgba(237,232,220,0.5)" }}>{txn.date}</td>
-                                <td style={{ padding: "0.45rem 1rem", fontSize: "0.8rem", maxWidth: 340, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txn.narration}</td>
-                                <td style={{ padding: "0.45rem 1rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: txn.type === "credit" ? "#4ade80" : "#f87171" }}>
-                                  {fmt(txn.amount)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Action buttons */}
-            <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-              <button onClick={() => { setStep("upload"); setCategories([]); setRawTxns([]); }} style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem" }}>← Back</button>
-              <button
-                onClick={postAll}
-                disabled={unresolvedCount > 0 || !bankAccountId}
-                style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: (unresolvedCount > 0 || !bankAccountId) ? 0.45 : 1 }}
-              >
-                Post {rawTxns.length} Transactions to Ledger →
-              </button>
-              {unresolvedCount > 0 && <span style={{ fontSize: "0.78rem", color: "#fb923c" }}>Assign accounts to all {unresolvedCount} highlighted groups first</span>}
-            </div>
-          </>
-        )}
-
-        {/* ── Step 3: Posting ── */}
-        {step === "posting" && (
-          <div style={{ textAlign: "center", padding: "4rem" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>⏳</div>
-            <div style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: "0.4rem" }}>Posting journal entries…</div>
-            <div style={{ color: "rgba(237,232,220,0.4)", fontSize: "0.85rem" }}>Please wait, do not close this tab.</div>
           </div>
         )}
 
-        {/* ── Step 4: Done ── */}
-        {step === "done" && postResult && (
-          <div style={{ textAlign: "center", padding: "3rem" }}>
-            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>{postResult.failed === 0 ? "✅" : "⚠️"}</div>
-            <div style={{ fontWeight: 700, fontSize: "1.2rem", marginBottom: "0.5rem" }}>
-              {postResult.posted} Journal Entr{postResult.posted !== 1 ? "ies" : "y"} Posted
+        {/* ── Main table view ── */}
+        {rows.length > 0 && (
+          <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
+
+            {/* ── Left: table ── */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+
+              {/* Filters row */}
+              <div style={{ background: "#0B1428", border: "1px solid #1B2E4A", borderRadius: 12, padding: "0.8rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
+                {/* Search */}
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search description…" style={{ ...inp, flex: "1 1 180px", minWidth: 140 }} />
+
+                {/* Date range */}
+                <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} style={{ ...inp, width: 130 }} title="From date" />
+                <span style={{ color: "#2A4060", fontSize: "0.75rem" }}>–</span>
+                <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} style={{ ...inp, width: 130 }} title="To date" />
+
+                {/* Type filter */}
+                {(["all", "debit", "credit"] as const).map(t => (
+                  <button key={t} onClick={() => setFilterType(t)} className={`bs-filter-btn${filterType === t ? " active" : ""}`}>
+                    {t === "all" ? "All" : t === "debit" ? "💸 Payments" : "💰 Receipts"}
+                  </button>
+                ))}
+
+                {/* Status filter */}
+                {(["all", "unassigned", "assigned", "pushed"] as const).map(s => (
+                  <button key={s} onClick={() => setFilterStatus(s)} className={`bs-filter-btn${filterStatus === s ? " active" : ""}`}>
+                    {s === "all" ? "All" : s === "unassigned" ? "⬜ Unassigned" : s === "assigned" ? "✅ Assigned" : "✓ Pushed"}
+                  </button>
+                ))}
+
+                <span style={{ marginLeft: "auto", fontSize: "0.74rem", color: "#4A6FA5" }}>{filtered.length} shown</span>
+              </div>
+
+              {/* Bulk assign bar — visible when rows are selected */}
+              {selected.size > 0 && (
+                <div style={{ background: "rgba(37,99,235,0.08)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: 10, padding: "0.65rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#60A5FA" }}>{selected.size} selected</span>
+                  <input value={bulkSearch} onChange={e => setBulkSearch(e.target.value)} placeholder="Search ledger…" style={{ ...inp, width: 160, padding: "5px 8px", fontSize: "0.78rem" }} />
+                  <select value={bulkLedgerId} onChange={e => setBulkLedgerId(e.target.value)} style={{ ...inp, minWidth: 200, padding: "5px 8px", fontSize: "0.78rem", cursor: "pointer" }}>
+                    <option value="">— select ledger to assign —</option>
+                    {bulkCoa.map(a => <option key={a.id} value={a.id}>{a.name} ({a.type})</option>)}
+                  </select>
+                  <button onClick={applyBulkAssign} disabled={!bulkLedgerId} className="bs-btn" style={{ background: "#2563EB", color: "#fff", padding: "6px 16px", fontSize: "0.8rem" }}>
+                    Assign to All
+                  </button>
+                  <button onClick={() => setSelected(new Set())} style={{ background: "none", border: "none", color: "#4A6FA5", cursor: "pointer", fontSize: "0.78rem", fontFamily: "inherit" }}>
+                    Deselect
+                  </button>
+                </div>
+              )}
+
+              {/* Table */}
+              <div style={{ background: "#0B1428", border: "1px solid #1B2E4A", borderRadius: 12, overflow: "hidden" }}>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+                    <thead>
+                      <tr style={{ background: "#080D1C", borderBottom: "1px solid #111E33" }}>
+                        <th style={{ padding: "0.6rem 0.75rem", width: 36, textAlign: "center" }}>
+                          <input type="checkbox" className="bs-sel" checked={allFilteredSelected} onChange={toggleAll} />
+                        </th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Date</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Description</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Debit (Dr)</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Credit (Cr)</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Balance</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ledger Account</th>
+                        <th style={{ padding: "0.6rem 0.75rem", width: 32 }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((row, i) => (
+                        <React.Fragment key={row.id}>
+                          <tr
+                            className={`bs-row${row.pushed ? " pushed" : ""}`}
+                            style={{ borderTop: i === 0 ? "none" : "1px solid #0D1827", background: selected.has(row.id) ? "rgba(37,99,235,0.06)" : "transparent" }}
+                          >
+                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "center" }}>
+                              <input type="checkbox" className="bs-sel" checked={selected.has(row.id)} onChange={() => toggleRow(row.id)} />
+                            </td>
+                            <td style={{ padding: "0.5rem 0.75rem", whiteSpace: "nowrap", color: "#6E88A8", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem" }}>
+                              {fmtDate(row.date)}
+                            </td>
+                            <td style={{ padding: "0.5rem 0.75rem", color: "#DEE8F5", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.description}>
+                              {row.description || <span style={{ color: "#2A4060" }}>—</span>}
+                            </td>
+                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.debit ? "#FCA5A5" : "#2A4060", fontWeight: row.debit ? 600 : 400 }}>
+                              {row.debit ? `₹${fmt(row.debit)}` : ""}
+                            </td>
+                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.credit ? "#34D399" : "#2A4060", fontWeight: row.credit ? 600 : 400 }}>
+                              {row.credit ? `₹${fmt(row.credit)}` : ""}
+                            </td>
+                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: "#4A6FA5", fontSize: "0.7rem" }}>
+                              {row.balance ? `₹${fmt(row.balance)}` : ""}
+                            </td>
+                            <td style={{ padding: "0.5rem 0.75rem" }}>
+                              {row.pushed ? (
+                                <span className="bs-chip" style={{ background: "rgba(16,185,129,0.12)", color: "#34D399" }}>✓ Pushed</span>
+                              ) : addLedgerRow === row.id ? (
+                                <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
+                                  <input value={newLedgerName} onChange={e => setNewLedgerName(e.target.value)} placeholder="Ledger name" style={{ ...inp, padding: "4px 8px", fontSize: "0.72rem", width: 140 }} />
+                                  <select value={newLedgerType} onChange={e => setNewLedgerType(e.target.value)} style={{ ...inp, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}>
+                                    {["expense","income","asset","liability","bank","cash","receivable","payable"].map(t => <option key={t} value={t}>{t}</option>)}
+                                  </select>
+                                  <button onClick={() => addLedger(row.id)} disabled={addingLedger || !newLedgerName.trim()} className="bs-btn" style={{ background: "#10B981", color: "#fff", padding: "4px 10px", fontSize: "0.72rem", borderRadius: 6 }}>
+                                    {addingLedger ? "…" : "Add"}
+                                  </button>
+                                  <button onClick={() => setAddLedgerRow(null)} style={{ background: "none", border: "none", color: "#4A6FA5", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
+                                </div>
+                              ) : (
+                                <select
+                                  value={row.ledger_id ?? ""}
+                                  onChange={e => {
+                                    if (e.target.value === "__add__") { setAddLedgerRow(row.id); setNewLedgerName(""); return; }
+                                    assignLedger(row.id, e.target.value);
+                                  }}
+                                  className="ledger-sel"
+                                  style={{ borderColor: row.ledger_id ? "rgba(16,185,129,0.3)" : "#1B2E4A", color: row.ledger_id ? "#34D399" : "#4A6FA5" }}
+                                >
+                                  <option value="">— select ledger —</option>
+                                  <option value="__add__">＋ Add new ledger…</option>
+                                  {coa.map(a => (
+                                    <option key={a.id} value={a.id}>{a.name} ({a.type})</option>
+                                  ))}
+                                </select>
+                              )}
+                            </td>
+                            <td style={{ padding: "0.5rem 0.5rem", textAlign: "center" }}>
+                              {row.debit > 0 ? (
+                                <span className="bs-chip bs-badge-dr">Dr</span>
+                              ) : (
+                                <span className="bs-chip bs-badge-cr">Cr</span>
+                              )}
+                            </td>
+                          </tr>
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                    {/* Footer totals */}
+                    <tfoot>
+                      <tr style={{ borderTop: "1px solid #1B2E4A", background: "#080D1C" }}>
+                        <td colSpan={3} style={{ padding: "0.55rem 0.75rem", fontSize: "0.72rem", fontWeight: 700, color: "#4A6FA5" }}>
+                          Total ({rows.length} transactions)
+                        </td>
+                        <td style={{ padding: "0.55rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, color: "#FCA5A5", fontSize: "0.78rem" }}>
+                          ₹{fmt(totalDebit)}
+                        </td>
+                        <td style={{ padding: "0.55rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, color: "#34D399", fontSize: "0.78rem" }}>
+                          ₹{fmt(totalCredit)}
+                        </td>
+                        <td colSpan={3} />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              {filtered.length === 0 && (
+                <div style={{ padding: "2rem", textAlign: "center", color: "#2A4060", fontSize: "0.84rem" }}>
+                  No transactions match the current filters.
+                </div>
+              )}
             </div>
-            <div style={{ color: "rgba(237,232,220,0.5)", marginBottom: "2rem" }}>
-              {postResult.failed > 0 ? `${postResult.failed} failed — check chart of accounts.` : "All transactions are now in your ledger and dashboard."}
-            </div>
-            <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
-              <Link href="/finance" style={{ background: "#C9A84C", color: "#070C1A", padding: "10px 24px", borderRadius: 8, fontWeight: 700, textDecoration: "none" }}>View Dashboard →</Link>
-              <Link href="/finance/journals" style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.1)", color: "#EDE8DC", padding: "10px 20px", borderRadius: 8, textDecoration: "none" }}>Journal Entries →</Link>
-              <button onClick={() => { setCsvText(""); setStep("upload"); setCategories([]); setRawTxns([]); setPostResult(null); }} style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}>
-                Import Another
+
+            {/* ── Right: action panel ── */}
+            <div style={{ width: 260, flexShrink: 0, position: "sticky", top: 68 }}>
+
+              {/* Bank account selector */}
+              <div style={{ background: "#0B1428", border: "1px solid #1B2E4A", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
+                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#4A6FA5", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Bank / Cash Account</div>
+                <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} style={{ ...inp, width: "100%", cursor: "pointer", fontSize: "0.8rem" }}>
+                  <option value="">— select account —</option>
+                  {bankAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <div style={{ fontSize: "0.66rem", color: "#2A4060", marginTop: "0.4rem" }}>All transactions in this statement belong to this account</div>
+              </div>
+
+              {/* Summary */}
+              <div style={{ background: "#0B1428", border: "1px solid #1B2E4A", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
+                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#4A6FA5", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>Summary</div>
+                {[
+                  ["Total Transactions", rows.length, "#DEE8F5"],
+                  ["Assigned", assignedCount, "#34D399"],
+                  ["Unassigned", rows.length - assignedCount - rows.filter(r => r.pushed).length, "#F59E0B"],
+                  ["Already Pushed", rows.filter(r => r.pushed).length, "#60A5FA"],
+                  ["Ready to Push", unpushedAssigned, "#A78BFA"],
+                ].map(([label, val, color]) => (
+                  <div key={String(label)} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
+                    <span style={{ fontSize: "0.76rem", color: "#4A6FA5" }}>{label}</span>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: String(color) }}>{val}</span>
+                  </div>
+                ))}
+                <div style={{ height: 1, background: "#111E33", margin: "0.6rem 0" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.3rem" }}>
+                  <span style={{ fontSize: "0.76rem", color: "#4A6FA5" }}>Total Payments</span>
+                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#FCA5A5", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(totalDebit)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "0.76rem", color: "#4A6FA5" }}>Total Receipts</span>
+                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#34D399", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(totalCredit)}</span>
+                </div>
+              </div>
+
+              {/* Push button */}
+              <button
+                onClick={pushToJournals}
+                disabled={pushing || unpushedAssigned === 0 || !bankAccountId}
+                className="bs-btn"
+                style={{ width: "100%", padding: "14px 0", fontSize: "0.92rem", fontWeight: 800, background: unpushedAssigned > 0 && bankAccountId ? "#2563EB" : "#111E33", color: unpushedAssigned > 0 && bankAccountId ? "#fff" : "#2A4060", borderRadius: 10, justifyContent: "center", marginBottom: "0.5rem" }}
+              >
+                {pushing ? (
+                  <><span className="spin" style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block" }} /> Pushing…</>
+                ) : (
+                  `🚀 Push ${unpushedAssigned} to Journals`
+                )}
               </button>
+
+              {!bankAccountId && (
+                <div style={{ fontSize: "0.72rem", color: "#F59E0B", textAlign: "center", marginBottom: "0.5rem" }}>Select a bank account above first</div>
+              )}
+
+              {pushResult && (
+                <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 10, padding: "0.85rem 1rem", textAlign: "center" }}>
+                  <div style={{ fontSize: "1.4rem", marginBottom: "0.25rem" }}>✅</div>
+                  <div style={{ fontWeight: 700, color: "#34D399", fontSize: "0.88rem", marginBottom: "0.2rem" }}>{pushResult.created} entries created</div>
+                  <div style={{ fontSize: "0.72rem", color: "#4A6FA5", marginBottom: "0.75rem" }}>Journals → Ledger → TB → FS updated</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                    <Link href="/finance/journals" style={{ display: "block", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.25)", color: "#60A5FA", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
+                      📋 View Journals →
+                    </Link>
+                    <Link href="/finance/ledger" style={{ display: "block", background: "rgba(255,255,255,0.03)", border: "1px solid #1B2E4A", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
+                      📒 Ledger →
+                    </Link>
+                    <Link href="/finance/reports" style={{ display: "block", background: "rgba(255,255,255,0.03)", border: "1px solid #1B2E4A", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
+                      📈 Financial Statements →
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* Upload another */}
+              <div style={{ marginTop: "0.75rem", textAlign: "center" }}>
+                <button onClick={() => fileRef.current?.click()} style={{ background: "none", border: "1px dashed #1B2E4A", color: "#4A6FA5", padding: "7px 16px", borderRadius: 8, cursor: "pointer", fontSize: "0.76rem", fontFamily: "inherit", fontWeight: 600, width: "100%" }}>
+                  ⬆ Upload Another Statement
+                </button>
+                <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={onFileInput} style={{ display: "none" }} />
+              </div>
             </div>
           </div>
         )}

@@ -42,7 +42,7 @@ const NAV_GROUPS = [
       { icon: "📈", label: "Financial Reports", href: "/finance/reports" },
       { icon: "🏛️", label: "GST Returns", href: "/finance/gst" },
       { icon: "🔖", label: "TDS Tracker", href: "/finance/tds" },
-      { icon: "🏦", label: "Bank Reconciliation", href: "/finance/banking" },
+      { icon: "🏦", label: "Bank Import", href: "/finance/banking" },
       { icon: "🔄", label: "Tally Export", href: "/finance/tally" },
     ],
   },
