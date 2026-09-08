@@ -116,10 +116,15 @@ export default function BusinessSetup() {
       // Seed Chart of Accounts
       await seedCoA(biz.id, form.coa_preset);
 
-      // Save active business to localStorage
+      // Save as active business
       if (userId) localStorage.setItem(`fw_fin_biz_${userId}`, biz.id);
 
-      router.push("/finance");
+      // If user already had businesses, go to selector; otherwise straight to finance
+      const { count } = await supabase
+        .from("fw_fin_businesses")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_id", userId);
+      router.push((count ?? 0) > 1 ? "/finance/select-business" : "/finance");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
       if (msg.includes("schema cache") || msg.includes("does not exist") || msg.includes("relation")) {

@@ -131,21 +131,31 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         </div>
 
         {/* Business switcher */}
-        {!collapsed && bizName && (
+        {!collapsed && (
           <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(237,232,220,0.05)" }}>
             <div style={{ fontSize: "0.6rem", color: "rgba(237,232,220,0.22)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Active Business</div>
-            {bizCount > 1 ? (
-              <Link href="/finance/select-business" style={{
-                display: "flex", alignItems: "center", gap: 6, textDecoration: "none",
-                background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)",
-                borderRadius: 8, padding: "5px 8px", transition: "border-color 0.2s",
-              }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(237,232,220,0.75)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{bizName}</span>
-                <span style={{ fontSize: "0.7rem", color: "#3B82F6", flexShrink: 0 }}>⇄</span>
-              </Link>
-            ) : (
-              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "rgba(237,232,220,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "2px 0" }}>{bizName}</div>
+            {bizName && (
+              bizCount > 1 ? (
+                <Link href="/finance/select-business" style={{
+                  display: "flex", alignItems: "center", gap: 6, textDecoration: "none",
+                  background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)",
+                  borderRadius: 8, padding: "5px 8px", marginBottom: 6,
+                }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(237,232,220,0.75)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{bizName}</span>
+                  <span style={{ fontSize: "0.7rem", color: "#3B82F6", flexShrink: 0 }}>⇄</span>
+                </Link>
+              ) : (
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "rgba(237,232,220,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "2px 0", marginBottom: 6 }}>{bizName}</div>
+              )
             )}
+            <Link href="/finance/setup" style={{
+              display: "flex", alignItems: "center", gap: 5, textDecoration: "none",
+              color: "rgba(237,232,220,0.35)", fontSize: "0.7rem", fontWeight: 600,
+              padding: "4px 6px", borderRadius: 6, border: "1px dashed rgba(237,232,220,0.1)",
+              transition: "color 0.15s, border-color 0.15s",
+            }}>
+              <span style={{ fontSize: "0.75rem" }}>＋</span> Add Business
+            </Link>
           </div>
         )}
 
