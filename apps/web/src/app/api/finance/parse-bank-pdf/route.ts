@@ -1,35 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-
 export async function POST(req: NextRequest) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: "ANTHROPIC_API_KEY is not set in environment variables. Add it in Vercel → Settings → Environment Variables." }, { status: 500 });
+  }
+
+  const anthropic = new Anthropic({ apiKey });
+
   try {
     const form = await req.formData();
     const file = form.get("file") as File | null;
-    if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
+    if (!file) return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
 
     const bytes = await file.arrayBuffer();
     const base64 = Buffer.from(bytes).toString("base64");
 
-    const prompt = `This is a bank statement PDF. Extract ALL transactions from it.
-Return ONLY a JSON array with no markdown, no explanation. Each element:
-{
-  "date": "YYYY-MM-DD",
-  "description": "narration/description as shown",
-  "debit": number or 0,
-  "credit": number or 0,
-  "balance": number or 0
-}
+    const prompt = `This is a bank statement PDF. Extract ALL transaction rows from it.
+Return ONLY a valid JSON array — no markdown fences, no explanation, nothing else before or after.
+Each element must be:
+{"date":"YYYY-MM-DD","description":"narration as shown","debit":0,"credit":0,"balance":0}
+
 Rules:
-- Amounts must be numbers (no currency symbols, no commas)
-- If a column says "Withdrawal" or "Dr" it is debit
-- If a column says "Deposit" or "Cr" it is credit
-- Ignore header rows, opening/closing balance summary rows
-- Extract every transaction row`;
+- Amounts: plain numbers only (no ₹, $, commas). Use 0 if empty.
+- Withdrawal / Dr / Debit column → debit field
+- Deposit / Cr / Credit column → credit field
+- Skip header rows and summary/total rows
+- Extract every individual transaction row`;
 
     const response = await anthropic.messages.create({
-      model: "claude-opus-5",
+      model: "claude-sonnet-4-5",
       max_tokens: 8192,
       messages: [{
         role: "user",
@@ -40,13 +41,31 @@ Rules:
       }],
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return NextResponse.json({ error: "Could not parse PDF", raw: text.slice(0, 500) }, { status: 422 });
+    const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "";
+
+    // Strip markdown fences if Claude wrapped it anyway
+    const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+    const jsonMatch = stripped.match(/\[[\s\S]*\]/);
+
+    if (!jsonMatch) {
+      return NextResponse.json({
+        error: "AI could not extract transactions from this PDF. Try saving the statement as Excel (.xlsx) from your bank's portal and uploading that instead.",
+        raw: raw.slice(0, 600),
+      }, { status: 422 });
+    }
 
     const transactions = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(transactions) || transactions.length === 0) {
+      return NextResponse.json({ error: "No transactions found in this PDF. Try downloading the statement as Excel from your bank portal." }, { status: 422 });
+    }
+
     return NextResponse.json({ transactions });
   } catch (e: unknown) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    // Surface meaningful errors
+    if (msg.includes("Could not process document") || msg.includes("unsupported")) {
+      return NextResponse.json({ error: "This PDF format is not supported. Download the statement as Excel (.xlsx) from your bank portal and upload that." }, { status: 422 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

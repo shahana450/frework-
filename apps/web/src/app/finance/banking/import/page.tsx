@@ -405,8 +405,19 @@ export default function BankingPage() {
             <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={onFileInput} style={{ display: "none" }} />
 
             {parseError && (
-              <div style={{ marginTop: "1rem", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 10, padding: "0.85rem 1rem", color: "#FCA5A5", fontSize: "0.85rem" }}>
-                ⚠ {parseError}
+              <div style={{ marginTop: "1rem", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 10, padding: "1rem 1.1rem" }}>
+                <div style={{ color: "#FCA5A5", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.5rem" }}>⚠ {parseError}</div>
+                <div style={{ color: "#7A93B4", fontSize: "0.78rem", lineHeight: 1.6 }}>
+                  <strong style={{ color: "#DEE8F5" }}>Tip:</strong> Most Indian banks (SBI, HDFC, ICICI, Axis, Kotak) let you download statements as <strong style={{ color: "#60A5FA" }}>Excel (.xlsx)</strong> from NetBanking → Account Statement → Download. Excel always works reliably.
+                </div>
+                <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.6rem" }}>
+                  <button onClick={() => fileRef.current?.click()} style={{ background: "#2563EB", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>
+                    Try Another File
+                  </button>
+                  <button onClick={() => setParseError("")} style={{ background: "none", border: "1px solid #1B2E4A", color: "#6E88A8", borderRadius: 7, padding: "7px 14px", fontWeight: 600, fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>
+                    Dismiss
+                  </button>
+                </div>
               </div>
             )}
           </div>
