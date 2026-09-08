@@ -64,6 +64,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const router = useRouter();
   const [bizName, setBizName] = useState("");
+  const [bizCount, setBizCount] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
   const [subChecked, setSubChecked] = useState(false);
 
@@ -88,9 +89,15 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       setSubChecked(true);
 
       const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
+      const { data: allBiz } = await supabase.from("fw_fin_businesses").select("id,name").eq("owner_id", user.id);
+      setBizCount(allBiz?.length ?? 0);
       if (saved) {
-        const { data } = await supabase.from("fw_fin_businesses").select("name").eq("id", saved).single();
-        if (data) setBizName(data.name);
+        const active = allBiz?.find(b => b.id === saved);
+        if (active) { setBizName(active.name); return; }
+      }
+      if (allBiz?.length) {
+        setBizName(allBiz[0].name);
+        localStorage.setItem(`fw_fin_biz_${user.id}`, allBiz[0].id);
       }
     });
   }, [pathname]);
@@ -123,11 +130,22 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
           </button>
         </div>
 
-        {/* Business name */}
+        {/* Business switcher */}
         {!collapsed && bizName && (
-          <div style={{ padding: "8px 14px", borderBottom: "1px solid rgba(237,232,220,0.05)" }}>
-            <div style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.25)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>Active Business</div>
-            <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "rgba(237,232,220,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bizName}</div>
+          <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(237,232,220,0.05)" }}>
+            <div style={{ fontSize: "0.6rem", color: "rgba(237,232,220,0.22)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Active Business</div>
+            {bizCount > 1 ? (
+              <Link href="/finance/select-business" style={{
+                display: "flex", alignItems: "center", gap: 6, textDecoration: "none",
+                background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)",
+                borderRadius: 8, padding: "5px 8px", transition: "border-color 0.2s",
+              }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(237,232,220,0.75)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{bizName}</span>
+                <span style={{ fontSize: "0.7rem", color: "#3B82F6", flexShrink: 0 }}>⇄</span>
+              </Link>
+            ) : (
+              <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "rgba(237,232,220,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "2px 0" }}>{bizName}</div>
+            )}
           </div>
         )}
 

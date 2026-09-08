@@ -41,11 +41,30 @@ function AuthCallbackInner() {
         method: "google",
       }, { onConflict: "id" });
 
-      // Honour ?next= redirect if present in the stored state
+      // If the user is heading into finance, check business count to decide where to land
       const next = typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("next") || sessionStorage.getItem("auth_next") || "/dashboard"
-        : "/dashboard";
+        ? new URLSearchParams(window.location.search).get("next") || sessionStorage.getItem("auth_next") || "/finance"
+        : "/finance";
       sessionStorage.removeItem("auth_next");
+
+      if (next.startsWith("/finance") || next === "/dashboard") {
+        const { data: bizList } = await supabase
+          .from("fw_fin_businesses")
+          .select("id")
+          .eq("owner_id", user.id);
+
+        const count = bizList?.length ?? 0;
+        if (count === 0) { router.replace("/finance/setup"); return; }
+        if (count === 1) {
+          localStorage.setItem(`fw_fin_biz_${user.id}`, bizList![0].id);
+          router.replace("/finance");
+          return;
+        }
+        // Multiple businesses — let user pick
+        router.replace("/finance/select-business");
+        return;
+      }
+
       router.replace(next);
     };
 
