@@ -37,12 +37,19 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: "Banking",
+    items: [
+      { icon: "🏦", label: "Bank Statement", href: "/finance/banking" },
+      { icon: "⬆", label: "Import Statement", href: "/finance/banking/import" },
+      { icon: "📑", label: "Transaction History", href: "/finance/banking/history" },
+    ],
+  },
+  {
     label: "Reports",
     items: [
       { icon: "📈", label: "Financial Reports", href: "/finance/reports" },
       { icon: "🏛️", label: "GST Returns", href: "/finance/gst" },
       { icon: "🔖", label: "TDS Tracker", href: "/finance/tds" },
-      { icon: "🏦", label: "Bank Import", href: "/finance/banking" },
       { icon: "🔄", label: "Tally Export", href: "/finance/tally" },
     ],
   },
