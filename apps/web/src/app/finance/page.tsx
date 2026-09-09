@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
 type TallyStatus = { state: "idle" | "checking" | "connected" | "disconnected"; company: string };
-type TallyStats = { revenue: number; expenses: number; profit: number; salesCount: number; fromDate: string; toDate: string; _raw?: string } | null;
+type TallyStats = { revenue: number; expenses: number; profit: number; salesCount: number; fromDate: string; toDate: string } | null;
 type PeriodKey = "fy" | "quarter" | "month" | "lastmonth";
 
 function fyDates(): { from: string; to: string; label: string } {
@@ -112,37 +112,58 @@ async function fetchTallyLedgers(): Promise<TallyLedger[]> {
   }
 }
 
-async function fetchTallyStats(from: string, to: string): Promise<TallyStats & { _raw?: string }> {
+async function fetchTallyStats(from: string, to: string): Promise<TallyStats> {
   try {
-    const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FPGroupBal</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${from}</SVFROMDATE><SVTODATE>${to}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FPGroupBal" ISMODIFY="No"><TYPE>Group</TYPE><FETCH>Name,ClosingBalance</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+    // Fetch ledger-level closing balances (more reliable than group-level)
+    const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FPLedBal</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${from}</SVFROMDATE><SVTODATE>${to}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FPLedBal" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent,ClosingBalance</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
     const res = await fetch("http://localhost:7001", {
       method: "POST", headers: { "Content-Type": "text/xml" }, body: xml,
       signal: AbortSignal.timeout(10000),
     });
     const text = await res.text();
-    const groups: Record<string, number> = {};
-    // Try attribute format: <GROUP NAME="Sales Accounts">
-    const attrRx = /<GROUP\s+NAME="([^"]+)"[^>]*>([\s\S]*?)<\/GROUP>/gi;
+
+    // Sum ledger balances by parent group
+    const byParent: Record<string, number> = {};
+
+    // attribute form: <LEDGER NAME="Sales" REMOTEID="...">
+    const attrRx = /<LEDGER\s+NAME="[^"]*"[^>]*>([\s\S]*?)<\/LEDGER>/gi;
     let m;
     while ((m = attrRx.exec(text)) !== null) {
-      const bal = m[2].match(/<CLOSINGBALANCE[^>]*>([\s\S]*?)<\/CLOSINGBALANCE>/i);
-      if (bal) groups[m[1].trim().toLowerCase()] = parseTallyAmount(bal[1]);
-    }
-    // Try child NAME tag: <GROUP><NAME>Sales Accounts</NAME>...
-    if (Object.keys(groups).length === 0) {
-      const childRx = /<GROUP[^>]*>\s*<NAME[^>]*>([^<]+)<\/NAME>([\s\S]*?)<\/GROUP>/gi;
-      while ((m = childRx.exec(text)) !== null) {
-        const bal = m[2].match(/<CLOSINGBALANCE[^>]*>([\s\S]*?)<\/CLOSINGBALANCE>/i);
-        if (bal) groups[m[1].trim().toLowerCase()] = parseTallyAmount(bal[1]);
+      const block = m[1];
+      const parentM = block.match(/<PARENT[^>]*>([^<]+)<\/PARENT>/i);
+      const balM = block.match(/<CLOSINGBALANCE[^>]*>([^<]*)<\/CLOSINGBALANCE>/i);
+      if (parentM && balM) {
+        const parent = parentM[1].trim().toLowerCase();
+        byParent[parent] = (byParent[parent] ?? 0) + parseTallyAmount(balM[1]);
       }
     }
-    const revenue = (groups["sales accounts"] ?? 0) + (groups["direct incomes"] ?? 0) + (groups["indirect incomes"] ?? 0);
-    const expenses = Math.abs(groups["direct expenses"] ?? 0) + Math.abs(groups["indirect expenses"] ?? 0) + Math.abs(groups["purchase accounts"] ?? 0);
-    // Store raw snippet for debugging when all zero
-    const _raw = revenue === 0 && expenses === 0 ? text.slice(0, 600) : undefined;
-    return { revenue, expenses, profit: revenue - expenses, salesCount: 0, fromDate: from, toDate: to, _raw };
-  } catch (e) {
-    return { revenue: 0, expenses: 0, profit: 0, salesCount: 0, fromDate: from, toDate: to, _raw: String(e) };
+
+    // Also try child-NAME form: <LEDGER><NAME>...</NAME>
+    if (Object.keys(byParent).length === 0) {
+      const childRx = /<LEDGER[^>]*>\s*<NAME[^>]*>([^<]+)<\/NAME>([\s\S]*?)<\/LEDGER>/gi;
+      while ((m = childRx.exec(text)) !== null) {
+        const block = m[2];
+        const parentM = block.match(/<PARENT[^>]*>([^<]+)<\/PARENT>/i);
+        const balM = block.match(/<CLOSINGBALANCE[^>]*>([^<]*)<\/CLOSINGBALANCE>/i);
+        if (parentM && balM) {
+          const parent = parentM[1].trim().toLowerCase();
+          byParent[parent] = (byParent[parent] ?? 0) + parseTallyAmount(balM[1]);
+        }
+      }
+    }
+
+    // Revenue = sales accounts + direct/indirect incomes
+    const revenue = (byParent["sales accounts"] ?? 0)
+      + (byParent["direct incomes"] ?? 0)
+      + (byParent["indirect incomes"] ?? 0);
+    // Expenses = purchases + direct/indirect expenses
+    const expenses = Math.abs(byParent["purchase accounts"] ?? 0)
+      + Math.abs(byParent["direct expenses"] ?? 0)
+      + Math.abs(byParent["indirect expenses"] ?? 0);
+
+    return { revenue, expenses, profit: revenue - expenses, salesCount: 0, fromDate: from, toDate: to };
+  } catch {
+    return null;
   }
 }
 
