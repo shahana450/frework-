@@ -80,17 +80,18 @@ function buildVoucherXML(journals: {
 // ── Parse company name from any Tally XML response ───────────────────────────
 
 function extractCompanyName(xml: string): string {
-  // Try specific company tags only — avoid generic <NAME> which matches ledger names
   const patterns = [
     /<COMPANYNAME[^>]*>([^<]+)<\/COMPANYNAME>/i,
     /<SVCURRENTCOMPANY[^>]*>([^<]+)<\/SVCURRENTCOMPANY>/i,
     /<BASICCOMPANYNAME[^>]*>([^<]+)<\/BASICCOMPANYNAME>/i,
-    // NAME inside a COMPANY block
-    /<COMPANY[^>]*NAME="([^"]+)"/i,
+    // attribute anywhere in COMPANY tag (other attrs may come before NAME)
+    /<COMPANY[^>]+NAME="([^"]+)"/i,
+    // NAME child inside COMPANY (may be wrapped in NAME.LIST)
+    /<COMPANY[^>]*>(?:(?!<\/COMPANY>)[\s\S]){0,400}<NAME[^>]*>([^<]{2,})<\/NAME>/i,
   ];
   for (const re of patterns) {
     const m = xml.match(re);
-    if (m?.[1]?.trim()) return m[1].trim();
+    if (m?.[1]?.trim().length >= 2) return m[1].trim();
   }
   return "";
 }
@@ -189,7 +190,7 @@ export default function TallyPage() {
     if (typeof window === "undefined") return "";
     const stored = localStorage.getItem("fw_tally_company") ?? "";
     // Reject obviously wrong values (single short words like "abc" that came from ledger name parsing bug)
-    return stored.length > 4 ? stored : "";
+    return stored.length >= 2 ? stored : "";
   });
   const [rawDebug, setRawDebug] = useState<string>("");
   const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | "import" | null>(null);
@@ -222,7 +223,7 @@ export default function TallyPage() {
         setTallyPort(storedPort);
         // Silently test connection in background
         try {
-          const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,StartingFrom,EndingAt</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+          const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom,EndingAt</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
           const res = await fetch(`http://localhost:${storedPort}`, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(3000) });
           if (res.ok) {
             setConnStatus("connected");
@@ -319,7 +320,7 @@ export default function TallyPage() {
     setConnStatus("connecting"); setConnMsg(""); setSyncResult(null); setRawDebug("");
     try {
       // Fetch company info + current period dates
-      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,StartingFrom,EndingAt</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom,EndingAt</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
       const res = await fetch(tallyUrl, {
         method: "POST",
         headers: { "Content-Type": "text/xml" },
