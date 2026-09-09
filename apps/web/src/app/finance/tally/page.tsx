@@ -91,7 +91,7 @@ function extractCompanyName(xml: string): string {
   ];
   for (const re of patterns) {
     const m = xml.match(re);
-    if (m?.[1]?.trim().length >= 2) return m[1].trim();
+    if (m?.[1] && m[1].trim().length >= 2) return m[1].trim();
   }
   return "";
 }
