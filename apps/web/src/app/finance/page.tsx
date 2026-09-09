@@ -243,16 +243,10 @@ export default function FrePilotDashboard() {
     return () => clearInterval(id);
   }, []);
 
-  // When Tally connects, load stats only (ledgers are manual to avoid overloading Tally)
+  // When Tally disconnects, clear data
   useEffect(() => {
-    if (tally.state === "connected") loadTallyStats(period);
-    if (tally.state === "disconnected") { setTallyLedgers([]); }
+    if (tally.state === "disconnected") { setTallyLedgers([]); setTallyStats(null); }
   }, [tally.state]);
-
-  // When period changes + Tally connected, reload
-  useEffect(() => {
-    if (tally.state === "connected") loadTallyStats(period);
-  }, [period]);
 
   async function loadBusinesses(uid: string) {
     const { data } = await supabase.from("fw_fin_businesses")
@@ -441,15 +435,20 @@ export default function FrePilotDashboard() {
                         {source}
                       </span>
                       <span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.22)", fontFamily: "'IBM Plex Mono',monospace" }}>{periodDates(period).label}</span>
-                      {isLoading && <span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.2)" }}>Loading…</span>}
-                    {useTally && !isLoading && <button onClick={() => loadTallyStats(period)} style={{ fontSize: "0.6rem", color: "rgba(52,211,153,0.5)", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>↻ Reload</button>}
+                      {isLoading && <span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.2)" }}>Loading… (keep Tally idle)</span>}
+                    {tally.state === "connected" && !isLoading && (
+                      <button onClick={() => loadTallyStats(period)}
+                        style={{ fontSize: "0.62rem", fontWeight: 700, color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: 8, padding: "2px 10px", cursor: "pointer", fontFamily: "inherit" }}>
+                        {tallyStats ? "↻ Reload" : "Load from Tally"}
+                      </button>
+                    )}
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.85rem", marginBottom: "1.75rem" }}>
                       {[
-                        { label: "Revenue", value: isLoading ? "—" : (useTally && rev === 0 ? "No entries" : fmt(rev)), color: "#34D399", sub: useTally && rev === 0 && !isLoading ? "No sales in Tally this period" : periodDates(period).label, mono: !( useTally && rev === 0) },
-                        { label: "Net Profit", value: isLoading ? "—" : (useTally && rev === 0 && exp === 0 ? "No entries" : (prof < 0 ? "−" : "") + fmt(prof)), color: prof >= 0 ? "#34D399" : "#F87171", sub: prof < 0 ? "Net loss" : "Net profit", mono: !(useTally && rev === 0 && exp === 0) },
-                        { label: useTally ? "Total Expenses" : "Sales Invoices", value: isLoading ? "—" : (useTally && exp === 0 ? "No entries" : useTally ? fmt(exp) : String(stats.sales)), color: "#F59E0B", sub: useTally ? "All expense groups" : "Posted entries", mono: !(useTally && exp === 0) },
+                        { label: "Revenue", value: isLoading ? "—" : useTally && !tallyStats ? "—" : fmt(rev), color: "#34D399", sub: useTally && !tallyStats && !isLoading ? "Click Load from Tally" : periodDates(period).label, mono: true },
+                        { label: "Net Profit", value: isLoading ? "—" : useTally && !tallyStats ? "—" : (prof < 0 ? "−" : "") + fmt(prof), color: prof >= 0 ? "#34D399" : "#F87171", sub: prof < 0 ? "Net loss" : "Net profit", mono: true },
+                        { label: useTally ? "Total Expenses" : "Sales Invoices", value: isLoading ? "—" : useTally && !tallyStats ? "—" : useTally ? fmt(exp) : String(stats.sales), color: "#F59E0B", sub: useTally ? "All expense groups" : "Posted entries", mono: true },
                         { label: "Draft Entries", value: isLoading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#FB923C" : "rgba(232,237,245,0.3)", sub: stats.drafts > 0 ? "Needs review" : "All clear", mono: false, alert: stats.drafts > 0 },
                       ].map(k => (
                         <div key={k.label} className="fp-kpi" style={k.alert ? { background: "rgba(251,146,60,0.06)", borderColor: "rgba(251,146,60,0.2)" } : {}}>
