@@ -45,14 +45,31 @@ function parseTallyAmount(raw: string): number {
 
 async function checkTally(): Promise<TallyStatus> {
   try {
-    const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FPCompany</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FPCompany"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+    // Filter for the currently active/open company using $$IsCurrentCompany
+    const xml = `<ENVELOPE>
+<HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FPCurComp</ID></HEADER>
+<BODY><DESC>
+<STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES>
+<TDL><TDLMESSAGE>
+<COLLECTION NAME="FPCurComp">
+<TYPE>Company</TYPE>
+<FETCH>Name</FETCH>
+<FILTER>IsCurrent</FILTER>
+</COLLECTION>
+<SYSTEM TYPE="Formulae" NAME="IsCurrent">$$IsCurrentCompany:$Name</SYSTEM>
+</TDLMESSAGE></TDL>
+</DESC></BODY>
+</ENVELOPE>`;
     const res = await fetch("http://localhost:7001", {
       method: "POST", headers: { "Content-Type": "text/xml" }, body: xml,
       signal: AbortSignal.timeout(3000),
     });
     const text = await res.text();
-    const match = text.match(/<NAME[^>]*>(.*?)<\/NAME>/i) || text.match(/<COMPANYNAME[^>]*>(.*?)<\/COMPANYNAME>/i);
+    // Get the first NAME inside a COMPANY element (the current company)
+    const match = text.match(/<COMPANY[^>]*>[\s\S]*?<NAME[^>]*>(.*?)<\/NAME>/i)
+      || text.match(/<NAME[^>]*>(.*?)<\/NAME>/i);
     const company = match?.[1]?.trim() ?? "Tally";
+    if (!company || company.length === 0) return { state: "disconnected", company: "" };
     return { state: "connected", company };
   } catch {
     return { state: "disconnected", company: "" };
