@@ -1,8 +1,31 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+
+type TallyStatus = { state: "idle" | "checking" | "connected" | "disconnected"; company: string };
+
+async function checkTally(): Promise<TallyStatus> {
+  try {
+    const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Data</TYPE><ID>MyCompany</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><REPORT NAME="MyCompany"><FORMS>MyCompany</FORMS></REPORT><FORM NAME="MyCompany"><PARTS>MyCompany</PARTS></FORM><PART NAME="MyCompany"><LINES>MyCompany</LINES></PART><LINE NAME="MyCompany"><FIELDS>FName</FIELDS></LINE><FIELD NAME="FName"><SET>$Name</SET></FIELD></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+    const res = await fetch("http://localhost:7001", {
+      method: "POST",
+      headers: { "Content-Type": "text/xml" },
+      body: xml,
+      signal: AbortSignal.timeout(3000),
+    });
+    const text = await res.text();
+    // Extract company name from Tally XML response
+    const match = text.match(/<COMPANYNAME[^>]*>(.*?)<\/COMPANYNAME>/i)
+      || text.match(/<NAME[^>]*>(.*?)<\/NAME>/i)
+      || text.match(/<FNAME[^>]*>(.*?)<\/FNAME>/i);
+    const company = match?.[1]?.trim() ?? "Tally";
+    return { state: "connected", company };
+  } catch {
+    return { state: "disconnected", company: "" };
+  }
+}
 
 type Business = { id: string; name: string; gstin: string | null; gst_registration_type: string; state: string | null };
 type Stats = { sales: number; expenses: number; drafts: number; pendingTds: number; revenue: number; profit: number };
@@ -47,6 +70,13 @@ export default function FrePilotDashboard() {
   const [stats, setStats] = useState<Stats>({ sales: 0, expenses: 0, drafts: 0, pendingTds: 0, revenue: 0, profit: 0 });
   const [loading, setLoading] = useState(true);
   const [fyLabel, setFyLabel] = useState("2025-26");
+  const [tally, setTally] = useState<TallyStatus>({ state: "idle", company: "" });
+
+  const pingTally = useCallback(async () => {
+    setTally(t => ({ ...t, state: "checking" }));
+    const result = await checkTally();
+    setTally(result);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -54,6 +84,10 @@ export default function FrePilotDashboard() {
       setUser({ id: u.id, email: u.email ?? "" });
       loadBusinesses(u.id);
     });
+    // Check Tally on mount, then every 30s
+    pingTally();
+    const id = setInterval(pingTally, 30000);
+    return () => clearInterval(id);
   }, []);
 
   async function loadBusinesses(uid: string) {
@@ -128,6 +162,7 @@ export default function FrePilotDashboard() {
         .fp-ai-banner { background: linear-gradient(135deg, rgba(201,168,76,0.1) 0%, rgba(201,168,76,0.03) 100%); border: 1px solid rgba(201,168,76,0.22); border-radius: 16px; padding: 1.2rem 1.5rem; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: border-color 0.2s; }
         .fp-ai-banner:hover { border-color: rgba(201,168,76,0.45); }
         select option { background: #0B1221; }
+        @keyframes tp-pulse { 0%,100%{opacity:1;box-shadow:0 0 6px rgba(52,211,153,0.6)} 50%{opacity:0.6;box-shadow:0 0 12px rgba(52,211,153,0.9)} }
         ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
       `}</style>
 
@@ -145,6 +180,25 @@ export default function FrePilotDashboard() {
             {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         )}
+        {/* Tally connection pill */}
+        {tally.state === "connected" ? (
+          <Link href="/finance/tally" title="Tally connected — click to manage" style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 13px", borderRadius: 20, background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.3)", textDecoration: "none", cursor: "pointer" }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#34D399", boxShadow: "0 0 6px rgba(52,211,153,0.6)", flexShrink: 0, animation: "tp-pulse 2s ease-in-out infinite" }} />
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#34D399" }}>Tally</span>
+            <span style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.5)", maxWidth: 120, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tally.company}</span>
+          </Link>
+        ) : tally.state === "checking" ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 13px", borderRadius: 20, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(232,237,245,0.2)", flexShrink: 0 }} />
+            <span style={{ fontSize: "0.75rem", color: "rgba(232,237,245,0.3)" }}>Checking…</span>
+          </div>
+        ) : (
+          <Link href="/finance/tally" title="Tally not connected — click to set up" style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 13px", borderRadius: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", textDecoration: "none" }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(232,237,245,0.15)", flexShrink: 0 }} />
+            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(232,237,245,0.35)" }}>Connect Tally</span>
+          </Link>
+        )}
+
         <Link href="/finance/virtual-ca" style={{ background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.25)", color: "#C9A84C", padding: "6px 16px", borderRadius: 8, fontSize: "0.8rem", textDecoration: "none", fontWeight: 700, letterSpacing: "0.01em" }}>
           🛩️ Ask FrePilot
         </Link>
