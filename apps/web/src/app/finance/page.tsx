@@ -8,27 +8,35 @@ type Business = { id: string; name: string; gstin: string | null; gst_registrati
 type Stats = { sales: number; expenses: number; drafts: number; pendingTds: number; revenue: number; profit: number };
 
 const QUICK = [
-  { icon: "🧾", label: "New Invoice", href: "/finance/sales/new", color: "#C9A84C" },
-  { icon: "📦", label: "Purchase Bill", href: "/finance/purchases/new", color: "#60a5fa" },
-  { icon: "💸", label: "Record Expense", href: "/finance/expenses", color: "#a78bfa" },
-  { icon: "📤", label: "Upload Doc", href: "/finance/upload", color: "#4ade80" },
-  { icon: "💳", label: "Payment Entry", href: "/finance/payment", color: "#fb923c" },
-  { icon: "🛩️", label: "Ask FrePilot", href: "/finance/virtual-ca", color: "#C9A84C" },
+  { icon: "🧾", label: "New Invoice",    href: "/finance/sales/new",     color: "#F59E0B" },
+  { icon: "📦", label: "Purchase Bill",  href: "/finance/purchases/new", color: "#60A5FA" },
+  { icon: "💸", label: "Record Expense", href: "/finance/expenses",      color: "#A78BFA" },
+  { icon: "📤", label: "Upload Doc",     href: "/finance/upload",        color: "#34D399" },
+  { icon: "💳", label: "Payment Entry",  href: "/finance/payment",       color: "#FB923C" },
+  { icon: "🛩️", label: "Ask FrePilot",  href: "/finance/virtual-ca",    color: "#F59E0B" },
 ];
 
 const MODULES = [
-  { icon: "📈", label: "P&L / Reports", desc: "Income statement, balance sheet, cash flow", href: "/finance/reports" },
-  { icon: "🏛️", label: "GST Returns", desc: "GSTR-1, GSTR-3B — auto-prepared", href: "/finance/gst" },
-  { icon: "🔖", label: "TDS Tracker", desc: "Section-wise TDS, due dates, calculator", href: "/finance/tds" },
-  { icon: "📒", label: "Journal Entries", desc: "Double-entry ledger — Dr = Cr enforced", href: "/finance/journals" },
-  { icon: "🔴", label: "Credit Notes", desc: "Issue CN to customers — sales returns", href: "/finance/credit-note" },
-  { icon: "🟢", label: "Debit Notes", desc: "Issue DN to vendors — purchase returns", href: "/finance/debit-note" },
-  { icon: "📥", label: "Receivables (AR)", desc: "Who owes you money, aging report", href: "/finance/receivables" },
-  { icon: "📤", label: "Payables (AP)", desc: "Who you owe, vendor aging", href: "/finance/payables" },
-  { icon: "🏦", label: "Bank Reconciliation", desc: "Import CSV, auto-match entries", href: "/finance/banking" },
-  { icon: "🔄", label: "Tally Export", desc: "Export as Tally-compatible XML", href: "/finance/tally" },
-  { icon: "👥", label: "Contacts", desc: "Customers & vendors with opening balances", href: "/finance/contacts" },
-  { icon: "📊", label: "Chart of Accounts", desc: "Indian account heads structure", href: "/finance/chart-of-accounts" },
+  { group: "Reports", items: [
+    { icon: "📈", label: "P&L / Reports",      desc: "Income statement, balance sheet, cash flow", href: "/finance/reports",           accent: "#34D399" },
+    { icon: "🏛️", label: "GST Returns",        desc: "GSTR-1, GSTR-3B — auto-prepared",           href: "/finance/gst",               accent: "#60A5FA" },
+    { icon: "🔖", label: "TDS Tracker",         desc: "Section-wise TDS, due dates, calculator",   href: "/finance/tds",               accent: "#F59E0B" },
+  ]},
+  { group: "Books", items: [
+    { icon: "📒", label: "Journal Entries",    desc: "Double-entry ledger — Dr = Cr enforced",     href: "/finance/journals",          accent: "#A78BFA" },
+    { icon: "🔴", label: "Credit Notes",       desc: "Issue CN to customers — sales returns",      href: "/finance/credit-note",       accent: "#F87171" },
+    { icon: "🟢", label: "Debit Notes",        desc: "Issue DN to vendors — purchase returns",     href: "/finance/debit-note",        accent: "#34D399" },
+  ]},
+  { group: "Receivables & Payables", items: [
+    { icon: "📥", label: "Receivables (AR)",   desc: "Who owes you money, aging report",           href: "/finance/receivables",       accent: "#34D399" },
+    { icon: "📤", label: "Payables (AP)",       desc: "Who you owe, vendor aging",                 href: "/finance/payables",          accent: "#F87171" },
+    { icon: "🏦", label: "Bank Reconciliation", desc: "Import CSV, auto-match entries",            href: "/finance/banking",           accent: "#60A5FA" },
+  ]},
+  { group: "Setup", items: [
+    { icon: "🔄", label: "Tally Export",        desc: "Export as Tally-compatible XML",            href: "/finance/tally",             accent: "#FB923C" },
+    { icon: "👥", label: "Contacts",            desc: "Customers & vendors with opening balances", href: "/finance/contacts",          accent: "#A78BFA" },
+    { icon: "📊", label: "Chart of Accounts",  desc: "Indian account heads structure",             href: "/finance/chart-of-accounts", accent: "#60A5FA" },
+  ]},
 ];
 
 export default function FrePilotDashboard() {
@@ -53,7 +61,7 @@ export default function FrePilotDashboard() {
       .select("id,name,gstin,gst_registration_type,state").eq("owner_id", uid).eq("is_active", true).order("created_at");
     if (!data || data.length === 0) { setLoading(false); return; }
     setBusinesses(data);
-    const saved = (localStorage.getItem(`fw_fin_biz_${uid}`) ?? "").replace(/\uFEFF/g, "").trim();
+    const saved = (localStorage.getItem(`fw_fin_biz_${uid}`) ?? "").replace(/﻿/g, "").trim();
     const biz = data.find(b => b.id === saved) || data[0];
     setActiveBiz(biz);
     loadStats(biz.id, uid);
@@ -68,14 +76,8 @@ export default function FrePilotDashboard() {
     if (fyRes.data) setFyLabel(fyRes.data.label);
     const journals = journalsRes.data ?? [];
     const posted = journals.filter(j => j.status === "posted");
-    // Revenue = sales + receipt credits
-    const salesRev = posted
-      .filter(j => j.type === "sales" || j.type === "receipt")
-      .reduce((s, j) => s + (j.total_credit || 0), 0);
-    // Expenses = purchase + expense + payment debits
-    const expTotal = posted
-      .filter(j => j.type === "purchase" || j.type === "expense" || j.type === "payment" || j.type === "journal")
-      .reduce((s, j) => s + (j.total_debit || 0), 0);
+    const salesRev = posted.filter(j => j.type === "sales" || j.type === "receipt").reduce((s, j) => s + (j.total_credit || 0), 0);
+    const expTotal = posted.filter(j => j.type === "purchase" || j.type === "expense" || j.type === "payment" || j.type === "journal").reduce((s, j) => s + (j.total_debit || 0), 0);
     setStats({
       sales: posted.filter(j => j.type === "sales").length,
       expenses: posted.filter(j => j.type === "purchase" || j.type === "expense" || j.type === "payment").length,
@@ -97,130 +99,141 @@ export default function FrePilotDashboard() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const fmt = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-  // ─── No business yet ───────────────────────────────────────────────────────
   if (!loading && businesses.length === 0) {
     return (
-      <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "2rem" }}>
-        <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>🛩️</div>
-        <h1 style={{ fontSize: "2rem", fontWeight: 900, color: "#C9A84C", margin: "0 0 0.4rem" }}>Welcome to FrePilot</h1>
-        <p style={{ color: "rgba(237,232,220,0.5)", fontSize: "1rem", maxWidth: 400, lineHeight: 1.6, margin: "0 0 2rem" }}>
-          Your AI accountant is ready. Set up your business in 2 minutes and let FrePilot handle the books.
-        </p>
-        <Link href="/finance/setup" style={{ background: "#C9A84C", color: "#070C1A", padding: "14px 36px", borderRadius: 10, fontWeight: 800, textDecoration: "none", fontSize: "1rem", letterSpacing: "0.02em" }}>
+      <div style={{ minHeight: "100vh", background: "#050914", color: "#E8EDF5", fontFamily: "'DM Sans',system-ui,sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "2rem" }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');`}</style>
+        <div style={{ width: 64, height: 64, borderRadius: 18, background: "linear-gradient(135deg,#1A2E5A,#C9A84C)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.8rem", marginBottom: "1.5rem", boxShadow: "0 0 40px rgba(201,168,76,0.3)" }}>🛩️</div>
+        <h1 style={{ fontSize: "2.2rem", fontWeight: 900, background: "linear-gradient(135deg,#E8EDF5,#C9A84C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", margin: "0 0 0.5rem", letterSpacing: "-0.03em" }}>Welcome to FrePilot</h1>
+        <p style={{ color: "rgba(232,237,245,0.45)", fontSize: "1rem", maxWidth: 380, lineHeight: 1.7, margin: "0 0 2.5rem" }}>Your AI accountant is ready. Set up your business in 2 minutes.</p>
+        <Link href="/finance/setup" style={{ background: "linear-gradient(135deg,#B8922A,#C9A84C)", color: "#050914", padding: "14px 40px", borderRadius: 12, fontWeight: 800, textDecoration: "none", fontSize: "0.95rem", letterSpacing: "0.01em", boxShadow: "0 8px 32px rgba(201,168,76,0.35)" }}>
           Set Up My Business →
         </Link>
-        <div style={{ marginTop: "3rem", display: "flex", gap: "2rem", color: "rgba(237,232,220,0.35)", fontSize: "0.78rem" }}>
-          {["GST-ready invoicing", "Double-entry accounting", "TDS tracking", "Financial reports"].map(f => (
-            <span key={f}>✓ {f}</span>
-          ))}
-        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      {/* Top bar */}
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.15)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56, position: "sticky", top: 0, background: "rgba(7,12,26,0.95)", backdropFilter: "blur(8px)", zIndex: 30 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: "1.2rem" }}>🛩️</span>
-          <span style={{ fontWeight: 900, fontSize: "1rem", color: "#C9A84C", letterSpacing: "-0.01em" }}>FrePilot</span>
-          <span style={{ fontSize: "0.65rem", color: "rgba(201,168,76,0.5)", fontWeight: 500, marginLeft: 2 }}>by FreWork</span>
+    <div style={{ minHeight: "100vh", background: "#050914", color: "#E8EDF5", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        * { box-sizing: border-box; }
+        .fp-bg { background-image: radial-gradient(circle, rgba(201,168,76,0.04) 1px, transparent 1px); background-size: 32px 32px; }
+        .fp-kpi { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 1.25rem 1.4rem; transition: border-color 0.2s; }
+        .fp-kpi:hover { border-color: rgba(255,255,255,0.14); }
+        .fp-quick { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.7rem 1.1rem; display: flex; align-items: center; gap: 0.55rem; text-decoration: none; transition: all 0.15s; white-space: nowrap; }
+        .fp-quick:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.16); transform: translateY(-1px); }
+        .fp-mod { background: rgba(255,255,255,0.018); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1rem 1.1rem; display: flex; gap: 0.85rem; align-items: flex-start; text-decoration: none; transition: all 0.15s; }
+        .fp-mod:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.12); transform: translateY(-1px); }
+        .fp-ai-banner { background: linear-gradient(135deg, rgba(201,168,76,0.1) 0%, rgba(201,168,76,0.03) 100%); border: 1px solid rgba(201,168,76,0.22); border-radius: 16px; padding: 1.2rem 1.5rem; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: border-color 0.2s; }
+        .fp-ai-banner:hover { border-color: rgba(201,168,76,0.45); }
+        select option { background: #0B1221; }
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+      `}</style>
+
+      {/* Nav */}
+      <nav style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 1.75rem", display: "flex", alignItems: "center", gap: "1rem", height: 58, position: "sticky", top: 0, background: "rgba(5,9,20,0.92)", backdropFilter: "blur(16px)", zIndex: 30 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#1A2E5A,#C9A84C)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem" }}>🛩️</div>
+          <span style={{ fontWeight: 800, fontSize: "1rem", color: "#C9A84C", letterSpacing: "-0.02em" }}>FrePilot</span>
+          <span style={{ fontSize: "0.62rem", color: "rgba(201,168,76,0.4)", fontWeight: 500 }}>by FreWork</span>
         </div>
         <div style={{ flex: 1 }} />
         {businesses.length > 1 && (
           <select value={activeBiz?.id ?? ""} onChange={e => { const b = businesses.find(x => x.id === e.target.value); if (b) switchBiz(b); }}
-            style={{ background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", color: "#EDE8DC", padding: "4px 10px", borderRadius: 6, fontSize: "0.82rem", cursor: "pointer" }}>
+            style={{ background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", color: "#E8EDF5", padding: "5px 12px", borderRadius: 8, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>
             {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         )}
-        <Link href="/finance/virtual-ca" style={{ background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.3)", color: "#C9A84C", padding: "6px 14px", borderRadius: 7, fontSize: "0.8rem", textDecoration: "none", fontWeight: 600 }}>
+        <Link href="/finance/virtual-ca" style={{ background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.25)", color: "#C9A84C", padding: "6px 16px", borderRadius: 8, fontSize: "0.8rem", textDecoration: "none", fontWeight: 700, letterSpacing: "0.01em" }}>
           🛩️ Ask FrePilot
         </Link>
-        <Link href="/finance/setup" style={{ color: "rgba(237,232,220,0.35)", fontSize: "0.78rem", textDecoration: "none" }}>⚙</Link>
+        <Link href="/finance/setup" style={{ color: "rgba(232,237,245,0.3)", fontSize: "1rem", textDecoration: "none", padding: "4px 8px", borderRadius: 6, lineHeight: 1 }}>⚙</Link>
       </nav>
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
-        {activeBiz && (
-          <>
-            {/* Header */}
-            <div style={{ marginBottom: "2rem" }}>
-              <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)", marginBottom: "0.25rem" }}>{greeting} · FY {fyLabel}</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "1rem", flexWrap: "wrap" }}>
-                <h1 style={{ margin: 0, fontSize: "1.6rem", fontWeight: 800 }}>{activeBiz.name}</h1>
-                {activeBiz.gstin && <span style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.35)", fontFamily: "monospace" }}>GSTIN {activeBiz.gstin}</span>}
+      <div className="fp-bg" style={{ minHeight: "calc(100vh - 58px)" }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto", padding: "2rem 1.75rem" }}>
+          {activeBiz && (
+            <>
+              {/* Header */}
+              <div style={{ marginBottom: "2rem" }}>
+                <div style={{ fontSize: "0.74rem", color: "rgba(232,237,245,0.35)", marginBottom: "0.3rem", letterSpacing: "0.02em" }}>{greeting} · FY {fyLabel}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+                  <h1 style={{ margin: 0, fontSize: "2rem", fontWeight: 900, letterSpacing: "-0.03em", background: "linear-gradient(135deg,#E8EDF5 60%,rgba(232,237,245,0.5))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{activeBiz.name}</h1>
+                  {activeBiz.gstin && (
+                    <span style={{ fontSize: "0.7rem", color: "rgba(232,237,245,0.3)", fontFamily: "'IBM Plex Mono',monospace", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", padding: "3px 10px", borderRadius: 6 }}>
+                      GSTIN {activeBiz.gstin}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* FrePilot AI Banner */}
-            <Link href="/finance/virtual-ca" style={{ textDecoration: "none", display: "block", marginBottom: "1.5rem" }}>
-              <div style={{ background: "linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(201,168,76,0.04) 100%)", border: "1px solid rgba(201,168,76,0.25)", borderRadius: 14, padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1.25rem", cursor: "pointer", transition: "border-color 0.2s" }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(201,168,76,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>🛩️</div>
+              {/* AI Banner */}
+              <Link href="/finance/virtual-ca" className="fp-ai-banner" style={{ display: "flex", marginBottom: "1.75rem", textDecoration: "none" }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: "linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border: "1px solid rgba(201,168,76,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>🛩️</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, color: "#C9A84C", fontSize: "0.95rem" }}>FrePilot AI — Your Virtual Accountant</div>
-                  <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.5)", marginTop: "0.2rem" }}>Ask anything — GST rates, TDS sections, journal entries, compliance deadlines. Powered by Claude AI.</div>
+                  <div style={{ fontWeight: 700, color: "#C9A84C", fontSize: "0.9rem", marginBottom: "0.2rem" }}>FrePilot AI — Your Virtual Accountant</div>
+                  <div style={{ fontSize: "0.76rem", color: "rgba(232,237,245,0.45)", lineHeight: 1.6 }}>Ask anything — GST rates, TDS sections, journal entries, compliance deadlines. Powered by Claude AI.</div>
                 </div>
-                <div style={{ color: "rgba(201,168,76,0.5)", fontSize: "1.2rem", flexShrink: 0 }}>→</div>
-              </div>
-            </Link>
+                <div style={{ color: "rgba(201,168,76,0.4)", fontSize: "1.1rem", flexShrink: 0, alignSelf: "center" }}>→</div>
+              </Link>
 
-            {/* KPI row */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
-              {[
-                { label: "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#4ade80", icon: "📈" },
-                { label: "Net Profit", value: loading ? "—" : fmt(stats.profit), color: stats.profit >= 0 ? "#4ade80" : "#f87171", icon: "💰" },
-                { label: "Sales Invoices", value: loading ? "—" : String(stats.sales), color: "#C9A84C", icon: "🧾" },
-                { label: "Draft Entries", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#fb923c" : "rgba(237,232,220,0.4)", icon: "✏️", alert: stats.drafts > 0 },
-              ].map(k => (
-                <div key={k.label} style={{ background: k.alert ? "rgba(251,146,60,0.06)" : "rgba(255,255,255,0.025)", border: `1px solid ${k.alert ? "rgba(251,146,60,0.2)" : "rgba(237,232,220,0.07)"}`, borderRadius: 12, padding: "1rem 1.1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
-                    <span style={{ fontSize: "0.6rem", color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>{k.label}</span>
-                    <span style={{ fontSize: "0.9rem" }}>{k.icon}</span>
+              {/* KPI Cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.85rem", marginBottom: "1.75rem" }}>
+                {[
+                  { label: "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#34D399", sub: "FY total", mono: true },
+                  { label: "Net Profit", value: loading ? "—" : (stats.profit < 0 ? "−" : "") + fmt(stats.profit), color: stats.profit >= 0 ? "#34D399" : "#F87171", sub: stats.profit < 0 ? "Net loss" : "Net profit", mono: true },
+                  { label: "Sales Invoices", value: loading ? "—" : String(stats.sales), color: "#F59E0B", sub: "Posted entries", mono: false },
+                  { label: "Draft Entries", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#FB923C" : "rgba(232,237,245,0.3)", sub: stats.drafts > 0 ? "Needs review" : "All clear", mono: false, alert: stats.drafts > 0 },
+                ].map(k => (
+                  <div key={k.label} className="fp-kpi" style={k.alert ? { background: "rgba(251,146,60,0.06)", borderColor: "rgba(251,146,60,0.2)" } : {}}>
+                    <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.75rem" }}>{k.label}</div>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 900, color: k.color, fontFamily: k.mono ? "'IBM Plex Mono',monospace" : "inherit", letterSpacing: k.mono ? "-0.02em" : "-0.01em", lineHeight: 1, marginBottom: "0.4rem" }}>{k.value}</div>
+                    <div style={{ fontSize: "0.65rem", color: "rgba(232,237,245,0.25)", fontWeight: 500 }}>{k.sub}</div>
                   </div>
-                  <div style={{ fontSize: "1.4rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>{k.value}</div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            {/* Quick actions */}
-            <div style={{ marginBottom: "2rem" }}>
-              <div style={{ fontSize: "0.65rem", color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.75rem" }}>Quick Actions</div>
-              <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap" }}>
-                {QUICK.map(q => (
-                  <Link key={q.href} href={q.href} style={{ textDecoration: "none" }}>
-                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, padding: "0.65rem 1rem", display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+              {/* Quick Actions */}
+              <div style={{ marginBottom: "2rem" }}>
+                <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.25)", textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 700, marginBottom: "0.75rem" }}>Quick Actions</div>
+                <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+                  {QUICK.map(q => (
+                    <Link key={q.href} href={q.href} className="fp-quick">
                       <span style={{ fontSize: "1rem" }}>{q.icon}</span>
-                      <span style={{ fontSize: "0.8rem", fontWeight: 600, color: q.color }}>{q.label}</span>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: q.color }}>{q.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Modules by group */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                {MODULES.map(group => (
+                  <div key={group.group}>
+                    <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.25)", textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 700, marginBottom: "0.65rem" }}>{group.group}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0.65rem" }}>
+                      {group.items.map(m => (
+                        <Link key={m.href} href={m.href} className="fp-mod">
+                          <div style={{ width: 34, height: 34, borderRadius: 9, background: `rgba(255,255,255,0.04)`, border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>{m.icon}</div>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#E8EDF5", marginBottom: "0.2rem" }}>{m.label}</div>
+                            <div style={{ fontSize: "0.68rem", color: "rgba(232,237,245,0.32)", lineHeight: 1.5 }}>{m.desc}</div>
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
-            </div>
 
-            {/* Modules grid */}
-            <div style={{ marginBottom: "0.75rem" }}>
-              <div style={{ fontSize: "0.65rem", color: "rgba(237,232,220,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.75rem" }}>All Modules</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
-                {MODULES.map(m => (
-                  <Link key={m.href} href={m.href} style={{ textDecoration: "none" }}>
-                    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 10, padding: "0.9rem 1rem", display: "flex", gap: "0.75rem", alignItems: "flex-start", cursor: "pointer" }}>
-                      <span style={{ fontSize: "1.1rem", flexShrink: 0, marginTop: 1 }}>{m.icon}</span>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: "0.83rem", color: "#EDE8DC", marginBottom: "0.2rem" }}>{m.label}</div>
-                        <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.35)", lineHeight: 1.4 }}>{m.desc}</div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+              {/* Footer */}
+              <div style={{ marginTop: "3rem", textAlign: "center", fontSize: "0.68rem", color: "rgba(232,237,245,0.15)", letterSpacing: "0.02em" }}>
+                FrePilot · Powered by Claude AI · FY {fyLabel} · {activeBiz.name}
               </div>
-            </div>
-
-            {/* Footer */}
-            <div style={{ marginTop: "2rem", textAlign: "center", fontSize: "0.72rem", color: "rgba(237,232,220,0.2)" }}>
-              FrePilot · Powered by Claude AI · {activeBiz.gstin ? `GSTIN ${activeBiz.gstin}` : "GST not configured"} · FY {fyLabel}
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

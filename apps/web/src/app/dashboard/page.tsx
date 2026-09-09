@@ -421,390 +421,331 @@ export default function DashboardPage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const statusColor = (s: string) =>
-    s === "live" ? "text-emerald-600 bg-emerald-50 border-emerald-200" :
-    s === "pending" ? "text-amber-600 bg-amber-50 border-amber-200" :
-    "text-slate-400 bg-slate-50 border-slate-200";
+    s === "live" ? "text-emerald-400 bg-emerald-950/40 border-emerald-800/60" :
+    s === "pending" ? "text-amber-400 bg-amber-950/40 border-amber-800/60" :
+    "text-slate-400 bg-slate-900/40 border-slate-700/60";
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div style={{ minHeight: "100vh", background: "#050914", color: "#E8EDF5", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        * { box-sizing: border-box; }
+        .db-bg { background-image: radial-gradient(circle, rgba(99,130,246,0.035) 1px, transparent 1px); background-size: 30px 30px; }
+        .db-nav-link { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; font-size: 0.84rem; font-weight: 600; color: rgba(232,237,245,0.45); text-decoration: none; transition: all 0.15s; }
+        .db-nav-link:hover { color: #E8EDF5; background: rgba(255,255,255,0.06); }
+        .db-stat { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 1.1rem 1.25rem; transition: border-color 0.2s; }
+        .db-stat:hover { border-color: rgba(255,255,255,0.13); }
+        .db-card { background: rgba(255,255,255,0.022); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; overflow: hidden; }
+        .db-card-hd { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .db-startup-row { display: flex; align-items: center; gap: 0.9rem; padding: 0.75rem 1.25rem; border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.15s; }
+        .db-startup-row:hover { background: rgba(255,255,255,0.025); }
+        .db-ql { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; padding: 0.85rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.07); text-decoration: none; font-size: 0.72rem; font-weight: 700; text-align: center; transition: all 0.15s; background: rgba(255,255,255,0.02); }
+        .db-ql:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); transform: translateY(-1px); }
+        .db-space-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+        select option { background: #0B1221; }
+      `}</style>
 
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <FreWorkLogo size={32} />
-            <span className="font-black text-slate-900 text-lg tracking-tight">FreWork</span>
+      <header style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(5,9,20,0.92)", backdropFilter: "blur(16px)", position: "sticky", top: 0, zIndex: 40, padding: "0 1.5rem", height: 60, display: "flex", alignItems: "center" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+            <FreWorkLogo size={30} />
+            <span style={{ fontWeight: 900, fontSize: "1.05rem", color: "#E8EDF5", letterSpacing: "-0.02em" }}>FreWork</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
+          <nav style={{ display: "flex", alignItems: "center", gap: "0.2rem", marginLeft: "1.5rem" }}>
             {[
-              { label: "Services", href: "/services", icon: FileText },
-              { label: "Freelancers", href: "/freelancers", icon: Users },
-              { label: "Coworking", href: "/coworking", icon: Building2 },
-              { label: "Startups", href: "/startups", icon: Rocket },
-            ].map(({ label, href, icon: Icon }) => (
-              <Link key={label} href={href}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors">
-                <Icon className="w-3.5 h-3.5" />{label}
-              </Link>
+              { label: "Services", href: "/services" },
+              { label: "Freelancers", href: "/freelancers" },
+              { label: "Coworking", href: "/coworking" },
+              { label: "Startups", href: "/startups" },
+            ].map(({ label, href }) => (
+              <Link key={label} href={href} className="db-nav-link">{label}</Link>
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div style={{ flex: 1 }} />
+
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             {user?.avatar ? (
-              <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full border border-slate-200" />
+              <img src={user.avatar} alt={user.name} style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.12)" }} />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center">
-                <span className="text-blue-700 text-xs font-bold">{user?.name?.[0]?.toUpperCase()}</span>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(37,99,235,0.2)", border: "1.5px solid rgba(37,99,235,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#60A5FA" }}>{user?.name?.[0]?.toUpperCase()}</span>
               </div>
             )}
-            <span className="text-sm text-slate-600 font-medium hidden sm:block">{user?.name}</span>
-            <button onClick={handleSignOut}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+            <span style={{ fontSize: "0.84rem", fontWeight: 600, color: "rgba(232,237,245,0.7)" }} className="hidden sm:block">{user?.name}</span>
+            <button onClick={handleSignOut} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(248,113,113,0.2)", background: "rgba(248,113,113,0.06)", color: "#F87171", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer" }}>
               <LogOut className="w-3.5 h-3.5" /> Sign out
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <div className="db-bg" style={{ minHeight: "calc(100vh - 60px)" }}>
+        <main style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem 1.5rem" }}>
 
-        {/* Welcome banner */}
-        <div className="rounded-2xl overflow-hidden mb-8 border border-slate-200 shadow-sm"
-          style={{ background: "linear-gradient(135deg,#0F2044 0%,#1E3A8A 100%)" }}>
-          <div className="px-8 py-7 flex items-center justify-between">
-            <div>
-              <p className="text-blue-200 text-sm mb-1">{greeting},</p>
-              <h1 className="text-3xl font-black text-white mb-1 tracking-tight">{firstName} 👋</h1>
-              <p className="text-blue-300 text-sm">{user?.email}</p>
-            </div>
-            <div className="hidden md:flex flex-col items-end gap-2">
-              <span className="text-xs px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-medium">
-                ● Active account
-              </span>
-              <span className="text-xs px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/60 capitalize font-medium">
-                {subscription ? `${subscription.plan} Plan` : "Free Plan"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── FINANCE BANNER ── */}
-        <Link href="/finance" className="block mb-6 rounded-2xl overflow-hidden border transition-all hover:shadow-xl hover:scale-[1.01]"
-          style={{ borderColor: "rgba(59,130,246,0.5)", background: "linear-gradient(135deg,#1D4ED8 0%,#1e3a8a 60%,#0f172a 100%)" }}>
-          <div className="px-6 py-5 flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
-              style={{ background: "rgba(255,255,255,0.15)", boxShadow: "0 4px 20px rgba(59,130,246,0.4)" }}>
-              🛩️
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-black" style={{ background: "rgba(255,255,255,0.2)", color: "#ffffff", border: "1px solid rgba(255,255,255,0.35)" }}>NEW</span>
-                <span className="font-black text-base" style={{ color: "#ffffff" }}>FrePilot Finance — AI Bookkeeping</span>
-              </div>
-              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
-                Upload invoices, bills &amp; bank statements · AI posts journal entries · GST returns, P&amp;L, Balance Sheet
-              </p>
-            </div>
-            <div className="flex-shrink-0 flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-sm"
-              style={{ background: "#ffffff", color: "#1D4ED8" }}>
-              Open Finance <ArrowRight className="w-4 h-4" />
-            </div>
-          </div>
-        </Link>
-
-        {/* ── SPACE OWNER SECTION ── */}
-        {(userRole === "space_owner" || mySpaces.length > 0) && (
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-5">
+          {/* Welcome banner */}
+          <div style={{ borderRadius: 20, overflow: "hidden", marginBottom: "1.75rem", background: "linear-gradient(135deg,#0B1A3E 0%,#0F2252 50%,#0B1A3E 100%)", border: "1px solid rgba(59,130,246,0.2)", position: "relative" }}>
+            <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 80% 50%, rgba(37,99,235,0.15) 0%, transparent 60%)", pointerEvents: "none" }} />
+            <div style={{ padding: "1.75rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
               <div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-blue-600" /> My Listed Spaces
-                </h2>
-                <p className="text-sm text-slate-500 mt-0.5">Manage your coworking spaces · Approved listings go live publicly</p>
+                <p style={{ fontSize: "0.8rem", color: "rgba(147,197,253,0.7)", marginBottom: "0.3rem", fontWeight: 500 }}>{greeting},</p>
+                <h1 style={{ margin: "0 0 0.3rem", fontSize: "2.2rem", fontWeight: 900, letterSpacing: "-0.03em", color: "#ffffff" }}>{firstName} <span style={{ opacity: 0.8 }}>👋</span></h1>
+                <p style={{ fontSize: "0.8rem", color: "rgba(147,197,253,0.5)", margin: 0 }}>{user?.email}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Link href="/dashboard/coworking"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 border"
-                  style={{ borderColor:"rgba(201,168,76,0.35)", color:"#92742A", background:"rgba(201,168,76,0.08)" }}>
-                  <CheckCircle className="w-4 h-4" /> Review Submissions
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
+                <span style={{ fontSize: "0.72rem", padding: "5px 14px", borderRadius: 20, background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)", color: "#34D399", fontWeight: 700 }}>
+                  ● Active account
+                </span>
+                <span style={{ fontSize: "0.72rem", padding: "5px 14px", borderRadius: 20, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.5)", fontWeight: 600, textTransform: "capitalize" }}>
+                  {subscription ? `${subscription.plan} Plan` : "Free Plan"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Finance banner */}
+          <Link href="/finance" style={{ display: "block", marginBottom: "1.75rem", borderRadius: 18, overflow: "hidden", border: "1px solid rgba(201,168,76,0.25)", background: "linear-gradient(135deg,#0E1A0A 0%,#1A2E0E 50%,#0B1A0E 100%)", textDecoration: "none", transition: "border-color 0.2s, transform 0.15s" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(201,168,76,0.5)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(201,168,76,0.25)"; (e.currentTarget as HTMLElement).style.transform = "none"; }}>
+            <div style={{ padding: "1.25rem 1.6rem", display: "flex", alignItems: "center", gap: "1.25rem" }}>
+              <div style={{ width: 50, height: 50, borderRadius: 14, background: "linear-gradient(135deg,rgba(201,168,76,0.25),rgba(201,168,76,0.08))", border: "1px solid rgba(201,168,76,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>🛩️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.3rem" }}>
+                  <span style={{ fontSize: "0.6rem", padding: "2px 8px", borderRadius: 10, background: "rgba(201,168,76,0.2)", border: "1px solid rgba(201,168,76,0.35)", color: "#C9A84C", fontWeight: 800, letterSpacing: "0.06em" }}>NEW</span>
+                  <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#E8C97A" }}>FrePilot Finance — AI Bookkeeping</span>
+                </div>
+                <p style={{ fontSize: "0.76rem", color: "rgba(232,237,245,0.45)", margin: 0, lineHeight: 1.6 }}>
+                  Upload invoices, bills &amp; bank statements · AI posts journal entries · GST returns, P&amp;L, Balance Sheet
+                </p>
+              </div>
+              <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "10px 20px", borderRadius: 12, background: "rgba(201,168,76,0.12)", border: "1px solid rgba(201,168,76,0.3)", color: "#C9A84C", fontWeight: 800, fontSize: "0.84rem" }}>
+                Open Finance <ArrowRight className="w-4 h-4" />
+              </div>
+            </div>
+          </Link>
+
+          {/* ── SPACE OWNER SECTION ── */}
+        {(userRole === "space_owner" || mySpaces.length > 0) && (
+          <div style={{ marginBottom: "1.75rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Building2 className="w-4 h-4" style={{ color: "#60A5FA" }} /> My Listed Spaces
+                </h2>
+                <p style={{ margin: "0.2rem 0 0", fontSize: "0.74rem", color: "rgba(232,237,245,0.35)" }}>Manage your coworking spaces · Approved listings go live publicly</p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <Link href="/dashboard/coworking" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, border: "1px solid rgba(201,168,76,0.25)", color: "#C9A84C", background: "rgba(201,168,76,0.07)", fontSize: "0.76rem", fontWeight: 700, textDecoration: "none" }}>
+                  <CheckCircle className="w-3.5 h-3.5" /> Review Submissions
                 </Link>
-                <Link href="/dashboard/workspace/submit"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-                  style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
-                  <Plus className="w-4 h-4" /> Add New Space
+                <Link href="/dashboard/workspace/submit" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10, background: "linear-gradient(135deg,#1246C8,#2563EB)", color: "#fff", fontSize: "0.76rem", fontWeight: 700, textDecoration: "none" }}>
+                  <Plus className="w-3.5 h-3.5" /> Add New Space
                 </Link>
               </div>
             </div>
 
             {mySpaces.length === 0 ? (
-              /* Empty state */
-              <div className="rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/50 p-10 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center mx-auto mb-4">
-                  <Building2 className="w-7 h-7 text-blue-500" />
+              <div style={{ borderRadius: 16, border: "2px dashed rgba(96,165,250,0.2)", padding: "2.5rem", textAlign: "center" }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 0.75rem" }}>
+                  <Building2 className="w-5 h-5" style={{ color: "#60A5FA", opacity: 0.7 }} />
                 </div>
-                <h3 className="font-bold text-slate-900 mb-1">No spaces listed yet</h3>
-                <p className="text-slate-500 text-sm mb-5 max-w-sm mx-auto">
-                  Add your coworking space or office for free. Once approved it appears publicly on frework.online/coworking for thousands of professionals to discover.
+                <p style={{ fontWeight: 600, fontSize: "0.84rem", color: "rgba(232,237,245,0.6)", marginBottom: "0.3rem" }}>No spaces listed yet</p>
+                <p style={{ fontSize: "0.74rem", color: "rgba(232,237,245,0.3)", marginBottom: "1.25rem", maxWidth: 340, margin: "0 auto 1.25rem", lineHeight: 1.7 }}>
+                  Add your coworking space or office for free. Once approved it appears publicly on frework.online/coworking.
                 </p>
-                <Link href="/dashboard/workspace/submit"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white"
-                  style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
-                  <Plus className="w-4 h-4" /> List Your First Space — Free
+                <Link href="/dashboard/workspace/submit" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 20px", borderRadius: 10, background: "linear-gradient(135deg,#1246C8,#2563EB)", color: "#fff", fontSize: "0.8rem", fontWeight: 700, textDecoration: "none" }}>
+                  <Plus className="w-3.5 h-3.5" /> List Your First Space — Free
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0.75rem" }}>
                 {mySpaces.map(space => {
                   const isApproved = space.status === "approved";
                   const isPending  = space.status === "pending";
                   return (
-                    <div key={space.id}
-                      className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-all flex flex-col gap-3">
-                      {/* Name + status */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0">
-                          <Building2 className="w-5 h-5 text-blue-600" />
+                    <div key={space.id} className="db-space-card">
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.5rem" }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Building2 className="w-4 h-4" style={{ color: "#60A5FA" }} />
                         </div>
-                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border flex-shrink-0 ${
-                          isApproved ? "text-emerald-700 bg-emerald-50 border-emerald-200" :
-                          isPending  ? "text-amber-700 bg-amber-50 border-amber-200" :
-                          "text-slate-400 bg-slate-50 border-slate-200"
-                        }`}>
-                          {isApproved ? "● Live" : isPending ? "⏳ Under Review" : space.status}
+                        <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "3px 10px", borderRadius: 10, background: isApproved ? "rgba(52,211,153,0.1)" : isPending ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.05)", border: `1px solid ${isApproved ? "rgba(52,211,153,0.25)" : isPending ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.1)"}`, color: isApproved ? "#34D399" : isPending ? "#F59E0B" : "rgba(232,237,245,0.4)", flexShrink: 0 }}>
+                          {isApproved ? "● Live" : isPending ? "⏳ Reviewing" : space.status}
                         </span>
                       </div>
-
                       <div>
-                        <p className="font-bold text-slate-900 text-sm leading-snug">{space.name}</p>
-                        <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                        <p style={{ fontWeight: 700, fontSize: "0.84rem", margin: "0 0 0.2rem" }}>{space.name}</p>
+                        <p style={{ fontSize: "0.7rem", color: "rgba(232,237,245,0.35)", margin: 0, display: "flex", alignItems: "center", gap: 4 }}>
                           <MapPin className="w-3 h-3" />{space.city} · {space.type}
                         </p>
                       </div>
-
-                      <div className="flex items-center gap-3 text-xs text-slate-400">
-                        {space.price_per_day && (
-                          <span className="font-semibold text-slate-700">₹{space.price_per_day.toLocaleString("en-IN")}/day</span>
-                        )}
-                        {space.price_per_month && (
-                          <span className="font-semibold text-slate-700">₹{space.price_per_month.toLocaleString("en-IN")}/mo</span>
-                        )}
-                        <span className="flex items-center gap-1 ml-auto">
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.72rem" }}>
+                        {space.price_per_day && <span style={{ fontWeight: 700, color: "rgba(232,237,245,0.7)" }}>₹{space.price_per_day.toLocaleString("en-IN")}/day</span>}
+                        {space.price_per_month && <span style={{ fontWeight: 700, color: "rgba(232,237,245,0.7)" }}>₹{space.price_per_month.toLocaleString("en-IN")}/mo</span>}
+                        <span style={{ marginLeft: "auto", color: "rgba(232,237,245,0.25)", display: "flex", alignItems: "center", gap: 4 }}>
                           <Clock className="w-3 h-3" />
                           {new Date(space.created_at).toLocaleDateString("en-IN", { day:"numeric", month:"short" })}
                         </span>
                       </div>
-
                       {isApproved && (
-                        <Link href="/coworking"
-                          className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+                        <Link href="/coworking" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px", borderRadius: 9, border: "1px solid rgba(96,165,250,0.2)", color: "#60A5FA", fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}>
                           <ExternalLink className="w-3 h-3" /> View on FreWork
                         </Link>
                       )}
                       {isPending && (
-                        <p className="text-center text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-xl py-2 font-medium">
+                        <p style={{ textAlign: "center", fontSize: "0.68rem", color: "#F59E0B", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 9, padding: "7px", margin: 0, fontWeight: 600 }}>
                           Reviewing — goes live within 24 hrs
                         </p>
                       )}
                     </div>
                   );
                 })}
-
-                {/* Add another card */}
-                <Link href="/dashboard/workspace/submit"
-                  className="rounded-2xl border-2 border-dashed border-slate-200 p-5 hover:border-blue-300 hover:bg-blue-50/30 transition-all flex flex-col items-center justify-center gap-2 text-center min-h-[160px]">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
-                    <Plus className="w-5 h-5 text-slate-400" />
-                  </div>
-                  <p className="text-sm font-semibold text-slate-500">Add Another Space</p>
+                <Link href="/dashboard/workspace/submit" style={{ borderRadius: 14, border: "2px dashed rgba(255,255,255,0.08)", padding: "1.25rem", textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.5rem", textAlign: "center", minHeight: 140, transition: "border-color 0.15s" }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(96,165,250,0.25)"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)"}>
+                  <Plus className="w-5 h-5" style={{ color: "rgba(232,237,245,0.2)" }} />
+                  <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "rgba(232,237,245,0.3)" }}>Add Another Space</span>
                 </Link>
               </div>
             )}
           </div>
         )}
 
-        {/* ── STATS + CONTENT ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {/* Stats row */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.75rem", marginBottom: "1.75rem" }}>
           {[
-            { icon: MessageSquare, label: "Active Queries",    value: "0", color: "#2563EB", bg: "#EFF6FF", border: "#BFDBFE" },
-            { icon: CalendarClock, label: "Upcoming Meetings", value: "0", color: "#D97706", bg: "#FFFBEB", border: "#FDE68A" },
-            { icon: CheckSquare,   label: "Pending Tasks",     value: "0", color: "#DC2626", bg: "#FEF2F2", border: "#FECACA" },
-            { icon: Rocket,        label: "My Startups",       value: String(startups.length), color: "#7C3AED", bg: "#FAF5FF", border: "#E9D5FF" },
-          ].map(({ icon: Icon, label, value, color, bg, border }) => (
-            <div key={label} className="rounded-2xl bg-white border p-5 hover:shadow-sm transition-all"
-              style={{ borderColor: border }}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: bg }}>
-                <Icon className="w-4.5 h-4.5" style={{ color }} />
-              </div>
-              <div className="text-2xl font-black text-slate-900 mb-0.5">{value}</div>
-              <div className="text-xs text-slate-500 font-medium">{label}</div>
+            { icon: "💬", label: "Active Queries",    value: "0",                      accent: "#60A5FA" },
+            { icon: "📅", label: "Upcoming Meetings", value: "0",                      accent: "#F59E0B" },
+            { icon: "✅", label: "Pending Tasks",     value: "0",                      accent: "#F87171" },
+            { icon: "🚀", label: "My Startups",       value: String(startups.length),  accent: "#A78BFA" },
+          ].map(s => (
+            <div key={s.label} className="db-stat">
+              <div style={{ fontSize: "1.2rem", marginBottom: "0.6rem" }}>{s.icon}</div>
+              <div style={{ fontSize: "1.6rem", fontWeight: 900, color: s.accent, letterSpacing: "-0.02em", lineHeight: 1, marginBottom: "0.35rem" }}>{s.value}</div>
+              <div style={{ fontSize: "0.7rem", color: "rgba(232,237,245,0.35)", fontWeight: 600 }}>{s.label}</div>
             </div>
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 340px", gap: "1rem", alignItems: "start" }}>
 
-          {/* Left — main content */}
-          <div className="lg:col-span-2 space-y-5">
-
-            {/* My Queries */}
-            <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-                    <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-                  </div>
-                  <h2 className="font-bold text-slate-900 text-sm">My Service Queries</h2>
+          {/* Queries */}
+          <div className="db-card">
+            <div className="db-card-hd">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <MessageSquare className="w-3.5 h-3.5" style={{ color: "#60A5FA" }} />
                 </div>
-                <Link href="/contact" className="text-xs text-blue-600 font-semibold hover:underline flex items-center gap-1">
-                  New query <ArrowRight className="w-3 h-3" />
-                </Link>
+                <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>My Service Queries</span>
               </div>
-              <div className="px-6 py-10 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-3">
-                  <FileText className="w-5 h-5 text-blue-400" />
-                </div>
-                <p className="text-sm font-semibold text-slate-600 mb-1">No queries yet</p>
-                <p className="text-xs text-slate-400 mb-4 max-w-[220px] mx-auto">Submit a query and our expert team will respond within 2 hours.</p>
-                <Link href="/contact"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg,#1246C8,#2563EB)" }}>
-                  <Plus className="w-3.5 h-3.5" /> Submit a query
-                </Link>
-              </div>
+              <Link href="/contact" style={{ fontSize: "0.74rem", color: "#60A5FA", textDecoration: "none", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                New query <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
-
-            {/* Tasks + Meetings */}
-            <div className="grid md:grid-cols-2 gap-5">
-              <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm">
-                <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100">
-                  <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
-                    <CheckSquare className="w-3.5 h-3.5 text-orange-500" />
-                  </div>
-                  <h2 className="font-bold text-slate-900 text-sm">Pending Tasks</h2>
-                </div>
-                <div className="px-5 py-8 text-center">
-                  <p className="text-xs text-slate-400">Tasks from your expert team appear here once a service starts.</p>
-                </div>
+            <div style={{ padding: "2.5rem 1.25rem", textAlign: "center" }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 0.75rem" }}>
+                <FileText className="w-5 h-5" style={{ color: "#60A5FA", opacity: 0.6 }} />
               </div>
-
-              <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm">
-                <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-                    <CalendarClock className="w-3.5 h-3.5 text-blue-500" />
-                  </div>
-                  <h2 className="font-bold text-slate-900 text-sm">Meetings</h2>
-                </div>
-                <div className="px-5 py-6 text-center">
-                  <p className="text-xs text-slate-400 mb-3">Book a free 30-min call with our expert professional.</p>
-                  <Link href="/contact"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors">
-                    Schedule a call <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* My Startups */}
-            <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center">
-                    <Rocket className="w-3.5 h-3.5 text-purple-600" />
-                  </div>
-                  <h2 className="font-bold text-slate-900 text-sm">My Startups</h2>
-                  {startups.length > 0 && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200">{startups.length}</span>
-                  )}
-                </div>
-                <Link href="/dashboard/startup/submit"
-                  className="flex items-center gap-1.5 text-xs text-purple-600 font-semibold hover:underline">
-                  <Plus className="w-3.5 h-3.5" /> List startup
-                </Link>
-              </div>
-              {startups.length === 0 ? (
-                <div className="px-6 py-8 text-center">
-                  <p className="text-sm text-slate-400 mb-3">No startups listed yet</p>
-                  <Link href="/dashboard/startup/submit"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-colors">
-                    <Rocket className="w-3.5 h-3.5" /> List your startup — Free
-                  </Link>
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {startups.map(s => (
-                    <div key={s.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
-                      <div className="w-9 h-9 rounded-xl bg-purple-100 border border-purple-200 flex items-center justify-center text-sm font-black text-purple-600 flex-shrink-0">
-                        {s.name[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{s.name}</p>
-                        <p className="text-xs text-slate-500 truncate">{s.tagline}</p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusColor(s.status)}`}>{s.status}</span>
-                        {s.status === "live" && (
-                          <Link href={`/startups/${s.slug}`} className="text-slate-400 hover:text-slate-700 transition-colors">
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <p style={{ fontWeight: 600, fontSize: "0.84rem", color: "rgba(232,237,245,0.7)", marginBottom: "0.3rem" }}>No queries yet</p>
+              <p style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.3)", marginBottom: "1rem", lineHeight: 1.6 }}>Submit a query and our expert team responds within 2 hours.</p>
+              <Link href="/contact" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 10, background: "linear-gradient(135deg,#1246C8,#2563EB)", color: "#fff", fontSize: "0.78rem", fontWeight: 700, textDecoration: "none" }}>
+                <Plus className="w-3 h-3" /> Submit a query
+              </Link>
             </div>
           </div>
 
-          {/* Right sidebar */}
-          <div className="space-y-5">
-
-            {/* Plan card */}
-            <div className="rounded-2xl border border-blue-100 bg-white overflow-hidden shadow-sm">
-              <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100">
-                <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center">
-                  <Crown className="w-3.5 h-3.5 text-amber-500" />
+          {/* Startups */}
+          <div className="db-card">
+            <div className="db-card-hd">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Rocket className="w-3.5 h-3.5" style={{ color: "#A78BFA" }} />
                 </div>
-                <h2 className="font-bold text-slate-900 text-sm">Your Plan</h2>
+                <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>My Startups</span>
+                {startups.length > 0 && (
+                  <span style={{ fontSize: "0.62rem", padding: "1px 7px", borderRadius: 10, background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)", color: "#A78BFA", fontWeight: 700 }}>{startups.length}</span>
+                )}
               </div>
-              <div className="px-5 py-5">
+              <Link href="/dashboard/startup/submit" style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.74rem", color: "#A78BFA", textDecoration: "none", fontWeight: 700 }}>
+                <Plus className="w-3 h-3" /> List startup
+              </Link>
+            </div>
+            {startups.length === 0 ? (
+              <div style={{ padding: "2.5rem 1.25rem", textAlign: "center" }}>
+                <p style={{ fontSize: "0.8rem", color: "rgba(232,237,245,0.3)", marginBottom: "1rem" }}>No startups listed yet</p>
+                <Link href="/dashboard/startup/submit" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 18px", borderRadius: 10, background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.25)", color: "#A78BFA", fontSize: "0.78rem", fontWeight: 700, textDecoration: "none" }}>
+                  <Rocket className="w-3 h-3" /> List your startup — Free
+                </Link>
+              </div>
+            ) : (
+              <div>
+                {startups.map(s => (
+                  <div key={s.id} className="db-startup-row">
+                    <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.82rem", fontWeight: 800, color: "#A78BFA", flexShrink: 0 }}>
+                      {s.name[0]}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: "0.82rem", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</p>
+                      <p style={{ fontSize: "0.68rem", color: "rgba(232,237,245,0.35)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.tagline}</p>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusColor(s.status)}`}>{s.status}</span>
+                      {s.status === "live" && (
+                        <Link href={`/startups/${s.slug}`} style={{ color: "rgba(232,237,245,0.3)", textDecoration: "none" }}>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right sidebar */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+
+            {/* Plan */}
+            <div className="db-card">
+              <div className="db-card-hd">
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                  <Crown className="w-4 h-4" style={{ color: "#F59E0B" }} />
+                  <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Your Plan</span>
+                </div>
+              </div>
+              <div style={{ padding: "1rem 1.25rem" }}>
                 {subscription ? (
                   <>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-xs px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-bold capitalize">
-                        {subscription.plan} Plan
-                      </span>
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                      <span className="text-xs text-emerald-600 font-medium">Active</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
+                      <span style={{ fontSize: "0.7rem", padding: "3px 10px", borderRadius: 12, background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)", color: "#60A5FA", fontWeight: 700, textTransform: "capitalize" }}>{subscription.plan} Plan</span>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D399", flexShrink: 0 }} />
+                      <span style={{ fontSize: "0.7rem", color: "#34D399", fontWeight: 600 }}>Active</span>
                     </div>
-                    <p className="text-[11px] text-slate-400 mb-4 capitalize">
-                      Billing: {subscription.billing} · Since {new Date(subscription.started_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    <p style={{ fontSize: "0.68rem", color: "rgba(232,237,245,0.3)", marginBottom: "0.9rem", textTransform: "capitalize" }}>
+                      {subscription.billing} billing · since {new Date(subscription.started_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                     </p>
-                    <Link href="/pricing"
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors">
+                    <Link href="/pricing" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px", borderRadius: 10, border: "1px solid rgba(96,165,250,0.2)", color: "#60A5FA", fontSize: "0.76rem", fontWeight: 700, textDecoration: "none" }}>
                       Manage Plan <ArrowRight className="w-3 h-3" />
                     </Link>
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 font-medium">Free Plan</span>
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                      <span className="text-xs text-emerald-600 font-medium">Active</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                      <span style={{ fontSize: "0.7rem", padding: "3px 10px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(232,237,245,0.5)", fontWeight: 600 }}>Free Plan</span>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D399", flexShrink: 0 }} />
+                      <span style={{ fontSize: "0.7rem", color: "#34D399", fontWeight: 600 }}>Active</span>
                     </div>
-                    <ul className="space-y-2 mb-5">
+                    <ul style={{ listStyle: "none", padding: 0, margin: "0 0 0.9rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                       {["Browse freelancers & spaces free", "1 active service query", "Email support", "1 startup listing"].map(f => (
-                        <li key={f} className="flex items-center gap-2 text-xs text-slate-600">
-                          <svg className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" viewBox="0 0 12 10" fill="none">
-                            <path d="M1 5l3.5 3.5L11 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
+                        <li key={f} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: "0.72rem", color: "rgba(232,237,245,0.5)" }}>
+                          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="#34D399" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           {f}
                         </li>
                       ))}
                     </ul>
-                    <Link href="/pricing"
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-white transition-opacity hover:opacity-90"
-                      style={{ background: "linear-gradient(135deg,#1246C8,#2563EB)" }}>
+                    <Link href="/pricing" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px", borderRadius: 10, background: "linear-gradient(135deg,#1246C8,#2563EB)", color: "#fff", fontSize: "0.76rem", fontWeight: 700, textDecoration: "none" }}>
                       Upgrade Plan <ArrowRight className="w-3 h-3" />
                     </Link>
                   </>
@@ -812,45 +753,23 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Popular services */}
-            <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Star className="w-4 h-4 text-blue-600" />
-                <h3 className="text-sm font-bold text-slate-900">Popular Services</h3>
+            {/* Quick Links */}
+            <div className="db-card" style={{ padding: "1rem 1.25rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.85rem" }}>
+                <Zap className="w-3.5 h-3.5" style={{ color: "rgba(232,237,245,0.25)" }} />
+                <span style={{ fontWeight: 700, fontSize: "0.82rem" }}>Explore FreWork</span>
               </div>
-              <div className="space-y-2">
-                {PAID_SERVICES.slice(0, 5).map(s => (
-                  <Link key={s.label} href={s.href}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-colors group">
-                    <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 truncate">{s.label}</span>
-                    <span className="text-[11px] font-black ml-2 flex-shrink-0" style={{ color: s.color }}>{s.price}</span>
-                  </Link>
-                ))}
-                <Link href="/services"
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-blue-200 text-blue-600 text-xs font-bold hover:bg-blue-50 transition-colors mt-1">
-                  View all services <ChevronRight className="w-3 h-3" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Quick links */}
-            <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Zap className="w-4 h-4 text-slate-400" />
-                <h3 className="text-sm font-bold text-slate-900">Quick Links</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
                 {[
-                  { icon: Users,     label: "Freelancers",  href: "/freelancers",  color: "text-emerald-600", bg: "bg-emerald-50 hover:bg-emerald-100 border-emerald-100" },
-                  { icon: Building2, label: "Coworking",    href: "/coworking",    color: "text-cyan-600",    bg: "bg-cyan-50 hover:bg-cyan-100 border-cyan-100" },
-                  { icon: Rocket,    label: "Startups",     href: "/startups",     color: "text-purple-600",  bg: "bg-purple-50 hover:bg-purple-100 border-purple-100" },
-                  { icon: AlertCircle, label: "Contact CA", href: "/contact",      color: "text-blue-600",    bg: "bg-blue-50 hover:bg-blue-100 border-blue-100" },
-                  { icon: BarChart3, label: "Finance",      href: "/finance",      color: "text-amber-600",   bg: "bg-amber-50 hover:bg-amber-100 border-amber-100" },
-                ].map(({ icon: Icon, label, href, color, bg }) => (
-                  <Link key={label} href={href}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border ${bg} transition-all text-center`}>
-                    <Icon className={`w-4 h-4 ${color}`} />
-                    <span className={`text-xs font-semibold ${color} leading-tight`}>{label}</span>
+                  { icon: "👥", label: "Freelancers", href: "/freelancers", color: "#34D399" },
+                  { icon: "🏛️", label: "Coworking",   href: "/coworking",   color: "#60A5FA" },
+                  { icon: "🚀", label: "Startups",    href: "/startups",    color: "#A78BFA" },
+                  { icon: "📞", label: "Contact CA",  href: "/contact",     color: "#FB923C" },
+                  { icon: "📈", label: "Finance",     href: "/finance",     color: "#F59E0B" },
+                ].map(q => (
+                  <Link key={q.label} href={q.href} className="db-ql" style={{ color: q.color }}>
+                    <span style={{ fontSize: "1.15rem" }}>{q.icon}</span>
+                    {q.label}
                   </Link>
                 ))}
               </div>
@@ -859,6 +778,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+      </div>
     </div>
   );
 }
