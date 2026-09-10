@@ -292,7 +292,7 @@ export default function FrePilotDashboard() {
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
-                  {financialYears.length > 1 && (
+                  {financialYears.length > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                       <span style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(232,237,245,0.25)", textTransform: "uppercase", letterSpacing: "0.1em" }}>FY</span>
                       <select
