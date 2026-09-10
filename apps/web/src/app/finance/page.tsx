@@ -47,33 +47,6 @@ async function checkTally(): Promise<TallyStatus & { _raw: string }> {
   }
 }
 
-type TallyLedger = { name: string; parent: string };
-
-async function fetchTallyLedgers(): Promise<TallyLedger[]> {
-  try {
-    const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ledgers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ledgers" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-    const res = await fetch("http://localhost:7001", {
-      method: "POST", headers: { "Content-Type": "text/xml" }, body: xml,
-      signal: AbortSignal.timeout(8000),
-    });
-    const text = await res.text();
-    const results: TallyLedger[] = [];
-    const seen = new Set<string>();
-    // NAME attribute format: <LEDGER NAME="Cash">
-    const attrRe = /<LEDGER\s+NAME="([^"]+)"[^>]*>([\s\S]*?)<\/LEDGER>/gi;
-    let m;
-    while ((m = attrRe.exec(text)) !== null) {
-      const name = m[1].trim();
-      const block = m[2];
-      const pm = block.match(/<PARENT[^>]*>([^<]+)<\/PARENT>/i);
-      const parent = pm?.[1]?.trim() ?? "";
-      if (name && !seen.has(name)) { seen.add(name); results.push({ name, parent }); }
-    }
-    return results.sort((a, b) => a.parent.localeCompare(b.parent) || a.name.localeCompare(b.name));
-  } catch {
-    return [];
-  }
-}
 
 
 type Business = { id: string; name: string; gstin: string | null; gst_registration_type: string; state: string | null };
@@ -123,9 +96,9 @@ export default function FrePilotDashboard() {
   const [fyId, setFyId] = useState<string | null>(null);
   const [financialYears, setFinancialYears] = useState<{ id: string; label: string }[]>([]);
   const [tally, setTally] = useState<TallyStatus>({ state: "idle", company: "" });
-  const [tallyLedgers, setTallyLedgers] = useState<TallyLedger[]>([]);
-  const [tallyLedgersLoading, setTallyLedgersLoading] = useState(false);
-  const [ledgerSearch, setLedgerSearch] = useState("");
+  const [tallySyncing, setTallySyncing] = useState<"ledgers" | "vouchers" | null>(null);
+  const [tallySyncMsg, setTallySyncMsg] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [tallySyncProgress, setTallySyncProgress] = useState<string | null>(null);
 
   const pingTally = useCallback(async () => {
     setTally(t => ({ ...t, state: "checking" }));
@@ -145,7 +118,6 @@ export default function FrePilotDashboard() {
   }, []);
 
   useEffect(() => {
-    if (tally.state === "disconnected") setTallyLedgers([]);
   }, [tally.state]);
 
   async function loadBusinesses(uid: string) {
@@ -198,6 +170,172 @@ export default function FrePilotDashboard() {
     setFyId(selectedId);
     if (activeBiz && user) loadStats(activeBiz.id, user.id, selectedId);
   }
+
+  const tallyUrl = `http://localhost:${typeof window !== "undefined" ? (localStorage.getItem("fw_tally_port") ?? "7001") : "7001"}`;
+
+  function tallyParentToType(parent: string): string {
+    const p = parent.toLowerCase();
+    if (p.includes("bank")) return "bank";
+    if (p === "cash" || p.includes("cash-in-hand") || p.includes("cash in hand")) return "cash";
+    if (p.includes("sales") || p.includes("income") || p.includes("revenue")) return "income";
+    if (p.includes("purchase") || p.includes("direct exp") || p.includes("cost of goods")) return "cost_of_goods";
+    if (p.includes("capital") || p.includes("reserve") || p.includes("equity") || p.includes("proprietor")) return "equity";
+    if (p.includes("loan") || p.includes("borrowing")) return "loan";
+    if (p.includes("duties") || p.includes("tax") || p.includes("gst") || p.includes("tds")) return "tax";
+    if (p.includes("fixed asset") || p.includes("plant") || p.includes("machinery") || p.includes("laptop") || p.includes("furniture")) return "fixed_asset";
+    if (p.includes("current asset") || p.includes("sundry debt") || p.includes("receivable") || p.includes("debtor")) return "asset";
+    if (p.includes("current liab") || p.includes("sundry cred") || p.includes("payable") || p.includes("creditor")) return "liability";
+    return "expense";
+  }
+
+  function parseTallyVouchersLocal(xml: string) {
+    type TV = { date: string; voucherType: string; voucherNumber: string; narration: string; lines: { ledgerName: string; amount: number; isDeemed: boolean }[] };
+    const results: TV[] = [];
+    const vRe = /<VOUCHER[^>]*>([\s\S]*?)<\/VOUCHER>/gi;
+    let vm;
+    while ((vm = vRe.exec(xml)) !== null) {
+      const block = vm[1];
+      const rawDate = (block.match(/<DATE[^>]*>([^<]+)<\/DATE>/i) ?? [])[1]?.trim() ?? "";
+      let date = "";
+      if (/^\d{8}$/.test(rawDate)) date = `${rawDate.slice(0,4)}-${rawDate.slice(4,6)}-${rawDate.slice(6,8)}`;
+      const voucherType = (block.match(/<VOUCHERTYPENAME[^>]*>([^<]+)<\/VOUCHERTYPENAME>/i) ?? [])[1]?.trim() ?? "Journal";
+      const voucherNumber = (block.match(/<VOUCHERNUMBER[^>]*>([^<]+)<\/VOUCHERNUMBER>/i) ?? [])[1]?.trim() ?? "";
+      const narration = (block.match(/<NARRATION[^>]*>([^<]*)<\/NARRATION>/i) ?? [])[1]?.trim() ?? "";
+      const lines: TV["lines"] = [];
+      const eRe = /<ALLLEDGERENTRIES\.LIST[^>]*>([\s\S]*?)<\/ALLLEDGERENTRIES\.LIST>/gi;
+      let em;
+      while ((em = eRe.exec(block)) !== null) {
+        const eb = em[1];
+        const ledgerName = (eb.match(/<LEDGERNAME[^>]*>([^<]+)<\/LEDGERNAME>/i) ?? [])[1]?.trim() ?? "";
+        const amtStr = (eb.match(/<AMOUNT[^>]*>([^<]+)<\/AMOUNT>/i) ?? [])[1]?.trim() ?? "0";
+        const isDeemed = /Yes/i.test((eb.match(/<ISDEEMEDPOSITIVE[^>]*>([^<]+)<\/ISDEEMEDPOSITIVE>/i) ?? [])[1] ?? "");
+        const amount = Math.abs(parseFloat(amtStr) || 0);
+        if (ledgerName && amount > 0) lines.push({ ledgerName, amount, isDeemed });
+      }
+      if (date && lines.length >= 1) results.push({ date, voucherType, voucherNumber, narration, lines });
+    }
+    return results;
+  }
+
+  const doImportLedgers = useCallback(async () => {
+    if (!activeBiz || tally.state !== "connected") return;
+    setTallySyncing("ledgers"); setTallySyncMsg(null);
+    try {
+      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ledgers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ledgers" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(20000) });
+      const text = await res.text();
+      const seen = new Set<string>(); const ledgers: { name: string; parent: string }[] = [];
+      const re = /<LEDGER\s+NAME="([^"]+)"[^>]*>([\s\S]*?)<\/LEDGER>/gi; let m;
+      while ((m = re.exec(text)) !== null) {
+        const name = m[1].trim(); if (!name || seen.has(name)) continue;
+        const pm = m[2].match(/<PARENT[^>]*>([^<]+)<\/PARENT>/i);
+        seen.add(name); ledgers.push({ name, parent: pm?.[1]?.trim() ?? "" });
+      }
+      if (!ledgers.length) { setTallySyncMsg({ ok: false, msg: "No ledgers returned from Tally." }); setTallySyncing(null); return; }
+      const { data: existing } = await supabase.from("fw_fin_chart_of_accounts").select("name").eq("business_id", activeBiz.id);
+      const existingNames = new Set((existing ?? []).map(a => a.name));
+      const rows = ledgers.filter(l => !existingNames.has(l.name)).map((l, idx) => ({
+        business_id: activeBiz.id, code: `TL${String(idx + 1).padStart(3,"0")}`, name: l.name,
+        type: tallyParentToType(l.parent), description: l.parent ? `From Tally — ${l.parent}` : "From Tally",
+        is_system: false, is_group: false, sort_order: (existing?.length ?? 0) + idx + 1,
+      }));
+      let inserted = 0;
+      for (let i = 0; i < rows.length; i += 50) {
+        const { error } = await supabase.from("fw_fin_chart_of_accounts").insert(rows.slice(i, i + 50));
+        if (!error) inserted += Math.min(50, rows.length - i);
+      }
+      setTallySyncMsg({ ok: true, msg: `✓ Imported ${inserted} ledgers (${existingNames.size} already existed)` });
+    } catch (e) { setTallySyncMsg({ ok: false, msg: e instanceof Error ? e.message : "Network error" }); }
+    setTallySyncing(null);
+  }, [activeBiz, tally.state, tallyUrl]);
+
+  const doImportVouchers = useCallback(async (clearFirst = false) => {
+    if (!activeBiz || tally.state !== "connected") return;
+    if (clearFirst && !confirm("Delete all existing TLY imports and re-import fresh from Tally?")) return;
+    setTallySyncing("vouchers"); setTallySyncMsg(null); setTallySyncProgress(null);
+
+    if (clearFirst) {
+      setTallySyncProgress("Clearing old entries…");
+      const { data: old } = await supabase.from("fw_fin_journals").select("id").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
+      if (old?.length) {
+        const ids = old.map(j => j.id);
+        for (let i = 0; i < ids.length; i += 100) {
+          await supabase.from("fw_fin_journal_lines").delete().in("journal_id", ids.slice(i, i + 100));
+          await supabase.from("fw_fin_journals").delete().in("id", ids.slice(i, i + 100));
+        }
+      }
+    }
+
+    const stored = typeof window !== "undefined" ? localStorage.getItem("fw_tally_fy_id") : null;
+    const fyFrom = stored ? null : null; // dates from stored FY
+    const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,start_date,end_date").eq("business_id", activeBiz.id).order("start_date", { ascending: false });
+    const activeFy = stored ? fys?.find(f => f.id === stored) : fys?.[0];
+    const fromDate = activeFy?.start_date ?? `${new Date().getFullYear()}-04-01`;
+    const toDate = activeFy?.end_date ?? `${new Date().getFullYear() + 1}-03-31`;
+    void fyFrom;
+
+    const months: { from: string; to: string; label: string }[] = [];
+    let cur = new Date(new Date(fromDate).getFullYear(), new Date(fromDate).getMonth(), 1);
+    const end = new Date(toDate);
+    while (cur <= end) {
+      const y = cur.getFullYear(), mo = cur.getMonth();
+      const mFrom = `${y}-${String(mo+1).padStart(2,"0")}-01`;
+      const mTo = new Date(y, mo+1, 0).toISOString().slice(0,10);
+      months.push({ from: mFrom, to: mTo < toDate ? mTo : toDate, label: cur.toLocaleString("en-IN", { month: "short", year: "2-digit" }) });
+      cur = new Date(y, mo+1, 1);
+    }
+
+    const allVouchers: ReturnType<typeof parseTallyVouchersLocal> = [];
+    for (let i = 0; i < months.length; i++) {
+      const { from: mf, to: mt, label } = months[i];
+      setTallySyncProgress(`Fetching ${label} (${i+1}/${months.length})…`);
+      const fd = mf.replace(/-/g,""), td = mt.replace(/-/g,"");
+      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+      try {
+        const r = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(20000) });
+        allVouchers.push(...parseTallyVouchersLocal(await r.text()));
+      } catch { /* continue */ }
+      if (i < months.length - 1) await new Promise(r => setTimeout(r, 400));
+    }
+
+    if (!allVouchers.length) { setTallySyncMsg({ ok: false, msg: "No vouchers found in Tally for this period." }); setTallySyncing(null); return; }
+
+    const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", activeBiz.id);
+    const accountMap = new Map((accounts ?? []).map(a => [a.name.toLowerCase(), a]));
+    const missing = new Set<string>();
+    for (const v of allVouchers) for (const l of v.lines) if (!accountMap.has(l.ledgerName.toLowerCase())) missing.add(l.ledgerName);
+    if (missing.size) {
+      const newAcc = Array.from(missing).map((name, i) => ({ business_id: activeBiz.id, code: `TI${String((accounts?.length ?? 0)+i+1).padStart(3,"0")}`, name, type: tallyParentToType(name), description: "From Tally", is_system: false, is_group: false, sort_order: (accounts?.length ?? 0)+i+1 }));
+      const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAcc).select("id,name,type");
+      for (const a of created ?? []) accountMap.set(a.name.toLowerCase(), a);
+    }
+
+    const { data: existingTly } = await supabase.from("fw_fin_journals").select("date,reference_no,narration,total_debit").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
+    const fingerprints = new Set((existingTly ?? []).map(j => j.reference_no?.trim() ? `${j.date}|${j.reference_no.trim()}` : `${j.date}|${j.narration}|${j.total_debit}`));
+    let seq = 1;
+    if (existingTly?.length) { const nums = existingTly.map(j => parseInt((j as unknown as { entry_no?: string }).entry_no?.replace(/\D/g,"") ?? "0", 10)).filter(n => !isNaN(n)); if (nums.length) seq = Math.max(...nums) + 1; }
+    // Re-fetch with entry_no for seq
+    const { data: tlyWithNo } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
+    if (tlyWithNo?.length) { const nums = tlyWithNo.map(j => parseInt(j.entry_no.replace(/\D/g,""), 10)).filter(n => !isNaN(n)); if (nums.length) seq = Math.max(...nums) + 1; }
+
+    const typeMap: Record<string,string> = { "Sales":"sales","Purchase":"purchase","Payment":"payment","Receipt":"receipt","Contra":"contra","Journal":"journal","Debit Note":"debit_note","Credit Note":"credit_note" };
+    let imported = 0, skipped = 0;
+    for (const v of allVouchers) {
+      const fp = v.voucherNumber?.trim() ? `${v.date}|${v.voucherNumber.trim()}` : `${v.date}|${v.narration || `${v.voucherType} ${v.voucherNumber}`.trim()}|${v.lines.reduce((s,l)=>s+l.amount,0)}`;
+      if (fingerprints.has(fp)) { skipped++; continue; }
+      const fpType = typeMap[v.voucherType] ?? "journal";
+      const totalDr = v.lines.filter(l => l.isDeemed).reduce((s,l) => s+l.amount, 0);
+      const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s,l) => s+l.amount, 0);
+      const { data: jRow, error: jErr } = await supabase.from("fw_fin_journals").insert({ business_id: activeBiz.id, financial_year_id: activeFy?.id ?? null, entry_no: `TLY-${String(seq).padStart(4,"0")}`, date: v.date, narration: v.narration || `${v.voucherType} ${v.voucherNumber}`.trim(), type: fpType, status: "posted", total_debit: totalDr||totalCr, total_credit: totalCr||totalDr, reference_no: v.voucherNumber||null }).select("id").single();
+      if (jErr || !jRow) { skipped++; continue; }
+      const lines = v.lines.map(l => { const acc = accountMap.get(l.ledgerName.toLowerCase()); if (!acc) return null; return { journal_id: jRow.id, account_id: acc.id, description: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }; }).filter(Boolean);
+      if (lines.length > 0) { await supabase.from("fw_fin_journal_lines").insert(lines as {journal_id:string;account_id:string;description:string;dr_amount:number;cr_amount:number}[]); imported++; seq++; fingerprints.add(fp); }
+      else { await supabase.from("fw_fin_journals").delete().eq("id", jRow.id); skipped++; }
+    }
+    setTallySyncMsg({ ok: imported > 0, msg: imported > 0 ? `✓ Imported ${imported} voucher${imported!==1?"s":""}${skipped>0?` (${skipped} skipped, already existed)`:""}.` : `No new vouchers to import${skipped>0?` (${skipped} already existed)`:""}.` });
+    if (imported > 0 && activeBiz && user) loadStats(activeBiz.id, user.id, fyId);
+    setTallySyncing(null); setTallySyncProgress(null);
+  }, [activeBiz, tally.state, tallyUrl, fyId, user]);
 
   const now = new Date();
   const hour = now.getHours();
@@ -373,87 +511,53 @@ export default function FrePilotDashboard() {
                 ))}
               </div>
 
-              {/* Tally Ledgers — shown when connected */}
+              {/* Tally Sync Card — shown when connected */}
               {tally.state === "connected" && (
-                <div style={{ marginTop: "2rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", marginBottom: "0.75rem" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                      <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.25)", textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 700 }}>Tally Ledgers</div>
-                      <span style={{ fontSize: "0.6rem", fontWeight: 700, padding: "2px 8px", borderRadius: 8, background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.25)", color: "#34D399" }}>
-                        {tallyLedgersLoading ? "Loading…" : `${tallyLedgers.length} ledgers`}
-                      </span>
+                <div style={{ marginTop: "2rem", background: "linear-gradient(135deg,rgba(52,211,153,0.04),rgba(52,211,153,0.01))", border: "1px solid rgba(52,211,153,0.18)", borderRadius: 16, padding: "1.25rem 1.5rem" }}>
+                  {/* Header */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#34D399", display: "inline-block", boxShadow: "0 0 6px #34D399" }} />
+                      <span style={{ fontWeight: 800, fontSize: "0.92rem", color: "#34D399" }}>Tally · {tally.company}</span>
+                      <span style={{ fontSize: "0.65rem", color: "rgba(52,211,153,0.5)", fontWeight: 600 }}>LIVE</span>
                     </div>
-                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                      <input value={ledgerSearch} onChange={e => setLedgerSearch(e.target.value)}
-                        placeholder="Search ledger or group…"
-                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#E8EDF5", padding: "5px 12px", borderRadius: 8, fontSize: "0.76rem", outline: "none", fontFamily: "inherit", width: 200 }} />
-                      {tallyLedgers.length > 0 && (
-                        <button onClick={() => { setTallyLedgersLoading(true); fetchTallyLedgers().then(l => { setTallyLedgers(l); setTallyLedgersLoading(false); }); }}
-                          disabled={tallyLedgersLoading}
-                          style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.4)", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>
-                          ↻ Refresh
-                        </button>
-                      )}
-                      <Link href="/finance/tally" style={{ fontSize: "0.72rem", color: "#34D399", textDecoration: "none", fontWeight: 700, padding: "5px 12px", borderRadius: 8, background: "rgba(52,211,153,0.07)", border: "1px solid rgba(52,211,153,0.2)" }}>
-                        Manage →
-                      </Link>
-                    </div>
+                    <Link href="/finance/tally" style={{ fontSize: "0.72rem", color: "rgba(52,211,153,0.5)", textDecoration: "none", fontWeight: 600 }}>Advanced settings →</Link>
                   </div>
 
-                  {tallyLedgersLoading ? (
-                    <div style={{ background: "rgba(255,255,255,0.018)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "2rem", textAlign: "center", color: "rgba(232,237,245,0.25)", fontSize: "0.8rem" }}>
-                      Fetching ledgers from Tally… (do not use Tally until this finishes)
+                  {/* Buttons */}
+                  <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: tallySyncMsg || tallySyncProgress ? "0.85rem" : 0 }}>
+                    <button
+                      onClick={doImportLedgers}
+                      disabled={!!tallySyncing}
+                      style={{ flex: 1, minWidth: 160, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.08)", color: "#34D399", fontWeight: 700, fontSize: "0.86rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
+                      {tallySyncing === "ledgers" ? "Importing…" : "⬇ Import Ledgers"}
+                    </button>
+                    <button
+                      onClick={() => doImportVouchers(false)}
+                      disabled={!!tallySyncing}
+                      style={{ flex: 1, minWidth: 160, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.08)", color: "#C4B5FD", fontWeight: 700, fontSize: "0.86rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
+                      {tallySyncing === "vouchers" ? (tallySyncProgress ?? "Syncing…") : "⬇ Import Vouchers"}
+                    </button>
+                    <button
+                      onClick={() => doImportVouchers(true)}
+                      disabled={!!tallySyncing}
+                      style={{ padding: "11px 18px", borderRadius: 10, border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.06)", color: "#F87171", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1, whiteSpace: "nowrap" }}
+                      title="Delete all TLY imports and re-import fresh">
+                      🗑 Clear & Re-import
+                    </button>
+                  </div>
+
+                  {/* Progress */}
+                  {tallySyncing === "vouchers" && tallySyncProgress && (
+                    <div style={{ fontSize: "0.76rem", color: "rgba(196,181,253,0.6)", marginBottom: "0.5rem" }}>{tallySyncProgress}</div>
+                  )}
+
+                  {/* Result */}
+                  {tallySyncMsg && (
+                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: tallySyncMsg.ok ? "#34D399" : "#FCD34D", background: tallySyncMsg.ok ? "rgba(52,211,153,0.06)" : "rgba(252,211,77,0.06)", border: `1px solid ${tallySyncMsg.ok ? "rgba(52,211,153,0.2)" : "rgba(252,211,77,0.2)"}`, borderRadius: 9, padding: "0.6rem 0.9rem" }}>
+                      {tallySyncMsg.msg}
                     </div>
-                  ) : tallyLedgers.length === 0 ? (
-                    <div style={{ background: "rgba(255,255,255,0.018)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "2rem", textAlign: "center" }}>
-                      <div style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.8rem", marginBottom: "1rem" }}>Ledgers not loaded yet. Click below — keep Tally open and idle while loading.</div>
-                      <button onClick={() => { setTallyLedgersLoading(true); fetchTallyLedgers().then(l => { setTallyLedgers(l); setTallyLedgersLoading(false); }); }}
-                        style={{ background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", color: "#34D399", padding: "8px 24px", borderRadius: 8, fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>
-                        Load Ledgers from Tally
-                      </button>
-                    </div>
-                  ) : (() => {
-                    const filtered = tallyLedgers.filter(l =>
-                      !ledgerSearch || l.name.toLowerCase().includes(ledgerSearch.toLowerCase()) || l.parent.toLowerCase().includes(ledgerSearch.toLowerCase())
-                    );
-                    // Group by parent
-                    const byParent: Record<string, TallyLedger[]> = {};
-                    filtered.forEach(l => { (byParent[l.parent || "Other"] ??= []).push(l); });
-                    const parents = Object.keys(byParent).sort();
-                    return (
-                      <div style={{ background: "rgba(255,255,255,0.018)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, overflow: "hidden" }}>
-                        <div style={{ maxHeight: 380, overflowY: "auto" }}>
-                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
-                            <thead style={{ position: "sticky", top: 0, background: "rgba(5,9,20,0.95)", zIndex: 2 }}>
-                              <tr>
-                                <th style={{ padding: "0.6rem 1rem", textAlign: "left", color: "rgba(232,237,245,0.25)", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.1em", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>Ledger Name</th>
-                                <th style={{ padding: "0.6rem 1rem", textAlign: "left", color: "rgba(232,237,245,0.25)", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.1em", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>Group / Parent</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {parents.map(parent => (
-                                byParent[parent].map((l, i) => (
-                                  <tr key={l.name} style={{ borderTop: "1px solid rgba(255,255,255,0.03)" }}>
-                                    <td style={{ padding: "0.5rem 1rem", color: "#E8EDF5", fontWeight: 500 }}>{l.name}</td>
-                                    {i === 0 ? (
-                                      <td rowSpan={byParent[parent].length} style={{ padding: "0.5rem 1rem", verticalAlign: "top", borderLeft: "1px solid rgba(255,255,255,0.04)" }}>
-                                        <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 9px", borderRadius: 8, background: "rgba(52,211,153,0.07)", border: "1px solid rgba(52,211,153,0.18)", color: "#34D399" }}>{parent}</span>
-                                      </td>
-                                    ) : null}
-                                  </tr>
-                                ))
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                        {filtered.length < tallyLedgers.length && (
-                          <div style={{ padding: "0.5rem 1rem", fontSize: "0.66rem", color: "rgba(232,237,245,0.2)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                            Showing {filtered.length} of {tallyLedgers.length} ledgers
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+                  )}
                 </div>
               )}
 
