@@ -136,16 +136,16 @@ function parseTallyLedgers(xml: string): { name: string; parent: string }[] {
 function tallyParentToType(parent: string): string {
   const p = parent.toLowerCase();
   if (p.includes("bank")) return "bank";
-  if (p.includes("cash")) return "cash";
+  if (p === "cash" || p.includes("cash-in-hand") || p.includes("cash in hand")) return "cash";
   if (p.includes("sales") || p.includes("income") || p.includes("revenue")) return "income";
-  if (p.includes("purchase") || p.includes("direct exp") || p.includes("cost")) return "cost_of_goods";
-  if (p.includes("indirect exp") || p.includes("expense")) return "expense";
-  if (p.includes("capital") || p.includes("reserve") || p.includes("equity")) return "equity";
+  if (p.includes("purchase") || p.includes("direct exp") || p.includes("cost of goods") || p.includes("cost of sales")) return "cost_of_goods";
+  if (p.includes("capital") || p.includes("reserve") || p.includes("equity") || p.includes("proprietor")) return "equity";
   if (p.includes("loan") || p.includes("borrowing")) return "loan";
-  if (p.includes("duties") || p.includes("tax")) return "tax";
-  if (p.includes("fixed asset") || p.includes("plant") || p.includes("machinery")) return "fixed_asset";
-  if (p.includes("current asset") || p.includes("sundry debt") || p.includes("receivable")) return "asset";
-  if (p.includes("current liab") || p.includes("sundry cred") || p.includes("payable")) return "liability";
+  if (p.includes("duties") || p.includes("tax") || p.includes("gst") || p.includes("tds")) return "tax";
+  if (p.includes("fixed asset") || p.includes("plant") || p.includes("machinery") || p.includes("laptop") || p.includes("computer") || p.includes("furniture")) return "fixed_asset";
+  if (p.includes("current asset") || p.includes("sundry debt") || p.includes("receivable") || p.includes("debtor")) return "asset";
+  if (p.includes("current liab") || p.includes("sundry cred") || p.includes("payable") || p.includes("creditor")) return "liability";
+  if (p.includes("indirect exp") || p.includes("expense")) return "expense";
   return "expense";
 }
 
@@ -403,7 +403,7 @@ export default function TallyPage() {
       if (missingNames.size > 0) {
         const newAccounts = Array.from(missingNames).map((name, idx) => ({
           business_id: bizId, code: `TI${String((accounts?.length ?? 0) + idx + 1).padStart(3,"0")}`,
-          name, type: "expense", description: "Imported from Tally", is_system: false, is_group: false,
+          name, type: tallyParentToType(name), description: "Imported from Tally", is_system: false, is_group: false,
           sort_order: (accounts?.length ?? 0) + idx + 1,
         }));
         const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAccounts).select("id,name,type");
