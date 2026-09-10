@@ -90,6 +90,7 @@ const QUICK = [
 
 const MODULES = [
   { group: "Reports", items: [
+    { icon: "🔍", label: "Audit & Reports",     desc: "Trial balance, P&L, Balance Sheet, audit flags", href: "/finance/audit",          accent: "#34D399" },
     { icon: "📈", label: "P&L / Reports",      desc: "Income statement, balance sheet, cash flow", href: "/finance/reports",           accent: "#34D399" },
     { icon: "🏛️", label: "GST Returns",        desc: "GSTR-1, GSTR-3B — auto-prepared",           href: "/finance/gst",               accent: "#60A5FA" },
     { icon: "🔖", label: "TDS Tracker",         desc: "Section-wise TDS, due dates, calculator",   href: "/finance/tds",               accent: "#F59E0B" },

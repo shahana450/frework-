@@ -32,6 +32,7 @@ const NAV_GROUPS = [
       { icon: "🧾", label: "Sales List", href: "/finance/sales" },
       { icon: "📋", label: "Journal Entries", href: "/finance/journals" },
       { icon: "📒", label: "Account Ledger", href: "/finance/ledger" },
+      { icon: "🔍", label: "Audit & Reports", href: "/finance/audit" },
       { icon: "📥", label: "Receivables (AR)", href: "/finance/receivables" },
       { icon: "📤", label: "Payables (AP)", href: "/finance/payables" },
     ],

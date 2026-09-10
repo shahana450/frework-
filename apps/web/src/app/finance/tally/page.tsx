@@ -245,6 +245,7 @@ export default function TallyPage() {
   const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | "import" | "importVouchers" | null>(null);
   const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [importVoucherResult, setImportVoucherResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [syncProgress, setSyncProgress] = useState<string | null>(null);
   const [autoSyncDone, setAutoSyncDone] = useState(false);
 
   const tallyUrl = `http://localhost:${tallyPort}`;
@@ -369,19 +370,44 @@ export default function TallyPage() {
 
   const importVouchers = useCallback(async () => {
     if (!bizId || connStatus !== "connected") return;
-    setSyncing("importVouchers"); setImportVoucherResult(null);
+    setSyncing("importVouchers"); setImportVoucherResult(null); setSyncProgress(null);
+
+    // Build list of months in the date range
+    function monthsInRange(startIso: string, endIso: string): { from: string; to: string; label: string }[] {
+      const months: { from: string; to: string; label: string }[] = [];
+      const start = new Date(startIso);
+      const end = new Date(endIso);
+      let cur = new Date(start.getFullYear(), start.getMonth(), 1);
+      while (cur <= end) {
+        const y = cur.getFullYear(), m = cur.getMonth();
+        const mFrom = `${y}-${String(m + 1).padStart(2,"0")}-01`;
+        const mTo = new Date(y, m + 1, 0).toISOString().slice(0,10);
+        months.push({ from: mFrom, to: mTo < endIso ? mTo : endIso, label: cur.toLocaleString("en-IN", { month: "short", year: "2-digit" }) });
+        cur = new Date(y, m + 1, 1);
+      }
+      return months;
+    }
 
     try {
-      const fromDate = from.replace(/-/g, "");
-      const toDate = to.replace(/-/g, "");
-      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fromDate}</SVFROMDATE><SVTODATE>${toDate}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+      const months = monthsInRange(from || "2025-04-01", to || "2026-03-31");
+      const allVouchers: ReturnType<typeof parseTallyVouchers> = [];
 
-      const res = await fetch(tallyUrl, {
-        method: "POST", headers: { "Content-Type": "text/xml" }, body: xml,
-        signal: AbortSignal.timeout(30000),
-      });
-      const text = await res.text();
-      const vouchers = parseTallyVouchers(text);
+      for (let i = 0; i < months.length; i++) {
+        const { from: mFrom, to: mTo, label } = months[i];
+        setSyncProgress(`Fetching ${label} (${i + 1}/${months.length})…`);
+        const fromDate = mFrom.replace(/-/g, "");
+        const toDate = mTo.replace(/-/g, "");
+        const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fromDate}</SVFROMDATE><SVTODATE>${toDate}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+        try {
+          const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(20000) });
+          const text = await res.text();
+          allVouchers.push(...parseTallyVouchers(text));
+        } catch { /* month failed — continue with next */ }
+        // Small delay between months so Tally doesn't get overwhelmed
+        if (i < months.length - 1) await new Promise(r => setTimeout(r, 400));
+      }
+
+      const vouchers = allVouchers;
 
       if (!vouchers.length) {
         setImportVoucherResult({ ok: false, msg: "No vouchers found in Tally for this date range." });
@@ -913,7 +939,9 @@ export default function TallyPage() {
                 </div>
               )}
               {syncing === "importVouchers" && (
-                <div style={{ marginTop: "0.6rem", fontSize: "0.76rem", color: "#4A6FA5" }}>Fetching vouchers from Tally… keep Tally idle.</div>
+                <div style={{ marginTop: "0.6rem", fontSize: "0.76rem", color: "#4A6FA5" }}>
+                  {syncProgress ?? "Starting sync… keep Tally idle."}
+                </div>
               )}
             </div>
 
