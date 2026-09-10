@@ -5,43 +5,6 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
 type TallyStatus = { state: "idle" | "checking" | "connected" | "disconnected"; company: string };
-type TallyStats = { revenue: number; expenses: number; profit: number; salesCount: number; fromDate: string; toDate: string } | null;
-type PeriodKey = "fy" | "quarter" | "month" | "lastmonth";
-
-function fyDates(): { from: string; to: string; label: string } {
-  const now = new Date();
-  const y = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-  return { from: `${y}0401`, to: `${y+1}0331`, label: `FY ${y}-${String(y+1).slice(2)}` };
-}
-function periodDates(key: PeriodKey): { from: string; to: string; label: string } {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const fmt = (d: Date) => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
-  const fmtLabel = (d: Date) => d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  if (key === "fy") return fyDates();
-  if (key === "quarter") {
-    const q = Math.floor(now.getMonth() / 3);
-    const qStart = new Date(now.getFullYear(), q * 3, 1);
-    const qEnd = new Date(now.getFullYear(), q * 3 + 3, 0);
-    return { from: fmt(qStart), to: fmt(qEnd), label: `${fmtLabel(qStart)} – ${fmtLabel(qEnd)}` };
-  }
-  if (key === "lastmonth") {
-    const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lme = new Date(now.getFullYear(), now.getMonth(), 0);
-    return { from: fmt(lm), to: fmt(lme), label: `${fmtLabel(lm)} – ${fmtLabel(lme)}` };
-  }
-  // month
-  const ms = new Date(now.getFullYear(), now.getMonth(), 1);
-  return { from: fmt(ms), to: fmt(now), label: `${fmtLabel(ms)} – ${fmtLabel(now)}` };
-}
-
-function parseTallyAmount(raw: string): number {
-  // Tally returns "12345.67 Cr" or "12345.67 Dr" or just "12345.67"
-  const m = raw.replace(/,/g, "").match(/([\d.]+)\s*(Cr|Dr)?/i);
-  if (!m) return 0;
-  const n = parseFloat(m[1]);
-  return m[2]?.toLowerCase() === "dr" ? -n : n;
-}
 
 function parseTallyCompanyName(xml: string): string {
   // All known patterns Tally Prime uses to return company name
@@ -112,60 +75,6 @@ async function fetchTallyLedgers(): Promise<TallyLedger[]> {
   }
 }
 
-async function fetchTallyStats(from: string, to: string): Promise<TallyStats> {
-  try {
-    // Fetch ledger-level closing balances (more reliable than group-level)
-    const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FPLedBal</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${from}</SVFROMDATE><SVTODATE>${to}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FPLedBal" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent,ClosingBalance</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-    const res = await fetch("http://localhost:7001", {
-      method: "POST", headers: { "Content-Type": "text/xml" }, body: xml,
-      signal: AbortSignal.timeout(10000),
-    });
-    const text = await res.text();
-
-    // Sum ledger balances by parent group
-    const byParent: Record<string, number> = {};
-
-    // attribute form: <LEDGER NAME="Sales" REMOTEID="...">
-    const attrRx = /<LEDGER\s+NAME="[^"]*"[^>]*>([\s\S]*?)<\/LEDGER>/gi;
-    let m;
-    while ((m = attrRx.exec(text)) !== null) {
-      const block = m[1];
-      const parentM = block.match(/<PARENT[^>]*>([^<]+)<\/PARENT>/i);
-      const balM = block.match(/<CLOSINGBALANCE[^>]*>([^<]*)<\/CLOSINGBALANCE>/i);
-      if (parentM && balM) {
-        const parent = parentM[1].trim().toLowerCase();
-        byParent[parent] = (byParent[parent] ?? 0) + parseTallyAmount(balM[1]);
-      }
-    }
-
-    // Also try child-NAME form: <LEDGER><NAME>...</NAME>
-    if (Object.keys(byParent).length === 0) {
-      const childRx = /<LEDGER[^>]*>\s*<NAME[^>]*>([^<]+)<\/NAME>([\s\S]*?)<\/LEDGER>/gi;
-      while ((m = childRx.exec(text)) !== null) {
-        const block = m[2];
-        const parentM = block.match(/<PARENT[^>]*>([^<]+)<\/PARENT>/i);
-        const balM = block.match(/<CLOSINGBALANCE[^>]*>([^<]*)<\/CLOSINGBALANCE>/i);
-        if (parentM && balM) {
-          const parent = parentM[1].trim().toLowerCase();
-          byParent[parent] = (byParent[parent] ?? 0) + parseTallyAmount(balM[1]);
-        }
-      }
-    }
-
-    // Revenue = sales accounts + direct/indirect incomes
-    const revenue = (byParent["sales accounts"] ?? 0)
-      + (byParent["direct incomes"] ?? 0)
-      + (byParent["indirect incomes"] ?? 0);
-    // Expenses = purchases + direct/indirect expenses
-    const expenses = Math.abs(byParent["purchase accounts"] ?? 0)
-      + Math.abs(byParent["direct expenses"] ?? 0)
-      + Math.abs(byParent["indirect expenses"] ?? 0);
-
-    return { revenue, expenses, profit: revenue - expenses, salesCount: 0, fromDate: from, toDate: to };
-  } catch {
-    return null;
-  }
-}
 
 type Business = { id: string; name: string; gstin: string | null; gst_registration_type: string; state: string | null };
 type Stats = { sales: number; expenses: number; drafts: number; pendingTds: number; revenue: number; profit: number };
@@ -211,9 +120,6 @@ export default function FrePilotDashboard() {
   const [loading, setLoading] = useState(true);
   const [fyLabel, setFyLabel] = useState("2025-26");
   const [tally, setTally] = useState<TallyStatus>({ state: "idle", company: "" });
-  const [tallyStats, setTallyStats] = useState<TallyStats>(null);
-  const [tallyStatsLoading, setTallyStatsLoading] = useState(false);
-  const [period, setPeriod] = useState<PeriodKey>("fy");
   const [tallyLedgers, setTallyLedgers] = useState<TallyLedger[]>([]);
   const [tallyLedgersLoading, setTallyLedgersLoading] = useState(false);
   const [ledgerSearch, setLedgerSearch] = useState("");
@@ -222,14 +128,6 @@ export default function FrePilotDashboard() {
     setTally(t => ({ ...t, state: "checking" }));
     const result = await checkTally();
     setTally(result);
-  }, []);
-
-  const loadTallyStats = useCallback(async (p: PeriodKey) => {
-    setTallyStatsLoading(true);
-    const { from, to } = periodDates(p);
-    const data = await fetchTallyStats(from, to);
-    setTallyStats(data);
-    setTallyStatsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -243,9 +141,8 @@ export default function FrePilotDashboard() {
     return () => clearInterval(id);
   }, []);
 
-  // When Tally disconnects, clear data
   useEffect(() => {
-    if (tally.state === "disconnected") { setTallyLedgers([]); setTallyStats(null); }
+    if (tally.state === "disconnected") setTallyLedgers([]);
   }, [tally.state]);
 
   async function loadBusinesses(uid: string) {
@@ -381,32 +278,12 @@ export default function FrePilotDashboard() {
                   </div>
                 </div>
 
-                {/* Period selector — always shown, drives Tally stats when connected */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.4rem" }}>
-                  <div style={{ fontSize: "0.6rem", color: "rgba(232,237,245,0.25)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700 }}>
-                    {tally.state === "connected" ? "📡 Tally · Period" : "📊 App Data · Period"}
-                  </div>
-                  <div style={{ display: "flex", gap: "0.35rem" }}>
-                    {([
-                      { key: "fy" as PeriodKey, label: "This FY" },
-                      { key: "quarter" as PeriodKey, label: "Quarter" },
-                      { key: "month" as PeriodKey, label: "This Month" },
-                      { key: "lastmonth" as PeriodKey, label: "Last Month" },
-                    ]).map(p => (
-                      <button key={p.key} onClick={() => setPeriod(p.key)}
-                        style={{ padding: "4px 11px", borderRadius: 20, fontSize: "0.7rem", fontWeight: 700, cursor: "pointer", border: "1px solid", fontFamily: "inherit", transition: "all 0.15s",
-                          background: period === p.key ? (tally.state === "connected" ? "rgba(52,211,153,0.12)" : "rgba(96,165,250,0.12)") : "rgba(255,255,255,0.03)",
-                          borderColor: period === p.key ? (tally.state === "connected" ? "rgba(52,211,153,0.4)" : "rgba(96,165,250,0.4)") : "rgba(255,255,255,0.08)",
-                          color: period === p.key ? (tally.state === "connected" ? "#34D399" : "#60A5FA") : "rgba(232,237,245,0.35)",
-                        }}>
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: "0.66rem", color: "rgba(232,237,245,0.22)", fontFamily: "'IBM Plex Mono',monospace" }}>
-                    {periodDates(period).label}
-                  </div>
-                </div>
+                {tally.state === "connected" && (
+                  <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 8, background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.2)", textDecoration: "none", alignSelf: "flex-start", marginTop: 4 }}>
+                    <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#34D399" }}>📡 {tally.company} connected</span>
+                    <span style={{ fontSize: "0.6rem", color: "rgba(52,211,153,0.5)" }}>— sync ledgers →</span>
+                  </Link>
+                )}
               </div>
 
               {/* AI Banner */}
@@ -419,48 +296,25 @@ export default function FrePilotDashboard() {
                 <div style={{ color: "rgba(201,168,76,0.4)", fontSize: "1.1rem", flexShrink: 0, alignSelf: "center" }}>→</div>
               </Link>
 
-              {/* KPI Cards — Tally data when connected, app data otherwise */}
-              {(() => {
-                const useTally = tally.state === "connected" && tallyStats;
-                const isLoading = useTally ? tallyStatsLoading : loading;
-                const rev = useTally ? tallyStats!.revenue : stats.revenue;
-                const prof = useTally ? tallyStats!.profit : stats.profit;
-                const exp = useTally ? tallyStats!.expenses : stats.expenses;
-                const source = useTally ? `📡 ${tally.company}` : "📂 FrePilot";
-                return (
-                  <>
-                    {/* Source badge */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.65rem" }}>
-                      <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "3px 10px", borderRadius: 10, background: useTally ? "rgba(52,211,153,0.08)" : "rgba(96,165,250,0.08)", border: `1px solid ${useTally ? "rgba(52,211,153,0.25)" : "rgba(96,165,250,0.2)"}`, color: useTally ? "#34D399" : "#60A5FA" }}>
-                        {source}
-                      </span>
-                      <span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.22)", fontFamily: "'IBM Plex Mono',monospace" }}>{periodDates(period).label}</span>
-                      {isLoading && <span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.2)" }}>Loading… (keep Tally idle)</span>}
-                    {tally.state === "connected" && !isLoading && (
-                      <button onClick={() => loadTallyStats(period)}
-                        style={{ fontSize: "0.62rem", fontWeight: 700, color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: 8, padding: "2px 10px", cursor: "pointer", fontFamily: "inherit" }}>
-                        {tallyStats ? "↻ Reload" : "Load from Tally"}
-                      </button>
-                    )}
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.85rem", marginBottom: "1.75rem" }}>
-                      {[
-                        { label: "Revenue", value: isLoading ? "—" : useTally && !tallyStats ? "—" : fmt(rev), color: "#34D399", sub: useTally && !tallyStats && !isLoading ? "Click Load from Tally" : periodDates(period).label, mono: true },
-                        { label: "Net Profit", value: isLoading ? "—" : useTally && !tallyStats ? "—" : (prof < 0 ? "−" : "") + fmt(prof), color: prof >= 0 ? "#34D399" : "#F87171", sub: prof < 0 ? "Net loss" : "Net profit", mono: true },
-                        { label: useTally ? "Total Expenses" : "Sales Invoices", value: isLoading ? "—" : useTally && !tallyStats ? "—" : useTally ? fmt(exp) : String(stats.sales), color: "#F59E0B", sub: useTally ? "All expense groups" : "Posted entries", mono: true },
-                        { label: "Draft Entries", value: isLoading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#FB923C" : "rgba(232,237,245,0.3)", sub: stats.drafts > 0 ? "Needs review" : "All clear", mono: false, alert: stats.drafts > 0 },
-                      ].map(k => (
-                        <div key={k.label} className="fp-kpi" style={k.alert ? { background: "rgba(251,146,60,0.06)", borderColor: "rgba(251,146,60,0.2)" } : {}}>
-                          <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.75rem" }}>{k.label}</div>
-                          <div style={{ fontSize: "1.5rem", fontWeight: 900, color: k.color, fontFamily: k.mono ? "'IBM Plex Mono',monospace" : "inherit", letterSpacing: k.mono ? "-0.02em" : "-0.01em", lineHeight: 1, marginBottom: "0.4rem" }}>{k.value}</div>
-                          <div style={{ fontSize: "0.65rem", color: "rgba(232,237,245,0.25)", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{k.sub}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                );
-              })()}
+              {/* KPI Cards — FrePilot app data */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.65rem" }}>
+                <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "3px 10px", borderRadius: 10, background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.2)", color: "#60A5FA" }}>📂 FrePilot · FY {fyLabel}</span>
+                {loading && <span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.2)" }}>Loading…</span>}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.85rem", marginBottom: "1.75rem" }}>
+                {[
+                  { label: "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#34D399", sub: `FY ${fyLabel}`, mono: true },
+                  { label: "Net Profit", value: loading ? "—" : (stats.profit < 0 ? "−" : "") + fmt(stats.profit), color: stats.profit >= 0 ? "#34D399" : "#F87171", sub: stats.profit < 0 ? "Net loss" : "Net profit", mono: true },
+                  { label: "Sales Invoices", value: loading ? "—" : String(stats.sales), color: "#F59E0B", sub: "Posted entries", mono: false },
+                  { label: "Draft Entries", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#FB923C" : "rgba(232,237,245,0.3)", sub: stats.drafts > 0 ? "Needs review" : "All clear", mono: false, alert: stats.drafts > 0 },
+                ].map(k => (
+                  <div key={k.label} className="fp-kpi" style={(k as {alert?:boolean}).alert ? { background: "rgba(251,146,60,0.06)", borderColor: "rgba(251,146,60,0.2)" } : {}}>
+                    <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.75rem" }}>{k.label}</div>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 900, color: k.color, fontFamily: k.mono ? "'IBM Plex Mono',monospace" : "inherit", letterSpacing: "-0.02em", lineHeight: 1, marginBottom: "0.4rem" }}>{k.value}</div>
+                    <div style={{ fontSize: "0.65rem", color: "rgba(232,237,245,0.25)", fontWeight: 500 }}>{k.sub}</div>
+                  </div>
+                ))}
+              </div>
 
               {/* Quick Actions */}
               <div style={{ marginBottom: "2rem" }}>
