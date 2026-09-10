@@ -473,13 +473,33 @@ export default function TallyPage() {
       const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label").eq("business_id", bizId).order("start_date", { ascending: false });
       const fyIdToUse = fys?.[0]?.id ?? null;
 
-      // Get last entry number
-      const { data: lastJ } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).order("created_at", { ascending: false }).limit(1);
+      // Get last entry number + build dedup fingerprint set from existing TLY imports
+      const { data: existingTly } = await supabase
+        .from("fw_fin_journals")
+        .select("entry_no,date,reference_no,narration,total_debit")
+        .eq("business_id", bizId)
+        .like("entry_no", "TLY-%");
+      // Fingerprint: date|voucherNumber (reference_no) — fall back to date|narration|amount
+      const existingFingerprints = new Set<string>(
+        (existingTly ?? []).map(j => {
+          const ref = j.reference_no?.trim() ?? "";
+          return ref ? `${j.date}|${ref}` : `${j.date}|${j.narration}|${j.total_debit}`;
+        })
+      );
       let entrySeq = 1;
-      if (lastJ?.[0]?.entry_no) { const n = parseInt(lastJ[0].entry_no.replace(/\D/g, ""), 10); if (!isNaN(n)) entrySeq = n + 1; }
+      if (existingTly?.length) {
+        const nums = existingTly.map(j => parseInt(j.entry_no.replace(/\D/g, ""), 10)).filter(n => !isNaN(n));
+        if (nums.length) entrySeq = Math.max(...nums) + 1;
+      }
 
       let imported = 0, skipped = 0;
       for (const v of vouchers) {
+        // Deduplication — skip if this voucher was already imported
+        const fingerprint = v.voucherNumber?.trim()
+          ? `${v.date}|${v.voucherNumber.trim()}`
+          : `${v.date}|${(v.narration || `${v.voucherType} ${v.voucherNumber}`.trim())}|${v.lines.reduce((s,l)=>s+l.amount,0)}`;
+        if (existingFingerprints.has(fingerprint)) { skipped++; continue; }
+
         const fpType = tallyVoucherTypeToFP(v.voucherType);
         const totalDr = v.lines.filter(l => l.isDeemed).reduce((s, l) => s + l.amount, 0);
         const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s, l) => s + l.amount, 0);
@@ -531,13 +551,7 @@ export default function TallyPage() {
     setSyncing(null);
   }, [bizId, connStatus, tallyUrl, from, to]);
 
-  // Auto-sync vouchers once when connection is established
-  useEffect(() => {
-    if (connStatus === "connected" && bizId && !autoSyncDone && !syncing) {
-      importVouchers();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connStatus, bizId]);
+  // Auto-sync removed — user must click "Import Vouchers" manually to prevent duplicate imports on every page load
 
   // ── Test connection ──────────────────────────────────────────────────────
 
