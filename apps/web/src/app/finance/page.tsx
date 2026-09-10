@@ -167,9 +167,11 @@ export default function FrePilotDashboard() {
     ]);
     const fys = fysRes.data ?? [];
     setFinancialYears(fys.map(f => ({ id: f.id, label: f.label })));
+    // If Tally is connected and stored a matching FY, use it as the default
+    const tallyFyId = typeof window !== "undefined" ? localStorage.getItem("fw_tally_fy_id") ?? "" : "";
     const activeFy = selectedFyId
       ? fys.find(f => f.id === selectedFyId)
-      : (fys.find(f => f.is_current) ?? fys[0]);
+      : (tallyFyId ? fys.find(f => f.id === tallyFyId) : undefined) ?? (fys.find(f => f.is_current) ?? fys[0]);
     if (activeFy) { setFyLabel(activeFy.label); setFyId(activeFy.id); }
     const allJournals = journalsRes.data ?? [];
     const journals = activeFy ? allJournals.filter(j => j.financial_year_id === activeFy.id) : allJournals;

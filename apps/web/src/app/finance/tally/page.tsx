@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
@@ -247,6 +247,7 @@ export default function TallyPage() {
   const [importVoucherResult, setImportVoucherResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
   const [autoSyncDone, setAutoSyncDone] = useState(false);
+  const keepAliveFailsRef = useRef(0);
 
   const tallyUrl = `http://localhost:${tallyPort}`;
 
@@ -285,6 +286,38 @@ export default function TallyPage() {
       }
     });
   }, []);
+
+  // Keep-alive ping every 30s — auto-disconnect after 3 consecutive failures
+  useEffect(() => {
+    if (connStatus !== "connected") return;
+    keepAliveFailsRef.current = 0;
+    const id = setInterval(async () => {
+      try {
+        const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ping</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ping" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+        const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(4000) });
+        if (res.ok) {
+          keepAliveFailsRef.current = 0;
+        } else {
+          keepAliveFailsRef.current += 1;
+        }
+      } catch {
+        keepAliveFailsRef.current += 1;
+      }
+      if (keepAliveFailsRef.current >= 3) {
+        setConnStatus("error");
+        setConnMsg("Tally connection lost — bridge or Tally may have closed. Click Connect to reconnect.");
+      }
+    }, 30000);
+    return () => clearInterval(id);
+  }, [connStatus, tallyUrl]);
+
+  function disconnect() {
+    setConnStatus("idle");
+    setConnMsg("");
+    setCompanyName("");
+    keepAliveFailsRef.current = 0;
+    try { localStorage.removeItem("fw_tally_company"); localStorage.removeItem("fw_tally_fy_id"); } catch { /* */ }
+  }
 
   async function loadJournalPreview() {
     if (!bizId) return;
@@ -550,7 +583,19 @@ export default function TallyPage() {
         }
 
         // Set FROM from Tally's start date; derive TO as the Indian FY end (31 Mar) from that start
-        if (startMatch) { const iso = tallyDateToISO(startMatch[1]); if (iso) { setFrom(iso); setTo(fyEnd(iso)); } }
+        if (startMatch) {
+          const iso = tallyDateToISO(startMatch[1]);
+          if (iso) {
+            setFrom(iso);
+            setTo(fyEnd(iso));
+            // Match Tally's FY to a FrePilot financial year and store in localStorage so Dashboard auto-switches
+            const matchedFy = financialYears.find(f => f.start_date === iso);
+            if (matchedFy) {
+              try { localStorage.setItem("fw_tally_fy_id", matchedFy.id); } catch { /* */ }
+              setFyId(matchedFy.id);
+            }
+          }
+        }
       } else {
         setConnStatus("error"); setConnMsg(`Tally responded with HTTP ${res.status}`);
       }
@@ -896,6 +941,11 @@ export default function TallyPage() {
               <button onClick={testConnection} disabled={connStatus === "connecting"} className="tb-btn tb-btn-primary" style={{ padding: "9px 24px", fontSize: "0.875rem" }}>
                 {connStatus === "connecting" ? "Testing…" : connStatus === "connected" ? "Re-test" : "Connect to Tally"}
               </button>
+              {connStatus === "connected" && (
+                <button onClick={disconnect} className="tb-btn" style={{ padding: "9px 20px", fontSize: "0.84rem", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#F87171", borderRadius: 10 }}>
+                  Disconnect
+                </button>
+              )}
             </div>
 
             {rawDebug && (
