@@ -281,7 +281,7 @@ export default function FrePilotDashboard() {
                 {tally.state === "connected" && (
                   <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 8, background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.2)", textDecoration: "none", alignSelf: "flex-start", marginTop: 4 }}>
                     <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#34D399" }}>📡 {tally.company} connected</span>
-                    <span style={{ fontSize: "0.6rem", color: "rgba(52,211,153,0.5)" }}>— sync ledgers →</span>
+                    <span style={{ fontSize: "0.6rem", color: "rgba(52,211,153,0.5)" }}>— open Tally Bridge →</span>
                   </Link>
                 )}
               </div>
