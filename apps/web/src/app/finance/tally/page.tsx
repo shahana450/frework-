@@ -152,9 +152,58 @@ function tallyParentToType(parent: string): string {
 // ── Derive Indian FY end date from any start date ────────────────────────────
 function fyEnd(startIso: string): string {
   const [y, m] = startIso.split("-").map(Number);
-  // Indian FY: Apr–Mar. If start month >= 4, FY ends 31-Mar of (year+1)
   const endYear = m >= 4 ? y + 1 : y;
   return `${endYear}-03-31`;
+}
+
+// ── Parse vouchers FROM Tally XML ─────────────────────────────────────────────
+type TallyVoucher = {
+  date: string; // YYYY-MM-DD
+  voucherType: string;
+  voucherNumber: string;
+  narration: string;
+  lines: { ledgerName: string; amount: number; isDeemed: boolean }[];
+};
+
+function parseTallyVouchers(xml: string): TallyVoucher[] {
+  const results: TallyVoucher[] = [];
+  const vRe = /<VOUCHER[^>]*>([\s\S]*?)<\/VOUCHER>/gi;
+  let vm;
+  while ((vm = vRe.exec(xml)) !== null) {
+    const block = vm[1];
+
+    const rawDate = (block.match(/<DATE[^>]*>([^<]+)<\/DATE>/i) ?? [])[1]?.trim() ?? "";
+    let date = "";
+    if (/^\d{8}$/.test(rawDate)) date = `${rawDate.slice(0,4)}-${rawDate.slice(4,6)}-${rawDate.slice(6,8)}`;
+
+    const voucherType = (block.match(/<VOUCHERTYPENAME[^>]*>([^<]+)<\/VOUCHERTYPENAME>/i) ?? [])[1]?.trim() ?? "Journal";
+    const voucherNumber = (block.match(/<VOUCHERNUMBER[^>]*>([^<]+)<\/VOUCHERNUMBER>/i) ?? [])[1]?.trim() ?? "";
+    const narration = (block.match(/<NARRATION[^>]*>([^<]*)<\/NARRATION>/i) ?? [])[1]?.trim() ?? "";
+
+    const lines: TallyVoucher["lines"] = [];
+    const entryRe = /<ALLLEDGERENTRIES\.LIST[^>]*>([\s\S]*?)<\/ALLLEDGERENTRIES\.LIST>/gi;
+    let em;
+    while ((em = entryRe.exec(block)) !== null) {
+      const eb = em[1];
+      const ledgerName = (eb.match(/<LEDGERNAME[^>]*>([^<]+)<\/LEDGERNAME>/i) ?? [])[1]?.trim() ?? "";
+      const amtStr = (eb.match(/<AMOUNT[^>]*>([^<]+)<\/AMOUNT>/i) ?? [])[1]?.trim() ?? "0";
+      const isDeemed = /Yes/i.test((eb.match(/<ISDEEMEDPOSITIVE[^>]*>([^<]+)<\/ISDEEMEDPOSITIVE>/i) ?? [])[1] ?? "");
+      const amount = Math.abs(parseFloat(amtStr) || 0);
+      if (ledgerName && amount > 0) lines.push({ ledgerName, amount, isDeemed });
+    }
+
+    if (date && lines.length >= 1) results.push({ date, voucherType, voucherNumber, narration, lines });
+  }
+  return results;
+}
+
+function tallyVoucherTypeToFP(t: string): string {
+  const m: Record<string,string> = {
+    "Sales": "sales", "Purchase": "purchase", "Payment": "payment",
+    "Receipt": "receipt", "Contra": "contra", "Journal": "journal",
+    "Debit Note": "debit_note", "Credit Note": "credit_note",
+  };
+  return m[t] ?? "journal";
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -193,8 +242,10 @@ export default function TallyPage() {
     return stored.length >= 2 ? stored : "";
   });
   const [rawDebug, setRawDebug] = useState<string>("");
-  const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | "import" | null>(null);
+  const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | "import" | "importVouchers" | null>(null);
   const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [importVoucherResult, setImportVoucherResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [autoSyncDone, setAutoSyncDone] = useState(false);
 
   const tallyUrl = `http://localhost:${tallyPort}`;
 
@@ -313,6 +364,121 @@ export default function TallyPage() {
     }
     setCreatingLedgers(false);
   }
+
+  // ── Import vouchers FROM Tally → FrePilot ────────────────────────────────
+
+  const importVouchers = useCallback(async () => {
+    if (!bizId || connStatus !== "connected") return;
+    setSyncing("importVouchers"); setImportVoucherResult(null);
+
+    try {
+      const fromDate = from.replace(/-/g, "");
+      const toDate = to.replace(/-/g, "");
+      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fromDate}</SVFROMDATE><SVTODATE>${toDate}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+
+      const res = await fetch(tallyUrl, {
+        method: "POST", headers: { "Content-Type": "text/xml" }, body: xml,
+        signal: AbortSignal.timeout(30000),
+      });
+      const text = await res.text();
+      const vouchers = parseTallyVouchers(text);
+
+      if (!vouchers.length) {
+        setImportVoucherResult({ ok: false, msg: "No vouchers found in Tally for this date range." });
+        setSyncing(null); return;
+      }
+
+      // Load existing accounts by name
+      const { data: accounts } = await supabase
+        .from("fw_fin_chart_of_accounts")
+        .select("id,name,type")
+        .eq("business_id", bizId);
+      const accountMap = new Map((accounts ?? []).map(a => [a.name.toLowerCase(), a]));
+
+      // Auto-create missing accounts
+      const missingNames = new Set<string>();
+      for (const v of vouchers) for (const l of v.lines) {
+        if (!accountMap.has(l.ledgerName.toLowerCase())) missingNames.add(l.ledgerName);
+      }
+      if (missingNames.size > 0) {
+        const newAccounts = Array.from(missingNames).map((name, idx) => ({
+          business_id: bizId, code: `TI${String((accounts?.length ?? 0) + idx + 1).padStart(3,"0")}`,
+          name, type: "expense", description: "Imported from Tally", is_system: false, is_group: false,
+          sort_order: (accounts?.length ?? 0) + idx + 1,
+        }));
+        const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAccounts).select("id,name,type");
+        for (const a of (created ?? [])) accountMap.set(a.name.toLowerCase(), a);
+      }
+
+      // Get existing FY for this business
+      const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label").eq("business_id", bizId).order("start_date", { ascending: false });
+      const fyIdToUse = fys?.[0]?.id ?? null;
+
+      // Get last entry number
+      const { data: lastJ } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).order("created_at", { ascending: false }).limit(1);
+      let entrySeq = 1;
+      if (lastJ?.[0]?.entry_no) { const n = parseInt(lastJ[0].entry_no.replace(/\D/g, ""), 10); if (!isNaN(n)) entrySeq = n + 1; }
+
+      let imported = 0, skipped = 0;
+      for (const v of vouchers) {
+        const fpType = tallyVoucherTypeToFP(v.voucherType);
+        const totalDr = v.lines.filter(l => l.isDeemed).reduce((s, l) => s + l.amount, 0);
+        const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s, l) => s + l.amount, 0);
+
+        const { data: jRow, error: jErr } = await supabase.from("fw_fin_journals").insert({
+          business_id: bizId,
+          financial_year_id: fyIdToUse,
+          entry_no: `TLY-${String(entrySeq).padStart(4,"0")}`,
+          date: v.date,
+          narration: v.narration || `${v.voucherType} ${v.voucherNumber}`.trim(),
+          type: fpType,
+          status: "posted",
+          total_debit: totalDr || totalCr,
+          total_credit: totalCr || totalDr,
+          reference_no: v.voucherNumber || null,
+        }).select("id").single();
+
+        if (jErr || !jRow) { skipped++; continue; }
+
+        const lines = v.lines
+          .map(l => {
+            const acc = accountMap.get(l.ledgerName.toLowerCase());
+            if (!acc) return null;
+            return {
+              journal_id: jRow.id,
+              account_id: acc.id,
+              description: l.ledgerName,
+              dr_amount: l.isDeemed ? l.amount : 0,
+              cr_amount: l.isDeemed ? 0 : l.amount,
+            };
+          })
+          .filter(Boolean);
+
+        if (lines.length > 0) {
+          await supabase.from("fw_fin_journal_lines").insert(lines as {journal_id:string;account_id:string;description:string;dr_amount:number;cr_amount:number}[]);
+          imported++;
+          entrySeq++;
+        } else {
+          await supabase.from("fw_fin_journals").delete().eq("id", jRow.id);
+          skipped++;
+        }
+      }
+
+      setImportVoucherResult({ ok: imported > 0, msg: `Imported ${imported} voucher${imported !== 1 ? "s" : ""} from Tally${skipped > 0 ? ` (${skipped} skipped)` : ""}.` });
+      setAutoSyncDone(true);
+    } catch (e: unknown) {
+      setImportVoucherResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
+    }
+    setSyncing(null);
+  }, [bizId, connStatus, tallyUrl, from, to]);
+
+  // Auto-sync vouchers once when connection is established
+  useEffect(() => {
+    if (connStatus === "connected" && bizId && !autoSyncDone && !syncing) {
+      importVouchers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connStatus, bizId]);
 
   // ── Test connection ──────────────────────────────────────────────────────
 
@@ -732,9 +898,23 @@ export default function TallyPage() {
             {/* Tally → FrePilot */}
             <div style={{ marginBottom: "0.5rem" }}>
               <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "#2A4060", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.6rem" }}>Tally → FrePilot</div>
-              <button onClick={importLedgers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-green" style={{ width: "100%", padding: "11px 0", fontSize: "0.86rem" }}>
-                {syncing === "import" ? "Importing…" : "⬇ Import Ledgers from Tally"}
-              </button>
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                <button onClick={importLedgers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-green" style={{ flex: 1, padding: "11px 0", fontSize: "0.86rem" }}>
+                  {syncing === "import" ? "Importing…" : "⬇ Import Ledgers"}
+                </button>
+                <button onClick={importVouchers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn" style={{ flex: 1, padding: "11px 0", fontSize: "0.86rem", background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#C4B5FD" }}>
+                  {syncing === "importVouchers" ? "Syncing…" : "⬇ Import Vouchers"}
+                </button>
+              </div>
+              {importVoucherResult && (
+                <div style={{ marginTop: "0.75rem", fontSize: "0.8rem", fontWeight: 600, color: importVoucherResult.ok ? "#34D399" : "#FCD34D", background: importVoucherResult.ok ? "rgba(16,185,129,0.07)" : "rgba(252,211,77,0.07)", border: `1px solid ${importVoucherResult.ok ? "rgba(16,185,129,0.2)" : "rgba(252,211,77,0.2)"}`, borderRadius: 9, padding: "0.65rem 0.9rem" }}>
+                  {importVoucherResult.ok ? "✓ " : "⚠ "}{importVoucherResult.msg}
+                  {importVoucherResult.ok && <span style={{ marginLeft: 8, fontSize: "0.72rem", fontWeight: 400, color: "rgba(52,211,153,0.6)" }}>— visible in Journal Entries</span>}
+                </div>
+              )}
+              {syncing === "importVouchers" && (
+                <div style={{ marginTop: "0.6rem", fontSize: "0.76rem", color: "#4A6FA5" }}>Fetching vouchers from Tally… keep Tally idle.</div>
+              )}
             </div>
 
             {/* Divider */}
