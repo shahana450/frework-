@@ -551,7 +551,22 @@ export default function TallyPage() {
     setSyncing(null);
   }, [bizId, connStatus, tallyUrl, from, to]);
 
-  // Auto-sync removed — user must click "Import Vouchers" manually to prevent duplicate imports on every page load
+  // ── Clear all TLY imports and re-import fresh ───────────────────────────
+  const clearAndReimport = useCallback(async () => {
+    if (!bizId || connStatus !== "connected") return;
+    if (!confirm("This will delete ALL existing Tally-imported entries (TLY-xxxx) and re-import fresh from Tally. Continue?")) return;
+    setSyncing("importVouchers"); setImportVoucherResult(null); setSyncProgress("Clearing old Tally entries…");
+    const { data: oldJournals } = await supabase.from("fw_fin_journals").select("id").eq("business_id", bizId).like("entry_no", "TLY-%");
+    if (oldJournals?.length) {
+      const ids = oldJournals.map(j => j.id);
+      for (let i = 0; i < ids.length; i += 100) {
+        await supabase.from("fw_fin_journal_lines").delete().in("journal_id", ids.slice(i, i + 100));
+        await supabase.from("fw_fin_journals").delete().in("id", ids.slice(i, i + 100));
+      }
+    }
+    setSyncing(null); setSyncProgress(null);
+    await importVouchers();
+  }, [bizId, connStatus, importVouchers]);
 
   // ── Test connection ──────────────────────────────────────────────────────
 
@@ -1011,6 +1026,9 @@ export default function TallyPage() {
                 </button>
                 <button onClick={importVouchers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn" style={{ flex: 1, padding: "11px 0", fontSize: "0.86rem", background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#C4B5FD" }}>
                   {syncing === "importVouchers" ? "Syncing…" : "⬇ Import Vouchers"}
+                </button>
+                <button onClick={clearAndReimport} disabled={connStatus !== "connected" || !!syncing} className="tb-btn" style={{ padding: "11px 16px", fontSize: "0.82rem", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#F87171", whiteSpace: "nowrap" }} title="Delete all existing TLY imports and re-import fresh">
+                  🗑 Clear & Re-import
                 </button>
               </div>
               {importVoucherResult && (
