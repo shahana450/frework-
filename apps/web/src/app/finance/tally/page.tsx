@@ -565,8 +565,9 @@ export default function TallyPage() {
         // Parse Tally's current period dates (format: YYYYMMDD or DD-Mon-YYYY)
         const startMatch = text.match(/<STARTINGFROM[^>]*>([^<]+)<\/STARTINGFROM>/i)
           ?? text.match(/<STARTDATE[^>]*>([^<]+)<\/STARTDATE>/i);
-        const endMatch = text.match(/<ENDINGAT[^>]*>([^<]+)<\/ENDINGAT>/i)
-          ?? text.match(/<ENDDATE[^>]*>([^<]+)<\/ENDDATE>/i);
+        // endMatch reserved for future use
+        void (text.match(/<ENDINGAT[^>]*>([^<]+)<\/ENDINGAT>/i)
+          ?? text.match(/<ENDDATE[^>]*>([^<]+)<\/ENDDATE>/i));
 
         function tallyDateToISO(d: string): string | null {
           d = d.trim();
@@ -587,9 +588,25 @@ export default function TallyPage() {
           const iso = tallyDateToISO(startMatch[1]);
           if (iso) {
             setFrom(iso);
-            setTo(fyEnd(iso));
-            // Match Tally's FY to a FrePilot financial year and store in localStorage so Dashboard auto-switches
-            const matchedFy = financialYears.find(f => f.start_date === iso);
+            const endIso = fyEnd(iso);
+            setTo(endIso);
+
+            // Try to find matching FY in FrePilot; if missing, create it automatically
+            let matchedFy = financialYears.find(f => f.start_date === iso);
+            if (!matchedFy && bizId) {
+              // Derive FY label e.g. "2026-27" from start date
+              const startYear = parseInt(iso.slice(0, 4), 10);
+              const fyLabel = `${startYear}-${String(startYear + 1).slice(2)}`;
+              const { data: newFy } = await supabase
+                .from("fw_fin_financial_years")
+                .insert({ business_id: bizId, label: fyLabel, start_date: iso, end_date: endIso, is_current: false })
+                .select("id,label,start_date,end_date,is_current")
+                .single();
+              if (newFy) {
+                matchedFy = newFy;
+                setFinancialYears(prev => [newFy, ...prev]);
+              }
+            }
             if (matchedFy) {
               try { localStorage.setItem("fw_tally_fy_id", matchedFy.id); } catch { /* */ }
               setFyId(matchedFy.id);
