@@ -119,6 +119,8 @@ export default function FrePilotDashboard() {
   const [stats, setStats] = useState<Stats>({ sales: 0, expenses: 0, drafts: 0, pendingTds: 0, revenue: 0, profit: 0 });
   const [loading, setLoading] = useState(true);
   const [fyLabel, setFyLabel] = useState("2025-26");
+  const [fyId, setFyId] = useState<string | null>(null);
+  const [financialYears, setFinancialYears] = useState<{ id: string; label: string }[]>([]);
   const [tally, setTally] = useState<TallyStatus>({ state: "idle", company: "" });
   const [tallyLedgers, setTallyLedgers] = useState<TallyLedger[]>([]);
   const [tallyLedgersLoading, setTallyLedgersLoading] = useState(false);
@@ -156,14 +158,20 @@ export default function FrePilotDashboard() {
     loadStats(biz.id, uid);
   }
 
-  async function loadStats(bizId: string, uid: string) {
+  async function loadStats(bizId: string, uid: string, selectedFyId?: string | null) {
     setLoading(true);
-    const [fyRes, journalsRes] = await Promise.all([
-      supabase.from("fw_fin_financial_years").select("label").eq("business_id", bizId).eq("is_current", true).single(),
-      supabase.from("fw_fin_journals").select("type,status,total_credit,total_debit").eq("business_id", bizId),
+    const [fysRes, journalsRes] = await Promise.all([
+      supabase.from("fw_fin_financial_years").select("id,label,is_current").eq("business_id", bizId).order("start_date", { ascending: false }),
+      supabase.from("fw_fin_journals").select("type,status,total_credit,total_debit,financial_year_id").eq("business_id", bizId),
     ]);
-    if (fyRes.data) setFyLabel(fyRes.data.label);
-    const journals = journalsRes.data ?? [];
+    const fys = fysRes.data ?? [];
+    setFinancialYears(fys.map(f => ({ id: f.id, label: f.label })));
+    const activeFy = selectedFyId
+      ? fys.find(f => f.id === selectedFyId)
+      : (fys.find(f => f.is_current) ?? fys[0]);
+    if (activeFy) { setFyLabel(activeFy.label); setFyId(activeFy.id); }
+    const allJournals = journalsRes.data ?? [];
+    const journals = activeFy ? allJournals.filter(j => j.financial_year_id === activeFy.id) : allJournals;
     const posted = journals.filter(j => j.status === "posted");
     const salesRev = posted.filter(j => j.type === "sales" || j.type === "receipt").reduce((s, j) => s + (j.total_credit || 0), 0);
     const expTotal = posted.filter(j => j.type === "purchase" || j.type === "expense" || j.type === "payment" || j.type === "journal").reduce((s, j) => s + (j.total_debit || 0), 0);
@@ -180,7 +188,12 @@ export default function FrePilotDashboard() {
 
   function switchBiz(biz: Business) {
     setActiveBiz(biz);
-    if (user) { localStorage.setItem(`fw_fin_biz_${user.id}`, biz.id); loadStats(biz.id, user.id); }
+    if (user) { localStorage.setItem(`fw_fin_biz_${user.id}`, biz.id); loadStats(biz.id, user.id, null); }
+  }
+
+  function switchFy(selectedId: string) {
+    setFyId(selectedId);
+    if (activeBiz && user) loadStats(activeBiz.id, user.id, selectedId);
   }
 
   const now = new Date();
@@ -278,12 +291,28 @@ export default function FrePilotDashboard() {
                   </div>
                 </div>
 
-                {tally.state === "connected" && (
-                  <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 8, background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.2)", textDecoration: "none", alignSelf: "flex-start", marginTop: 4 }}>
-                    <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#34D399" }}>📡 {tally.company} connected</span>
-                    <span style={{ fontSize: "0.6rem", color: "rgba(52,211,153,0.5)" }}>— open Tally Bridge →</span>
-                  </Link>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                  {financialYears.length > 1 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                      <span style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(232,237,245,0.25)", textTransform: "uppercase", letterSpacing: "0.1em" }}>FY</span>
+                      <select
+                        value={fyId ?? ""}
+                        onChange={e => switchFy(e.target.value)}
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#E8EDF5", borderRadius: 8, padding: "4px 10px", fontSize: "0.75rem", fontWeight: 700, fontFamily: "inherit", cursor: "pointer", outline: "none" }}
+                      >
+                        {financialYears.map(f => (
+                          <option key={f.id} value={f.id} style={{ background: "#0D1627" }}>FY {f.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {tally.state === "connected" && (
+                    <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 8, background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.2)", textDecoration: "none" }}>
+                      <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#34D399" }}>📡 {tally.company} connected</span>
+                      <span style={{ fontSize: "0.6rem", color: "rgba(52,211,153,0.5)" }}>— open Tally Bridge →</span>
+                    </Link>
+                  )}
+                </div>
               </div>
 
               {/* AI Banner */}
