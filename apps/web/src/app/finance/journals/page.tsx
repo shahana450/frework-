@@ -1,8 +1,7 @@
 ﻿"use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-
 import Link from "next/link";
 
 type Journal = {
@@ -28,12 +27,27 @@ const STATUS_COLOR: Record<string, string> = {
   draft: "#f59e0b", posted: "#4ade80", voided: "#f87171",
 };
 
+const TYPE_TITLES: Record<string, string> = {
+  sales: "Sales Transactions", receipt: "Receipts", payment: "Payments",
+  purchase: "Purchase Entries", expense: "Expenses", journal: "Journal Entries",
+  contra: "Contra Entries", debit_note: "Debit Notes", credit_note: "Credit Notes",
+};
+
 export default function JournalsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const typeParam = searchParams.get("type") ?? "";   // e.g. "sales" or "sales,receipt"
+  const statusParam = searchParams.get("status") ?? ""; // e.g. "draft"
+
   const [journals, setJournals] = useState<Journal[]>([]);
   const [loading, setLoading] = useState(true);
   const [bizId, setBizId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "draft" | "posted">("all");
+
+  useEffect(() => {
+    if (statusParam === "draft") setFilter("draft");
+    else if (statusParam === "posted") setFilter("posted");
+  }, [statusParam]);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -50,7 +64,10 @@ export default function JournalsPage() {
     });
   }, []);
 
-  const filtered = filter === "all" ? journals : journals.filter(j => j.status === filter);
+  const typeFilter = typeParam ? typeParam.split(",").map(t => t.trim()).filter(Boolean) : [];
+  const afterTypeFilter = typeFilter.length > 0 ? journals.filter(j => typeFilter.includes(j.type)) : journals;
+  const filtered = filter === "all" ? afterTypeFilter : afterTypeFilter.filter(j => j.status === filter);
+  const pageTitle = typeFilter.length === 1 ? (TYPE_TITLES[typeFilter[0]] ?? "Journal Entries") : "Journal Entries";
   const totalDebit = filtered.reduce((a, j) => a + (j.total_debit || 0), 0);
 
   return (
@@ -68,7 +85,7 @@ export default function JournalsPage() {
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
           <div>
-            <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800 }}>Journal Entries</h1>
+            <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800 }}>{pageTitle}</h1>
             <div style={{ fontSize: "0.82rem", color: "rgba(237,232,220,0.4)" }}>{filtered.length} entries · Total: ₹{totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
           </div>
           <div style={{ display: "flex", gap: "0.5rem" }}>

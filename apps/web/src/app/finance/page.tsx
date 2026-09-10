@@ -324,10 +324,10 @@ export default function FrePilotDashboard() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.85rem", marginBottom: "1.75rem" }}>
                 {[
-                  { label: "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#34D399", sub: `FY ${fyLabel}`, mono: true, href: "/finance/sales", cta: "View Sales →" },
+                  { label: "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#34D399", sub: `FY ${fyLabel}`, mono: true, href: "/finance/journals?type=sales,receipt&status=posted", cta: "View Transactions →" },
                   { label: "Net Profit", value: loading ? "—" : (stats.profit < 0 ? "−" : "") + fmt(stats.profit), color: stats.profit >= 0 ? "#34D399" : "#F87171", sub: stats.profit < 0 ? "Net loss" : "Net profit", mono: true, href: "/finance/audit", cta: "View P&L →" },
-                  { label: "Sales Invoices", value: loading ? "—" : String(stats.sales), color: "#F59E0B", sub: "Posted entries", mono: false, href: "/finance/sales", cta: "View Invoices →" },
-                  { label: "Draft Entries", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#FB923C" : "rgba(232,237,245,0.3)", sub: stats.drafts > 0 ? "Needs review" : "All clear", mono: false, alert: stats.drafts > 0, href: "/finance/journals", cta: stats.drafts > 0 ? "Review Now →" : "View Journals →" },
+                  { label: "Sales Invoices", value: loading ? "—" : String(stats.sales), color: "#F59E0B", sub: "Posted entries", mono: false, href: "/finance/journals?type=sales&status=posted", cta: "View Invoices →" },
+                  { label: "Draft Entries", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#FB923C" : "rgba(232,237,245,0.3)", sub: stats.drafts > 0 ? "Needs review" : "All clear", mono: false, alert: stats.drafts > 0, href: "/finance/journals?status=draft", cta: stats.drafts > 0 ? "Review Now →" : "View Journals →" },
                 ].map(k => (
                   <Link key={k.label} href={k.href} className="fp-kpi" style={{ textDecoration: "none", display: "block", cursor: "pointer", ...(((k as {alert?:boolean}).alert) ? { background: "rgba(251,146,60,0.06)", borderColor: "rgba(251,146,60,0.2)" } : {}) }}>
                     <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.75rem" }}>{k.label}</div>
