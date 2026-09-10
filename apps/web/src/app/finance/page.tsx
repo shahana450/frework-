@@ -234,43 +234,57 @@ export default function FrePilotDashboard() {
         ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
       `}</style>
 
-      {/* Nav */}
-      <nav style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 1.75rem", display: "flex", alignItems: "center", gap: "1rem", height: 58, position: "sticky", top: 0, background: "rgba(5,9,20,0.92)", backdropFilter: "blur(16px)", zIndex: 30 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#1A2E5A,#C9A84C)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem" }}>🛩️</div>
-          <span style={{ fontWeight: 800, fontSize: "1rem", color: "#C9A84C", letterSpacing: "-0.02em" }}>FrePilot</span>
-          <span style={{ fontSize: "0.62rem", color: "rgba(201,168,76,0.4)", fontWeight: 500 }}>by FreWork</span>
+      {/* Nav — ProVia-style: logo | business ▾ | FY ▾ | … | actions */}
+      <nav style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.6rem", height: 54, position: "sticky", top: 0, background: "rgba(5,9,20,0.95)", backdropFilter: "blur(16px)", zIndex: 30 }}>
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 8 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: "linear-gradient(135deg,#1A2E5A,#C9A84C)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.85rem" }}>🛩️</div>
+          <span style={{ fontWeight: 800, fontSize: "0.92rem", color: "#C9A84C", letterSpacing: "-0.02em" }}>FrePilot</span>
         </div>
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.08)" }} />
+
+        {/* Business selector — always visible */}
+        <select
+          value={activeBiz?.id ?? ""}
+          onChange={e => { const b = businesses.find(x => x.id === e.target.value); if (b) switchBiz(b); }}
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#E8EDF5", padding: "5px 28px 5px 10px", borderRadius: 8, fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", outline: "none", maxWidth: 200, appearance: "none",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B7FA3' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+            backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}>
+          {businesses.map(b => <option key={b.id} value={b.id} style={{ background: "#0B1221" }}>{b.name}</option>)}
+        </select>
+
+        {/* FY selector — always visible */}
+        <select
+          value={fyId ?? ""}
+          onChange={e => switchFy(e.target.value)}
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#E8EDF5", padding: "5px 28px 5px 10px", borderRadius: 8, fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", outline: "none", appearance: "none",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B7FA3' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+            backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}>
+          {financialYears.map(f => <option key={f.id} value={f.id} style={{ background: "#0B1221" }}>FY {f.label}</option>)}
+          {financialYears.length === 0 && <option value="">FY {fyLabel}</option>}
+        </select>
+
         <div style={{ flex: 1 }} />
-        {businesses.length > 1 && (
-          <select value={activeBiz?.id ?? ""} onChange={e => { const b = businesses.find(x => x.id === e.target.value); if (b) switchBiz(b); }}
-            style={{ background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", color: "#E8EDF5", padding: "5px 12px", borderRadius: 8, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>
-            {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
-        )}
-        {/* Tally connection pill */}
+
+        {/* Tally pill */}
         {tally.state === "connected" ? (
-          <Link href="/finance/tally" title="Tally connected — click to manage" style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 13px", borderRadius: 20, background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.3)", textDecoration: "none", cursor: "pointer" }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#34D399", boxShadow: "0 0 6px rgba(52,211,153,0.6)", flexShrink: 0, animation: "tp-pulse 2s ease-in-out infinite" }} />
-            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#34D399" }}>Tally</span>
-            <span style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.5)", maxWidth: 120, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tally.company}</span>
+          <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 11px", borderRadius: 20, background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.3)", textDecoration: "none" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D399", flexShrink: 0, animation: "tp-pulse 2s ease-in-out infinite" }} />
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#34D399" }}>Tally · {tally.company}</span>
           </Link>
-        ) : tally.state === "checking" ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 13px", borderRadius: 20, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(232,237,245,0.2)", flexShrink: 0 }} />
-            <span style={{ fontSize: "0.75rem", color: "rgba(232,237,245,0.3)" }}>Checking…</span>
-          </div>
         ) : (
-          <Link href="/finance/tally" title="Tally not connected — click to set up" style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 13px", borderRadius: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", textDecoration: "none" }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(232,237,245,0.15)", flexShrink: 0 }} />
-            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "rgba(232,237,245,0.35)" }}>Connect Tally</span>
+          <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 11px", borderRadius: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", textDecoration: "none" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(232,237,245,0.15)", flexShrink: 0 }} />
+            <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "rgba(232,237,245,0.3)" }}>Connect Tally</span>
           </Link>
         )}
 
-        <Link href="/finance/virtual-ca" style={{ background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.25)", color: "#C9A84C", padding: "6px 16px", borderRadius: 8, fontSize: "0.8rem", textDecoration: "none", fontWeight: 700, letterSpacing: "0.01em" }}>
+        <Link href="/finance/virtual-ca" style={{ background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.25)", color: "#C9A84C", padding: "5px 14px", borderRadius: 8, fontSize: "0.78rem", textDecoration: "none", fontWeight: 700 }}>
           🛩️ Ask FrePilot
         </Link>
-        <Link href="/finance/setup" style={{ color: "rgba(232,237,245,0.3)", fontSize: "1rem", textDecoration: "none", padding: "4px 8px", borderRadius: 6, lineHeight: 1 }}>⚙</Link>
+        <Link href="/finance/setup" style={{ color: "rgba(232,237,245,0.3)", fontSize: "1rem", textDecoration: "none", padding: "4px 6px", borderRadius: 6 }}>⚙</Link>
       </nav>
 
 <div className="fp-bg" style={{ minHeight: "calc(100vh - 58px)" }}>
@@ -278,39 +292,14 @@ export default function FrePilotDashboard() {
           {activeBiz && (
             <>
               {/* Header */}
-              <div style={{ marginBottom: "1.75rem", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-                <div>
-                  <div style={{ fontSize: "0.74rem", color: "rgba(232,237,245,0.35)", marginBottom: "0.3rem", letterSpacing: "0.02em" }}>{greeting} · FY {fyLabel}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-                    <h1 style={{ margin: 0, fontSize: "2rem", fontWeight: 900, letterSpacing: "-0.03em", background: "linear-gradient(135deg,#E8EDF5 60%,rgba(232,237,245,0.5))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{activeBiz.name}</h1>
-                    {activeBiz.gstin && (
-                      <span style={{ fontSize: "0.7rem", color: "rgba(232,237,245,0.3)", fontFamily: "'IBM Plex Mono',monospace", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", padding: "3px 10px", borderRadius: 6 }}>
-                        GSTIN {activeBiz.gstin}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
-                  {financialYears.length > 0 && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                      <span style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(232,237,245,0.25)", textTransform: "uppercase", letterSpacing: "0.1em" }}>FY</span>
-                      <select
-                        value={fyId ?? ""}
-                        onChange={e => switchFy(e.target.value)}
-                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#E8EDF5", borderRadius: 8, padding: "4px 10px", fontSize: "0.75rem", fontWeight: 700, fontFamily: "inherit", cursor: "pointer", outline: "none" }}
-                      >
-                        {financialYears.map(f => (
-                          <option key={f.id} value={f.id} style={{ background: "#0D1627" }}>FY {f.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  {tally.state === "connected" && (
-                    <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 8, background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.2)", textDecoration: "none" }}>
-                      <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#34D399" }}>📡 {tally.company} connected</span>
-                      <span style={{ fontSize: "0.6rem", color: "rgba(52,211,153,0.5)" }}>— open Tally Bridge →</span>
-                    </Link>
+              <div style={{ marginBottom: "1.75rem" }}>
+                <div style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.3)", marginBottom: "0.25rem" }}>{greeting}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+                  <h1 style={{ margin: 0, fontSize: "1.8rem", fontWeight: 900, letterSpacing: "-0.03em", background: "linear-gradient(135deg,#E8EDF5 60%,rgba(232,237,245,0.5))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{activeBiz.name}</h1>
+                  {activeBiz.gstin && (
+                    <span style={{ fontSize: "0.68rem", color: "rgba(232,237,245,0.28)", fontFamily: "'IBM Plex Mono',monospace", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", padding: "3px 9px", borderRadius: 6 }}>
+                      GSTIN {activeBiz.gstin}
+                    </span>
                   )}
                 </div>
               </div>
