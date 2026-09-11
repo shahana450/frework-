@@ -110,7 +110,8 @@ export default function AuditPage() {
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id,label,is_current").eq("business_id", saved).order("start_date", { ascending: false });
-      const cur = fysData?.find(f => f.is_current) ?? fysData?.[0];
+      const tallyFyId = localStorage.getItem("fw_tally_fy_id") ?? "";
+      const cur = (tallyFyId ? fysData?.find(f => f.id === tallyFyId) : undefined) ?? fysData?.find(f => f.is_current) ?? fysData?.[0];
       setFys(fysData?.map(f => ({ id: f.id, label: f.label })) ?? []);
       if (cur) { setFyId(cur.id); await loadData(saved, cur.id); }
       else { setLoading(false); }
