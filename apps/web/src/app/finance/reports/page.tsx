@@ -70,7 +70,10 @@ export default function ReportsPage() {
       const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label,is_current").eq("business_id", saved).order("start_date", { ascending: false });
       if (fys?.length) {
         setFinancialYears(fys);
-        const current = fys.find(f => f.is_current) ?? fys[0];
+        const tallyFyId = localStorage.getItem("fw_tally_fy_id") ?? "";
+        const current = (tallyFyId ? fys.find(f => f.id === tallyFyId) : undefined)
+          ?? fys.find(f => f.is_current)
+          ?? fys[0];
         setFyId(current.id);
       }
     });
