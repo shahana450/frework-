@@ -25,18 +25,27 @@ export async function GET(req: NextRequest) {
 
   if (!bizId) return NextResponse.json({ error: "business_id required" }, { status: 400 });
 
-  // Get all posted journal lines for this business/FY
+  // Resolve FY date range for filtering
+  let fromDate: string | null = null;
+  let toDate: string | null = null;
+  if (fyId) {
+    const { data: fy } = await supabase.from("fw_fin_financial_years").select("start_date,end_date").eq("id", fyId).single();
+    if (fy) { fromDate = fy.start_date; toDate = fy.end_date; }
+  }
+
+  // Get all posted journal lines for this business/FY filtered by date range
   let query = supabase
     .from("fw_fin_journal_lines")
     .select(`
       dr_amount, cr_amount,
       fw_fin_chart_of_accounts(code, name, type, sub_type),
-      fw_fin_journals!inner(business_id, financial_year_id, status, date)
+      fw_fin_journals!inner(business_id, status, date)
     `)
     .eq("fw_fin_journals.business_id", bizId)
     .eq("fw_fin_journals.status", "posted");
 
-  if (fyId) query = query.eq("fw_fin_journals.financial_year_id", fyId);
+  if (fromDate) query = query.gte("fw_fin_journals.date", fromDate);
+  if (toDate) query = query.lte("fw_fin_journals.date", toDate);
 
   const { data: lines, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

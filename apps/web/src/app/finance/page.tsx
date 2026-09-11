@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
@@ -117,8 +117,14 @@ export default function FrePilotDashboard() {
     return () => clearInterval(id);
   }, []);
 
+  const autoSyncedRef = useRef(false);
   useEffect(() => {
-  }, [tally.state]);
+    if (tally.state === "connected" && activeBiz && !tallySyncing && !autoSyncedRef.current) {
+      autoSyncedRef.current = true;
+      doImportVouchers(false);
+    }
+    if (tally.state !== "connected") autoSyncedRef.current = false;
+  }, [tally.state, activeBiz]);
 
   async function loadBusinesses(uid: string) {
     const { data } = await supabase.from("fw_fin_businesses")
