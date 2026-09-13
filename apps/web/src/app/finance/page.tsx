@@ -121,9 +121,16 @@ export default function FrePilotDashboard() {
   useEffect(() => {
     if (tally.state === "connected" && activeBiz && !tallySyncing && !autoSyncedRef.current) {
       autoSyncedRef.current = true;
-      doImportVouchers(false);
+      const ssKey = `fw_tally_synced_${activeBiz.id}`;
+      if (!sessionStorage.getItem(ssKey)) {
+        sessionStorage.setItem(ssKey, "1");
+        doImportVouchers(false);
+      }
     }
-    if (tally.state !== "connected") autoSyncedRef.current = false;
+    if (tally.state !== "connected" && activeBiz) {
+      autoSyncedRef.current = false;
+      sessionStorage.removeItem(`fw_tally_synced_${activeBiz.id}`);
+    }
   }, [tally.state, activeBiz]);
 
   async function loadBusinesses(uid: string) {
@@ -329,27 +336,39 @@ export default function FrePilotDashboard() {
       for (const a of created ?? []) accountMap.set(a.name.toLowerCase(), a);
     }
 
-    const { data: existingTly } = await supabase.from("fw_fin_journals").select("date,reference_no,narration,total_debit").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
-    const fingerprints = new Set((existingTly ?? []).map(j => j.reference_no?.trim() ? `${j.date}|${j.reference_no.trim()}` : `${j.date}|${j.narration}|${j.total_debit}`));
-    let seq = 1;
-    if (existingTly?.length) { const nums = existingTly.map(j => parseInt((j as unknown as { entry_no?: string }).entry_no?.replace(/\D/g,"") ?? "0", 10)).filter(n => !isNaN(n)); if (nums.length) seq = Math.max(...nums) + 1; }
-    // Re-fetch with entry_no for seq
-    const { data: tlyWithNo } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
-    if (tlyWithNo?.length) { const nums = tlyWithNo.map(j => parseInt(j.entry_no.replace(/\D/g,""), 10)).filter(n => !isNaN(n)); if (nums.length) seq = Math.max(...nums) + 1; }
+    // Dedup by Tally entry_no (TLY-Sales-105, TLY-Receipt-23, etc.)
+    const { data: existingTly } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
+    const existingEntryNos = new Set((existingTly ?? []).map(j => j.entry_no));
+    // Fallback seq counter for unnumbered vouchers
+    let seq = existingTly?.length
+      ? Math.max(0, ...existingTly.map(j => parseInt(j.entry_no.replace(/\D/g,"") || "0", 10))) + 1
+      : 1;
 
     const typeMap: Record<string,string> = { "Sales":"sales","Purchase":"purchase","Payment":"payment","Receipt":"receipt","Contra":"contra","Journal":"journal","Debit Note":"debit_note","Credit Note":"credit_note" };
     let imported = 0, skipped = 0;
     for (const v of allVouchers) {
-      const fp = v.voucherNumber?.trim() ? `${v.date}|${v.voucherNumber.trim()}` : `${v.date}|${v.narration || `${v.voucherType} ${v.voucherNumber}`.trim()}|${v.lines.reduce((s,l)=>s+l.amount,0)}`;
-      if (fingerprints.has(fp)) { skipped++; continue; }
+      // Build entry_no mirroring Tally: "TLY-Sales 105", "TLY-Receipt 23"
+      const vNum = v.voucherNumber?.trim();
+      const tallyLabel = vNum ? `${v.voucherType} ${vNum}` : `${v.voucherType}-${seq}`;
+      const entryNo = `TLY-${tallyLabel}`;
+      if (existingEntryNos.has(entryNo)) { skipped++; continue; }
+
       const fpType = typeMap[v.voucherType] ?? "journal";
       const totalDr = v.lines.filter(l => l.isDeemed).reduce((s,l) => s+l.amount, 0);
       const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s,l) => s+l.amount, 0);
-      const { data: jRow, error: jErr } = await supabase.from("fw_fin_journals").insert({ business_id: activeBiz.id, financial_year_id: activeFy?.id ?? null, entry_no: `TLY-${String(seq).padStart(4,"0")}`, date: v.date, narration: v.narration || `${v.voucherType} ${v.voucherNumber}`.trim(), type: fpType, status: "posted", total_debit: totalDr||totalCr, total_credit: totalCr||totalDr, reference_no: v.voucherNumber||null }).select("id").single();
+      const narration = v.narration || tallyLabel;
+      const { data: jRow, error: jErr } = await supabase.from("fw_fin_journals").insert({
+        business_id: activeBiz.id, financial_year_id: activeFy?.id ?? null,
+        entry_no: entryNo, date: v.date, narration, type: fpType,
+        status: "posted", total_debit: totalDr||totalCr, total_credit: totalCr||totalDr,
+        reference_no: vNum || null,
+      }).select("id").single();
       if (jErr || !jRow) { skipped++; continue; }
       const lines = v.lines.map(l => { const acc = accountMap.get(l.ledgerName.toLowerCase()); if (!acc) return null; return { journal_id: jRow.id, account_id: acc.id, description: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }; }).filter(Boolean);
-      if (lines.length > 0) { await supabase.from("fw_fin_journal_lines").insert(lines as {journal_id:string;account_id:string;description:string;dr_amount:number;cr_amount:number}[]); imported++; seq++; fingerprints.add(fp); }
-      else { await supabase.from("fw_fin_journals").delete().eq("id", jRow.id); skipped++; }
+      if (lines.length > 0) {
+        await supabase.from("fw_fin_journal_lines").insert(lines as {journal_id:string;account_id:string;description:string;dr_amount:number;cr_amount:number}[]);
+        imported++; if (!vNum) seq++; existingEntryNos.add(entryNo);
+      } else { await supabase.from("fw_fin_journals").delete().eq("id", jRow.id); skipped++; }
     }
     setTallySyncMsg({ ok: imported > 0, msg: imported > 0 ? `✓ Imported ${imported} voucher${imported!==1?"s":""}${skipped>0?` (${skipped} skipped, already existed)`:""}.` : `No new vouchers to import${skipped>0?` (${skipped} already existed)`:""}.` });
     if (imported > 0 && activeBiz && user) loadStats(activeBiz.id, user.id, fyId);
