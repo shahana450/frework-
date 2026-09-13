@@ -146,26 +146,40 @@ export default function FrePilotDashboard() {
 
   async function loadStats(bizId: string, uid: string, selectedFyId?: string | null) {
     setLoading(true);
-    const [fysRes, journalsRes] = await Promise.all([
-      supabase.from("fw_fin_financial_years").select("id,label,is_current").eq("business_id", bizId).order("start_date", { ascending: false }),
-      supabase.from("fw_fin_journals").select("type,status,total_credit,total_debit,financial_year_id").eq("business_id", bizId),
-    ]);
-    const fys = fysRes.data ?? [];
-    setFinancialYears(fys.map(f => ({ id: f.id, label: f.label })));
-    // If Tally is connected and stored a matching FY, use it as the default
+    void uid;
+    // 1. Load financial years
+    const { data: fys } = await supabase.from("fw_fin_financial_years")
+      .select("id,label,is_current,start_date,end_date").eq("business_id", bizId).order("start_date", { ascending: false });
+    const allFys = fys ?? [];
+    setFinancialYears(allFys.map(f => ({ id: f.id, label: f.label })));
     const tallyFyId = typeof window !== "undefined" ? localStorage.getItem("fw_tally_fy_id") ?? "" : "";
     const activeFy = selectedFyId
-      ? fys.find(f => f.id === selectedFyId)
-      : (tallyFyId ? fys.find(f => f.id === tallyFyId) : undefined) ?? (fys.find(f => f.is_current) ?? fys[0]);
+      ? allFys.find(f => f.id === selectedFyId)
+      : (tallyFyId ? allFys.find(f => f.id === tallyFyId) : undefined) ?? allFys.find(f => f.is_current) ?? allFys[0];
     if (activeFy) { setFyLabel(activeFy.label); setFyId(activeFy.id); }
-    const allJournals = journalsRes.data ?? [];
-    const journals = activeFy ? allJournals.filter(j => j.financial_year_id === activeFy.id) : allJournals;
+
+    // 2. Load journals filtered by DATE RANGE (not financial_year_id — Tally imports may have null FY)
+    let q = supabase.from("fw_fin_journals")
+      .select("type,status,total_credit,total_debit,date").eq("business_id", bizId).neq("status", "voided");
+    if (activeFy?.start_date) q = q.gte("date", activeFy.start_date);
+    if (activeFy?.end_date)   q = q.lte("date", activeFy.end_date);
+    const { data: allJournals } = await q;
+    const journals = allJournals ?? [];
     const posted = journals.filter(j => j.status === "posted");
-    const salesRev = posted.filter(j => j.type === "sales" || j.type === "receipt").reduce((s, j) => s + (j.total_credit || 0), 0);
-    const expTotal = posted.filter(j => j.type === "purchase" || j.type === "expense" || j.type === "payment" || j.type === "journal").reduce((s, j) => s + (j.total_debit || 0), 0);
+
+    // 3. Revenue = ONLY sales-type vouchers (receipts are AR collections, not income)
+    const salesRev = posted
+      .filter(j => j.type === "sales")
+      .reduce((s, j) => s + (j.total_credit || j.total_debit || 0), 0);
+
+    // 4. Expenses = purchase + expense type only (NOT payment/journal — those are transfers)
+    const expTotal = posted
+      .filter(j => j.type === "purchase" || j.type === "expense")
+      .reduce((s, j) => s + (j.total_debit || j.total_credit || 0), 0);
+
     setStats({
       sales: posted.filter(j => j.type === "sales").length,
-      expenses: posted.filter(j => j.type === "purchase" || j.type === "expense" || j.type === "payment").length,
+      expenses: posted.filter(j => j.type === "purchase" || j.type === "expense").length,
       drafts: journals.filter(j => j.status === "draft").length,
       pendingTds: 0,
       revenue: salesRev,
@@ -374,6 +388,31 @@ export default function FrePilotDashboard() {
     if (imported > 0 && activeBiz && user) loadStats(activeBiz.id, user.id, fyId);
     setTallySyncing(null); setTallySyncProgress(null);
   }, [activeBiz, tally.state, tallyUrl, fyId, user]);
+
+  // Remove exact duplicate TLY entries (same entry_no — keep the one with lines)
+  const doFixDuplicates = useCallback(async () => {
+    if (!activeBiz) return;
+    setTallySyncing("vouchers"); setTallySyncMsg(null);
+    setTallySyncProgress("Scanning for duplicates…");
+    const { data: all } = await supabase.from("fw_fin_journals")
+      .select("id,entry_no,created_at").eq("business_id", activeBiz.id).like("entry_no", "TLY-%").order("created_at", { ascending: true });
+    if (!all?.length) { setTallySyncMsg({ ok: true, msg: "No Tally entries found." }); setTallySyncing(null); setTallySyncProgress(null); return; }
+    // Group by entry_no; for each group keep the first (oldest), delete the rest
+    const groups = new Map<string, string[]>();
+    for (const j of all) { const g = groups.get(j.entry_no) ?? []; g.push(j.id); groups.set(j.entry_no, g); }
+    const toDelete: string[] = [];
+    for (const [, ids] of groups) { if (ids.length > 1) toDelete.push(...ids.slice(1)); }
+    if (!toDelete.length) { setTallySyncMsg({ ok: true, msg: "✓ No duplicates found — your data is clean." }); setTallySyncing(null); setTallySyncProgress(null); return; }
+    setTallySyncProgress(`Removing ${toDelete.length} duplicate entries…`);
+    for (let i = 0; i < toDelete.length; i += 100) {
+      const batch = toDelete.slice(i, i + 100);
+      await supabase.from("fw_fin_journal_lines").delete().in("journal_id", batch);
+      await supabase.from("fw_fin_journals").delete().in("id", batch);
+    }
+    setTallySyncMsg({ ok: true, msg: `✓ Removed ${toDelete.length} duplicate entr${toDelete.length !== 1 ? "ies" : "y"}. Figures updated.` });
+    if (activeBiz && user) loadStats(activeBiz.id, user.id, fyId);
+    setTallySyncing(null); setTallySyncProgress(null);
+  }, [activeBiz, fyId, user]);
 
   const now = new Date();
   const hour = now.getHours();
@@ -585,6 +624,13 @@ export default function FrePilotDashboard() {
                       style={{ padding: "11px 18px", borderRadius: 10, border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.06)", color: "#F87171", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1, whiteSpace: "nowrap" }}
                       title="Delete all TLY imports and re-import fresh">
                       🗑 Clear & Re-import
+                    </button>
+                    <button
+                      onClick={doFixDuplicates}
+                      disabled={!!tallySyncing}
+                      style={{ padding: "11px 18px", borderRadius: 10, border: "1px solid rgba(251,191,36,0.25)", background: "rgba(251,191,36,0.06)", color: "#FCD34D", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1, whiteSpace: "nowrap" }}
+                      title="Remove duplicate Tally imports (same voucher number) — keeps latest">
+                      🔧 Fix Duplicates
                     </button>
                   </div>
 
