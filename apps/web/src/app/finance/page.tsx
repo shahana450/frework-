@@ -224,6 +224,15 @@ export default function FrePilotDashboard() {
 
   const tallyUrl = `http://localhost:${typeof window !== "undefined" ? (localStorage.getItem("fw_tally_port") ?? "7001") : "7001"}`;
 
+  function doDisconnectTally() {
+    ["fw_tally_company","fw_tally_port","fw_tally_fy_id"].forEach(k => localStorage.removeItem(k));
+    if (activeBiz) {
+      localStorage.removeItem(`fw_tally_last_sync_${activeBiz.id}`);
+      sessionStorage.removeItem(`fw_tally_synced_${activeBiz.id}`);
+    }
+    setTally({ state: "disconnected", company: "" });
+  }
+
   function tallyParentToType(parent: string): "asset" | "liability" | "equity" | "income" | "expense" {
     const p = parent.toLowerCase();
     if (p.includes("bank") || p.includes("cash") || p.includes("fixed asset") || p.includes("plant") ||
@@ -512,12 +521,20 @@ export default function FrePilotDashboard() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Tally pill */}
+        {/* Tally pill + disconnect */}
         {tally.state === "connected" ? (
-          <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 11px", borderRadius: 20, background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.3)", textDecoration: "none" }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D399", flexShrink: 0, animation: "tp-pulse 2s ease-in-out infinite" }} />
-            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#34D399" }}>Tally · {tally.company}</span>
-          </Link>
+          <div style={{ display: "flex", alignItems: "center", borderRadius: 20, overflow: "hidden", border: "1px solid rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.08)" }}>
+            <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px 4px 11px", textDecoration: "none" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D399", flexShrink: 0, animation: "tp-pulse 2s ease-in-out infinite" }} />
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#34D399" }}>Tally · {tally.company}</span>
+            </Link>
+            <button
+              onClick={doDisconnectTally}
+              title="Disconnect Tally"
+              style={{ background: "rgba(239,68,68,0.15)", border: "none", borderLeft: "1px solid rgba(52,211,153,0.2)", color: "#F87171", fontSize: "0.7rem", padding: "4px 8px", cursor: "pointer", lineHeight: 1, fontFamily: "inherit" }}>
+              ✕
+            </button>
+          </div>
         ) : (
           <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 11px", borderRadius: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", textDecoration: "none" }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(232,237,245,0.15)", flexShrink: 0 }} />
