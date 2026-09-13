@@ -26,8 +26,8 @@ function parseTallyCompanyName(xml: string): string {
 }
 
 // Safe lightweight ping — no TDL filters that freeze Tally
-// TDL Report that uses $$CurrentCompany system function — returns ONLY the active company
-const TALLY_CURRENT_COMPANY_XML = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Data</TYPE><ID>FP_CurInfo</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><REPORT NAME="FP_CurInfo"><FORMS>FP_CIF</FORMS></REPORT><FORM NAME="FP_CIF"><PARTS>FP_CIP</PARTS></FORM><PART NAME="FP_CIP"><LINES>FP_CIL</LINES></PART><LINE NAME="FP_CIL"><FIELDS>FP_CIComp,FP_CIStart</FIELDS></LINE><FIELD NAME="FP_CIComp"><SET>$$CurrentCompany</SET><XMLTAG>CURRENTCOMPANY</XMLTAG></FIELD><FIELD NAME="FP_CIStart"><SET>$$CurrentCompanyStartDate</SET><XMLTAG>CURRENTCOMPANYSTART</XMLTAG></FIELD></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+// TDL Report using ##SVCurrentCompany system variable — always the active Tally company
+const TALLY_CURRENT_COMPANY_XML = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Data</TYPE><ID>FP_CurInfo</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><REPORT NAME="FP_CurInfo"><FORMS>FP_CIF</FORMS></REPORT><FORM NAME="FP_CIF"><PARTS>FP_CIP</PARTS></FORM><PART NAME="FP_CIP"><LINES>FP_CIL</LINES></PART><LINE NAME="FP_CIL"><FIELDS>FP_CIComp,FP_CIStart</FIELDS></LINE><FIELD NAME="FP_CIComp"><SET>##SVCurrentCompany</SET><XMLTAG>CURRENTCOMPANY</XMLTAG></FIELD><FIELD NAME="FP_CIStart"><SET>##SVFromDate</SET><XMLTAG>CURRENTCOMPANYSTART</XMLTAG></FIELD></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
 
 async function checkTally(): Promise<TallyStatus & { _raw: string }> {
   try {
@@ -41,11 +41,12 @@ async function checkTally(): Promise<TallyStatus & { _raw: string }> {
     // Primary: <CURRENTCOMPANY> tag from $$CurrentCompany system function
     const parsed = (text.match(/<CURRENTCOMPANY[^>]*>([^<]+)<\/CURRENTCOMPANY>/i) ?? [])[1]?.trim()
       ?? parseTallyCompanyName(text);
-    const stored = typeof window !== "undefined" ? localStorage.getItem("fw_tally_company") ?? "" : "";
-    const company = parsed?.length >= 2 ? parsed : (stored.length >= 2 ? stored : "Tally");
-    if (parsed?.length >= 2 && parsed !== stored) {
+    // Always use live response; only fall back to cache if Tally returned nothing
+    if (parsed?.length >= 2) {
       try { localStorage.setItem("fw_tally_company", parsed); } catch { /* */ }
     }
+    const stored = typeof window !== "undefined" ? localStorage.getItem("fw_tally_company") ?? "" : "";
+    const company = parsed?.length >= 2 ? parsed : (stored.length >= 2 ? stored : "Tally");
     return { state: "connected", company, _raw: text.slice(0, 800) };
   } catch (e) {
     return { state: "disconnected", company: "", _raw: String(e) };
