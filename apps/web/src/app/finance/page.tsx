@@ -169,38 +169,31 @@ export default function FrePilotDashboard() {
 
     // 2. Count journals by date range (for counts + drafts)
     let jq = supabase.from("fw_fin_journals")
-      .select("type,status,date").eq("business_id", bizId).neq("status", "voided");
+      .select("id,type,status,date").eq("business_id", bizId).neq("status", "voided");
     if (activeFy?.start_date) jq = jq.gte("date", activeFy.start_date);
     if (activeFy?.end_date)   jq = jq.lte("date", activeFy.end_date);
     const { data: jData } = await jq;
     const journals = jData ?? [];
     const posted = journals.filter(j => j.status === "posted");
+    const postedIds = posted.filter(j => j.type !== "contra").map(j => j.id);
 
-    // 3. Revenue & profit: query journal_lines joined with accounts by type
-    //    This is always accurate regardless of how total_debit/credit was stored
-    let lq = supabase.from("fw_fin_journal_lines")
-      .select("dr_amount, cr_amount, fw_fin_chart_of_accounts!inner(type), fw_fin_journals!inner(business_id, status, date, type)")
-      .eq("fw_fin_journals.business_id", bizId)
-      .eq("fw_fin_journals.status", "posted")
-      .neq("fw_fin_journals.type", "contra"); // exclude bank-to-bank transfers
-    if (activeFy?.start_date) lq = lq.gte("fw_fin_journals.date", activeFy.start_date);
-    if (activeFy?.end_date)   lq = lq.lte("fw_fin_journals.date", activeFy.end_date);
-    const { data: lines } = await lq;
-    type LineRow = { dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { type: string }[] | { type: string } | null };
-    const linesArr = (lines ?? []) as unknown as LineRow[];
-    const accType = (l: LineRow) => {
-      const a = l.fw_fin_chart_of_accounts;
-      return Array.isArray(a) ? a[0]?.type : (a as { type: string } | null)?.type ?? "";
-    };
-
-    // Revenue = total Cr on income accounts
-    const salesRev = linesArr
-      .filter(l => accType(l) === "income")
-      .reduce((s, l) => s + (l.cr_amount || 0), 0);
-    // Expenses = total Dr on expense accounts
-    const expTotal = linesArr
-      .filter(l => accType(l) === "expense")
-      .reduce((s, l) => s + (l.dr_amount || 0), 0);
+    // 3. Revenue & profit: fetch lines for posted journals in this FY by journal ID
+    //    Using journal IDs avoids unreliable nested-join filters in PostgREST
+    let salesRev = 0, expTotal = 0;
+    if (postedIds.length > 0) {
+      const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts").select("id,type").eq("business_id", bizId);
+      const accTypeMap = new Map((accounts ?? []).map(a => [a.id, a.type]));
+      // Fetch in batches of 200 to avoid URL length limits
+      for (let i = 0; i < postedIds.length; i += 200) {
+        const { data: lines } = await supabase.from("fw_fin_journal_lines")
+          .select("account_id,dr_amount,cr_amount").in("journal_id", postedIds.slice(i, i + 200));
+        for (const l of lines ?? []) {
+          const t = accTypeMap.get(l.account_id) ?? "";
+          if (t === "income") salesRev += (l.cr_amount || 0);
+          if (t === "expense") expTotal += (l.dr_amount || 0);
+        }
+      }
+    }
 
     setStats({
       sales: posted.filter(j => j.type === "sales").length,
