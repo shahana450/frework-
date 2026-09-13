@@ -120,8 +120,14 @@ export default function AuditPage() {
 
   async function loadData(bid: string, fid: string) {
     setLoading(true);
+    const { data: fyRow } = await supabase.from("fw_fin_financial_years").select("start_date,end_date").eq("id", fid).single();
+    let jq = supabase.from("fw_fin_journals")
+      .select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id")
+      .eq("business_id", bid).eq("status", "posted").order("date");
+    if (fyRow?.start_date) jq = jq.gte("date", fyRow.start_date);
+    if (fyRow?.end_date)   jq = jq.lte("date", fyRow.end_date);
     const [jRes, lRes, aRes] = await Promise.all([
-      supabase.from("fw_fin_journals").select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id").eq("business_id", bid).eq("financial_year_id", fid).eq("status", "posted").order("date"),
+      jq,
       supabase.from("fw_fin_journal_lines").select("id,journal_id,account_id,description,dr_amount,cr_amount").eq("business_id", bid),
       supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bid),
     ]);
