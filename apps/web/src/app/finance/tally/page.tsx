@@ -238,9 +238,9 @@ export default function TallyPage() {
   const [companyName, setCompanyName] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     const stored = localStorage.getItem("fw_tally_company") ?? "";
-    // Reject obviously wrong values (single short words like "abc" that came from ledger name parsing bug)
     return stored.length >= 2 ? stored : "";
   });
+  const [allCompanies, setAllCompanies] = useState<string[]>([]);
   const [rawDebug, setRawDebug] = useState<string>("");
   const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | "import" | "importVouchers" | null>(null);
   const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -577,11 +577,29 @@ export default function TallyPage() {
         const text = await res.text();
         const found = extractCompanyName(text);
         setRawDebug(text.slice(0, 800));
-        setCompanyName(found);
-        if (found) localStorage.setItem("fw_tally_company", found);
         setConnStatus("connected");
         setConnMsg(found ? `Connected — ${found}` : "Connected to Tally");
         localStorage.setItem("fw_tally_port", tallyPort);
+
+        // Also fetch full company list so user can manually select the right one
+        try {
+          const listXml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_AllCo</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_AllCo" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+          const listRes = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: listXml, signal: AbortSignal.timeout(4000) });
+          const listText = await listRes.text();
+          const names: string[] = [];
+          const re = /NAME="([^"]+)"/gi; let m;
+          while ((m = re.exec(listText)) !== null) { const n = m[1].trim(); if (n && n !== "FP_AllCo" && !names.includes(n)) names.push(n); }
+          // Also try <NAME> child tags
+          const re2 = /<NAME[^>]*>([^<]{2,})<\/NAME>/gi;
+          while ((m = re2.exec(listText)) !== null) { const n = m[1].trim(); if (n && !names.includes(n)) names.push(n); }
+          setAllCompanies(names);
+          // Auto-select the detected one; if not detected, keep whatever is stored
+          const pick = (found && found.length >= 2) ? found : (names.length === 1 ? names[0] : (localStorage.getItem("fw_tally_company") ?? ""));
+          setCompanyName(pick);
+          if (pick) localStorage.setItem("fw_tally_company", pick);
+        } catch {
+          if (found) { setCompanyName(found); localStorage.setItem("fw_tally_company", found); }
+        }
 
         // Parse Tally's current period dates (format: YYYYMMDD or DD-Mon-YYYY)
         const startMatch = text.match(/<CURRENTCOMPANYSTART[^>]*>([^<]+)<\/CURRENTCOMPANYSTART>/i)
@@ -944,23 +962,34 @@ export default function TallyPage() {
             </div>
 
             {/* Connected company card */}
-            {connStatus === "connected" && companyName && (
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem", background: "linear-gradient(135deg,#071A12,#091C14)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 12, padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
-                <div style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem", flexShrink: 0 }}>🏢</div>
-                <div>
-                  <div style={{ fontSize: "0.6rem", color: "rgba(52,211,153,0.6)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Connected Tally Company</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#34D399", marginTop: 3, letterSpacing: "-0.01em" }}>{companyName}</div>
+            {connStatus === "connected" && (
+              <div style={{ background: "linear-gradient(135deg,#071A12,#091C14)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 12, padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem", flexShrink: 0 }}>🏢</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "0.6rem", color: "rgba(52,211,153,0.6)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Connected Tally Company</div>
+                    {allCompanies.length > 1 ? (
+                      <select
+                        value={companyName}
+                        onChange={e => { setCompanyName(e.target.value); localStorage.setItem("fw_tally_company", e.target.value); }}
+                        style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(52,211,153,0.35)", color: "#34D399", borderRadius: 8, padding: "5px 10px", fontSize: "0.95rem", fontWeight: 700, fontFamily: "inherit", cursor: "pointer", width: "100%" }}>
+                        <option value="">— select the correct company —</option>
+                        {allCompanies.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    ) : (
+                      <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#34D399", letterSpacing: "-0.01em" }}>{companyName || "—"}</div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: "0.62rem", color: "rgba(52,211,153,0.5)", fontWeight: 600 }}>● LIVE</div>
+                    <div style={{ fontSize: "0.68rem", color: "#2A4060", marginTop: 2 }}>Port {tallyPort}</div>
+                  </div>
                 </div>
-                <div style={{ marginLeft: "auto", textAlign: "right" }}>
-                  <div style={{ fontSize: "0.62rem", color: "rgba(52,211,153,0.5)", fontWeight: 600 }}>● LIVE</div>
-                  <div style={{ fontSize: "0.68rem", color: "#2A4060", marginTop: 2 }}>Port {tallyPort}</div>
-                </div>
-              </div>
-            )}
-
-            {connStatus === "connected" && !companyName && (
-              <div style={{ fontSize: "0.8rem", color: "#34D399", background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 8, padding: "0.65rem 1rem", marginBottom: "1.25rem" }}>
-                ✓ Connected to Tally — open a company in Tally to see its name here.
+                {allCompanies.length > 1 && (
+                  <div style={{ fontSize: "0.72rem", color: "rgba(52,211,153,0.45)", marginTop: "0.6rem" }}>
+                    Multiple companies are open in Tally — select the one you want to sync.
+                  </div>
+                )}
               </div>
             )}
 
