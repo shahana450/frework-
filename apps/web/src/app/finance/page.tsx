@@ -179,18 +179,20 @@ export default function FrePilotDashboard() {
 
   const tallyUrl = `http://localhost:${typeof window !== "undefined" ? (localStorage.getItem("fw_tally_port") ?? "7001") : "7001"}`;
 
-  function tallyParentToType(parent: string): string {
+  function tallyParentToType(parent: string): "asset" | "liability" | "equity" | "income" | "expense" {
     const p = parent.toLowerCase();
-    if (p.includes("bank")) return "bank";
-    if (p === "cash" || p.includes("cash-in-hand") || p.includes("cash in hand")) return "cash";
-    if (p.includes("sales") || p.includes("income") || p.includes("revenue")) return "income";
-    if (p.includes("purchase") || p.includes("direct exp") || p.includes("cost of goods")) return "cost_of_goods";
-    if (p.includes("capital") || p.includes("reserve") || p.includes("equity") || p.includes("proprietor")) return "equity";
-    if (p.includes("loan") || p.includes("borrowing")) return "loan";
-    if (p.includes("duties") || p.includes("tax") || p.includes("gst") || p.includes("tds")) return "tax";
-    if (p.includes("fixed asset") || p.includes("plant") || p.includes("machinery") || p.includes("laptop") || p.includes("furniture")) return "fixed_asset";
-    if (p.includes("current asset") || p.includes("sundry debt") || p.includes("receivable") || p.includes("debtor")) return "asset";
-    if (p.includes("current liab") || p.includes("sundry cred") || p.includes("payable") || p.includes("creditor")) return "liability";
+    if (p.includes("bank") || p.includes("cash") || p.includes("fixed asset") || p.includes("plant") ||
+        p.includes("machinery") || p.includes("furniture") || p.includes("sundry debt") ||
+        p.includes("receivable") || p.includes("debtor") || p.includes("current asset") ||
+        p.includes("loan") || p.includes("deposit") || p.includes("investment")) return "asset";
+    if (p.includes("capital") || p.includes("reserve") || p.includes("equity") || p.includes("proprietor") ||
+        p.includes("retained")) return "equity";
+    if (p.includes("sales") || p.includes("income") || p.includes("revenue") || p.includes("interest income")) return "income";
+    if (p.includes("current liab") || p.includes("sundry cred") || p.includes("payable") ||
+        p.includes("creditor") || p.includes("borrowing") || p.includes("overdraft")) return "liability";
+    if (p.includes("purchase") || p.includes("direct exp") || p.includes("cost of goods") ||
+        p.includes("indirect exp") || p.includes("duties") || p.includes("tax") ||
+        p.includes("gst") || p.includes("tds") || p.includes("expense")) return "expense";
     return "expense";
   }
 
@@ -238,9 +240,20 @@ export default function FrePilotDashboard() {
         seen.add(name); ledgers.push({ name, parent: pm?.[1]?.trim() ?? "" });
       }
       if (!ledgers.length) { setTallySyncMsg({ ok: false, msg: "No ledgers returned from Tally." }); setTallySyncing(null); return; }
-      const { data: existing } = await supabase.from("fw_fin_chart_of_accounts").select("name").eq("business_id", activeBiz.id);
-      const existingNames = new Set((existing ?? []).map(a => a.name));
-      const rows = ledgers.filter(l => !existingNames.has(l.name)).map((l, idx) => ({
+      const { data: existing } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", activeBiz.id);
+      const existingMap = new Map((existing ?? []).map(a => [a.name, a]));
+      const VALID = new Set(["asset","liability","equity","income","expense"]);
+
+      // Fix accounts with non-standard types (from old imports)
+      const badTypeAccounts = (existing ?? []).filter(a => !VALID.has(a.type));
+      for (const acc of badTypeAccounts) {
+        const ledger = ledgers.find(l => l.name === acc.name);
+        if (ledger) {
+          await supabase.from("fw_fin_chart_of_accounts").update({ type: tallyParentToType(ledger.parent) }).eq("id", acc.id);
+        }
+      }
+
+      const rows = ledgers.filter(l => !existingMap.has(l.name)).map((l, idx) => ({
         business_id: activeBiz.id, code: `TL${String(idx + 1).padStart(3,"0")}`, name: l.name,
         type: tallyParentToType(l.parent), description: l.parent ? `From Tally — ${l.parent}` : "From Tally",
         is_system: false, is_group: false, sort_order: (existing?.length ?? 0) + idx + 1,
@@ -250,7 +263,7 @@ export default function FrePilotDashboard() {
         const { error } = await supabase.from("fw_fin_chart_of_accounts").insert(rows.slice(i, i + 50));
         if (!error) inserted += Math.min(50, rows.length - i);
       }
-      setTallySyncMsg({ ok: true, msg: `✓ Imported ${inserted} ledgers (${existingNames.size} already existed)` });
+      setTallySyncMsg({ ok: true, msg: `✓ Imported ${inserted} ledgers, fixed ${badTypeAccounts.length} account types (${existingMap.size} already existed)` });
     } catch (e) { setTallySyncMsg({ ok: false, msg: e instanceof Error ? e.message : "Network error" }); }
     setTallySyncing(null);
   }, [activeBiz, tally.state, tallyUrl]);

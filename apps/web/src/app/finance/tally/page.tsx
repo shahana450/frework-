@@ -133,19 +133,17 @@ function parseTallyLedgers(xml: string): { name: string; parent: string }[] {
   return results;
 }
 
-function tallyParentToType(parent: string): string {
+function tallyParentToType(parent: string): "asset" | "liability" | "equity" | "income" | "expense" {
   const p = parent.toLowerCase();
-  if (p.includes("bank")) return "bank";
-  if (p === "cash" || p.includes("cash-in-hand") || p.includes("cash in hand")) return "cash";
-  if (p.includes("sales") || p.includes("income") || p.includes("revenue")) return "income";
-  if (p.includes("purchase") || p.includes("direct exp") || p.includes("cost of goods") || p.includes("cost of sales")) return "cost_of_goods";
-  if (p.includes("capital") || p.includes("reserve") || p.includes("equity") || p.includes("proprietor")) return "equity";
-  if (p.includes("loan") || p.includes("borrowing")) return "loan";
-  if (p.includes("duties") || p.includes("tax") || p.includes("gst") || p.includes("tds")) return "tax";
-  if (p.includes("fixed asset") || p.includes("plant") || p.includes("machinery") || p.includes("laptop") || p.includes("computer") || p.includes("furniture")) return "fixed_asset";
-  if (p.includes("current asset") || p.includes("sundry debt") || p.includes("receivable") || p.includes("debtor")) return "asset";
-  if (p.includes("current liab") || p.includes("sundry cred") || p.includes("payable") || p.includes("creditor")) return "liability";
-  if (p.includes("indirect exp") || p.includes("expense")) return "expense";
+  if (p.includes("bank") || p.includes("cash") || p.includes("fixed asset") || p.includes("plant") ||
+      p.includes("machinery") || p.includes("computer") || p.includes("laptop") || p.includes("furniture") ||
+      p.includes("sundry debt") || p.includes("receivable") || p.includes("debtor") ||
+      p.includes("current asset") || p.includes("loan") || p.includes("deposit") || p.includes("investment")) return "asset";
+  if (p.includes("capital") || p.includes("reserve") || p.includes("equity") || p.includes("proprietor") ||
+      p.includes("retained")) return "equity";
+  if (p.includes("sales") || p.includes("income") || p.includes("revenue") || p.includes("interest income")) return "income";
+  if (p.includes("current liab") || p.includes("sundry cred") || p.includes("payable") ||
+      p.includes("creditor") || p.includes("borrowing") || p.includes("overdraft")) return "liability";
   return "expense";
 }
 
