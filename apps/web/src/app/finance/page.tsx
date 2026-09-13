@@ -129,6 +129,8 @@ export default function FrePilotDashboard() {
   useEffect(() => {
     if (tally.state === "connected" && activeBiz && !tallySyncing && !autoSyncedRef.current) {
       autoSyncedRef.current = true;
+      // Reload stats so FY auto-selects from fw_tally_fy_id saved during Tally connection
+      if (user) loadStats(activeBiz.id, user.id);
       const lsKey = `fw_tally_last_sync_${activeBiz.id}`;
       const lastSync = parseInt(localStorage.getItem(lsKey) ?? "0", 10);
       const elapsed = Date.now() - lastSync;
@@ -162,9 +164,17 @@ export default function FrePilotDashboard() {
     const allFys = fys ?? [];
     setFinancialYears(allFys.map(f => ({ id: f.id, label: f.label })));
     const tallyFyId = typeof window !== "undefined" ? localStorage.getItem("fw_tally_fy_id") ?? "" : "";
+    // Derive current Indian FY start from today: Apr-Mar year
+    const today = new Date();
+    const curFyStart = today.getMonth() >= 3
+      ? `${today.getFullYear()}-04-01`
+      : `${today.getFullYear() - 1}-04-01`;
     const activeFy = selectedFyId
       ? allFys.find(f => f.id === selectedFyId)
-      : (tallyFyId ? allFys.find(f => f.id === tallyFyId) : undefined) ?? allFys.find(f => f.is_current) ?? allFys[0];
+      : (tallyFyId ? allFys.find(f => f.id === tallyFyId) : undefined)
+        ?? allFys.find(f => f.start_date === curFyStart)
+        ?? allFys.find(f => f.is_current)
+        ?? allFys[0];
     if (activeFy) { setFyLabel(activeFy.label); setFyId(activeFy.id); }
 
     // 2. Count journals by date range (for counts + drafts)
