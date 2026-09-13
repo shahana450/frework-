@@ -129,12 +129,19 @@ export default function FrePilotDashboard() {
   useEffect(() => {
     if (tally.state === "connected" && activeBiz && !tallySyncing && !autoSyncedRef.current) {
       autoSyncedRef.current = true;
-      // Reload stats so FY auto-selects from fw_tally_fy_id saved during Tally connection
       if (user) loadStats(activeBiz.id, user.id);
+      // Auto-sync: always run if there are unsynced months; otherwise respect 1-hr cooldown
+      const syncedMonthsKey = `fw_tally_synced_months_${activeBiz.id}`;
+      const synced: string[] = JSON.parse(localStorage.getItem(syncedMonthsKey) ?? "[]");
+      const today = new Date();
+      const fyStart = today.getMonth() >= 3 ? `${today.getFullYear()}-04` : `${today.getFullYear()-1}-04`;
+      // Count expected months (Apr to current month)
+      const startYear = parseInt(fyStart.slice(0,4)), startMonth = parseInt(fyStart.slice(5))-1;
+      const expectedMonths = (today.getFullYear()-startYear)*12 + today.getMonth() - startMonth + 1;
+      const hasMissingMonths = synced.length < expectedMonths - 1; // -1 because current month is always re-fetched
       const lsKey = `fw_tally_last_sync_${activeBiz.id}`;
       const lastSync = parseInt(localStorage.getItem(lsKey) ?? "0", 10);
-      const elapsed = Date.now() - lastSync;
-      if (elapsed > AUTO_SYNC_COOLDOWN_MS) {
+      if (hasMissingMonths || Date.now() - lastSync > AUTO_SYNC_COOLDOWN_MS) {
         localStorage.setItem(lsKey, String(Date.now()));
         doImportVouchers(false);
       }
@@ -321,6 +328,9 @@ export default function FrePilotDashboard() {
     if (clearFirst && !confirm("Delete all existing TLY imports and re-import fresh from Tally?")) return;
     setTallySyncing("vouchers"); setTallySyncMsg(null); setTallySyncProgress(null);
 
+    // Key for tracking which months have been fully synced
+    const syncedMonthsKey = `fw_tally_synced_months_${activeBiz.id}`;
+
     if (clearFirst) {
       setTallySyncProgress("Clearing old entries…");
       const { data: old } = await supabase.from("fw_fin_journals").select("id").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
@@ -331,41 +341,57 @@ export default function FrePilotDashboard() {
           await supabase.from("fw_fin_journals").delete().in("id", ids.slice(i, i + 100));
         }
       }
+      localStorage.removeItem(syncedMonthsKey);
     }
 
     const stored = typeof window !== "undefined" ? localStorage.getItem("fw_tally_fy_id") : null;
-    const fyFrom = stored ? null : null; // dates from stored FY
     const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,start_date,end_date").eq("business_id", activeBiz.id).order("start_date", { ascending: false });
     const activeFy = stored ? fys?.find(f => f.id === stored) : fys?.[0];
+    const today = new Date().toISOString().slice(0, 10);
     const fromDate = activeFy?.start_date ?? `${new Date().getFullYear()}-04-01`;
-    const toDate = activeFy?.end_date ?? `${new Date().getFullYear() + 1}-03-31`;
-    void fyFrom;
+    // Only sync up to today — no point fetching future months
+    const toDate = (activeFy?.end_date && activeFy.end_date < today) ? activeFy.end_date : today;
 
-    const months: { from: string; to: string; label: string }[] = [];
+    // Build month list
+    const months: { from: string; to: string; label: string; key: string }[] = [];
     let cur = new Date(new Date(fromDate).getFullYear(), new Date(fromDate).getMonth(), 1);
     const end = new Date(toDate);
     while (cur <= end) {
       const y = cur.getFullYear(), mo = cur.getMonth();
       const mFrom = `${y}-${String(mo+1).padStart(2,"0")}-01`;
       const mTo = new Date(y, mo+1, 0).toISOString().slice(0,10);
-      months.push({ from: mFrom, to: mTo < toDate ? mTo : toDate, label: cur.toLocaleString("en-IN", { month: "short", year: "2-digit" }) });
+      const mKey = `${y}-${String(mo+1).padStart(2,"0")}`;
+      months.push({ from: mFrom, to: mTo < toDate ? mTo : toDate, label: cur.toLocaleString("en-IN", { month: "short", year: "2-digit" }), key: mKey });
       cur = new Date(y, mo+1, 1);
     }
 
+    // Load already-synced months (skip past months that are fully done; always re-fetch current month)
+    const syncedMonths: Set<string> = new Set(JSON.parse(localStorage.getItem(syncedMonthsKey) ?? "[]"));
+    const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}`;
+    const monthsToFetch = months.filter(m => !syncedMonths.has(m.key) || m.key === currentMonthKey);
+
+    if (!monthsToFetch.length) {
+      setTallySyncMsg({ ok: true, msg: "✓ All months already synced. Nothing new to import." });
+      setTallySyncing(null); setTallySyncProgress(null); return;
+    }
+
     const allVouchers: ReturnType<typeof parseTallyVouchersLocal> = [];
-    for (let i = 0; i < months.length; i++) {
-      const { from: mf, to: mt, label } = months[i];
-      setTallySyncProgress(`Fetching ${label} (${i+1}/${months.length})…`);
+    for (let i = 0; i < monthsToFetch.length; i++) {
+      const { from: mf, to: mt, label, key: mKey } = monthsToFetch[i];
+      setTallySyncProgress(`Fetching ${label} (${i+1}/${monthsToFetch.length})…`);
       const fd = mf.replace(/-/g,""), td = mt.replace(/-/g,"");
       const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
       try {
-        const r = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(20000) });
-        allVouchers.push(...parseTallyVouchersLocal(await r.text()));
-      } catch { /* continue */ }
-      if (i < months.length - 1) await new Promise(r => setTimeout(r, 400));
+        const r = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(30000) });
+        const fetched = parseTallyVouchersLocal(await r.text());
+        allVouchers.push(...fetched);
+        // Mark past months as synced once fetched successfully
+        if (mKey !== currentMonthKey) { syncedMonths.add(mKey); localStorage.setItem(syncedMonthsKey, JSON.stringify([...syncedMonths])); }
+      } catch { /* skip failed month — will retry next auto-sync */ }
+      if (i < monthsToFetch.length - 1) await new Promise(r => setTimeout(r, 300));
     }
 
-    if (!allVouchers.length) { setTallySyncMsg({ ok: false, msg: "No vouchers found in Tally for this period." }); setTallySyncing(null); return; }
+    if (!allVouchers.length) { setTallySyncMsg({ ok: true, msg: "✓ No new vouchers found — data is up to date." }); setTallySyncing(null); setTallySyncProgress(null); return; }
 
     const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", activeBiz.id);
     const accountMap = new Map((accounts ?? []).map(a => [a.name.toLowerCase(), a]));
