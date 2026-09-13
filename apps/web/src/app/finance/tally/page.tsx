@@ -80,9 +80,10 @@ function buildVoucherXML(journals: {
 // ── Parse company name from any Tally XML response ───────────────────────────
 
 function extractCompanyName(xml: string): string {
+  // Try SVCURRENTCOMPANY first — only set on current-company-filtered responses
   const patterns = [
-    /<COMPANYNAME[^>]*>([^<]+)<\/COMPANYNAME>/i,
     /<SVCURRENTCOMPANY[^>]*>([^<]+)<\/SVCURRENTCOMPANY>/i,
+    /<COMPANYNAME[^>]*>([^<]+)<\/COMPANYNAME>/i,
     /<BASICCOMPANYNAME[^>]*>([^<]+)<\/BASICCOMPANYNAME>/i,
     // attribute anywhere in COMPANY tag (other attrs may come before NAME)
     /<COMPANY[^>]+NAME="([^"]+)"/i,
@@ -274,11 +275,14 @@ export default function TallyPage() {
         setTallyPort(storedPort);
         // Silently test connection in background
         try {
-          const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom,EndingAt</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+          const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_CurComp</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_CurComp" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom,EndingAt</FETCH><FILTER>FP_IsCurrent</FILTER></COLLECTION><SYSTEM TYPE="Formulae" NAME="FP_IsCurrent">$$IsCurrentCompany:$Name</SYSTEM></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
           const res = await fetch(`http://localhost:${storedPort}`, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(3000) });
           if (res.ok) {
+            const txt = await res.text();
+            const found = extractCompanyName(txt);
+            if (found) { localStorage.setItem("fw_tally_company", found); setCompanyName(found); }
             setConnStatus("connected");
-            setConnMsg(`Connected — ${storedCompany}`);
+            setConnMsg(`Connected — ${found || storedCompany}`);
           }
         } catch { /* bridge not running — stay idle, user will click Connect */ }
       }
@@ -561,8 +565,8 @@ export default function TallyPage() {
   async function testConnection() {
     setConnStatus("connecting"); setConnMsg(""); setSyncResult(null); setRawDebug("");
     try {
-      // Fetch company info + current period dates
-      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom,EndingAt</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+      // Fetch CURRENT company only using $$IsCurrentCompany filter
+      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_CurComp</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_CurComp" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom,EndingAt</FETCH><FILTER>FP_IsCurrent</FILTER></COLLECTION><SYSTEM TYPE="Formulae" NAME="FP_IsCurrent">$$IsCurrentCompany:$Name</SYSTEM></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
       const res = await fetch(tallyUrl, {
         method: "POST",
         headers: { "Content-Type": "text/xml" },

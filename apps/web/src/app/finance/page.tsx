@@ -28,14 +28,24 @@ function parseTallyCompanyName(xml: string): string {
 // Safe lightweight ping — no TDL filters that freeze Tally
 async function checkTally(): Promise<TallyStatus & { _raw: string }> {
   try {
-    // Fetch Name + CompanyName so we catch whichever field Tally returns
-    const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+    // Filter to ONLY the currently active company using $$IsCurrentCompany
+    // This avoids picking a background company when multiple are open in Tally
+    const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_CurComp</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_CurComp" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom</FETCH><FILTER>FP_IsCurrent</FILTER></COLLECTION><SYSTEM TYPE="Formulae" NAME="FP_IsCurrent">$$IsCurrentCompany:$Name</SYSTEM></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
     const res = await fetch("http://localhost:7001", {
       method: "POST", headers: { "Content-Type": "text/xml" }, body: xml,
       signal: AbortSignal.timeout(3000),
     });
     const text = await res.text();
-    const parsed = parseTallyCompanyName(text);
+    let parsed = parseTallyCompanyName(text);
+    // Fallback: if filter returned nothing (older Tally versions), try without filter
+    if (!parsed) {
+      const xmlAll = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+      const res2 = await fetch("http://localhost:7001", {
+        method: "POST", headers: { "Content-Type": "text/xml" }, body: xmlAll,
+        signal: AbortSignal.timeout(3000),
+      });
+      parsed = parseTallyCompanyName(await res2.text());
+    }
     const stored = typeof window !== "undefined" ? localStorage.getItem("fw_tally_company") ?? "" : "";
     const company = parsed.length >= 2 ? parsed : (stored.length >= 2 ? stored : "Tally");
     if (parsed.length >= 2 && parsed !== stored) {
