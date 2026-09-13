@@ -169,31 +169,21 @@ export default function FrePilotDashboard() {
 
     // 2. Count journals by date range (for counts + drafts)
     let jq = supabase.from("fw_fin_journals")
-      .select("id,type,status,date").eq("business_id", bizId).neq("status", "voided");
+      .select("id,type,status,date,total_debit,total_credit").eq("business_id", bizId).neq("status", "voided");
     if (activeFy?.start_date) jq = jq.gte("date", activeFy.start_date);
     if (activeFy?.end_date)   jq = jq.lte("date", activeFy.end_date);
     const { data: jData } = await jq;
     const journals = jData ?? [];
     const posted = journals.filter(j => j.status === "posted");
-    const postedIds = posted.filter(j => j.type !== "contra").map(j => j.id);
-
-    // 3. Revenue & profit: fetch lines for posted journals in this FY by journal ID
-    //    Using journal IDs avoids unreliable nested-join filters in PostgREST
-    let salesRev = 0, expTotal = 0;
-    if (postedIds.length > 0) {
-      const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts").select("id,type").eq("business_id", bizId);
-      const accTypeMap = new Map((accounts ?? []).map(a => [a.id, a.type]));
-      // Fetch in batches of 200 to avoid URL length limits
-      for (let i = 0; i < postedIds.length; i += 200) {
-        const { data: lines } = await supabase.from("fw_fin_journal_lines")
-          .select("account_id,dr_amount,cr_amount").in("journal_id", postedIds.slice(i, i + 200));
-        for (const l of lines ?? []) {
-          const t = accTypeMap.get(l.account_id) ?? "";
-          if (t === "income") salesRev += (l.cr_amount || 0);
-          if (t === "expense") expTotal += (l.dr_amount || 0);
-        }
-      }
-    }
+    // 3. Revenue & profit: sum totals directly from journal type
+    //    Sales journals → revenue (total_credit = sales amount)
+    //    Purchase/expense journals → expenses (total_debit = cost amount)
+    const salesRev = posted
+      .filter(j => j.type === "sales")
+      .reduce((s, j) => s + ((j as {total_credit?: number}).total_credit || 0), 0);
+    const expTotal = posted
+      .filter(j => j.type === "purchase" || j.type === "expense")
+      .reduce((s, j) => s + ((j as {total_debit?: number}).total_debit || 0), 0);
 
     setStats({
       sales: posted.filter(j => j.type === "sales").length,
