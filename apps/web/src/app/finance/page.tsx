@@ -26,32 +26,27 @@ function parseTallyCompanyName(xml: string): string {
 }
 
 // Safe lightweight ping — no TDL filters that freeze Tally
+// TDL Report that uses $$CurrentCompany system function — returns ONLY the active company
+const TALLY_CURRENT_COMPANY_XML = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Data</TYPE><ID>FP_CurInfo</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><REPORT NAME="FP_CurInfo"><FORMS>FP_CIF</FORMS></REPORT><FORM NAME="FP_CIF"><PARTS>FP_CIP</PARTS></FORM><PART NAME="FP_CIP"><LINES>FP_CIL</LINES></PART><LINE NAME="FP_CIL"><FIELDS>FP_CIComp,FP_CIStart</FIELDS></LINE><FIELD NAME="FP_CIComp"><SET>$$CurrentCompany</SET><XMLTAG>CURRENTCOMPANY</XMLTAG></FIELD><FIELD NAME="FP_CIStart"><SET>$$CurrentCompanyStartDate</SET><XMLTAG>CURRENTCOMPANYSTART</XMLTAG></FIELD></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+
 async function checkTally(): Promise<TallyStatus & { _raw: string }> {
   try {
-    // Filter to ONLY the currently active company using $$IsCurrentCompany
-    // This avoids picking a background company when multiple are open in Tally
-    const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_CurComp</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_CurComp" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom</FETCH><FILTER>FP_IsCurrent</FILTER></COLLECTION><SYSTEM TYPE="Formulae" NAME="FP_IsCurrent">$$IsCurrentCompany:$Name</SYSTEM></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-    const res = await fetch("http://localhost:7001", {
-      method: "POST", headers: { "Content-Type": "text/xml" }, body: xml,
+    const port = typeof window !== "undefined" ? (localStorage.getItem("fw_tally_port") ?? "7001") : "7001";
+    const url = `http://localhost:${port}`;
+    const res = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "text/xml" }, body: TALLY_CURRENT_COMPANY_XML,
       signal: AbortSignal.timeout(3000),
     });
     const text = await res.text();
-    let parsed = parseTallyCompanyName(text);
-    // Fallback: if filter returned nothing (older Tally versions), try without filter
-    if (!parsed) {
-      const xmlAll = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Companies" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-      const res2 = await fetch("http://localhost:7001", {
-        method: "POST", headers: { "Content-Type": "text/xml" }, body: xmlAll,
-        signal: AbortSignal.timeout(3000),
-      });
-      parsed = parseTallyCompanyName(await res2.text());
-    }
+    // Primary: <CURRENTCOMPANY> tag from $$CurrentCompany system function
+    const parsed = (text.match(/<CURRENTCOMPANY[^>]*>([^<]+)<\/CURRENTCOMPANY>/i) ?? [])[1]?.trim()
+      ?? parseTallyCompanyName(text);
     const stored = typeof window !== "undefined" ? localStorage.getItem("fw_tally_company") ?? "" : "";
-    const company = parsed.length >= 2 ? parsed : (stored.length >= 2 ? stored : "Tally");
-    if (parsed.length >= 2 && parsed !== stored) {
+    const company = parsed?.length >= 2 ? parsed : (stored.length >= 2 ? stored : "Tally");
+    if (parsed?.length >= 2 && parsed !== stored) {
       try { localStorage.setItem("fw_tally_company", parsed); } catch { /* */ }
     }
-    return { state: "connected", company, _raw: text.slice(0, 600) };
+    return { state: "connected", company, _raw: text.slice(0, 800) };
   } catch (e) {
     return { state: "disconnected", company: "", _raw: String(e) };
   }

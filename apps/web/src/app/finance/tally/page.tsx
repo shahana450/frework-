@@ -79,15 +79,16 @@ function buildVoucherXML(journals: {
 
 // ── Parse company name from any Tally XML response ───────────────────────────
 
+const TALLY_CURCOMP_XML = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Data</TYPE><ID>FP_CurInfo</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><REPORT NAME="FP_CurInfo"><FORMS>FP_CIF</FORMS></REPORT><FORM NAME="FP_CIF"><PARTS>FP_CIP</PARTS></FORM><PART NAME="FP_CIP"><LINES>FP_CIL</LINES></PART><LINE NAME="FP_CIL"><FIELDS>FP_CIComp,FP_CIStart</FIELDS></LINE><FIELD NAME="FP_CIComp"><SET>$$CurrentCompany</SET><XMLTAG>CURRENTCOMPANY</XMLTAG></FIELD><FIELD NAME="FP_CIStart"><SET>$$CurrentCompanyStartDate</SET><XMLTAG>CURRENTCOMPANYSTART</XMLTAG></FIELD></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+
 function extractCompanyName(xml: string): string {
-  // Try SVCURRENTCOMPANY first — only set on current-company-filtered responses
+  // Primary: $$CurrentCompany system function output
   const patterns = [
+    /<CURRENTCOMPANY[^>]*>([^<]+)<\/CURRENTCOMPANY>/i,
     /<SVCURRENTCOMPANY[^>]*>([^<]+)<\/SVCURRENTCOMPANY>/i,
     /<COMPANYNAME[^>]*>([^<]+)<\/COMPANYNAME>/i,
     /<BASICCOMPANYNAME[^>]*>([^<]+)<\/BASICCOMPANYNAME>/i,
-    // attribute anywhere in COMPANY tag (other attrs may come before NAME)
     /<COMPANY[^>]+NAME="([^"]+)"/i,
-    // NAME child inside COMPANY (may be wrapped in NAME.LIST)
     /<COMPANY[^>]*>(?:(?!<\/COMPANY>)[\s\S]){0,400}<NAME[^>]*>([^<]{2,})<\/NAME>/i,
   ];
   for (const re of patterns) {
@@ -275,8 +276,7 @@ export default function TallyPage() {
         setTallyPort(storedPort);
         // Silently test connection in background
         try {
-          const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_CurComp</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_CurComp" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom,EndingAt</FETCH><FILTER>FP_IsCurrent</FILTER></COLLECTION><SYSTEM TYPE="Formulae" NAME="FP_IsCurrent">$$IsCurrentCompany:$Name</SYSTEM></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-          const res = await fetch(`http://localhost:${storedPort}`, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(3000) });
+          const res = await fetch(`http://localhost:${storedPort}`, { method: "POST", headers: { "Content-Type": "text/xml" }, body: TALLY_CURCOMP_XML, signal: AbortSignal.timeout(3000) });
           if (res.ok) {
             const txt = await res.text();
             const found = extractCompanyName(txt);
@@ -565,8 +565,8 @@ export default function TallyPage() {
   async function testConnection() {
     setConnStatus("connecting"); setConnMsg(""); setSyncResult(null); setRawDebug("");
     try {
-      // Fetch CURRENT company only using $$IsCurrentCompany filter
-      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_CurComp</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_CurComp" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name,CompanyName,StartingFrom,EndingAt</FETCH><FILTER>FP_IsCurrent</FILTER></COLLECTION><SYSTEM TYPE="Formulae" NAME="FP_IsCurrent">$$IsCurrentCompany:$Name</SYSTEM></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+      // Use $$CurrentCompany TDL Report — always returns the active company
+      const xml = TALLY_CURCOMP_XML;
       const res = await fetch(tallyUrl, {
         method: "POST",
         headers: { "Content-Type": "text/xml" },
@@ -584,7 +584,8 @@ export default function TallyPage() {
         localStorage.setItem("fw_tally_port", tallyPort);
 
         // Parse Tally's current period dates (format: YYYYMMDD or DD-Mon-YYYY)
-        const startMatch = text.match(/<STARTINGFROM[^>]*>([^<]+)<\/STARTINGFROM>/i)
+        const startMatch = text.match(/<CURRENTCOMPANYSTART[^>]*>([^<]+)<\/CURRENTCOMPANYSTART>/i)
+          ?? text.match(/<STARTINGFROM[^>]*>([^<]+)<\/STARTINGFROM>/i)
           ?? text.match(/<STARTDATE[^>]*>([^<]+)<\/STARTDATE>/i);
         // endMatch reserved for future use
         void (text.match(/<ENDINGAT[^>]*>([^<]+)<\/ENDINGAT>/i)
