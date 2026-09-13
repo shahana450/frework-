@@ -382,21 +382,24 @@ export default function FrePilotDashboard() {
       const vNum = v.voucherNumber?.trim();
       const tallyLabel = vNum ? `${v.voucherType} ${vNum}` : `${v.voucherType}-${seq}`;
       const entryNo = `TLY-${tallyLabel}`;
-      if (existingEntryNos.has(entryNo)) { skipped++; continue; }
-
       const fpType = typeMap[v.voucherType] ?? "journal";
       const totalDr = v.lines.filter(l => l.isDeemed).reduce((s,l) => s+l.amount, 0);
       const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s,l) => s+l.amount, 0);
       const narration = v.narration || tallyLabel;
-      const { data: jRow, error: jErr } = await supabase.from("fw_fin_journals").insert({
+      // upsert on (business_id, entry_no) — DB unique constraint blocks duplicates at source
+      const { data: jRow, error: jErr } = await supabase.from("fw_fin_journals").upsert({
         business_id: activeBiz.id, financial_year_id: activeFy?.id ?? null,
         entry_no: entryNo, date: v.date, narration, type: fpType,
         status: "posted", total_debit: totalDr||totalCr, total_credit: totalCr||totalDr,
         reference_no: vNum || null,
-      }).select("id").single();
+      }, { onConflict: "business_id,entry_no", ignoreDuplicates: false }).select("id").single();
       if (jErr || !jRow) { skipped++; continue; }
       const lines = v.lines.map(l => { const acc = accountMap.get(l.ledgerName.toLowerCase()); if (!acc) return null; return { journal_id: jRow.id, account_id: acc.id, description: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }; }).filter(Boolean);
       if (lines.length > 0) {
+        // Delete old lines first (upsert may have matched existing journal) then re-insert
+        if (existingEntryNos.has(entryNo)) {
+          await supabase.from("fw_fin_journal_lines").delete().eq("journal_id", jRow.id);
+        }
         await supabase.from("fw_fin_journal_lines").insert(lines as {journal_id:string;account_id:string;description:string;dr_amount:number;cr_amount:number}[]);
         imported++; if (!vNum) seq++; existingEntryNos.add(entryNo);
       } else { await supabase.from("fw_fin_journals").delete().eq("id", jRow.id); skipped++; }
