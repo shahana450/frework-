@@ -559,7 +559,10 @@ export default function FrePilotDashboard() {
                       <span style={{ fontWeight: 800, fontSize: "0.92rem", color: "#34D399" }}>Tally · {tally.company}</span>
                       <span style={{ fontSize: "0.65rem", color: "rgba(52,211,153,0.5)", fontWeight: 600 }}>LIVE</span>
                     </div>
-                    <Link href="/finance/tally" style={{ fontSize: "0.72rem", color: "rgba(52,211,153,0.5)", textDecoration: "none", fontWeight: 600 }}>Advanced settings →</Link>
+                    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                      <Link href="/finance/chat-book" style={{ fontSize: "0.72rem", color: "rgba(201,168,76,0.7)", textDecoration: "none", fontWeight: 600, padding: "3px 10px", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 6, background: "rgba(201,168,76,0.05)" }}>🤖 AI Bookkeeper</Link>
+                      <Link href="/finance/tally" style={{ fontSize: "0.72rem", color: "rgba(52,211,153,0.5)", textDecoration: "none", fontWeight: 600 }}>Advanced settings →</Link>
+                    </div>
                   </div>
 
                   {/* Buttons */}
