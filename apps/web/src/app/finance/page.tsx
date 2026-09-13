@@ -194,21 +194,33 @@ export default function FrePilotDashboard() {
     const posted = journals.filter(j => j.status === "posted");
     const postedIds = posted.map(j => j.id);
 
-    // 3. Revenue = credits on income accounts (matches Tally "Sales Accounts" group total)
-    //    Expenses = debits on expense accounts (matches Tally "Purchase/Expense Accounts")
-    //    Fetch journal_lines for all posted journals, aggregate by account type
+    // 3. Revenue & expenses via journal_lines + account names/types
+    //    Matches Tally's P&L: aggregates by ledger group, not voucher type
     let salesRev = 0, expTotal = 0;
     if (postedIds.length > 0) {
       const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts")
-        .select("id,type").eq("business_id", bizId);
-      const accTypeMap = new Map((accounts ?? []).map(a => [a.id, a.type as string]));
+        .select("id,name,type").eq("business_id", bizId);
+      const accMap = new Map((accounts ?? []).map(a => [a.id, { type: a.type as string, name: (a.name as string).toLowerCase() }]));
+      // Classify by type field first; fall back to name heuristic for Tally imports
+      const isIncome = (id: string) => {
+        const a = accMap.get(id);
+        if (!a) return false;
+        if (a.type === "income") return true;
+        // Tally "Sales Accounts" group — name heuristic
+        return a.type === "sales" || a.name.includes("sales") || a.name.includes("export") || a.name.includes("revenue");
+      };
+      const isExpense = (id: string) => {
+        const a = accMap.get(id);
+        if (!a) return false;
+        if (a.type === "expense") return true;
+        return a.name.includes("purchase") || a.name.includes("direct exp") || a.name.includes("indirect exp");
+      };
       for (let i = 0; i < postedIds.length; i += 200) {
         const { data: lines } = await supabase.from("fw_fin_journal_lines")
           .select("account_id,dr_amount,cr_amount").in("journal_id", postedIds.slice(i, i + 200));
         for (const l of lines ?? []) {
-          const t = accTypeMap.get(l.account_id) ?? "";
-          if (t === "income")  salesRev  += (l.cr_amount || 0);
-          if (t === "expense") expTotal  += (l.dr_amount || 0);
+          if (isIncome(l.account_id))  salesRev  += (l.cr_amount || 0);
+          if (isExpense(l.account_id)) expTotal  += (l.dr_amount || 0);
         }
       }
     }
@@ -406,10 +418,20 @@ export default function FrePilotDashboard() {
 
     const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", activeBiz.id);
     const accountMap = new Map((accounts ?? []).map(a => [a.name.toLowerCase(), a]));
+    // Build a map of ledger name → voucher type context to infer account type correctly
+    const ledgerVoucherContext = new Map<string, string>();
+    for (const v of allVouchers) for (const l of v.lines) ledgerVoucherContext.set(l.ledgerName, v.voucherType);
     const missing = new Set<string>();
     for (const v of allVouchers) for (const l of v.lines) if (!accountMap.has(l.ledgerName.toLowerCase())) missing.add(l.ledgerName);
     if (missing.size) {
-      const newAcc = Array.from(missing).map((name, i) => ({ business_id: activeBiz.id, code: `TI${String((accounts?.length ?? 0)+i+1).padStart(3,"0")}`, name, type: tallyParentToType(name), description: "From Tally", is_system: false, is_group: false, sort_order: (accounts?.length ?? 0)+i+1 }));
+      const newAcc = Array.from(missing).map((name, i) => {
+        const ctx = ledgerVoucherContext.get(name) ?? "";
+        // Use voucher type context: Sales voucher credit side → income; Purchase debit side → expense
+        let type: string = tallyParentToType(name);
+        if (ctx === "Sales" || ctx === "Credit Note") type = "income";
+        else if (ctx === "Purchase" || ctx === "Debit Note") type = "expense";
+        return { business_id: activeBiz.id, code: `TI${String((accounts?.length ?? 0)+i+1).padStart(3,"0")}`, name, type, description: "From Tally", is_system: false, is_group: false, sort_order: (accounts?.length ?? 0)+i+1 };
+      });
       const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAcc).select("id,name,type");
       for (const a of created ?? []) accountMap.set(a.name.toLowerCase(), a);
     }
