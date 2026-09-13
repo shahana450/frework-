@@ -117,19 +117,22 @@ export default function FrePilotDashboard() {
     return () => clearInterval(id);
   }, []);
 
+  // Auto-sync: at most once every 60 minutes per business, stored in localStorage
+  const AUTO_SYNC_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
   const autoSyncedRef = useRef(false);
   useEffect(() => {
     if (tally.state === "connected" && activeBiz && !tallySyncing && !autoSyncedRef.current) {
       autoSyncedRef.current = true;
-      const ssKey = `fw_tally_synced_${activeBiz.id}`;
-      if (!sessionStorage.getItem(ssKey)) {
-        sessionStorage.setItem(ssKey, "1");
+      const lsKey = `fw_tally_last_sync_${activeBiz.id}`;
+      const lastSync = parseInt(localStorage.getItem(lsKey) ?? "0", 10);
+      const elapsed = Date.now() - lastSync;
+      if (elapsed > AUTO_SYNC_COOLDOWN_MS) {
+        localStorage.setItem(lsKey, String(Date.now()));
         doImportVouchers(false);
       }
     }
-    if (tally.state !== "connected" && activeBiz) {
+    if (tally.state !== "connected") {
       autoSyncedRef.current = false;
-      sessionStorage.removeItem(`fw_tally_synced_${activeBiz.id}`);
     }
   }, [tally.state, activeBiz]);
 
@@ -158,24 +161,35 @@ export default function FrePilotDashboard() {
       : (tallyFyId ? allFys.find(f => f.id === tallyFyId) : undefined) ?? allFys.find(f => f.is_current) ?? allFys[0];
     if (activeFy) { setFyLabel(activeFy.label); setFyId(activeFy.id); }
 
-    // 2. Load journals filtered by DATE RANGE (not financial_year_id — Tally imports may have null FY)
-    let q = supabase.from("fw_fin_journals")
-      .select("type,status,total_credit,total_debit,date").eq("business_id", bizId).neq("status", "voided");
-    if (activeFy?.start_date) q = q.gte("date", activeFy.start_date);
-    if (activeFy?.end_date)   q = q.lte("date", activeFy.end_date);
-    const { data: allJournals } = await q;
-    const journals = allJournals ?? [];
+    // 2. Count journals by date range (for counts + drafts)
+    let jq = supabase.from("fw_fin_journals")
+      .select("type,status,date").eq("business_id", bizId).neq("status", "voided");
+    if (activeFy?.start_date) jq = jq.gte("date", activeFy.start_date);
+    if (activeFy?.end_date)   jq = jq.lte("date", activeFy.end_date);
+    const { data: jData } = await jq;
+    const journals = jData ?? [];
     const posted = journals.filter(j => j.status === "posted");
 
-    // 3. Revenue = ONLY sales-type vouchers (receipts are AR collections, not income)
-    const salesRev = posted
-      .filter(j => j.type === "sales")
-      .reduce((s, j) => s + (j.total_credit || j.total_debit || 0), 0);
+    // 3. Revenue & profit: query journal_lines joined with accounts by type
+    //    This is always accurate regardless of how total_debit/credit was stored
+    let lq = supabase.from("fw_fin_journal_lines")
+      .select("dr_amount, cr_amount, fw_fin_chart_of_accounts!inner(type), fw_fin_journals!inner(business_id, status, date, type)")
+      .eq("fw_fin_journals.business_id", bizId)
+      .eq("fw_fin_journals.status", "posted")
+      .neq("fw_fin_journals.type", "contra"); // exclude bank-to-bank transfers
+    if (activeFy?.start_date) lq = lq.gte("fw_fin_journals.date", activeFy.start_date);
+    if (activeFy?.end_date)   lq = lq.lte("fw_fin_journals.date", activeFy.end_date);
+    const { data: lines } = await lq;
+    const linesArr = (lines ?? []) as { dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { type: string }; fw_fin_journals: { type: string } }[];
 
-    // 4. Expenses = purchase + expense type only (NOT payment/journal — those are transfers)
-    const expTotal = posted
-      .filter(j => j.type === "purchase" || j.type === "expense")
-      .reduce((s, j) => s + (j.total_debit || j.total_credit || 0), 0);
+    // Revenue = total Cr on income accounts
+    const salesRev = linesArr
+      .filter(l => l.fw_fin_chart_of_accounts?.type === "income")
+      .reduce((s, l) => s + (l.cr_amount || 0), 0);
+    // Expenses = total Dr on expense accounts
+    const expTotal = linesArr
+      .filter(l => l.fw_fin_chart_of_accounts?.type === "expense")
+      .reduce((s, l) => s + (l.dr_amount || 0), 0);
 
     setStats({
       sales: posted.filter(j => j.type === "sales").length,
@@ -384,8 +398,10 @@ export default function FrePilotDashboard() {
         imported++; if (!vNum) seq++; existingEntryNos.add(entryNo);
       } else { await supabase.from("fw_fin_journals").delete().eq("id", jRow.id); skipped++; }
     }
+    // Update last-sync timestamp so auto-sync cooldown resets after a manual import
+    if (activeBiz) localStorage.setItem(`fw_tally_last_sync_${activeBiz.id}`, String(Date.now()));
     setTallySyncMsg({ ok: imported > 0, msg: imported > 0 ? `✓ Imported ${imported} voucher${imported!==1?"s":""}${skipped>0?` (${skipped} skipped, already existed)`:""}.` : `No new vouchers to import${skipped>0?` (${skipped} already existed)`:""}.` });
-    if (imported > 0 && activeBiz && user) loadStats(activeBiz.id, user.id, fyId);
+    if (activeBiz && user) loadStats(activeBiz.id, user.id, fyId);
     setTallySyncing(null); setTallySyncProgress(null);
   }, [activeBiz, tally.state, tallyUrl, fyId, user]);
 
