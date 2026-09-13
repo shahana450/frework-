@@ -180,15 +180,20 @@ export default function FrePilotDashboard() {
     if (activeFy?.start_date) lq = lq.gte("fw_fin_journals.date", activeFy.start_date);
     if (activeFy?.end_date)   lq = lq.lte("fw_fin_journals.date", activeFy.end_date);
     const { data: lines } = await lq;
-    const linesArr = (lines ?? []) as { dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { type: string }; fw_fin_journals: { type: string } }[];
+    type LineRow = { dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { type: string }[] | { type: string } | null };
+    const linesArr = (lines ?? []) as unknown as LineRow[];
+    const accType = (l: LineRow) => {
+      const a = l.fw_fin_chart_of_accounts;
+      return Array.isArray(a) ? a[0]?.type : (a as { type: string } | null)?.type ?? "";
+    };
 
     // Revenue = total Cr on income accounts
     const salesRev = linesArr
-      .filter(l => l.fw_fin_chart_of_accounts?.type === "income")
+      .filter(l => accType(l) === "income")
       .reduce((s, l) => s + (l.cr_amount || 0), 0);
     // Expenses = total Dr on expense accounts
     const expTotal = linesArr
-      .filter(l => l.fw_fin_chart_of_accounts?.type === "expense")
+      .filter(l => accType(l) === "expense")
       .reduce((s, l) => s + (l.dr_amount || 0), 0);
 
     setStats({
