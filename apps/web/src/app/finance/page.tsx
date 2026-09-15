@@ -235,33 +235,30 @@ export default function FrePilotDashboard() {
     const posted = journals.filter(j => j.status === "posted");
     const postedIds = posted.map(j => j.id);
 
-    // 3. Revenue & Net Profit via journal_lines — mirrors Tally P&L exactly
-    //    Revenue = net credit of all income/sales accounts (Sales A/c, Service Income, etc.)
-    //    Net Profit = Total Income − Total Expenses (all expense/purchase accounts)
-    let totalIncome = 0, totalExp = 0;
+    // 3. Revenue = sum of total_credit from sales-type journals (exact match to Tally "Sales Accounts")
+    //    Net Profit = Revenue − all expense-account debits (Purchase + Direct + Indirect Expenses)
+    //    Closing Stock / Opening Stock accounts excluded to avoid double-counting
+    const salesRev = posted
+      .filter(j => j.type === "sales")
+      .reduce((s, j) => s + (j.total_credit || j.total_debit || 0), 0);
+
+    let expTotal = 0;
     if (postedIds.length > 0) {
       const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts")
         .select("id,name,type").eq("business_id", bizId);
       const accMap = new Map((accounts ?? []).map(a => [a.id, { type: a.type as string, name: (a.name as string).toLowerCase() }]));
 
-      // Income: matches Tally "Sales Accounts" + "Income" groups
-      const isIncome = (id: string) => {
-        const a = accMap.get(id);
-        if (!a) return false;
-        if (a.type === "income" || a.type === "sales") return true;
-        const n = a.name;
-        return n.includes("sales") || n.includes("export") || n.includes("revenue") ||
-               n.includes("income") || n.includes("service") || n.includes("fees received") ||
-               n.includes("commission received") || n.includes("interest received") ||
-               n.includes("other income") || n.includes("misc income");
-      };
-
-      // Expense: matches Tally "Direct Expenses" + "Indirect Expenses" + "Purchase" groups
+      // Expense: type="expense" OR name-based fallback — explicitly exclude stock/asset accounts
       const isExpense = (id: string) => {
         const a = accMap.get(id);
         if (!a) return false;
-        if (a.type === "expense") return true;
         const n = a.name;
+        // Never count stock, asset, bank, cash, or tax-payable accounts as expense
+        if (n.includes("stock") || n.includes("asset") || n.includes("bank") ||
+            n.includes("cash") || n.includes("deposit") || n.includes("loan") ||
+            n.includes("payable") || n.includes("gst") || n.includes("tds payable") ||
+            n.includes("creditor") || n.includes("debtor") || n.includes("capital")) return false;
+        if (a.type === "expense") return true;
         return n.includes("purchase") || n.includes("direct exp") || n.includes("indirect exp") ||
                n.includes("expense") || n.includes("salary") || n.includes("wages") ||
                n.includes("rent") || n.includes("freight") || n.includes("transport") ||
@@ -274,10 +271,8 @@ export default function FrePilotDashboard() {
         const { data: lines } = await supabase.from("fw_fin_journal_lines")
           .select("account_id,dr_amount,cr_amount").in("journal_id", postedIds.slice(i, i + 200));
         for (const l of lines ?? []) {
-          // Net credit for income (cr − dr handles sales returns / credit notes)
-          if (isIncome(l.account_id))  totalIncome += (l.cr_amount || 0) - (l.dr_amount || 0);
-          // Net debit for expenses (dr − cr handles purchase returns / expense reversals)
-          if (isExpense(l.account_id)) totalExp    += (l.dr_amount || 0) - (l.cr_amount || 0);
+          // Net debit for expenses (dr − cr handles purchase returns / reversals)
+          if (isExpense(l.account_id)) expTotal += (l.dr_amount || 0) - (l.cr_amount || 0);
         }
       }
     }
@@ -287,8 +282,8 @@ export default function FrePilotDashboard() {
       expenses: posted.filter(j => j.type === "purchase" || j.type === "expense").length,
       drafts: journals.filter(j => j.status === "draft").length,
       pendingTds: 0,
-      revenue: totalIncome,
-      profit: totalIncome - totalExp,
+      revenue: salesRev,
+      profit: salesRev - expTotal,
     });
     setLoading(false);
   }
