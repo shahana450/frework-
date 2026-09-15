@@ -134,14 +134,24 @@ export default function AuditPage() {
       .eq("business_id", bid).eq("status", "posted").order("date");
     if (fyRow?.start_date) jq = jq.gte("date", fyRow.start_date);
     if (fyRow?.end_date)   jq = jq.lte("date", fyRow.end_date);
-    const [jRes, lRes, aRes] = await Promise.all([
+    const [jRes, aRes] = await Promise.all([
       jq,
-      supabase.from("fw_fin_journal_lines").select("id,journal_id,account_id,description,dr_amount,cr_amount").eq("business_id", bid),
       supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bid),
     ]);
-    setJournals(jRes.data ?? []);
-    setLines(lRes.data ?? []);
+    const journalData = jRes.data ?? [];
+    setJournals(journalData);
     setAccounts(aRes.data ?? []);
+
+    // Fetch lines by journal IDs (journal_lines has no business_id column)
+    const jIds = journalData.map(j => j.id);
+    const allLines: JournalLine[] = [];
+    for (let i = 0; i < jIds.length; i += 200) {
+      const { data: batch } = await supabase.from("fw_fin_journal_lines")
+        .select("id,journal_id,account_id,description,dr_amount,cr_amount")
+        .in("journal_id", jIds.slice(i, i + 200));
+      allLines.push(...(batch ?? []));
+    }
+    setLines(allLines);
     setLoading(false);
   }
 
