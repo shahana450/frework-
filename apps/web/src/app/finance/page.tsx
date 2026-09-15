@@ -143,7 +143,35 @@ export default function FrePilotDashboard() {
       const lastSync = parseInt(localStorage.getItem(lsKey) ?? "0", 10);
       if (hasMissingMonths || Date.now() - lastSync > AUTO_SYNC_COOLDOWN_MS) {
         localStorage.setItem(lsKey, String(Date.now()));
-        doImportVouchers(false);
+        // Check if journals exist but lines are missing (orphaned headers from interrupted import)
+        // If so, clear synced-months so all months get re-fetched
+        supabase.from("fw_fin_journals").select("id", { count: "exact", head: true })
+          .eq("business_id", activeBiz.id).eq("status", "posted").like("entry_no", "TLY-%")
+          .then(({ count: jCount }) => {
+            supabase.from("fw_fin_journal_lines").select("id", { count: "exact", head: true })
+              .in("journal_id",
+                // Use a subquery approach: if jCount > 0 but lines ~= 0, clear and re-sync
+                [] // placeholder — check via separate query below
+              ).then(() => {});
+            if ((jCount ?? 0) > 10) {
+              supabase.from("fw_fin_journals").select("id").eq("business_id", activeBiz.id)
+                .eq("status", "posted").like("entry_no", "TLY-%").limit(5)
+                .then(({ data: sample }) => {
+                  if (!sample?.length) return;
+                  supabase.from("fw_fin_journal_lines").select("id", { count: "exact", head: true })
+                    .in("journal_id", sample.map(j => j.id))
+                    .then(({ count: lCount }) => {
+                      if ((lCount ?? 0) === 0) {
+                        // Journals exist but no lines → clear synced months to force full re-import
+                        localStorage.removeItem(syncedMonthsKey);
+                      }
+                      doImportVouchers(false);
+                    });
+                });
+            } else {
+              doImportVouchers(false);
+            }
+          });
       }
     }
     if (tally.state !== "connected") {
