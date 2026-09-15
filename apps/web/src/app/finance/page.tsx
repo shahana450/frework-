@@ -56,7 +56,7 @@ async function checkTally(): Promise<TallyStatus & { _raw: string }> {
 
 
 type Business = { id: string; name: string; gstin: string | null; gst_registration_type: string; state: string | null };
-type Stats = { sales: number; expenses: number; drafts: number; pendingTds: number; revenue: number; profit: number };
+type Stats = { sales: number; expenses: number; drafts: number; pendingTds: number; revenue: number; profit: number; tallyLive?: boolean };
 
 const QUICK = [
   { icon: "🧾", label: "New Invoice",    href: "/finance/sales/new",     color: "#F59E0B" },
@@ -203,6 +203,40 @@ export default function FrePilotDashboard() {
     loadStats(biz.id, uid);
   }
 
+  // Fetch revenue & net profit DIRECTLY from Tally closing balances — exact P&L mirror
+  async function fetchTallyPL(fromDate: string, toDate: string): Promise<{ revenue: number; profit: number } | null> {
+    try {
+      const fd = fromDate.replace(/-/g, ""), td = toDate.replace(/-/g, "");
+      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_PLBals</ID></HEADER><BODY><DESC><STATICVARIABLES><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_PLBals" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent,ClosingBalance</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(15000) });
+      const text = await res.text();
+      // Parse: <LEDGER NAME="Sales Accounts"><PARENT>...</PARENT><CLOSINGBALANCE>1234.56 Cr</CLOSINGBALANCE></LEDGER>
+      let revenue = 0, totalExp = 0;
+      const ledgerRe = /<LEDGER\s+NAME="([^"]+)"[^>]*>([\s\S]*?)<\/LEDGER>/gi;
+      let m: RegExpExecArray | null;
+      while ((m = ledgerRe.exec(text)) !== null) {
+        const block = m[2];
+        const parent = (block.match(/<PARENT[^>]*>([^<]*)<\/PARENT>/i) ?? [])[1]?.trim() ?? "";
+        const balRaw = (block.match(/<CLOSINGBALANCE[^>]*>([^<]*)<\/CLOSINGBALANCE>/i) ?? [])[1]?.trim() ?? "";
+        if (!balRaw) continue;
+        // Tally format: "31143466400.00 Cr" or "-100.00 Dr"
+        const parts = balRaw.split(/\s+/);
+        const amt = Math.abs(parseFloat(parts[0].replace(/,/g, "")) || 0);
+        const side = (parts[1] ?? "").toUpperCase(); // "CR" or "DR"
+        const acType = tallyParentToType(parent);
+        if (acType === "income") {
+          // Income ledger: credit balance = revenue; debit = negative (returns)
+          revenue += side === "CR" ? amt : -amt;
+        } else if (acType === "expense") {
+          // Expense ledger: debit balance = cost; credit = negative (expense returns)
+          totalExp += side === "DR" ? amt : -amt;
+        }
+      }
+      if (revenue === 0) return null; // Tally returned nothing useful
+      return { revenue, profit: revenue - totalExp };
+    } catch { return null; }
+  }
+
   async function loadStats(bizId: string, uid: string, selectedFyId?: string | null) {
     setLoading(true);
     void uid;
@@ -289,13 +323,21 @@ export default function FrePilotDashboard() {
       }
     }
 
+    // Try to get exact Revenue & Net Profit from Tally directly (live closing balances)
+    let finalRev = salesRev, finalProfit = salesRev - expTotal, tallyLive = false;
+    if (tally.state === "connected" && activeFy?.start_date && activeFy?.end_date) {
+      const live = await fetchTallyPL(activeFy.start_date, activeFy.end_date);
+      if (live) { finalRev = live.revenue; finalProfit = live.profit; tallyLive = true; }
+    }
+
     setStats({
       sales: posted.filter(j => j.type === "sales").length,
       expenses: posted.filter(j => j.type === "purchase" || j.type === "expense").length,
       drafts: journals.filter(j => j.status === "draft").length,
       pendingTds: 0,
-      revenue: salesRev,
-      profit: salesRev - expTotal,
+      revenue: finalRev,
+      profit: finalProfit,
+      tallyLive,
     });
     setLoading(false);
   }
@@ -700,7 +742,7 @@ export default function FrePilotDashboard() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.85rem", marginBottom: "1.75rem" }}>
                 {[
-                  { label: "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#34D399", sub: `FY ${fyLabel}`, mono: true, href: "/finance/journals?type=sales,receipt&status=posted", cta: "View Transactions →" },
+                  { label: "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#34D399", sub: stats.tallyLive ? "🟢 Live from Tally" : `FY ${fyLabel}`, mono: true, href: "/finance/journals?type=sales,receipt&status=posted", cta: "View Transactions →" },
                   { label: "Net Profit", value: loading ? "—" : (stats.profit < 0 ? "−" : "") + fmt(stats.profit), color: stats.profit >= 0 ? "#34D399" : "#F87171", sub: stats.profit < 0 ? "Net loss" : "Net profit", mono: true, href: "/finance/audit", cta: "View P&L →" },
                   { label: "Sales Invoices", value: loading ? "—" : String(stats.sales), color: "#F59E0B", sub: "Posted entries", mono: false, href: "/finance/journals?type=sales&status=posted", cta: "View Invoices →" },
                   { label: "Draft Entries", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#FB923C" : "rgba(232,237,245,0.3)", sub: stats.drafts > 0 ? "Needs review" : "All clear", mono: false, alert: stats.drafts > 0, href: "/finance/journals?status=draft", cta: stats.drafts > 0 ? "Review Now →" : "View Journals →" },
