@@ -62,75 +62,205 @@ function isCashAccount(name: string): boolean {
   return false; // default: not cash — be conservative to avoid false positives
 }
 
+// Narration keyword hints for TDS applicability
+function tdsHint(narration: string, accNames: string[]): string | null {
+  const n = (narration + " " + accNames.join(" ")).toLowerCase();
+  if (/rent|lease|premises|property|space/.test(n)) return "Rent — TDS @10% u/s 194-I (IT Act 2025, Sch. IV)";
+  if (/professional|consultant|legal|audit|ca |cs |doctor|medical|architect|engineer/.test(n)) return "Professional fee — TDS @10% u/s 194-J (IT Act 2025, Sch. IV)";
+  if (/contract|labour|work|transport|freight|clearing|loading/.test(n)) return "Contractor — TDS @1-2% u/s 194-C (IT Act 2025, Sch. IV)";
+  if (/commission|brokerage|agent/.test(n)) return "Commission — TDS @5% u/s 194-H (IT Act 2025, Sch. IV)";
+  if (/interest/.test(n)) return "Interest — TDS @10% u/s 194-A (IT Act 2025, Sch. IV)";
+  if (/royalt/.test(n)) return "Royalty — TDS @10% u/s 194-J (IT Act 2025, Sch. IV)";
+  if (/salary|wages|payroll/.test(n)) return "Salary — TDS u/s 192 (IT Act 2025) — check Form 16";
+  return null;
+}
+
 function buildFlags(journals: Journal[], lines: JournalLine[], accounts: Account[]): Flag[] {
   const flags: Flag[] = [];
   const accMap = new Map(accounts.map(a => [a.id, a]));
 
-  // Build set of journal IDs that involve a cash ledger (for 269ST check)
+  // ── Pre-compute: cash involvement per journal ──────────────────────────────
   const cashJournalIds = new Set<string>();
-  // Also track the cash account name per journal for detail text
   const cashAccName = new Map<string, string>();
+  // Lines per journal for narration/account lookups
+  const linesByJournal = new Map<string, JournalLine[]>();
   for (const l of lines) {
     const acc = accMap.get(l.account_id);
     if (acc && isCashAccount(acc.name)) {
       cashJournalIds.add(l.journal_id);
-      cashAccName.set(l.journal_id, acc.name);
+      if (!cashAccName.has(l.journal_id)) cashAccName.set(l.journal_id, acc.name);
+    }
+    const arr = linesByJournal.get(l.journal_id) ?? []; arr.push(l); linesByJournal.set(l.journal_id, arr);
+  }
+
+  // ── Aggregate payments per ledger per month for TDS threshold breaches ─────
+  // payByAccMonth[accId][YYYY-MM] = total payment amount
+  const payByAccMonth = new Map<string, Map<string, number>>();
+  for (const j of journals) {
+    if (j.type !== "payment") continue;
+    const month = j.date.slice(0, 7);
+    for (const l of linesByJournal.get(j.id) ?? []) {
+      const acc = accMap.get(l.account_id);
+      if (!acc || acc.type !== "liability") continue; // vendor ledgers are liabilities
+      const byMonth = payByAccMonth.get(l.account_id) ?? new Map<string, number>();
+      byMonth.set(month, (byMonth.get(month) ?? 0) + l.dr_amount);
+      payByAccMonth.set(l.account_id, byMonth);
     }
   }
 
-  // Group by date to detect same-day duplicates
+  // ── Group by date for duplicate detection ──────────────────────────────────
   const byDate = new Map<string, Journal[]>();
   for (const j of journals) {
-    const k = j.date; const g = byDate.get(k) ?? []; g.push(j); byDate.set(k, g);
+    const g = byDate.get(j.date) ?? []; g.push(j); byDate.set(j.date, g);
   }
 
   for (const j of journals) {
     const amt = Math.max(j.total_debit, j.total_credit);
+    const jLines = linesByJournal.get(j.id) ?? [];
+    const jAccNames = jLines.map(l => accMap.get(l.account_id)?.name ?? "").filter(Boolean);
 
     // ── CRITICAL ────────────────────────────────────────────────────────────
     if (Math.abs(j.total_debit - j.total_credit) > 1)
       flags.push({ ...j, amount: amt, category: "critical", severity: "high",
-        reason: "DR/CR mismatch — double-entry broken",
-        detail: `Debit ₹${j.total_debit.toFixed(2)} ≠ Credit ₹${j.total_credit.toFixed(2)}`,
+        reason: "DR/CR mismatch — double-entry is broken",
+        detail: `Debit ₹${j.total_debit.toFixed(2)} ≠ Credit ₹${j.total_credit.toFixed(2)}. Violates fundamental accounting equation (AS-1 / Ind AS 1).`,
         action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
 
     if (j.total_debit === 0 && j.total_credit === 0)
       flags.push({ ...j, amount: 0, category: "critical", severity: "high",
-        reason: "Zero-amount entry — no financial effect",
+        reason: "Zero-amount entry — no financial effect recorded",
         action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
 
-    // ── COMPLIANCE ──────────────────────────────────────────────────────────
-    // Cash transactions > ₹2 lakh (Income Tax Act Section 269ST) — only flag genuine CASH entries
-    if (amt >= 200000 && (j.type === "receipt" || j.type === "payment" || j.type === "contra")
-        && cashJournalIds.has(j.id))
+    // ── INCOME TAX ACT 2025 ──────────────────────────────────────────────────
+    // Sec 269ST equivalent (Chapter XX-B restated in IT Act 2025):
+    // No person shall receive ≥ ₹2L in cash from a single person in a day/single transaction
+    if (amt >= 200000 && cashJournalIds.has(j.id) && (j.type === "receipt" || j.type === "payment" || j.type === "contra"))
       flags.push({ ...j, amount: amt, category: "compliance", severity: "high",
-        reason: "Cash transaction above ₹2 lakh — Sec 269ST violation risk",
-        detail: `Cash ledger: ${cashAccName.get(j.id) ?? "Cash"}. Sec 269ST prohibits cash receipts/payments ≥ ₹2L from a single person in a day. Bank transfers are exempt.`,
+        reason: "Cash transaction ≥ ₹2 lakh — IT Act 2025, Sec 269ST equivalent",
+        detail: `Cash ledger: ${cashAccName.get(j.id) ?? "Cash"}. Penalty = 100% of amount received. Exempt: Govt receipts, bank withdrawals, transactions through banking channel.`,
         action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
 
-    // TDS threshold: single payment > ₹30,000 to vendor (approximate check)
-    if (amt >= 30000 && j.type === "payment" && !j.reference_no)
-      flags.push({ ...j, amount: amt, category: "compliance", severity: "medium",
-        reason: "Payment ≥ ₹30k without bill reference — TDS applicability unverified",
-        detail: "Payments ≥ ₹30k may attract TDS under Sec 194C/194J. Verify TDS deduction.",
+    // Sec 40A(3) equivalent — cash payment ≥ ₹10k for business expense → not deductible
+    if (amt >= 10000 && cashJournalIds.has(j.id) && (j.type === "payment" || j.type === "expense"))
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "high",
+        reason: "Cash payment ≥ ₹10k for expense — disallowed u/s 40A(3) [IT Act 2025]",
+        detail: "Business expense paid in cash ≥ ₹10k is disallowed as deduction (100%). Exception: transport, agriculture, villages without banking facility.",
         action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
 
-    // Large payment without reference
-    if (amt >= 100000 && (j.type === "purchase") && !j.reference_no)
+    // Sec 269SS — cash loan/deposit accepted ≥ ₹20k
+    const narr = (j.narration ?? "").toLowerCase();
+    if (amt >= 20000 && cashJournalIds.has(j.id) && /loan|deposit|advance|borrow/.test(narr))
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "high",
+        reason: "Cash loan/deposit ≥ ₹20k — violates Sec 269SS [IT Act 2025]",
+        detail: "Accepting/giving loans/deposits in cash ≥ ₹20k attracts penalty equal to the amount. Must be routed through banking channel.",
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    // ── TDS CHECKS (IT Act 2025 / Old Act equivalent sections) ──────────────
+    // 194-C: Contractor payment ≥ ₹30k single / ₹1L aggregate
+    if (amt >= 30000 && (j.type === "payment") &&
+        /contract|labour|work order|transport|freight|clearing|loading|construction/.test(narr))
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "high",
+        reason: "Contractor payment ≥ ₹30k — TDS @1-2% u/s 194-C [IT Act 2025, Sch. IV]",
+        detail: `Individual/HUF: 1%, Others: 2%. Aggregate threshold: ₹1L/year per contractor. Verify TDS deducted & deposited by 7th of next month.`,
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    // 194-J: Professional fees ≥ ₹30k
+    if (amt >= 30000 && (j.type === "payment") &&
+        /professional|consultant|legal|audit|ca |cs |doctor|medical|architect|engineer|software|technical/.test(narr))
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "high",
+        reason: "Professional fee ≥ ₹30k — TDS @10% u/s 194-J [IT Act 2025, Sch. IV]",
+        detail: "TDS @10% (2% for technical services). Deposit by 7th of next month. Issue Form 16A within 15 days of due date of quarterly TDS return.",
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    // 194-I: Rent ≥ ₹50k/month
+    if (amt >= 50000 && (j.type === "payment") && /rent|lease|premises|property|space|shop|office/.test(narr))
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "high",
+        reason: "Rent ≥ ₹50k/month — TDS @10% u/s 194-I [IT Act 2025, Sch. IV]",
+        detail: "Plant & machinery: 2%, Land/building/furniture: 10%. Deposit by 30th Apr for Mar quarter, 7th of next month otherwise.",
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    // 194-H: Commission/brokerage ≥ ₹15k
+    if (amt >= 15000 && (j.type === "payment") && /commission|brokerage|agency|agent/.test(narr))
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "high",
+        reason: "Commission/brokerage ≥ ₹15k — TDS @5% u/s 194-H [IT Act 2025, Sch. IV]",
+        detail: "TDS @5% on commission/brokerage payments. Threshold ₹15k per year per payee.",
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    // 194-A: Interest (non-bank) ≥ ₹5k / bank ≥ ₹40k
+    if (amt >= 5000 && (j.type === "payment") && /interest/.test(narr))
       flags.push({ ...j, amount: amt, category: "compliance", severity: "medium",
-        reason: "Purchase ≥ ₹1L with no bill reference number",
-        detail: "ITC claim may be denied without valid vendor invoice reference.",
+        reason: "Interest payment — TDS @10% u/s 194-A [IT Act 2025, Sch. IV]",
+        detail: "Non-bank interest: TDS if ≥ ₹5k/year. Bank/post office: TDS if ≥ ₹40k/year (₹50k for seniors). Rate: 10%.",
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    // Generic payment ≥ ₹30k without reference — check TDS applicability
+    if (amt >= 30000 && j.type === "payment" && !j.reference_no) {
+      const hint = tdsHint(j.narration ?? "", jAccNames);
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "medium",
+        reason: "Payment ≥ ₹30k without bill reference — verify TDS applicability",
+        detail: hint ?? "Cross-check against TDS sections 192/194A/194C/194I/194J (IT Act 2025, Schedule IV). Deposit TDS by 7th of next month.",
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+    }
+
+    // ── GST CHECKS ───────────────────────────────────────────────────────────
+    // E-invoice mandatory for turnover >₹5Cr — sales ≥ ₹2L without reference
+    if (amt >= 200000 && j.type === "sales" && !j.reference_no)
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "high",
+        reason: "Sales ≥ ₹2L with no invoice reference — e-Invoice IRN missing?",
+        detail: "For turnover >₹5Cr, e-Invoice is mandatory (CGST Rule 48(4)). Without valid IRN, ITC for buyer is blocked & penalty u/s 122 CGST may apply.",
         action: "Add Reference", actionHref: `/finance/journals?id=${j.id}` });
+
+    // Credit note without original reference
+    if (j.type === "credit_note" && !j.reference_no)
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "medium",
+        reason: "Credit note without original invoice reference — GST CGST Rule 53",
+        detail: "Credit note must reference the original tax invoice (CGST Rule 53). Without reference, ITC reversal by buyer is ambiguous.",
+        action: "Add Reference", actionHref: `/finance/journals?id=${j.id}` });
+
+    // Debit note without reference
+    if (j.type === "debit_note" && !j.reference_no)
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "medium",
+        reason: "Debit note without original invoice reference — CGST Rule 53",
+        action: "Add Reference", actionHref: `/finance/journals?id=${j.id}` });
+
+    // Purchase without reference — ITC claim at risk
+    if (amt >= 100000 && j.type === "purchase" && !j.reference_no)
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "medium",
+        reason: "Purchase ≥ ₹1L without bill reference — ITC claim at risk",
+        detail: "ITC can only be claimed against a valid tax invoice (Sec 16 CGST Act). Without bill reference, ITC is not available.",
+        action: "Add Reference", actionHref: `/finance/journals?id=${j.id}` });
+
+    // ── ACCOUNTING STANDARDS (AS / Ind AS) ──────────────────────────────────
+    // AS-9 / Ind AS 115: Revenue recognition — sales recorded without reference suggests advance
+    if (j.type === "sales" && amt >= 100000 && /advance|deposit|booking|token/.test(narr))
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "medium",
+        reason: "Advance receipt recorded as Sales — revenue recognition issue (Ind AS 115)",
+        detail: "Advance receipts should be credited to 'Advance from Customers' (liability), not revenue. Revenue recognised only when performance obligation is satisfied.",
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    // AS-2 / Ind AS 2: Stock/inventory adjustments without purchase entry
+    if (/stock adjustment|inventory|closing stock|opening stock/.test(narr) && j.type === "journal")
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "medium",
+        reason: "Stock adjustment entry — verify valuation basis (AS-2 / Ind AS 2)",
+        detail: "Inventory must be valued at lower of cost or net realisable value. FIFO/weighted average method must be consistent (AS-2, Ind AS 2)." });
+
+    // AS-16 / Ind AS 23: Capitalisation of borrowing costs
+    if (/interest/.test(narr) && j.type === "journal" && /capital|wip|asset|building|plant/.test(narr))
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "low",
+        reason: "Interest may be capitalisable — review under AS-16 / Ind AS 23",
+        detail: "Borrowing costs directly attributable to acquisition/construction of a qualifying asset must be capitalised (Ind AS 23)." });
 
     // ── DOCUMENTATION ───────────────────────────────────────────────────────
     if (!j.narration || j.narration.trim().length < 3)
       flags.push({ ...j, amount: amt, category: "documentation", severity: "medium",
-        reason: "Missing narration — entry is not self-explanatory",
+        reason: "Missing narration — entry not self-explanatory (AS-1 disclosure requirement)",
+        detail: "AS-1 (Disclosure of Accounting Policies) requires all entries to have adequate narration for audit trail.",
         action: "Add Narration", actionHref: `/finance/journals?id=${j.id}` });
 
     if ((j.type === "sales" || j.type === "purchase") && !j.reference_no)
       flags.push({ ...j, amount: amt, category: "documentation", severity: "medium",
-        reason: `${j.type === "sales" ? "Sales" : "Purchase"} entry has no invoice reference number`,
+        reason: `${j.type === "sales" ? "Sales" : "Purchase"} entry without invoice number — incomplete books`,
+        detail: "Every sales/purchase must reference the invoice number for GST matching (GSTR-1 vs GSTR-2B) and audit trail.",
         action: "Add Reference", actionHref: `/finance/journals?id=${j.id}` });
 
     // ── TIMING ──────────────────────────────────────────────────────────────
@@ -141,8 +271,8 @@ function buildFlags(journals: Journal[], lines: JournalLine[], accounts: Account
 
     if (j.date?.endsWith("-03-31") || j.date?.endsWith("-03-30"))
       flags.push({ ...j, amount: amt, category: "timing", severity: "medium",
-        reason: "Year-end entry — review for cut-off compliance",
-        detail: "Entries on 31 Mar / 30 Mar should be checked for proper period accrual." });
+        reason: "Year-end entry — review cut-off compliance (AS-1 / Ind AS 1)",
+        detail: "Entries on 30-31 Mar should reflect accrual-basis cut-off. Verify goods/services actually received/delivered before FY end." });
 
     if (j.date?.endsWith("-04-01") || j.date?.endsWith("-04-02"))
       flags.push({ ...j, amount: amt, category: "timing", severity: "low",
@@ -152,7 +282,7 @@ function buildFlags(journals: Journal[], lines: JournalLine[], accounts: Account
     if (isRoundNumber(amt))
       flags.push({ ...j, amount: amt, category: "pattern", severity: "low",
         reason: "Round-number amount — possible estimate or provisional entry",
-        detail: "Exact round figures (multiples of ₹1,000+) may indicate estimates rather than actuals." });
+        detail: "Exact round figures (multiples of ₹1,000+) may indicate estimates rather than actuals. Verify with supporting documents." });
 
     // Same-day same-amount duplicate check
     const sameDay = (byDate.get(j.date) ?? []).filter(x => x.id !== j.id && Math.max(x.total_debit, x.total_credit) === amt && x.type === j.type);
