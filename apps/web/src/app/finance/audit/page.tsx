@@ -49,8 +49,34 @@ const fmtDec = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { mini
 function isRoundNumber(n: number) { return n >= 10000 && n % 1000 === 0; }
 function isWeekend(d: string) { const day = new Date(d).getDay(); return day === 0 || day === 6; }
 
-function buildFlags(journals: Journal[]): Flag[] {
+// Returns true if an account name looks like a cash ledger (not bank)
+function isCashAccount(name: string): boolean {
+  const n = name.toLowerCase();
+  // Explicit cash indicators
+  if (/\bcash\b/.test(n) || n.includes("petty cash") || n.includes("cash in hand") || n.includes("cash at hand")) return true;
+  // Bank indicators — if any of these, it is NOT cash
+  const bankKeywords = ["bank", "hdfc", "sbi", "icici", "axis", "kotak", "yes bank", "pnb", "canara", "union bank",
+    "indian bank", "uco", "central bank", "idbi", "indusind", "rbl", "federal", "current a/c",
+    "savings a/c", "od a/c", "cc a/c", "overdraft", "neft", "rtgs", "imps"];
+  if (bankKeywords.some(k => n.includes(k))) return false;
+  return false; // default: not cash — be conservative to avoid false positives
+}
+
+function buildFlags(journals: Journal[], lines: JournalLine[], accounts: Account[]): Flag[] {
   const flags: Flag[] = [];
+  const accMap = new Map(accounts.map(a => [a.id, a]));
+
+  // Build set of journal IDs that involve a cash ledger (for 269ST check)
+  const cashJournalIds = new Set<string>();
+  // Also track the cash account name per journal for detail text
+  const cashAccName = new Map<string, string>();
+  for (const l of lines) {
+    const acc = accMap.get(l.account_id);
+    if (acc && isCashAccount(acc.name)) {
+      cashJournalIds.add(l.journal_id);
+      cashAccName.set(l.journal_id, acc.name);
+    }
+  }
 
   // Group by date to detect same-day duplicates
   const byDate = new Map<string, Journal[]>();
@@ -74,11 +100,12 @@ function buildFlags(journals: Journal[]): Flag[] {
         action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
 
     // ── COMPLIANCE ──────────────────────────────────────────────────────────
-    // Cash transactions > ₹2 lakh (Income Tax Act Section 269ST limit)
-    if (amt >= 200000 && (j.type === "receipt" || j.type === "payment" || j.type === "contra"))
+    // Cash transactions > ₹2 lakh (Income Tax Act Section 269ST) — only flag genuine CASH entries
+    if (amt >= 200000 && (j.type === "receipt" || j.type === "payment" || j.type === "contra")
+        && cashJournalIds.has(j.id))
       flags.push({ ...j, amount: amt, category: "compliance", severity: "high",
-        reason: "Cash txn above ₹2 lakh — Sec 269ST violation risk",
-        detail: "Income Tax Act prohibits cash receipts/payments ≥ ₹2L from a single party in a day.",
+        reason: "Cash transaction above ₹2 lakh — Sec 269ST violation risk",
+        detail: `Cash ledger: ${cashAccName.get(j.id) ?? "Cash"}. Sec 269ST prohibits cash receipts/payments ≥ ₹2L from a single person in a day. Bank transfers are exempt.`,
         action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
 
     // TDS threshold: single payment > ₹30,000 to vendor (approximate check)
@@ -268,7 +295,7 @@ export default function AuditPage() {
   }, []);
 
   const journalIds = new Set(journals.map(j => j.id));
-  const flags = buildFlags(journals);
+  const flags = buildFlags(journals, lines, accounts);
   const tb = buildTrialBalance(accounts, lines, journalIds);
   const pl = buildPL(tb);
   const bs = buildBS(tb, pl.netProfit);
