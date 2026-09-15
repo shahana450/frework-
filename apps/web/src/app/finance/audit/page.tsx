@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
@@ -7,51 +7,153 @@ import Link from "next/link";
 type Journal = {
   id: string; entry_no: string; date: string; narration: string;
   type: string; status: string; total_debit: number; total_credit: number;
-  financial_year_id: string | null;
+  financial_year_id: string | null; reference_no: string | null;
 };
 type JournalLine = {
   id: string; journal_id: string; account_id: string; narration: string;
   dr_amount: number; cr_amount: number;
-  account?: { name: string; type: string };
 };
 type Account = { id: string; name: string; type: string };
-type Flag = { id: string; entry_no: string; date: string; narration: string; type: string; amount: number; reason: string; severity: "high" | "medium" | "low" };
 
-const fmt = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2 });
-const sevColor: Record<string, string> = { high: "#F87171", medium: "#FBBF24", low: "#60A5FA" };
-const sevBg: Record<string, string>    = { high: "rgba(248,113,113,0.08)", medium: "rgba(251,191,36,0.08)", low: "rgba(96,165,250,0.08)" };
+// ─── Audit flag categories ───────────────────────────────────────────────────
+type FlagCategory =
+  | "critical"     // DR/CR mismatch, data integrity
+  | "compliance"   // Cash >2L, TDS threshold, GST
+  | "documentation"// Missing narration, no reference on sales/purchase
+  | "timing"       // Weekend, year-end, outside FY
+  | "pattern"      // Round number, duplicate amount same day
+  | "review";      // Large txn, negative asset balance
+
+type Flag = {
+  id: string; entry_no: string; date: string; narration: string;
+  type: string; amount: number;
+  reason: string; detail?: string;
+  category: FlagCategory;
+  severity: "high" | "medium" | "low";
+  action?: string;   // label for the quick-action button
+  actionHref?: string; // link if action is navigate
+};
+
+const CAT_META: Record<FlagCategory, { label: string; icon: string; color: string; bg: string; border: string }> = {
+  critical:      { label: "Critical",       icon: "🔴", color: "#F87171", bg: "rgba(248,113,113,0.07)", border: "rgba(248,113,113,0.25)" },
+  compliance:    { label: "Compliance",     icon: "⚖️",  color: "#FB923C", bg: "rgba(251,146,60,0.07)",  border: "rgba(251,146,60,0.25)"  },
+  documentation: { label: "Documentation", icon: "📋", color: "#FBBF24", bg: "rgba(251,191,36,0.07)",  border: "rgba(251,191,36,0.25)"  },
+  timing:        { label: "Timing",         icon: "🕐", color: "#A78BFA", bg: "rgba(167,139,250,0.07)", border: "rgba(167,139,250,0.25)" },
+  pattern:       { label: "Pattern",        icon: "🔁", color: "#60A5FA", bg: "rgba(96,165,250,0.07)",  border: "rgba(96,165,250,0.25)"  },
+  review:        { label: "Review",         icon: "🔍", color: "#34D399", bg: "rgba(52,211,153,0.07)",  border: "rgba(52,211,153,0.25)"  },
+};
+
+const fmt = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const fmtDec = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
 function isRoundNumber(n: number) { return n >= 10000 && n % 1000 === 0; }
-function isWeekend(dateStr: string) { const d = new Date(dateStr); return d.getDay() === 0 || d.getDay() === 6; }
+function isWeekend(d: string) { const day = new Date(d).getDay(); return day === 0 || day === 6; }
 
 function buildFlags(journals: Journal[]): Flag[] {
   const flags: Flag[] = [];
+
+  // Group by date to detect same-day duplicates
+  const byDate = new Map<string, Journal[]>();
+  for (const j of journals) {
+    const k = j.date; const g = byDate.get(k) ?? []; g.push(j); byDate.set(k, g);
+  }
+
   for (const j of journals) {
     const amt = Math.max(j.total_debit, j.total_credit);
-    // Round number (possible splitting / adjustment)
-    if (isRoundNumber(amt)) flags.push({ ...j, amount: amt, reason: "Round number amount — possible estimate or cash adjustment", severity: "medium" });
-    // Weekend transaction
-    if (isWeekend(j.date)) flags.push({ ...j, amount: amt, reason: "Transaction on weekend — verify if authorised", severity: "low" });
-    // No narration
-    if (!j.narration || j.narration.trim().length < 3) flags.push({ ...j, amount: amt, reason: "Missing narration — not self-explanatory", severity: "low" });
-    // Very large transaction (> 5 lakh)
-    if (amt >= 500000) flags.push({ ...j, amount: amt, reason: "Large transaction above ₹5 lakh — verify approval", severity: "high" });
-    // Debit-credit mismatch
-    if (Math.abs(j.total_debit - j.total_credit) > 1) flags.push({ ...j, amount: amt, reason: `DR/CR mismatch: DR ₹${j.total_debit.toFixed(2)} ≠ CR ₹${j.total_credit.toFixed(2)}`, severity: "high" });
-    // Year-end entries (March 31 / March 30)
-    if (j.date?.endsWith("-03-31") || j.date?.endsWith("-03-30")) flags.push({ ...j, amount: amt, reason: "Year-end entry — review for cut-off compliance", severity: "medium" });
+
+    // ── CRITICAL ────────────────────────────────────────────────────────────
+    if (Math.abs(j.total_debit - j.total_credit) > 1)
+      flags.push({ ...j, amount: amt, category: "critical", severity: "high",
+        reason: "DR/CR mismatch — double-entry broken",
+        detail: `Debit ₹${j.total_debit.toFixed(2)} ≠ Credit ₹${j.total_credit.toFixed(2)}`,
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    if (j.total_debit === 0 && j.total_credit === 0)
+      flags.push({ ...j, amount: 0, category: "critical", severity: "high",
+        reason: "Zero-amount entry — no financial effect",
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    // ── COMPLIANCE ──────────────────────────────────────────────────────────
+    // Cash transactions > ₹2 lakh (Income Tax Act Section 269ST limit)
+    if (amt >= 200000 && (j.type === "receipt" || j.type === "payment" || j.type === "contra"))
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "high",
+        reason: "Cash txn above ₹2 lakh — Sec 269ST violation risk",
+        detail: "Income Tax Act prohibits cash receipts/payments ≥ ₹2L from a single party in a day.",
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    // TDS threshold: single payment > ₹30,000 to vendor (approximate check)
+    if (amt >= 30000 && j.type === "payment" && !j.reference_no)
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "medium",
+        reason: "Payment ≥ ₹30k without bill reference — TDS applicability unverified",
+        detail: "Payments ≥ ₹30k may attract TDS under Sec 194C/194J. Verify TDS deduction.",
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    // Large payment without reference
+    if (amt >= 100000 && (j.type === "purchase") && !j.reference_no)
+      flags.push({ ...j, amount: amt, category: "compliance", severity: "medium",
+        reason: "Purchase ≥ ₹1L with no bill reference number",
+        detail: "ITC claim may be denied without valid vendor invoice reference.",
+        action: "Add Reference", actionHref: `/finance/journals?id=${j.id}` });
+
+    // ── DOCUMENTATION ───────────────────────────────────────────────────────
+    if (!j.narration || j.narration.trim().length < 3)
+      flags.push({ ...j, amount: amt, category: "documentation", severity: "medium",
+        reason: "Missing narration — entry is not self-explanatory",
+        action: "Add Narration", actionHref: `/finance/journals?id=${j.id}` });
+
+    if ((j.type === "sales" || j.type === "purchase") && !j.reference_no)
+      flags.push({ ...j, amount: amt, category: "documentation", severity: "medium",
+        reason: `${j.type === "sales" ? "Sales" : "Purchase"} entry has no invoice reference number`,
+        action: "Add Reference", actionHref: `/finance/journals?id=${j.id}` });
+
+    // ── TIMING ──────────────────────────────────────────────────────────────
+    if (isWeekend(j.date))
+      flags.push({ ...j, amount: amt, category: "timing", severity: "low",
+        reason: "Transaction on weekend — confirm authorisation",
+        detail: new Date(j.date).toLocaleDateString("en-IN", { weekday: "long", day: "2-digit", month: "short", year: "numeric" }) });
+
+    if (j.date?.endsWith("-03-31") || j.date?.endsWith("-03-30"))
+      flags.push({ ...j, amount: amt, category: "timing", severity: "medium",
+        reason: "Year-end entry — review for cut-off compliance",
+        detail: "Entries on 31 Mar / 30 Mar should be checked for proper period accrual." });
+
+    if (j.date?.endsWith("-04-01") || j.date?.endsWith("-04-02"))
+      flags.push({ ...j, amount: amt, category: "timing", severity: "low",
+        reason: "FY opening entry — verify opening balance treatment" });
+
+    // ── PATTERN ─────────────────────────────────────────────────────────────
+    if (isRoundNumber(amt))
+      flags.push({ ...j, amount: amt, category: "pattern", severity: "low",
+        reason: "Round-number amount — possible estimate or provisional entry",
+        detail: "Exact round figures (multiples of ₹1,000+) may indicate estimates rather than actuals." });
+
+    // Same-day same-amount duplicate check
+    const sameDay = (byDate.get(j.date) ?? []).filter(x => x.id !== j.id && Math.max(x.total_debit, x.total_credit) === amt && x.type === j.type);
+    if (sameDay.length > 0)
+      flags.push({ ...j, amount: amt, category: "pattern", severity: "medium",
+        reason: `Possible duplicate — ${sameDay.length} other ${j.type} of same amount on same date`,
+        detail: `Matching: ${sameDay.map(x => x.entry_no).join(", ")}`,
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
+
+    // ── REVIEW ──────────────────────────────────────────────────────────────
+    if (amt >= 500000)
+      flags.push({ ...j, amount: amt, category: "review", severity: "high",
+        reason: "Large transaction above ₹5 lakh — verify approval chain",
+        action: "View Entry", actionHref: `/finance/journals?id=${j.id}` });
   }
-  // Deduplication by id + reason to avoid double flags
+
+  // Dedup by id+reason
   const seen = new Set<string>();
   return flags.filter(f => { const k = f.id + f.reason; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
 type TrialRow = { name: string; type: string; dr: number; cr: number; balance: number };
 
-function buildTrialBalance(accounts: Account[], lines: JournalLine[]): TrialRow[] {
+function buildTrialBalance(accounts: Account[], lines: JournalLine[], journalIds: Set<string>): TrialRow[] {
   const map = new Map<string, TrialRow>();
   for (const a of accounts) map.set(a.id, { name: a.name, type: a.type, dr: 0, cr: 0, balance: 0 });
   for (const l of lines) {
+    if (!journalIds.has(l.journal_id)) continue;
     const row = map.get(l.account_id);
     if (!row) continue;
     row.dr += l.dr_amount || 0;
@@ -60,25 +162,21 @@ function buildTrialBalance(accounts: Account[], lines: JournalLine[]): TrialRow[
   return Array.from(map.values()).map(r => ({ ...r, balance: r.dr - r.cr })).filter(r => r.dr > 0 || r.cr > 0).sort((a,b) => a.name.localeCompare(b.name));
 }
 
-type PLSummary = { revenue: number; cogs: number; grossProfit: number; expenses: number; netProfit: number; rows: TrialRow[] };
+type PLSummary = { revenue: number; cogs: number; grossProfit: number; expenses: number; netProfit: number };
 
 function buildPL(tb: TrialRow[]): PLSummary {
-  const incomeTypes = ["income", "sales"];
-  const cogsTypes = ["cost_of_goods"];
-  const expTypes = ["expense"];
-  const revenue = tb.filter(r => incomeTypes.includes(r.type)).reduce((s,r) => s + Math.abs(r.cr - r.dr), 0);
-  const cogs = tb.filter(r => cogsTypes.includes(r.type)).reduce((s,r) => s + Math.abs(r.dr - r.cr), 0);
-  const expenses = tb.filter(r => expTypes.includes(r.type)).reduce((s,r) => s + Math.abs(r.dr - r.cr), 0);
-  return { revenue, cogs, grossProfit: revenue - cogs, expenses, netProfit: revenue - cogs - expenses, rows: tb };
+  const revenue  = tb.filter(r => ["income","sales"].includes(r.type)).reduce((s,r) => s + Math.abs(r.cr - r.dr), 0);
+  const cogs     = tb.filter(r => r.type === "cost_of_goods").reduce((s,r) => s + Math.abs(r.dr - r.cr), 0);
+  const expenses = tb.filter(r => r.type === "expense").reduce((s,r) => s + Math.abs(r.dr - r.cr), 0);
+  return { revenue, cogs, grossProfit: revenue - cogs, expenses, netProfit: revenue - cogs - expenses };
 }
 
 type BSSummary = {
   assets: TrialRow[]; fixedAssets: TrialRow[];
   liabilities: TrialRow[]; loans: TrialRow[]; taxes: TrialRow[];
-  equity: TrialRow[]; retainedEarnings: number;
+  equity: TrialRow[];
   totalAssets: number; totalLiabEq: number;
 };
-
 function buildBS(tb: TrialRow[], netProfit: number): BSSummary {
   const assets      = tb.filter(r => ["asset","bank","cash"].includes(r.type)).map(r => ({ ...r, balance: r.dr - r.cr }));
   const fixedAssets = tb.filter(r => r.type === "fixed_asset").map(r => ({ ...r, balance: r.dr - r.cr }));
@@ -88,7 +186,7 @@ function buildBS(tb: TrialRow[], netProfit: number): BSSummary {
   const equity      = tb.filter(r => r.type === "equity").map(r => ({ ...r, balance: r.cr - r.dr }));
   const totalAssets = [...assets, ...fixedAssets].reduce((s,r) => s + r.balance, 0);
   const totalLiabEq = [...liabilities, ...loans, ...taxes, ...equity].reduce((s,r) => s + r.balance, 0) + netProfit;
-  return { assets, fixedAssets, liabilities, loans, taxes, equity, retainedEarnings: netProfit, totalAssets, totalLiabEq };
+  return { assets, fixedAssets, liabilities, loans, taxes, equity, totalAssets, totalLiabEq };
 }
 
 export default function AuditPage() {
@@ -102,8 +200,17 @@ export default function AuditPage() {
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [fyId, setFyId] = useState<string | null>(null);
   const [fys, setFys] = useState<{ id: string; label: string }[]>([]);
+  // Flag filtering + reviewed state
+  const [filterCat, setFilterCat] = useState<FlagCategory | "all">("all");
+  const [filterSev, setFilterSev] = useState<"all" | "high" | "medium" | "low">("all");
+  const [reviewed, setReviewed] = useState<Set<string>>(new Set());
+  const [showReviewed, setShowReviewed] = useState(false);
+  const [tbSearch, setTbSearch] = useState("");
 
   useEffect(() => {
+    const saved2 = typeof window !== "undefined" ? (localStorage.getItem("fw_audit_reviewed") ?? "[]") : "[]";
+    try { setReviewed(new Set(JSON.parse(saved2))); } catch { /* */ }
+
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
       const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
@@ -111,18 +218,15 @@ export default function AuditPage() {
       setBizId(saved);
       const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id,label,is_current,start_date").eq("business_id", saved).order("start_date", { ascending: false });
       const tallyFyId = localStorage.getItem("fw_tally_fy_id") ?? "";
-      // Derive current Indian FY start (Apr-Mar) from today's date as reliable fallback
       const now = new Date();
-      const curFyStart = now.getMonth() >= 3
-        ? `${now.getFullYear()}-04-01`
-        : `${now.getFullYear() - 1}-04-01`;
+      const curFyStart = now.getMonth() >= 3 ? `${now.getFullYear()}-04-01` : `${now.getFullYear() - 1}-04-01`;
       const cur = (tallyFyId ? fysData?.find(f => f.id === tallyFyId) : undefined)
         ?? fysData?.find(f => f.start_date === curFyStart)
         ?? fysData?.find(f => f.is_current)
         ?? fysData?.[0];
       setFys(fysData?.map(f => ({ id: f.id, label: f.label })) ?? []);
       if (cur) { setFyId(cur.id); await loadData(saved, cur.id); }
-      else { setLoading(false); }
+      else setLoading(false);
     });
   }, []);
 
@@ -130,54 +234,78 @@ export default function AuditPage() {
     setLoading(true);
     const { data: fyRow } = await supabase.from("fw_fin_financial_years").select("start_date,end_date").eq("id", fid).single();
     let jq = supabase.from("fw_fin_journals")
-      .select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id")
+      .select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id,reference_no")
       .eq("business_id", bid).eq("status", "posted").order("date");
     if (fyRow?.start_date) jq = jq.gte("date", fyRow.start_date);
     if (fyRow?.end_date)   jq = jq.lte("date", fyRow.end_date);
-    const [jRes, aRes] = await Promise.all([
-      jq,
-      supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bid),
-    ]);
-    const journalData = jRes.data ?? [];
+    const [jRes, aRes] = await Promise.all([jq, supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bid)]);
+    const journalData: Journal[] = jRes.data ?? [];
     setJournals(journalData);
     setAccounts(aRes.data ?? []);
-
-    // Fetch lines by journal IDs (journal_lines has no business_id column)
     const jIds = journalData.map(j => j.id);
     const allLines: JournalLine[] = [];
     for (let i = 0; i < jIds.length; i += 200) {
       const { data: batch } = await supabase.from("fw_fin_journal_lines")
-        .select("id,journal_id,account_id,narration,dr_amount,cr_amount")
-        .in("journal_id", jIds.slice(i, i + 200));
+        .select("id,journal_id,account_id,narration,dr_amount,cr_amount").in("journal_id", jIds.slice(i, i + 200));
       allLines.push(...(batch ?? []));
     }
     setLines(allLines);
     setLoading(false);
   }
 
-  async function switchFy(fid: string) {
+  const switchFy = useCallback(async (fid: string) => {
     setFyId(fid);
     if (bizId) await loadData(bizId, fid);
-  }
+  }, [bizId]);
 
+  const markReviewed = useCallback((key: string) => {
+    setReviewed(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      try { localStorage.setItem("fw_audit_reviewed", JSON.stringify([...next])); } catch { /* */ }
+      return next;
+    });
+  }, []);
+
+  const journalIds = new Set(journals.map(j => j.id));
   const flags = buildFlags(journals);
-  const tb = buildTrialBalance(accounts, lines.filter(l => journals.some(j => j.id === l.journal_id)));
+  const tb = buildTrialBalance(accounts, lines, journalIds);
   const pl = buildPL(tb);
   const bs = buildBS(tb, pl.netProfit);
 
+  // Filter flags
+  const visibleFlags = flags.filter(f => {
+    const key = f.id + f.reason;
+    if (!showReviewed && reviewed.has(key)) return false;
+    if (filterCat !== "all" && f.category !== filterCat) return false;
+    if (filterSev !== "all" && f.severity !== filterSev) return false;
+    return true;
+  });
+
+  // Category breakdown for sidebar
+  const catCounts = Object.keys(CAT_META).reduce<Record<string, { total: number; unreviewed: number }>>((acc, c) => {
+    const all = flags.filter(f => f.category === c);
+    acc[c] = { total: all.length, unreviewed: all.filter(f => !reviewed.has(f.id + f.reason)).length };
+    return acc;
+  }, {} as Record<string, { total: number; unreviewed: number }>);
+
+  const unreviewedCount = flags.filter(f => !reviewed.has(f.id + f.reason)).length;
+  const criticalCount   = flags.filter(f => f.category === "critical" && !reviewed.has(f.id + f.reason)).length;
+  const complianceCount = flags.filter(f => f.category === "compliance" && !reviewed.has(f.id + f.reason)).length;
+
   const tabs = [
-    { key: "overview", label: "Overview" },
-    { key: "flags", label: `⚑ Flags (${flags.length})` },
-    { key: "trial_balance", label: "Trial Balance" },
-    { key: "pl", label: "P&L" },
-    { key: "balance_sheet", label: "Balance Sheet" },
-    { key: "ledger", label: "Ledger View" },
+    { key: "overview",       label: "Overview" },
+    { key: "flags",          label: `⚑ Findings${unreviewedCount > 0 ? ` (${unreviewedCount})` : ""}` },
+    { key: "trial_balance",  label: "Trial Balance" },
+    { key: "pl",             label: "P&L" },
+    { key: "balance_sheet",  label: "Balance Sheet" },
+    { key: "ledger",         label: "Ledger" },
   ];
 
   const inp: React.CSSProperties = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#E8EDF5", padding: "5px 10px", borderRadius: 7, fontSize: "0.8rem", fontFamily: "inherit", outline: "none", cursor: "pointer" };
-
-  const ledgerLines = selectedAccount ? lines.filter(l => l.account_id === selectedAccount && journals.some(j => j.id === l.journal_id)) : [];
+  const ledgerLines = selectedAccount ? lines.filter(l => l.account_id === selectedAccount && journalIds.has(l.journal_id)) : [];
   const ledgerJournals = new Map(journals.map(j => [j.id, j]));
+  const filteredTb = tb.filter(r => !tbSearch || r.name.toLowerCase().includes(tbSearch.toLowerCase()) || r.type.includes(tbSearch.toLowerCase()));
 
   return (
     <div style={{ minHeight: "100vh", background: "#050914", color: "#E8EDF5", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
@@ -185,13 +313,23 @@ export default function AuditPage() {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; }
         .au-card { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 1.25rem 1.4rem; }
-        .au-tab { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 0.82rem; font-weight: 600; padding: 8px 16px; border-radius: 8px; transition: all 0.15s; color: rgba(232,237,245,0.4); }
+        .au-tab { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 0.82rem; font-weight: 600; padding: 8px 14px; border-radius: 8px; transition: all 0.15s; color: rgba(232,237,245,0.4); white-space: nowrap; }
         .au-tab:hover { color: rgba(232,237,245,0.7); background: rgba(255,255,255,0.04); }
         .au-tab-active { color: #E8EDF5; background: rgba(255,255,255,0.08); }
         .au-tr:hover td { background: rgba(255,255,255,0.02); }
         td, th { padding: 0.45rem 0.85rem; }
-        select option { background: #0B1221; }
         .au-mono { font-family: 'IBM Plex Mono', monospace; }
+        select option { background: #0B1221; }
+        .au-flag { border-radius: 11px; padding: 0.9rem 1.05rem; transition: opacity 0.15s; }
+        .au-flag-reviewed { opacity: 0.4; }
+        .au-catbtn { background: none; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.75rem; font-weight: 600; padding: 5px 11px; transition: all 0.15s; color: rgba(232,237,245,0.45); display: flex; align-items: center; gap: 5px; }
+        .au-catbtn:hover { border-color: rgba(255,255,255,0.18); color: rgba(232,237,245,0.8); }
+        .au-catbtn-active { color: #E8EDF5 !important; }
+        .au-act { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 6px; border: none; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.15s; }
+        .au-act:hover { opacity: 0.8; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
       `}</style>
 
       {/* Nav */}
@@ -199,156 +337,297 @@ export default function AuditPage() {
         <Link href="/finance" style={{ color: "#60A5FA", fontWeight: 700, textDecoration: "none", fontSize: "0.88rem" }}>← Finance</Link>
         <span style={{ color: "rgba(255,255,255,0.15)" }}>›</span>
         <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Audit & Reports</span>
+        {criticalCount > 0 && (
+          <span style={{ fontSize: "0.65rem", fontWeight: 800, background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.3)", color: "#F87171", padding: "2px 9px", borderRadius: 20 }}>
+            {criticalCount} critical
+          </span>
+        )}
         <div style={{ flex: 1 }} />
         <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} style={inp}>
           {fys.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
         </select>
         <Link href="/finance/tally" style={{ fontSize: "0.78rem", color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", padding: "5px 12px", borderRadius: 7, textDecoration: "none", fontWeight: 600 }}>
-          ⬇ Sync from Tally
+          ⬇ Sync Tally
         </Link>
       </nav>
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "1.75rem 1.5rem" }}>
+      <div style={{ maxWidth: 1160, margin: "0 auto", padding: "1.75rem 1.5rem" }}>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: "0.3rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "0.25rem", marginBottom: "1.5rem", flexWrap: "wrap", overflowX: "auto" }}>
           {tabs.map(t => (
             <button key={t.key} onClick={() => setTab(t.key as typeof tab)} className={`au-tab${tab === t.key ? " au-tab-active" : ""}`}>{t.label}</button>
           ))}
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "4rem", color: "rgba(232,237,245,0.3)", fontSize: "0.88rem" }}>Loading data…</div>
+          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(232,237,245,0.3)", fontSize: "0.88rem" }}>
+            <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>⏳</div>Loading data…
+          </div>
         ) : journals.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem" }}>
-            <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>📭</div>
-            <div style={{ color: "rgba(232,237,245,0.4)", marginBottom: "1.5rem" }}>No transactions found. Sync from Tally first.</div>
+            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📭</div>
+            <div style={{ color: "rgba(232,237,245,0.4)", marginBottom: "1.5rem" }}>No transactions found for this FY. Sync from Tally first.</div>
             <Link href="/finance/tally" style={{ background: "#2563EB", color: "#fff", padding: "10px 24px", borderRadius: 9, textDecoration: "none", fontWeight: 700 }}>Go to Tally Bridge →</Link>
           </div>
         ) : (
 
           <>
-            {/* ── OVERVIEW ── */}
+            {/* ══ OVERVIEW ══════════════════════════════════════════════════ */}
             {tab === "overview" && (
-              <div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.85rem", marginBottom: "1.5rem" }}>
-                  {[
-                    { label: "Revenue", value: fmt(pl.revenue), color: "#34D399" },
-                    { label: "Net Profit", value: (pl.netProfit < 0 ? "−" : "") + fmt(pl.netProfit), color: pl.netProfit >= 0 ? "#34D399" : "#F87171" },
-                    { label: "Total Entries", value: String(journals.length), color: "#60A5FA" },
-                    { label: "Audit Flags", value: String(flags.length), color: flags.filter(f => f.severity === "high").length > 0 ? "#F87171" : "#FBBF24" },
-                  ].map(k => (
-                    <div key={k.label} className="au-card">
-                      <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.7rem" }}>{k.label}</div>
-                      <div style={{ fontSize: "1.4rem", fontWeight: 900, color: k.color, fontFamily: "'IBM Plex Mono',monospace", lineHeight: 1, marginBottom: "0.3rem" }}>{k.value}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Flag summary */}
-                {flags.length > 0 && (
-                  <div className="au-card" style={{ marginBottom: "1.25rem" }}>
-                    <div style={{ fontWeight: 700, marginBottom: "1rem", fontSize: "0.9rem" }}>⚑ Audit Flags Summary</div>
-                    <div style={{ display: "flex", gap: "0.75rem", marginBottom: "0.75rem" }}>
-                      {(["high","medium","low"] as const).map(sev => {
-                        const count = flags.filter(f => f.severity === sev).length;
-                        return count > 0 ? (
-                          <span key={sev} style={{ fontSize: "0.72rem", fontWeight: 700, color: sevColor[sev], background: sevBg[sev], padding: "3px 10px", borderRadius: 20, border: `1px solid ${sevColor[sev]}30` }}>
-                            {count} {sev}
-                          </span>
-                        ) : null;
-                      })}
-                    </div>
-                    <button onClick={() => setTab("flags")} style={{ fontSize: "0.78rem", color: "#60A5FA", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>View all flags →</button>
-                  </div>
-                )}
-
-                {/* Quick P&L */}
-                <div className="au-card" style={{ marginBottom: "1.25rem" }}>
-                  <div style={{ fontWeight: 700, marginBottom: "1rem", fontSize: "0.9rem", display: "flex", justifyContent: "space-between" }}>
-                    <span>Profit & Loss Summary</span>
-                    <button onClick={() => setTab("pl")} style={{ fontSize: "0.75rem", color: "#60A5FA", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>Full P&L →</button>
-                  </div>
-                  {[
-                    { label: "Revenue", val: pl.revenue, color: "#34D399" },
-                    { label: "Cost of Goods Sold", val: -pl.cogs, color: "#F87171" },
-                    { label: "Gross Profit", val: pl.grossProfit, color: "#60A5FA", bold: true },
-                    { label: "Operating Expenses", val: -pl.expenses, color: "#F87171" },
-                    { label: "Net Profit / Loss", val: pl.netProfit, color: pl.netProfit >= 0 ? "#34D399" : "#F87171", bold: true },
-                  ].map(r => (
-                    <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontWeight: r.bold ? 700 : 400, fontSize: r.bold ? "0.88rem" : "0.84rem" }}>
-                      <span style={{ color: "rgba(232,237,245,0.6)" }}>{r.label}</span>
-                      <span className="au-mono" style={{ color: r.color }}>{r.val < 0 ? "−" : ""}{fmt(r.val)}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Recent entries */}
-                <div className="au-card">
-                  <div style={{ fontWeight: 700, marginBottom: "1rem", fontSize: "0.9rem" }}>Recent Transactions</div>
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
-                      <thead><tr style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                        <th style={{ textAlign: "left" }}>Entry</th><th style={{ textAlign: "left" }}>Date</th><th style={{ textAlign: "left" }}>Type</th><th style={{ textAlign: "left" }}>Narration</th><th style={{ textAlign: "right" }}>Amount</th>
-                      </tr></thead>
-                      <tbody>
-                        {journals.slice(-10).reverse().map(j => (
-                          <tr key={j.id} className="au-tr" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                            <td className="au-mono" style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.72rem" }}>{j.entry_no}</td>
-                            <td style={{ color: "rgba(232,237,245,0.5)", whiteSpace: "nowrap" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</td>
-                            <td><span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#60A5FA", background: "rgba(96,165,250,0.1)", padding: "2px 8px", borderRadius: 20 }}>{j.type}</span></td>
-                            <td style={{ color: "rgba(232,237,245,0.6)", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
-                            <td className="au-mono" style={{ textAlign: "right", color: "#34D399" }}>{fmt(Math.max(j.total_debit, j.total_credit))}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── FLAGS ── */}
-            {tab === "flags" && (
-              <div>
-                <div style={{ marginBottom: "1rem", fontSize: "0.84rem", color: "rgba(232,237,245,0.4)" }}>{flags.length} audit observation{flags.length !== 1 ? "s" : ""} found</div>
-                {flags.length === 0 ? (
-                  <div className="au-card" style={{ textAlign: "center", padding: "3rem" }}>
-                    <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>✅</div>
-                    <div style={{ color: "rgba(232,237,245,0.5)" }}>No audit flags — all entries look clean.</div>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                    {flags.map((f, i) => (
-                      <div key={i} style={{ background: sevBg[f.severity], border: `1px solid ${sevColor[f.severity]}25`, borderLeft: `3px solid ${sevColor[f.severity]}`, borderRadius: 10, padding: "0.85rem 1rem" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
-                          <div>
-                            <span style={{ fontSize: "0.62rem", fontWeight: 700, color: sevColor[f.severity], textTransform: "uppercase", letterSpacing: "0.08em", marginRight: 8 }}>{f.severity}</span>
-                            <span style={{ fontSize: "0.82rem", color: "#E8EDF5", fontWeight: 600 }}>{f.reason}</span>
-                          </div>
-                          <span className="au-mono" style={{ fontSize: "0.84rem", fontWeight: 700, color: "#E8EDF5", flexShrink: 0 }}>{fmt(f.amount)}</span>
-                        </div>
-                        <div style={{ marginTop: "0.4rem", display: "flex", gap: "1rem", fontSize: "0.75rem", color: "rgba(232,237,245,0.35)" }}>
-                          <span className="au-mono">{f.entry_no}</span>
-                          <span>{new Date(f.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
-                          <span>{f.type}</span>
-                          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.narration}</span>
-                        </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.25rem", alignItems: "start" }}>
+                <div>
+                  {/* KPI row */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.75rem", marginBottom: "1.25rem" }}>
+                    {[
+                      { label: "Revenue",      value: fmt(pl.revenue),   color: "#34D399" },
+                      { label: "Net Profit",   value: (pl.netProfit < 0 ? "−" : "") + fmt(pl.netProfit), color: pl.netProfit >= 0 ? "#34D399" : "#F87171" },
+                      { label: "Total Entries",value: String(journals.length), color: "#60A5FA" },
+                      { label: "Open Findings",value: String(unreviewedCount), color: unreviewedCount > 0 ? (criticalCount > 0 ? "#F87171" : "#FBBF24") : "#34D399" },
+                    ].map(k => (
+                      <div key={k.label} className="au-card">
+                        <div style={{ fontSize: "0.57rem", color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.7rem" }}>{k.label}</div>
+                        <div style={{ fontSize: "1.35rem", fontWeight: 900, color: k.color, fontFamily: "'IBM Plex Mono',monospace", lineHeight: 1 }}>{k.value}</div>
                       </div>
                     ))}
                   </div>
-                )}
+
+                  {/* Quick P&L */}
+                  <div className="au-card" style={{ marginBottom: "1.1rem" }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "1rem", display: "flex", justifyContent: "space-between" }}>
+                      <span>Profit & Loss</span>
+                      <button onClick={() => setTab("pl")} style={{ ...inp, padding: "3px 10px", fontSize: "0.72rem" }}>Full P&L →</button>
+                    </div>
+                    {[
+                      { label: "Revenue",            val: pl.revenue,     color: "#34D399" },
+                      { label: "Cost of Goods Sold", val: -pl.cogs,       color: "#F87171" },
+                      { label: "Gross Profit",        val: pl.grossProfit, color: "#60A5FA", bold: true },
+                      { label: "Operating Expenses", val: -pl.expenses,   color: "#F87171" },
+                      { label: "Net Profit / Loss",  val: pl.netProfit,   color: pl.netProfit >= 0 ? "#34D399" : "#F87171", bold: true },
+                    ].map(r => (
+                      <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.38rem 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontWeight: r.bold ? 700 : 400, fontSize: r.bold ? "0.88rem" : "0.83rem" }}>
+                        <span style={{ color: "rgba(232,237,245,0.6)" }}>{r.label}</span>
+                        <span className="au-mono" style={{ color: r.color }}>{r.val < 0 ? "−" : ""}{fmt(r.val)}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Recent entries */}
+                  <div className="au-card">
+                    <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "1rem" }}>Recent Transactions</div>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+                        <thead><tr style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                          <th style={{ textAlign: "left" }}>Entry</th><th style={{ textAlign: "left" }}>Date</th><th style={{ textAlign: "left" }}>Type</th><th style={{ textAlign: "left" }}>Narration</th><th style={{ textAlign: "right" }}>Amount</th>
+                        </tr></thead>
+                        <tbody>
+                          {journals.slice(-10).reverse().map(j => (
+                            <tr key={j.id} className="au-tr" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                              <td className="au-mono" style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.7rem" }}>{j.entry_no}</td>
+                              <td style={{ color: "rgba(232,237,245,0.5)", whiteSpace: "nowrap" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</td>
+                              <td><span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#60A5FA", background: "rgba(96,165,250,0.1)", padding: "2px 7px", borderRadius: 20 }}>{j.type}</span></td>
+                              <td style={{ color: "rgba(232,237,245,0.6)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
+                              <td className="au-mono" style={{ textAlign: "right", color: "#34D399" }}>{fmt(Math.max(j.total_debit, j.total_credit))}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right sidebar: findings summary */}
+                <div>
+                  <div className="au-card" style={{ marginBottom: "1rem" }}>
+                    <div style={{ fontWeight: 800, fontSize: "0.88rem", marginBottom: "1rem" }}>
+                      Findings Summary
+                      {unreviewedCount > 0 && <span style={{ float: "right", fontSize: "0.72rem", color: "#F87171", fontWeight: 700 }}>{unreviewedCount} open</span>}
+                    </div>
+                    {(Object.keys(CAT_META) as FlagCategory[]).map(cat => {
+                      const c = CAT_META[cat]; const cnt = catCounts[cat];
+                      if (!cnt.total) return null;
+                      return (
+                        <div key={cat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.45rem 0", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                            <span style={{ fontSize: "0.85rem" }}>{c.icon}</span>
+                            <span style={{ fontSize: "0.8rem", color: "rgba(232,237,245,0.7)" }}>{c.label}</span>
+                          </div>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            {cnt.unreviewed > 0 && <span style={{ fontSize: "0.68rem", fontWeight: 800, color: c.color, background: c.bg, border: `1px solid ${c.border}`, padding: "1px 8px", borderRadius: 20 }}>{cnt.unreviewed}</span>}
+                            {cnt.unreviewed < cnt.total && <span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.25)" }}>+{cnt.total - cnt.unreviewed} done</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <button onClick={() => setTab("flags")} style={{ ...inp, marginTop: "0.85rem", width: "100%", textAlign: "center", padding: "8px", fontWeight: 700, fontSize: "0.78rem" }}>
+                      View All Findings →
+                    </button>
+                  </div>
+
+                  {/* Compliance alerts */}
+                  {complianceCount > 0 && (
+                    <div style={{ background: "rgba(251,146,60,0.07)", border: "1px solid rgba(251,146,60,0.25)", borderRadius: 11, padding: "0.85rem 1rem", marginBottom: "1rem" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#FB923C", marginBottom: "0.4rem" }}>⚖️ {complianceCount} Compliance Issue{complianceCount !== 1 ? "s" : ""}</div>
+                      <div style={{ fontSize: "0.72rem", color: "rgba(251,146,60,0.7)", lineHeight: 1.6 }}>Cash transactions, TDS thresholds, and GST compliance items need immediate attention.</div>
+                      <button onClick={() => { setFilterCat("compliance"); setTab("flags"); }} style={{ marginTop: "0.6rem", background: "rgba(251,146,60,0.15)", border: "1px solid rgba(251,146,60,0.3)", color: "#FB923C", padding: "4px 12px", borderRadius: 6, fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                        Review Compliance →
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Balance sheet balance indicator */}
+                  <div className="au-card">
+                    <div style={{ fontWeight: 700, fontSize: "0.82rem", marginBottom: "0.75rem" }}>Balance Sheet Check</div>
+                    {Math.abs(bs.totalAssets - bs.totalLiabEq) < 1 ? (
+                      <div style={{ fontSize: "0.8rem", color: "#34D399" }}>✓ Balanced — Assets = Liab + Equity</div>
+                    ) : (
+                      <div style={{ fontSize: "0.78rem", color: "#FBBF24", lineHeight: 1.6 }}>
+                        ⚠ Difference: {fmt(Math.abs(bs.totalAssets - bs.totalLiabEq))}<br />
+                        <span style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.7rem" }}>Some entries may have missing or unclassified accounts.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* ── TRIAL BALANCE ── */}
+            {/* ══ FINDINGS ══════════════════════════════════════════════════ */}
+            {tab === "flags" && (
+              <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "1.25rem", alignItems: "start" }}>
+
+                {/* Left: category filter sidebar */}
+                <div className="au-card" style={{ position: "sticky", top: 68 }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.82rem", marginBottom: "1rem", color: "rgba(232,237,245,0.6)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Categories</div>
+                  {/* All */}
+                  <button onClick={() => setFilterCat("all")} className={`au-catbtn${filterCat === "all" ? " au-catbtn-active" : ""}`}
+                    style={{ width: "100%", marginBottom: 4, ...(filterCat === "all" ? { background: "rgba(255,255,255,0.07)", borderColor: "rgba(255,255,255,0.2)" } : {}) }}>
+                    <span>🗂</span><span>All ({flags.filter(f => !reviewed.has(f.id+f.reason) || showReviewed).length})</span>
+                  </button>
+                  {(Object.keys(CAT_META) as FlagCategory[]).map(cat => {
+                    const c = CAT_META[cat]; const cnt = catCounts[cat];
+                    const isActive = filterCat === cat;
+                    return (
+                      <button key={cat} onClick={() => setFilterCat(cat)}
+                        className={`au-catbtn${isActive ? " au-catbtn-active" : ""}`}
+                        style={{ width: "100%", marginBottom: 4, justifyContent: "space-between",
+                          ...(isActive ? { background: c.bg, borderColor: c.border, color: c.color } : {}) }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span>{c.icon}</span><span>{c.label}</span></span>
+                        {cnt.unreviewed > 0 && <span style={{ fontSize: "0.65rem", fontWeight: 800, color: isActive ? c.color : "rgba(232,237,245,0.5)", background: isActive ? c.bg : "rgba(255,255,255,0.06)", padding: "1px 7px", borderRadius: 20, border: isActive ? `1px solid ${c.border}` : "1px solid transparent" }}>{cnt.unreviewed}</span>}
+                      </button>
+                    );
+                  })}
+
+                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: "0.85rem", paddingTop: "0.85rem" }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "rgba(232,237,245,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Severity</div>
+                    {(["all","high","medium","low"] as const).map(s => (
+                      <button key={s} onClick={() => setFilterSev(s)} className={`au-catbtn${filterSev === s ? " au-catbtn-active" : ""}`}
+                        style={{ width: "100%", marginBottom: 3, ...(filterSev === s && s !== "all" ? { color: s === "high" ? "#F87171" : s === "medium" ? "#FBBF24" : "#60A5FA", background: s === "high" ? "rgba(248,113,113,0.07)" : s === "medium" ? "rgba(251,191,36,0.07)" : "rgba(96,165,250,0.07)", borderColor: s === "high" ? "rgba(248,113,113,0.25)" : s === "medium" ? "rgba(251,191,36,0.25)" : "rgba(96,165,250,0.25)" } : filterSev === s ? { background: "rgba(255,255,255,0.07)", color: "#E8EDF5" } : {}) }}>
+                        {s === "all" ? "All severities" : `${s === "high" ? "🔴" : s === "medium" ? "🟡" : "🔵"} ${s.charAt(0).toUpperCase() + s.slice(1)}`}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: "0.85rem", paddingTop: "0.85rem" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: "0.78rem", color: "rgba(232,237,245,0.5)", cursor: "pointer" }}>
+                      <input type="checkbox" checked={showReviewed} onChange={e => setShowReviewed(e.target.checked)} style={{ accentColor: "#34D399" }} />
+                      Show reviewed
+                    </label>
+                    {reviewed.size > 0 && (
+                      <button onClick={() => { setReviewed(new Set()); localStorage.removeItem("fw_audit_reviewed"); }}
+                        style={{ marginTop: "0.5rem", fontSize: "0.7rem", color: "#F87171", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+                        Clear all reviews ({reviewed.size})
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right: flag cards */}
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
+                    <div style={{ fontSize: "0.82rem", color: "rgba(232,237,245,0.4)" }}>
+                      {visibleFlags.length} finding{visibleFlags.length !== 1 ? "s" : ""}
+                      {filterCat !== "all" && <span style={{ color: CAT_META[filterCat].color }}> · {CAT_META[filterCat].label}</span>}
+                    </div>
+                    {visibleFlags.length > 0 && (
+                      <button onClick={() => visibleFlags.forEach(f => markReviewed(f.id + f.reason))}
+                        style={{ fontSize: "0.72rem", color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}>
+                        ✓ Mark all reviewed
+                      </button>
+                    )}
+                  </div>
+
+                  {visibleFlags.length === 0 ? (
+                    <div className="au-card" style={{ textAlign: "center", padding: "3.5rem" }}>
+                      <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>✅</div>
+                      <div style={{ color: "rgba(232,237,245,0.5)", fontSize: "0.88rem" }}>
+                        {flags.length === 0 ? "No findings — all entries look clean." : "All findings reviewed for this filter."}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      {visibleFlags.map((f, i) => {
+                        const c = CAT_META[f.category];
+                        const key = f.id + f.reason;
+                        const isRev = reviewed.has(key);
+                        return (
+                          <div key={i} className={`au-flag${isRev ? " au-flag-reviewed" : ""}`}
+                            style={{ background: c.bg, border: `1px solid ${c.border}`, borderLeft: `3px solid ${c.color}` }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
+                              <div style={{ flex: 1 }}>
+                                {/* Category + severity badge */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.3rem" }}>
+                                  <span style={{ fontSize: "0.65rem", fontWeight: 800, color: c.color, textTransform: "uppercase", letterSpacing: "0.08em", background: c.bg, border: `1px solid ${c.border}`, padding: "1px 8px", borderRadius: 20 }}>{c.icon} {c.label}</span>
+                                  <span style={{ fontSize: "0.62rem", fontWeight: 700, color: f.severity === "high" ? "#F87171" : f.severity === "medium" ? "#FBBF24" : "#60A5FA", textTransform: "uppercase" }}>{f.severity}</span>
+                                </div>
+                                {/* Reason */}
+                                <div style={{ fontWeight: 700, fontSize: "0.84rem", color: "#E8EDF5", marginBottom: f.detail ? "0.2rem" : 0 }}>{f.reason}</div>
+                                {/* Detail */}
+                                {f.detail && <div style={{ fontSize: "0.73rem", color: "rgba(232,237,245,0.45)", lineHeight: 1.55 }}>{f.detail}</div>}
+                                {/* Meta row */}
+                                <div style={{ marginTop: "0.45rem", display: "flex", gap: "0.85rem", fontSize: "0.72rem", color: "rgba(232,237,245,0.35)", flexWrap: "wrap" }}>
+                                  <span className="au-mono">{f.entry_no}</span>
+                                  <span>{new Date(f.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                                  <span style={{ background: "rgba(96,165,250,0.1)", color: "#60A5FA", padding: "0px 6px", borderRadius: 20, fontWeight: 700 }}>{f.type}</span>
+                                  <span style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.narration}</span>
+                                </div>
+                              </div>
+                              {/* Amount + actions */}
+                              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
+                                <div className="au-mono" style={{ fontWeight: 800, color: "#E8EDF5", fontSize: "0.9rem" }}>{fmt(f.amount)}</div>
+                                <div style={{ display: "flex", gap: 5 }}>
+                                  {f.actionHref && (
+                                    <Link href={f.actionHref} className="au-act" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.color }}>
+                                      {f.action ?? "View"}
+                                    </Link>
+                                  )}
+                                  <button onClick={() => markReviewed(key)} className="au-act"
+                                    style={{ background: isRev ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.05)", border: isRev ? "1px solid rgba(52,211,153,0.3)" : "1px solid rgba(255,255,255,0.1)", color: isRev ? "#34D399" : "rgba(232,237,245,0.4)" }}>
+                                    {isRev ? "✓ Reviewed" : "Mark Reviewed"}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ══ TRIAL BALANCE ═════════════════════════════════════════════ */}
             {tab === "trial_balance" && (
               <div className="au-card">
-                <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "1rem" }}>Trial Balance</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>Trial Balance</div>
+                  <input value={tbSearch} onChange={e => setTbSearch(e.target.value)} placeholder="Search account…"
+                    style={{ ...inp, minWidth: 200 }} />
+                </div>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                     <thead>
-                      <tr style={{ background: "rgba(255,255,255,0.03)", color: "rgba(232,237,245,0.35)", fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                      <tr style={{ background: "rgba(255,255,255,0.03)", color: "rgba(232,237,245,0.35)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                         <th style={{ textAlign: "left" }}>Account</th>
                         <th style={{ textAlign: "left" }}>Type</th>
                         <th style={{ textAlign: "right" }}>Debit (₹)</th>
@@ -357,10 +636,11 @@ export default function AuditPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {tb.map(r => (
-                        <tr key={r.name} className="au-tr" style={{ borderTop: "1px solid rgba(255,255,255,0.04)", cursor: "pointer" }} onClick={() => { setSelectedAccount(accounts.find(a => a.name === r.name)?.id ?? null); setTab("ledger"); }}>
+                      {filteredTb.map(r => (
+                        <tr key={r.name} className="au-tr" style={{ borderTop: "1px solid rgba(255,255,255,0.04)", cursor: "pointer" }}
+                          onClick={() => { setSelectedAccount(accounts.find(a => a.name === r.name)?.id ?? null); setTab("ledger"); }}>
                           <td style={{ color: "#60A5FA", fontWeight: 500 }}>{r.name}</td>
-                          <td><span style={{ fontSize: "0.65rem", color: "rgba(232,237,245,0.35)", background: "rgba(255,255,255,0.04)", padding: "1px 7px", borderRadius: 20 }}>{r.type}</span></td>
+                          <td><span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.35)", background: "rgba(255,255,255,0.04)", padding: "1px 7px", borderRadius: 20 }}>{r.type}</span></td>
                           <td className="au-mono" style={{ textAlign: "right", color: r.dr > 0 ? "#E8EDF5" : "rgba(232,237,245,0.2)" }}>{r.dr > 0 ? fmt(r.dr) : "—"}</td>
                           <td className="au-mono" style={{ textAlign: "right", color: r.cr > 0 ? "#E8EDF5" : "rgba(232,237,245,0.2)" }}>{r.cr > 0 ? fmt(r.cr) : "—"}</td>
                           <td className="au-mono" style={{ textAlign: "right", color: r.balance >= 0 ? "#34D399" : "#F87171", fontWeight: 600 }}>{r.balance < 0 ? "−" : ""}{fmt(r.balance)}</td>
@@ -370,94 +650,94 @@ export default function AuditPage() {
                     <tfoot>
                       <tr style={{ borderTop: "2px solid rgba(255,255,255,0.1)", fontWeight: 800 }}>
                         <td colSpan={2} style={{ color: "rgba(232,237,245,0.5)", fontSize: "0.78rem" }}>TOTAL</td>
-                        <td className="au-mono" style={{ textAlign: "right", color: "#34D399" }}>{fmt(tb.reduce((s,r) => s+r.dr,0))}</td>
-                        <td className="au-mono" style={{ textAlign: "right", color: "#60A5FA" }}>{fmt(tb.reduce((s,r) => s+r.cr,0))}</td>
+                        <td className="au-mono" style={{ textAlign: "right", color: "#34D399" }}>{fmt(filteredTb.reduce((s,r) => s+r.dr,0))}</td>
+                        <td className="au-mono" style={{ textAlign: "right", color: "#60A5FA" }}>{fmt(filteredTb.reduce((s,r) => s+r.cr,0))}</td>
                         <td />
                       </tr>
                     </tfoot>
                   </table>
                 </div>
-                <div style={{ marginTop: "0.75rem", fontSize: "0.72rem", color: "rgba(232,237,245,0.25)" }}>Click any account to view ledger transactions.</div>
+                <div style={{ marginTop: "0.75rem", fontSize: "0.7rem", color: "rgba(232,237,245,0.2)" }}>
+                  {tb.length} accounts · Click any row to drill into ledger transactions
+                </div>
               </div>
             )}
 
-            {/* ── P&L ── */}
+            {/* ══ P&L ═══════════════════════════════════════════════════════ */}
             {tab === "pl" && (
               <div className="au-card">
                 <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "1.25rem" }}>Profit & Loss Statement</div>
                 {[
-                  { title: "INCOME", rows: tb.filter(r => ["income","sales"].includes(r.type)), sign: -1 },
-                  { title: "COST OF GOODS SOLD", rows: tb.filter(r => r.type === "cost_of_goods"), sign: 1 },
-                  { title: "OPERATING EXPENSES", rows: tb.filter(r => r.type === "expense"), sign: 1 },
+                  { title: "INCOME", rows: tb.filter(r => ["income","sales"].includes(r.type)), sign: -1 as const },
+                  { title: "COST OF GOODS SOLD", rows: tb.filter(r => r.type === "cost_of_goods"), sign: 1 as const },
+                  { title: "OPERATING EXPENSES", rows: tb.filter(r => r.type === "expense"), sign: 1 as const },
                 ].map(sec => sec.rows.length === 0 ? null : (
                   <div key={sec.title} style={{ marginBottom: "1.5rem" }}>
-                    <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "0.5rem", padding: "0.35rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{sec.title}</div>
+                    <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "0.5rem", padding: "0.35rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{sec.title}</div>
                     {sec.rows.map(r => (
-                      <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", fontSize: "0.84rem" }}>
+                      <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.38rem 0", fontSize: "0.84rem" }}>
                         <span style={{ color: "rgba(232,237,245,0.65)" }}>{r.name}</span>
-                        <span className="au-mono">{fmt(sec.sign === -1 ? r.cr - r.dr : r.dr - r.cr)}</span>
+                        <span className="au-mono">{fmtDec(sec.sign === -1 ? r.cr - r.dr : r.dr - r.cr)}</span>
                       </div>
                     ))}
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderTop: "1px solid rgba(255,255,255,0.08)", fontWeight: 700, fontSize: "0.85rem" }}>
                       <span style={{ color: "rgba(232,237,245,0.4)" }}>Total {sec.title}</span>
-                      <span className="au-mono">{fmt(sec.rows.reduce((s,r) => s + (sec.sign === -1 ? r.cr - r.dr : r.dr - r.cr), 0))}</span>
+                      <span className="au-mono">{fmtDec(sec.rows.reduce((s,r) => s + (sec.sign === -1 ? r.cr - r.dr : r.dr - r.cr), 0))}</span>
                     </div>
                   </div>
                 ))}
                 <div style={{ borderTop: "2px solid rgba(255,255,255,0.12)", paddingTop: "1rem" }}>
                   {[
-                    { label: "Gross Profit", val: pl.grossProfit },
-                    { label: "Net Profit / Loss", val: pl.netProfit },
+                    { label: "Gross Profit",      val: pl.grossProfit },
+                    { label: "Net Profit / Loss",  val: pl.netProfit },
                   ].map(r => (
                     <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", fontWeight: 800, fontSize: "0.92rem" }}>
                       <span>{r.label}</span>
-                      <span className="au-mono" style={{ color: r.val >= 0 ? "#34D399" : "#F87171" }}>{r.val < 0 ? "−" : ""}{fmt(r.val)}</span>
+                      <span className="au-mono" style={{ color: r.val >= 0 ? "#34D399" : "#F87171" }}>{r.val < 0 ? "−" : ""}{fmtDec(r.val)}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* ── BALANCE SHEET ── */}
+            {/* ══ BALANCE SHEET ═════════════════════════════════════════════ */}
             {tab === "balance_sheet" && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                {/* Assets side */}
                 <div className="au-card">
                   <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "1rem" }}>Assets</div>
                   {[
                     { title: "Current Assets", rows: bs.assets },
-                    { title: "Fixed Assets", rows: bs.fixedAssets },
+                    { title: "Fixed Assets",   rows: bs.fixedAssets },
                   ].map(sec => sec.rows.length === 0 ? null : (
                     <div key={sec.title} style={{ marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "rgba(232,237,245,0.3)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
+                      <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(232,237,245,0.3)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
                       {sec.rows.map(r => (
                         <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.35rem 0", fontSize: "0.83rem" }}>
                           <span style={{ color: "rgba(232,237,245,0.6)" }}>{r.name}</span>
-                          <span className="au-mono">{fmt(r.balance)}</span>
+                          <span className="au-mono" style={{ color: r.balance < 0 ? "#F87171" : undefined }}>{r.balance < 0 ? "−" : ""}{fmtDec(r.balance)}</span>
                         </div>
                       ))}
                     </div>
                   ))}
                   <div style={{ borderTop: "2px solid rgba(255,255,255,0.1)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
                     <span>Total Assets</span>
-                    <span className="au-mono" style={{ color: "#34D399" }}>{fmt(bs.totalAssets)}</span>
+                    <span className="au-mono" style={{ color: "#34D399" }}>{fmtDec(bs.totalAssets)}</span>
                   </div>
                 </div>
-                {/* Liabilities + Equity side */}
                 <div className="au-card">
                   <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "1rem" }}>Liabilities & Equity</div>
                   {[
-                    { title: "Capital & Equity", rows: bs.equity },
-                    { title: "Loans & Borrowings", rows: bs.loans },
+                    { title: "Capital & Equity",    rows: bs.equity },
+                    { title: "Loans & Borrowings",  rows: bs.loans },
                     { title: "Current Liabilities", rows: bs.liabilities },
-                    { title: "Tax Liabilities", rows: bs.taxes },
+                    { title: "Tax Liabilities",     rows: bs.taxes },
                   ].map(sec => sec.rows.length === 0 ? null : (
                     <div key={sec.title} style={{ marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "rgba(232,237,245,0.3)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
+                      <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(232,237,245,0.3)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
                       {sec.rows.map(r => (
                         <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.35rem 0", fontSize: "0.83rem" }}>
                           <span style={{ color: "rgba(232,237,245,0.6)" }}>{r.name}</span>
-                          <span className="au-mono">{fmt(r.balance)}</span>
+                          <span className="au-mono">{fmtDec(r.balance)}</span>
                         </div>
                       ))}
                     </div>
@@ -465,27 +745,27 @@ export default function AuditPage() {
                   {pl.netProfit !== 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "0.35rem 0", fontSize: "0.83rem" }}>
                       <span style={{ color: "rgba(232,237,245,0.6)" }}>Retained Earnings (Net P/L)</span>
-                      <span className="au-mono" style={{ color: pl.netProfit >= 0 ? "#34D399" : "#F87171" }}>{pl.netProfit < 0 ? "−" : ""}{fmt(pl.netProfit)}</span>
+                      <span className="au-mono" style={{ color: pl.netProfit >= 0 ? "#34D399" : "#F87171" }}>{pl.netProfit < 0 ? "−" : ""}{fmtDec(pl.netProfit)}</span>
                     </div>
                   )}
                   <div style={{ borderTop: "2px solid rgba(255,255,255,0.1)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
                     <span>Total Liab. + Equity</span>
-                    <span className="au-mono" style={{ color: "#60A5FA" }}>{fmt(bs.totalLiabEq)}</span>
+                    <span className="au-mono" style={{ color: "#60A5FA" }}>{fmtDec(bs.totalLiabEq)}</span>
                   </div>
                   {Math.abs(bs.totalAssets - bs.totalLiabEq) > 1 && (
-                    <div style={{ marginTop: "0.75rem", fontSize: "0.72rem", color: "#FBBF24", background: "rgba(251,191,36,0.08)", padding: "0.5rem 0.75rem", borderRadius: 7 }}>
-                      ⚠ Balance sheet doesn't balance by ₹{fmt(Math.abs(bs.totalAssets - bs.totalLiabEq))} — some entries may be missing accounts
+                    <div style={{ marginTop: "0.75rem", fontSize: "0.72rem", color: "#FBBF24", background: "rgba(251,191,36,0.08)", padding: "0.5rem 0.75rem", borderRadius: 7, lineHeight: 1.6 }}>
+                      ⚠ Doesn&apos;t balance by {fmt(Math.abs(bs.totalAssets - bs.totalLiabEq))} — some accounts may be unclassified
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* ── LEDGER VIEW ── */}
+            {/* ══ LEDGER VIEW ═══════════════════════════════════════════════ */}
             {tab === "ledger" && (
               <div>
                 <div style={{ marginBottom: "1rem" }}>
-                  <select value={selectedAccount ?? ""} onChange={e => setSelectedAccount(e.target.value || null)} style={{ ...inp, minWidth: 240 }}>
+                  <select value={selectedAccount ?? ""} onChange={e => setSelectedAccount(e.target.value || null)} style={{ ...inp, minWidth: 280 }}>
                     <option value="">— Select Account —</option>
                     {accounts.sort((a,b) => a.name.localeCompare(b.name)).map(a => <option key={a.id} value={a.id}>{a.name} ({a.type})</option>)}
                   </select>
@@ -496,7 +776,7 @@ export default function AuditPage() {
                     <div style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.3)", marginBottom: "1rem" }}>{ledgerLines.length} transaction{ledgerLines.length !== 1 ? "s" : ""}</div>
                     <div style={{ overflowX: "auto" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
-                        <thead><tr style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(255,255,255,0.03)" }}>
+                        <thead><tr style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(255,255,255,0.03)" }}>
                           <th style={{ textAlign: "left" }}>Entry</th>
                           <th style={{ textAlign: "left" }}>Date</th>
                           <th style={{ textAlign: "left" }}>Narration</th>
@@ -511,8 +791,8 @@ export default function AuditPage() {
                                 <td className="au-mono" style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.7rem" }}>{j?.entry_no}</td>
                                 <td style={{ color: "rgba(232,237,245,0.5)", whiteSpace: "nowrap" }}>{j ? new Date(j.date).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"2-digit" }) : ""}</td>
                                 <td style={{ color: "rgba(232,237,245,0.6)", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j?.narration || l.narration}</td>
-                                <td className="au-mono" style={{ textAlign: "right", color: l.dr_amount > 0 ? "#34D399" : "rgba(232,237,245,0.2)" }}>{l.dr_amount > 0 ? fmt(l.dr_amount) : "—"}</td>
-                                <td className="au-mono" style={{ textAlign: "right", color: l.cr_amount > 0 ? "#60A5FA" : "rgba(232,237,245,0.2)" }}>{l.cr_amount > 0 ? fmt(l.cr_amount) : "—"}</td>
+                                <td className="au-mono" style={{ textAlign: "right", color: l.dr_amount > 0 ? "#34D399" : "rgba(232,237,245,0.2)" }}>{l.dr_amount > 0 ? fmtDec(l.dr_amount) : "—"}</td>
+                                <td className="au-mono" style={{ textAlign: "right", color: l.cr_amount > 0 ? "#60A5FA" : "rgba(232,237,245,0.2)" }}>{l.cr_amount > 0 ? fmtDec(l.cr_amount) : "—"}</td>
                               </tr>
                             );
                           })}
@@ -520,8 +800,8 @@ export default function AuditPage() {
                         <tfoot>
                           <tr style={{ borderTop: "2px solid rgba(255,255,255,0.08)", fontWeight: 700 }}>
                             <td colSpan={3} style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.75rem" }}>CLOSING BALANCE</td>
-                            <td className="au-mono" style={{ textAlign: "right", color: "#34D399" }}>{fmt(ledgerLines.reduce((s,l) => s+l.dr_amount,0))}</td>
-                            <td className="au-mono" style={{ textAlign: "right", color: "#60A5FA" }}>{fmt(ledgerLines.reduce((s,l) => s+l.cr_amount,0))}</td>
+                            <td className="au-mono" style={{ textAlign: "right", color: "#34D399" }}>{fmtDec(ledgerLines.reduce((s,l) => s+l.dr_amount,0))}</td>
+                            <td className="au-mono" style={{ textAlign: "right", color: "#60A5FA" }}>{fmtDec(ledgerLines.reduce((s,l) => s+l.cr_amount,0))}</td>
                           </tr>
                         </tfoot>
                       </table>
