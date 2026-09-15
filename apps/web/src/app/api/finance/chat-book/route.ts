@@ -8,34 +8,56 @@ const supabase = createClient(
 );
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-const SYSTEM_PROMPT = `You are a double-entry bookkeeping engine for Indian SMBs. Your ONLY output is valid JSON — no prose, no markdown, no explanation.
+// ── Extract facts from plain text (amount, mode, party) ───────────────────────
+function extractFacts(texts: string[]): { amount?: number; mode?: string; party?: string } {
+  const combined = texts.join(" ");
+  // Amount: ₹1,23,456 or Rs 5000 or plain 5000
+  const amtMatch = combined.match(/(?:₹|rs\.?\s*)[\s]?([0-9,]+(?:\.[0-9]{1,2})?)/i)
+    ?? combined.match(/\b([0-9]{3,}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?)\b/);
+  const amount = amtMatch ? parseFloat(amtMatch[1].replace(/,/g, "")) : undefined;
+  // Payment mode
+  const modeMatch = combined.match(/\b(cash|bank|upi|neft|rtgs|imps|cheque|check|online|hdfc|sbi|icici|axis|kotak)\b/i);
+  const mode = modeMatch ? modeMatch[1].toLowerCase() : undefined;
+  // Party: "from X", "to X", "by X" — simple heuristic
+  const partyMatch = combined.match(/(?:from|to|by|paid to|received from|for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})/);
+  const party = partyMatch ? partyMatch[1].trim() : undefined;
+  return { amount, mode, party };
+}
 
-RULES:
-1. Always use double-entry: sum(debit) MUST equal sum(credit). If you cannot balance, set needs_clarification.
-2. Default date = today (passed in context). Use YYYY-MM-DD format.
-3. Default state = Kerala → intra-state GST → split into CGST + SGST equally. If user says inter-state → IGST only.
-4. NEVER invent amounts. If amount is missing, add it to needs_clarification.
-5. If confidence < 0.75 or debits ≠ credits, populate needs_clarification[].
-6. GST accounts: "CGST Payable", "SGST Payable", "IGST Payable", "Input CGST", "Input SGST", "Input IGST".
-7. Common accounts: Cash, Bank, Sales, Purchases, Rent Expense, Salary Expense, Stationery Expense, Debtors Control, Creditors Control, Capital Account, Drawings.
-8. For sales: Dr Debtors/Cash/Bank, Cr Sales + GST Payable accounts.
-9. For purchases: Dr Purchases + Input GST, Cr Cash/Bank/Creditors.
-10. For expenses: Dr [Expense Account], Cr Cash/Bank.
-11. For receipts from debtors: Dr Cash/Bank, Cr Debtors Control.
+const SYSTEM_PROMPT = `You are a double-entry bookkeeping engine for Indian SMBs. Output ONLY valid JSON — no prose, no markdown.
+
+CRITICAL BEHAVIOUR RULES:
+1. Read the ENTIRE conversation history to extract facts. Never ask again for something already given.
+2. Ask ONLY ONE clarifying question at a time — the single most important missing fact.
+   Priority: amount (if zero/unknown) > party name (for payables/receivables) > payment mode (only if truly unclear).
+3. If you have enough info to build a balanced entry, DO IT — show the entry, don't ask more questions.
+4. "known_facts" in the context tells you what has already been extracted — use these directly.
+5. Payment mode heuristics: if "by cash/cash" → Cash account. If "by bank/UPI/NEFT/online/bank name" → use the named bank account or "ICICI Bank" as default. If unclear and amount > 10000, assume bank.
+6. Account name heuristics from available accounts list — always pick the closest match.
+
+ACCOUNTING RULES:
+- Double-entry: sum(debit) MUST equal sum(credit). Never produce unbalanced entries.
+- Default date = today (in context). Format: YYYY-MM-DD.
+- Kerala default → intra-state → CGST + SGST equally split. Inter-state mentioned → IGST only.
+- GST accounts: "CGST Payable","SGST Payable","IGST Payable","Input CGST","Input SGST","Input IGST".
+- Sales: Dr Cash/Bank/Debtor → Cr Sales + GST Payable.
+- Purchase: Dr Purchases + Input GST → Cr Cash/Bank/Creditor.
+- Expense: Dr [Expense Account] → Cr Cash/Bank.
+- Salary: Dr [Employee Salary Expense] → Cr Cash/Bank (direct pay) or Cr [Employee Payable] (accrual).
+- Receipt from customer: Dr Cash/Bank → Cr Debtors Control / customer ledger.
+- Payment to vendor: Dr Creditors Control / vendor ledger → Cr Cash/Bank.
 
 OUTPUT SCHEMA (strict JSON, no other text):
 {
   "date": "YYYY-MM-DD",
-  "narration": "string (clear description for ledger)",
+  "narration": "string",
   "type": "sales|purchase|payment|receipt|journal|expense",
-  "lines": [
-    { "account": "exact account name", "debit": 0, "credit": 0 }
-  ],
-  "gst": { "rate": 18, "cgst": 0, "sgst": 0, "igst": 0 } | null,
-  "party": "party name | null",
-  "reference": "invoice/ref number | null",
+  "lines": [{"account": "exact account name", "debit": 0, "credit": 0}],
+  "gst": {"rate": 18, "cgst": 0, "sgst": 0, "igst": 0} | null,
+  "party": "name | null",
+  "reference": "ref | null",
   "confidence": 0.95,
-  "needs_clarification": []
+  "needs_clarification": ["ONE question only, or empty array if entry is complete"]
 }`;
 
 type ParsedEntry = {
@@ -69,7 +91,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Rate limit: 30 messages/hour. Please wait." }, { status: 429 });
     }
 
-    // Load existing session context (last 10 messages)
+    // Load existing session context (last 12 messages)
     let history: { role: "user" | "assistant"; content: string }[] = [];
     let chatSessionId = session_id;
     if (session_id) {
@@ -78,8 +100,15 @@ export async function POST(req: NextRequest) {
         .select("messages")
         .eq("id", session_id)
         .single();
-      if (sess?.messages) history = (sess.messages as typeof history).slice(-10);
+      if (sess?.messages) history = (sess.messages as typeof history).slice(-12);
     }
+
+    // Pre-extract facts from entire conversation so far (including current message)
+    const allUserTexts = [
+      ...history.filter(h => h.role === "user").map(h => h.content),
+      message,
+    ];
+    const knownFacts = extractFacts(allUserTexts);
 
     // Fetch chart of accounts for context
     const { data: accounts } = await supabase
@@ -87,42 +116,56 @@ export async function POST(req: NextRequest) {
       .select("name, type")
       .eq("business_id", business_id)
       .eq("is_group", false)
-      .limit(100);
+      .limit(150);
     const accountList = (accounts ?? []).map(a => `${a.name} (${a.type})`).join(", ");
 
     const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
-    const contextNote = `Today is ${today}. Available accounts: ${accountList || "Cash, Bank, Sales, Purchases, Debtors Control, Creditors Control, Capital Account"}.`;
+    const factsNote = [
+      knownFacts.amount ? `known amount: ₹${knownFacts.amount}` : "",
+      knownFacts.mode ? `known payment mode: ${knownFacts.mode}` : "",
+      knownFacts.party ? `known party: ${knownFacts.party}` : "",
+    ].filter(Boolean).join("; ");
 
-    const messages: Anthropic.MessageParam[] = [
+    const contextNote = [
+      `Today: ${today}.`,
+      factsNote ? `Known facts from conversation: ${factsNote}. Use these — do not ask for them again.` : "",
+      `Available accounts: ${accountList || "Cash, ICICI Bank, Sales, Purchases, Debtors Control, Creditors Control, Capital Account"}.`,
+    ].filter(Boolean).join(" ");
+
+    const claudeMessages: Anthropic.MessageParam[] = [
       ...history.map(h => ({ role: h.role, content: h.content })),
-      { role: "user", content: `${contextNote}\n\nUser: ${message}` },
+      { role: "user", content: `${contextNote}\n\nUser message: ${message}` },
     ];
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
-      messages,
+      messages: claudeMessages,
     });
 
     const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "";
 
-    // Extract JSON even if model adds minimal wrapper
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return NextResponse.json({ error: "Could not parse response. Please rephrase." }, { status: 422 });
     }
     const parsed: ParsedEntry = JSON.parse(jsonMatch[0]);
 
-    // Validate: debits === credits
-    const totalDr = parsed.lines.reduce((s, l) => s + (l.debit ?? 0), 0);
-    const totalCr = parsed.lines.reduce((s, l) => s + (l.credit ?? 0), 0);
-    if (Math.abs(totalDr - totalCr) > 0.01) {
-      parsed.needs_clarification.push(`Entry is unbalanced: Dr ₹${totalDr} ≠ Cr ₹${totalCr}. Please provide more details.`);
-      parsed.confidence = Math.min(parsed.confidence, 0.5);
+    // Keep only ONE clarification question
+    if (parsed.needs_clarification.length > 1) {
+      parsed.needs_clarification = [parsed.needs_clarification[0]];
     }
 
-    // Log message to chat session
+    // Validate balance
+    const totalDr = parsed.lines.reduce((s, l) => s + (l.debit ?? 0), 0);
+    const totalCr = parsed.lines.reduce((s, l) => s + (l.credit ?? 0), 0);
+    const balanced = Math.abs(totalDr - totalCr) < 0.01;
+    if (!balanced && !parsed.needs_clarification.length) {
+      parsed.needs_clarification = [`Entry doesn't balance (Dr ₹${totalDr} ≠ Cr ₹${totalCr}). What's the correct amount?`];
+    }
+
+    // Persist session
     const newHistory = [
       ...history,
       { role: "user" as const, content: message },
@@ -133,14 +176,11 @@ export async function POST(req: NextRequest) {
       await supabase.from("fw_fin_chat_sessions").update({ messages: newHistory, updated_at: new Date().toISOString() }).eq("id", chatSessionId);
     } else {
       const { data: newSess } = await supabase
-        .from("fw_fin_chat_sessions")
-        .insert({ user_id, business_id, messages: newHistory })
-        .select("id")
-        .single();
+        .from("fw_fin_chat_sessions").insert({ user_id, business_id, messages: newHistory }).select("id").single();
       chatSessionId = newSess?.id ?? null;
     }
 
-    return NextResponse.json({ parsed, session_id: chatSessionId, balanced: Math.abs(totalDr - totalCr) < 0.01 });
+    return NextResponse.json({ parsed, session_id: chatSessionId, balanced });
   } catch (e) {
     console.error("chat-book error", e);
     return NextResponse.json({ error: e instanceof Error ? e.message : "Server error" }, { status: 500 });

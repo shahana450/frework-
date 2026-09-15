@@ -235,33 +235,49 @@ export default function FrePilotDashboard() {
     const posted = journals.filter(j => j.status === "posted");
     const postedIds = posted.map(j => j.id);
 
-    // 3. Revenue & expenses via journal_lines + account names/types
-    //    Matches Tally's P&L: aggregates by ledger group, not voucher type
-    let salesRev = 0, expTotal = 0;
+    // 3. Revenue & Net Profit via journal_lines — mirrors Tally P&L exactly
+    //    Revenue = net credit of all income/sales accounts (Sales A/c, Service Income, etc.)
+    //    Net Profit = Total Income − Total Expenses (all expense/purchase accounts)
+    let totalIncome = 0, totalExp = 0;
     if (postedIds.length > 0) {
       const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts")
         .select("id,name,type").eq("business_id", bizId);
       const accMap = new Map((accounts ?? []).map(a => [a.id, { type: a.type as string, name: (a.name as string).toLowerCase() }]));
-      // Classify by type field first; fall back to name heuristic for Tally imports
+
+      // Income: matches Tally "Sales Accounts" + "Income" groups
       const isIncome = (id: string) => {
         const a = accMap.get(id);
         if (!a) return false;
-        if (a.type === "income") return true;
-        // Tally "Sales Accounts" group — name heuristic
-        return a.type === "sales" || a.name.includes("sales") || a.name.includes("export") || a.name.includes("revenue");
+        if (a.type === "income" || a.type === "sales") return true;
+        const n = a.name;
+        return n.includes("sales") || n.includes("export") || n.includes("revenue") ||
+               n.includes("income") || n.includes("service") || n.includes("fees received") ||
+               n.includes("commission received") || n.includes("interest received") ||
+               n.includes("other income") || n.includes("misc income");
       };
+
+      // Expense: matches Tally "Direct Expenses" + "Indirect Expenses" + "Purchase" groups
       const isExpense = (id: string) => {
         const a = accMap.get(id);
         if (!a) return false;
         if (a.type === "expense") return true;
-        return a.name.includes("purchase") || a.name.includes("direct exp") || a.name.includes("indirect exp");
+        const n = a.name;
+        return n.includes("purchase") || n.includes("direct exp") || n.includes("indirect exp") ||
+               n.includes("expense") || n.includes("salary") || n.includes("wages") ||
+               n.includes("rent") || n.includes("freight") || n.includes("transport") ||
+               n.includes("duties") || n.includes("depreciation") || n.includes("cost of") ||
+               n.includes("power") || n.includes("telephone") || n.includes("printing") ||
+               n.includes("advertisement") || n.includes("bank charges") || n.includes("audit fee");
       };
+
       for (let i = 0; i < postedIds.length; i += 200) {
         const { data: lines } = await supabase.from("fw_fin_journal_lines")
           .select("account_id,dr_amount,cr_amount").in("journal_id", postedIds.slice(i, i + 200));
         for (const l of lines ?? []) {
-          if (isIncome(l.account_id))  salesRev  += (l.cr_amount || 0);
-          if (isExpense(l.account_id)) expTotal  += (l.dr_amount || 0);
+          // Net credit for income (cr − dr handles sales returns / credit notes)
+          if (isIncome(l.account_id))  totalIncome += (l.cr_amount || 0) - (l.dr_amount || 0);
+          // Net debit for expenses (dr − cr handles purchase returns / expense reversals)
+          if (isExpense(l.account_id)) totalExp    += (l.dr_amount || 0) - (l.cr_amount || 0);
         }
       }
     }
@@ -271,8 +287,8 @@ export default function FrePilotDashboard() {
       expenses: posted.filter(j => j.type === "purchase" || j.type === "expense").length,
       drafts: journals.filter(j => j.status === "draft").length,
       pendingTds: 0,
-      revenue: salesRev,
-      profit: salesRev - expTotal,
+      revenue: totalIncome,
+      profit: totalIncome - totalExp,
     });
     setLoading(false);
   }
