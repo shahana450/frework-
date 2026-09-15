@@ -10,7 +10,7 @@ type Journal = {
   financial_year_id: string | null;
 };
 type JournalLine = {
-  id: string; journal_id: string; account_id: string; description: string;
+  id: string; journal_id: string; account_id: string; narration: string;
   dr_amount: number; cr_amount: number;
   account?: { name: string; type: string };
 };
@@ -510,7 +510,7 @@ export default function AuditPage() {
                               <tr key={l.id} className="au-tr" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                                 <td className="au-mono" style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.7rem" }}>{j?.entry_no}</td>
                                 <td style={{ color: "rgba(232,237,245,0.5)", whiteSpace: "nowrap" }}>{j ? new Date(j.date).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"2-digit" }) : ""}</td>
-                                <td style={{ color: "rgba(232,237,245,0.6)", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j?.narration || l.description}</td>
+                                <td style={{ color: "rgba(232,237,245,0.6)", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j?.narration || l.narration}</td>
                                 <td className="au-mono" style={{ textAlign: "right", color: l.dr_amount > 0 ? "#34D399" : "rgba(232,237,245,0.2)" }}>{l.dr_amount > 0 ? fmt(l.dr_amount) : "—"}</td>
                                 <td className="au-mono" style={{ textAlign: "right", color: l.cr_amount > 0 ? "#60A5FA" : "rgba(232,237,245,0.2)" }}>{l.cr_amount > 0 ? fmt(l.cr_amount) : "—"}</td>
                               </tr>
