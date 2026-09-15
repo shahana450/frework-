@@ -260,10 +260,20 @@ export default function TallyPage() {
       const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label,start_date,end_date,is_current").eq("business_id", saved).order("start_date", { ascending: false });
       if (fys?.length) {
         setFinancialYears(fys);
-        const cur = fys.find(f => f.is_current) ?? fys[0];
+        const tallyFyId = localStorage.getItem("fw_tally_fy_id") ?? "";
+        const now = new Date();
+        const curFyStart = now.getMonth() >= 3
+          ? `${now.getFullYear()}-04-01`
+          : `${now.getFullYear() - 1}-04-01`;
+        const cur = (tallyFyId ? fys.find(f => f.id === tallyFyId) : undefined)
+          ?? fys.find(f => f.start_date === curFyStart)
+          ?? fys.find(f => f.is_current)
+          ?? fys[0];
         setFyId(cur.id);
         setFrom(cur.start_date);
         setTo(fyEnd(cur.start_date));
+        // Update fw_tally_fy_id so dashboard/audit also pick up the correct FY
+        localStorage.setItem("fw_tally_fy_id", cur.id);
       }
       const { count, data: jData } = await supabase.from("fw_fin_journals").select("id,entry_no,date,narration,type,total_debit,total_credit", { count: "exact" }).eq("business_id", saved).eq("status", "posted").order("date");
       setJournalCount(count ?? 0);
