@@ -147,7 +147,7 @@ export default function AuditPage() {
     const allLines: JournalLine[] = [];
     for (let i = 0; i < jIds.length; i += 200) {
       const { data: batch } = await supabase.from("fw_fin_journal_lines")
-        .select("id,journal_id,account_id,description,dr_amount,cr_amount")
+        .select("id,journal_id,account_id,narration,dr_amount,cr_amount")
         .in("journal_id", jIds.slice(i, i + 200));
       allLines.push(...(batch ?? []));
     }

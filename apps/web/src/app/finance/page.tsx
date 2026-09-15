@@ -493,9 +493,9 @@ export default function FrePilotDashboard() {
         reference_no: vNum || null,
       }).select("id").single();
       if (jErr || !jRow) { skipped++; continue; }
-      const lines = v.lines.map(l => { const acc = accountMap.get(l.ledgerName.toLowerCase()); if (!acc) return null; return { journal_id: jRow.id, account_id: acc.id, description: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }; }).filter(Boolean);
+      const lines = v.lines.map(l => { const acc = accountMap.get(l.ledgerName.toLowerCase()); if (!acc) return null; return { journal_id: jRow.id, account_id: acc.id, narration: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }; }).filter(Boolean);
       if (lines.length > 0) {
-        await supabase.from("fw_fin_journal_lines").insert(lines as {journal_id:string;account_id:string;description:string;dr_amount:number;cr_amount:number}[]);
+        await supabase.from("fw_fin_journal_lines").insert(lines as {journal_id:string;account_id:string;narration:string;dr_amount:number;cr_amount:number}[]);
         imported++; if (!vNum) seq++; existingEntryNos.add(entryNo);
       } else { await supabase.from("fw_fin_journals").delete().eq("id", jRow.id); skipped++; }
     }
