@@ -161,22 +161,24 @@ export default function FrePilotDashboard() {
                   supabase.from("fw_fin_journal_lines").select("id", { count: "exact", head: true })
                     .in("journal_id", sample.map(j => j.id))
                     .then(({ count: lCount }) => {
-                      if ((lCount ?? 0) === 0) {
-                        // Journals exist but no lines → orphaned headers from broken import
-                        // Silently delete them all so doImportVouchers can re-import fresh
-                        setTallySyncProgress("Auto-healing: clearing orphaned entries…");
-                        const { data: allOrphans } = await supabase.from("fw_fin_journals")
-                          .select("id").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
-                        if (allOrphans?.length) {
-                          for (let oi = 0; oi < allOrphans.length; oi += 100) {
-                            const ids = allOrphans.slice(oi, oi + 100).map((j: {id: string}) => j.id);
-                            await supabase.from("fw_fin_journal_lines").delete().in("journal_id", ids);
-                            await supabase.from("fw_fin_journals").delete().in("id", ids);
+                      (async () => {
+                        if ((lCount ?? 0) === 0) {
+                          // Journals exist but no lines → orphaned headers from broken import
+                          // Silently delete them all so doImportVouchers can re-import fresh
+                          setTallySyncProgress("Auto-healing: clearing orphaned entries…");
+                          const { data: allOrphans } = await supabase.from("fw_fin_journals")
+                            .select("id").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
+                          if (allOrphans?.length) {
+                            for (let oi = 0; oi < allOrphans.length; oi += 100) {
+                              const ids = allOrphans.slice(oi, oi + 100).map((j: {id: string}) => j.id);
+                              await supabase.from("fw_fin_journal_lines").delete().in("journal_id", ids);
+                              await supabase.from("fw_fin_journals").delete().in("id", ids);
+                            }
                           }
+                          localStorage.removeItem(syncedMonthsKey);
                         }
-                        localStorage.removeItem(syncedMonthsKey);
-                      }
-                      doImportVouchers(false);
+                        doImportVouchers(false);
+                      })();
                     });
                 });
             } else {
