@@ -323,22 +323,16 @@ export default function FrePilotDashboard() {
       }
     }
 
-    // Try to get exact Revenue & Net Profit from Tally directly (live closing balances)
-    let finalRev = salesRev, finalProfit = salesRev - expTotal, tallyLive = false;
-    if (tally.state === "connected" && activeFy?.start_date && activeFy?.end_date) {
-      const live = await fetchTallyPL(activeFy.start_date, activeFy.end_date);
-      if (live) { finalRev = live.revenue; finalProfit = live.profit; tallyLive = true; }
-    }
-
-    setStats({
+    setStats(prev => ({
+      ...prev,
       sales: posted.filter(j => j.type === "sales").length,
       expenses: posted.filter(j => j.type === "purchase" || j.type === "expense").length,
       drafts: journals.filter(j => j.status === "draft").length,
       pendingTds: 0,
-      revenue: finalRev,
-      profit: finalProfit,
-      tallyLive,
-    });
+      revenue: salesRev,
+      profit: salesRev - expTotal,
+      tallyLive: false,
+    }));
     setLoading(false);
   }
 
@@ -810,15 +804,36 @@ export default function FrePilotDashboard() {
                   {/* Buttons */}
                   <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: tallySyncMsg || tallySyncProgress ? "0.85rem" : 0 }}>
                     <button
+                      onClick={async () => {
+                        if (!activeBiz || !fyId) return;
+                        setTallySyncing("ledgers"); setTallySyncMsg(null);
+                        const fy = financialYears.find(f => f.id === fyId);
+                        const { data: fyData } = await supabase.from("fw_fin_financial_years").select("start_date,end_date").eq("id", fyId).single();
+                        if (fyData) {
+                          const live = await fetchTallyPL(fyData.start_date, fyData.end_date);
+                          if (live) {
+                            setStats(prev => ({ ...prev, revenue: live.revenue, profit: live.profit, tallyLive: true }));
+                            setTallySyncMsg({ ok: true, msg: `✓ Live P&L from Tally — Revenue ₹${live.revenue.toLocaleString("en-IN")} · Net Profit ₹${live.profit.toLocaleString("en-IN")}` });
+                          } else {
+                            setTallySyncMsg({ ok: false, msg: "Could not read P&L from Tally. Make sure ODBC is enabled on port 9000." });
+                          }
+                        }
+                        setTallySyncing(null);
+                      }}
+                      disabled={!!tallySyncing}
+                      style={{ flex: 1, minWidth: 160, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.5)", background: "rgba(52,211,153,0.12)", color: "#34D399", fontWeight: 700, fontSize: "0.86rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
+                      {tallySyncing === "ledgers" ? "Reading…" : "📊 Fetch Live P&L"}
+                    </button>
+                    <button
                       onClick={doImportLedgers}
                       disabled={!!tallySyncing}
-                      style={{ flex: 1, minWidth: 160, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.08)", color: "#34D399", fontWeight: 700, fontSize: "0.86rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
-                      {tallySyncing === "ledgers" ? "Importing…" : "⬇ Import Ledgers"}
+                      style={{ flex: 1, minWidth: 140, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(52,211,153,0.05)", color: "#34D399", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
+                      ⬇ Import Ledgers
                     </button>
                     <button
                       onClick={() => doImportVouchers(false)}
                       disabled={!!tallySyncing}
-                      style={{ flex: 1, minWidth: 160, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.08)", color: "#C4B5FD", fontWeight: 700, fontSize: "0.86rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
+                      style={{ flex: 1, minWidth: 140, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.08)", color: "#C4B5FD", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
                       {tallySyncing === "vouchers" ? (tallySyncProgress ?? "Syncing…") : "⬇ Import Vouchers"}
                     </button>
                     <button
