@@ -198,12 +198,21 @@ function parseTallyVouchers(xml: string): TallyVoucher[] {
 }
 
 function tallyVoucherTypeToFP(t: string): string {
-  const m: Record<string,string> = {
+  const exact: Record<string,string> = {
     "Sales": "sales", "Purchase": "purchase", "Payment": "payment",
     "Receipt": "receipt", "Contra": "contra", "Journal": "journal",
     "Debit Note": "debit_note", "Credit Note": "credit_note",
   };
-  return m[t] ?? "journal";
+  if (exact[t]) return exact[t];
+  const lower = t.toLowerCase();
+  // Custom Tally voucher types — fuzzy match by keyword
+  if (lower.includes("sales") || lower.includes("export") || lower.includes("tax invoice")) return "sales";
+  if (lower.includes("purchase") || lower.includes("import")) return "purchase";
+  if (lower.includes("payment")) return "payment";
+  if (lower.includes("receipt")) return "receipt";
+  if (lower.includes("debit note") || lower.includes("debit memo")) return "debit_note";
+  if (lower.includes("credit note") || lower.includes("credit memo")) return "credit_note";
+  return "journal";
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────

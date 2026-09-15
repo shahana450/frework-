@@ -235,29 +235,41 @@ export default function FrePilotDashboard() {
     const posted = journals.filter(j => j.status === "posted");
     const postedIds = posted.map(j => j.id);
 
-    // 3. Revenue = sum of total_credit from sales-type journals (exact match to Tally "Sales Accounts")
-    //    Net Profit = Revenue − all expense-account debits (Purchase + Direct + Indirect Expenses)
-    //    Closing Stock / Opening Stock accounts excluded to avoid double-counting
-    const salesRev = posted
-      .filter(j => j.type === "sales")
-      .reduce((s, j) => s + (j.total_credit || j.total_debit || 0), 0);
-
-    let expTotal = 0;
+    // 3. Revenue & Net Profit via journal_lines across ALL voucher types
+    //    (covers standard "Sales" AND custom Tally types like "Export Sales", "Local Sales" etc.)
+    let salesRev = 0, expTotal = 0;
     if (postedIds.length > 0) {
       const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts")
         .select("id,name,type").eq("business_id", bizId);
       const accMap = new Map((accounts ?? []).map(a => [a.id, { type: a.type as string, name: (a.name as string).toLowerCase() }]));
 
-      // Expense: type="expense" OR name-based fallback — explicitly exclude stock/asset accounts
+      // Income: type="income"/"sales" OR name matches sales/export patterns
+      const isIncome = (id: string) => {
+        const a = accMap.get(id);
+        if (!a) return false;
+        if (a.type === "income" || a.type === "sales") return true;
+        const n = a.name;
+        // Explicit BS account exclusions (even if wrongly typed as income)
+        if (n.includes("payable") || n.includes("receivable") || n.includes("debtor") ||
+            n.includes("creditor") || n.includes("bank") || n.includes("cash") ||
+            n.includes("stock") || n.includes("capital") || n.includes("loan")) return false;
+        return n.includes("sales") || n.includes("export") || n.includes("revenue") ||
+               n.includes("income") || n.includes("service") || n.includes("drawback") ||
+               n.includes("discount received") || n.includes("commission received") ||
+               (n.includes("interest") && n.includes("received"));
+      };
+
+      // Expense: type="expense" OR name matches expense patterns — exclude BS accounts
       const isExpense = (id: string) => {
         const a = accMap.get(id);
         if (!a) return false;
         const n = a.name;
-        // Never count stock, asset, bank, cash, or tax-payable accounts as expense
         if (n.includes("stock") || n.includes("asset") || n.includes("bank") ||
             n.includes("cash") || n.includes("deposit") || n.includes("loan") ||
             n.includes("payable") || n.includes("gst") || n.includes("tds payable") ||
-            n.includes("creditor") || n.includes("debtor") || n.includes("capital")) return false;
+            n.includes("creditor") || n.includes("debtor") || n.includes("capital") ||
+            n.includes("export") || n.includes("sales") || n.includes("income") ||
+            n.includes("revenue")) return false;
         if (a.type === "expense") return true;
         return n.includes("purchase") || n.includes("direct exp") || n.includes("indirect exp") ||
                n.includes("expense") || n.includes("salary") || n.includes("wages") ||
@@ -271,8 +283,8 @@ export default function FrePilotDashboard() {
         const { data: lines } = await supabase.from("fw_fin_journal_lines")
           .select("account_id,dr_amount,cr_amount").in("journal_id", postedIds.slice(i, i + 200));
         for (const l of lines ?? []) {
-          // Net debit for expenses (dr − cr handles purchase returns / reversals)
-          if (isExpense(l.account_id)) expTotal += (l.dr_amount || 0) - (l.cr_amount || 0);
+          if (isIncome(l.account_id))  salesRev  += (l.cr_amount || 0) - (l.dr_amount || 0);
+          if (isExpense(l.account_id)) expTotal  += (l.dr_amount || 0) - (l.cr_amount || 0);
         }
       }
     }
