@@ -417,12 +417,10 @@ export default function TallyPage() {
     if (!bizId || connStatus !== "connected") return;
     setSyncing("importVouchers"); setImportVoucherResult(null); setSyncProgress(null);
 
-    // Build list of months in the date range
     function monthsInRange(startIso: string, endIso: string): { from: string; to: string; label: string }[] {
       const months: { from: string; to: string; label: string }[] = [];
-      const start = new Date(startIso);
+      let cur = new Date(new Date(startIso).getFullYear(), new Date(startIso).getMonth(), 1);
       const end = new Date(endIso);
-      let cur = new Date(start.getFullYear(), start.getMonth(), 1);
       while (cur <= end) {
         const y = cur.getFullYear(), m = cur.getMonth();
         const mFrom = `${y}-${String(m + 1).padStart(2,"0")}-01`;
@@ -435,40 +433,35 @@ export default function TallyPage() {
 
     try {
       const months = monthsInRange(from || "2025-04-01", to || "2026-03-31");
-      const allVouchers: ReturnType<typeof parseTallyVouchers> = [];
 
-      for (let i = 0; i < months.length; i++) {
-        const { from: mFrom, to: mTo, label } = months[i];
-        setSyncProgress(`Fetching ${label} (${i + 1}/${months.length})…`);
-        const fromDate = mFrom.replace(/-/g, "");
-        const toDate = mTo.replace(/-/g, "");
-        const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fromDate}</SVFROMDATE><SVTODATE>${toDate}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-        try {
-          const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(20000) });
-          const text = await res.text();
-          allVouchers.push(...parseTallyVouchers(text));
-        } catch { /* month failed — continue with next */ }
-        // Small delay between months so Tally doesn't get overwhelmed
-        if (i < months.length - 1) await new Promise(r => setTimeout(r, 400));
+      // Fetch months in parallel batches of 3 — no delay between batches
+      const CONCURRENCY = 3;
+      const allVouchers: ReturnType<typeof parseTallyVouchers> = [];
+      for (let i = 0; i < months.length; i += CONCURRENCY) {
+        const batch = months.slice(i, i + CONCURRENCY);
+        setSyncProgress(`Fetching ${batch.map(b => b.label).join(", ")} (${Math.min(i + CONCURRENCY, months.length)}/${months.length})…`);
+        const results = await Promise.all(batch.map(async ({ from: mFrom, to: mTo }) => {
+          const fd = mFrom.replace(/-/g,""), td = mTo.replace(/-/g,"");
+          const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+          try {
+            const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(25000) });
+            return parseTallyVouchers(await res.text());
+          } catch { return []; }
+        }));
+        allVouchers.push(...results.flat());
       }
 
-      const vouchers = allVouchers;
-
-      if (!vouchers.length) {
+      if (!allVouchers.length) {
         setImportVoucherResult({ ok: false, msg: "No vouchers found in Tally for this date range." });
         setSyncing(null); return;
       }
 
-      // Load existing accounts by name
-      const { data: accounts } = await supabase
-        .from("fw_fin_chart_of_accounts")
-        .select("id,name,type")
-        .eq("business_id", bizId);
+      // Load existing accounts + create missing ones
+      setSyncProgress("Preparing accounts…");
+      const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bizId);
       const accountMap = new Map((accounts ?? []).map(a => [a.name.toLowerCase(), a]));
-
-      // Auto-create missing accounts
       const missingNames = new Set<string>();
-      for (const v of vouchers) for (const l of v.lines) {
+      for (const v of allVouchers) for (const l of v.lines) {
         if (!accountMap.has(l.ledgerName.toLowerCase())) missingNames.add(l.ledgerName);
       }
       if (missingNames.size > 0) {
@@ -481,68 +474,62 @@ export default function TallyPage() {
         for (const a of (created ?? [])) accountMap.set(a.name.toLowerCase(), a);
       }
 
-      // Get existing FY for this business
-      const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label").eq("business_id", bizId).order("start_date", { ascending: false });
+      // Get FY + existing entry_nos
+      const { data: fys } = await supabase.from("fw_fin_financial_years").select("id").eq("business_id", bizId).order("start_date", { ascending: false });
       const fyIdToUse = fys?.[0]?.id ?? null;
-
-      // Dedup by Tally entry_no (TLY-Sales 105, TLY-Receipt 23, etc.)
-      const { data: existingTly } = await supabase
-        .from("fw_fin_journals")
-        .select("entry_no")
-        .eq("business_id", bizId)
-        .like("entry_no", "TLY-%");
+      const { data: existingTly } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).like("entry_no", "TLY-%");
       const existingEntryNos = new Set<string>((existingTly ?? []).map(j => j.entry_no));
       let entrySeq = existingTly?.length
-        ? Math.max(0, ...existingTly.map(j => parseInt(j.entry_no.replace(/\D/g,"") || "0", 10))) + 1
-        : 1;
+        ? Math.max(0, ...existingTly.map(j => parseInt(j.entry_no.replace(/\D/g,"") || "0", 10))) + 1 : 1;
 
-      let imported = 0, skipped = 0;
-      for (const v of vouchers) {
+      // Build all new journal rows (deduped) in memory
+      type JRow = { business_id: string; financial_year_id: string|null; entry_no: string; date: string; narration: string; type: string; status: string; total_debit: number; total_credit: number; reference_no: string|null };
+      type LRow = { account_id: string; narration: string; dr_amount: number; cr_amount: number };
+      const journalRows: JRow[] = [];
+      const pendingLines: LRow[][] = []; // lines[i] corresponds to journalRows[i]
+      let skipped = 0;
+
+      for (const v of allVouchers) {
         const vNum = v.voucherNumber?.trim();
         const tallyLabel = vNum ? `${v.voucherType} ${vNum}` : `${v.voucherType}-${entrySeq}`;
         const entryNo = `TLY-${tallyLabel}`;
         if (existingEntryNos.has(entryNo)) { skipped++; continue; }
 
-        const fpType = tallyVoucherTypeToFP(v.voucherType);
+        const lines: LRow[] = v.lines.flatMap(l => {
+          const acc = accountMap.get(l.ledgerName.toLowerCase());
+          if (!acc) return [];
+          return [{ account_id: acc.id, narration: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }];
+        });
+        if (!lines.length) { skipped++; continue; }
+
         const totalDr = v.lines.filter(l => l.isDeemed).reduce((s, l) => s + l.amount, 0);
         const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s, l) => s + l.amount, 0);
+        journalRows.push({ business_id: bizId, financial_year_id: fyIdToUse, entry_no: entryNo, date: v.date, narration: v.narration || tallyLabel, type: tallyVoucherTypeToFP(v.voucherType), status: "posted", total_debit: totalDr || totalCr, total_credit: totalCr || totalDr, reference_no: vNum || null });
+        pendingLines.push(lines);
+        existingEntryNos.add(entryNo);
+        if (!vNum) entrySeq++;
+      }
 
-        const { data: jRow, error: jErr } = await supabase.from("fw_fin_journals").insert({
-          business_id: bizId,
-          financial_year_id: fyIdToUse,
-          entry_no: entryNo,
-          date: v.date,
-          narration: v.narration || tallyLabel,
-          type: fpType,
-          status: "posted",
-          total_debit: totalDr || totalCr,
-          total_credit: totalCr || totalDr,
-          reference_no: vNum || null,
-        }).select("id").single();
-
-        if (jErr || !jRow) { skipped++; continue; }
-
-        const lines = v.lines
-          .map(l => {
-            const acc = accountMap.get(l.ledgerName.toLowerCase());
-            if (!acc) return null;
-            return {
-              journal_id: jRow.id,
-              account_id: acc.id,
-              description: l.ledgerName,
-              dr_amount: l.isDeemed ? l.amount : 0,
-              cr_amount: l.isDeemed ? 0 : l.amount,
-            };
-          })
-          .filter(Boolean);
-
-        if (lines.length > 0) {
-          await supabase.from("fw_fin_journal_lines").insert(lines as {journal_id:string;account_id:string;description:string;dr_amount:number;cr_amount:number}[]);
-          imported++; existingEntryNos.add(entryNo); if (!vNum) entrySeq++;
-        } else {
-          await supabase.from("fw_fin_journals").delete().eq("id", jRow.id);
-          skipped++;
+      // Batch insert journals (50 at a time) → get IDs back
+      setSyncProgress(`Saving ${journalRows.length} vouchers to database…`);
+      let imported = 0;
+      const BATCH = 50;
+      for (let i = 0; i < journalRows.length; i += BATCH) {
+        const slice = journalRows.slice(i, i + BATCH);
+        const { data: inserted } = await supabase.from("fw_fin_journals").insert(slice).select("id");
+        if (!inserted?.length) continue;
+        // Build all lines for this batch
+        const allLines: (LRow & { journal_id: string })[] = [];
+        for (let j = 0; j < inserted.length; j++) {
+          const jId = inserted[j].id;
+          for (const l of pendingLines[i + j]) allLines.push({ ...l, journal_id: jId });
         }
+        // Bulk insert lines (up to 200 at a time)
+        for (let li = 0; li < allLines.length; li += 200) {
+          await supabase.from("fw_fin_journal_lines").insert(allLines.slice(li, li + 200));
+        }
+        imported += inserted.length;
+        setSyncProgress(`Saved ${imported}/${journalRows.length} vouchers…`);
       }
 
       setImportVoucherResult({ ok: imported > 0, msg: `Imported ${imported} voucher${imported !== 1 ? "s" : ""} from Tally${skipped > 0 ? ` (${skipped} skipped)` : ""}.` });
