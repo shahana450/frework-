@@ -887,7 +887,6 @@ export default function TallyPage() {
     return `/api/finance/tally-export?${params}`;
   }
 
-  const inp: React.CSSProperties = { background: "rgba(255,255,255,0.04)", border: "1px solid #1B2E4A", color: "#DEE8F5", padding: "8px 12px", borderRadius: 8, fontSize: "0.85rem", outline: "none", fontFamily: "'DM Sans',system-ui,sans-serif" };
   const statusColors: Record<ConnStatus, string> = { idle: "#4A6FA5", connecting: "#F59E0B", connected: "#10B981", error: "#EF4444" };
   const statusLabels: Record<ConnStatus, string> = { idle: "Not connected", connecting: "Connecting…", connected: "Connected", error: "Error" };
   const typeColor: Record<string, [string,string]> = {
@@ -898,452 +897,352 @@ export default function TallyPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#05091A", color: "#DEE8F5", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#0A0D14", color: "#E2E8F0", fontFamily: "Inter,system-ui,sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
-        * { box-sizing: border-box; }
-        body { background: #05091A; }
-        .tb-bg { background: #05091A; background-image: radial-gradient(circle, rgba(59,130,246,0.06) 1px, transparent 1px); background-size: 28px 28px; }
-        .tb-nav { background: rgba(5,9,26,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid #1B2E4A; }
-        .tb-step { background: #0B1428; border: 1px solid #1B2E4A; border-radius: 14px; padding: 1.1rem; transition: border-color 0.2s; }
-        .tb-step-active { border-color: #1E4080; background: linear-gradient(135deg,#0C1830,#0B1428); }
-        .tb-step-done { border-color: rgba(16,185,129,0.3); background: linear-gradient(135deg,#071A12,#0B1428); }
-        .tb-card { background: #0B1428; border: 1px solid #1B2E4A; border-radius: 16px; padding: 1.5rem; }
-        .tb-btn { border: none; border-radius: 10px; font-family: 'DM Sans',system-ui,sans-serif; font-weight: 700; cursor: pointer; transition: opacity 0.15s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
-        .tb-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
-        .tb-btn:active:not(:disabled) { transform: translateY(0); }
-        .tb-btn:disabled { cursor: not-allowed; opacity: 0.4; }
-        .tb-btn-primary { background: #2563EB; color: #fff; }
-        .tb-btn-blue { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.35) !important; color: #60A5FA; }
-        .tb-btn-indigo { background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.35) !important; color: #818CF8; }
-        .tb-btn-green { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3) !important; color: #34D399; }
-        .tb-btn-gold { background: #D4A843; color: #05091A; }
-        .tb-link-btn { background: none; border: none; cursor: pointer; font-family: 'DM Sans',system-ui,sans-serif; padding: 0; }
-        .tb-mono { font-family: 'IBM Plex Mono',monospace; }
-        .tb-table th, .tb-table td { padding: 0.55rem 0.8rem; }
-        .tb-table tr:hover td { background: rgba(255,255,255,0.015); }
-        .tb-input-label { display: block; font-size: 0.65rem; font-weight: 700; color: #4A6FA5; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.35rem; }
-        .tb-result-row { transition: background 0.1s; }
-        .tb-result-ok { border-left: 3px solid #10B981; }
-        .tb-result-fail { border-left: 3px solid #EF4444; }
-        @keyframes pulse-ring { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
-        .tb-pulse { animation: pulse-ring 2s ease-in-out infinite; }
-        details summary { list-style: none; }
-        details summary::-webkit-details-marker { display: none; }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
-        select option { background: #0B1428; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        *{box-sizing:border-box}
+        .tb-mono{font-family:'JetBrains Mono',monospace}
+        .tb-btn{border:none;border-radius:8px;font-family:Inter,system-ui,sans-serif;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;font-size:0.875rem}
+        .tb-btn:hover:not(:disabled){filter:brightness(1.1)}
+        .tb-btn:disabled{opacity:0.4;cursor:not-allowed}
+        .tb-btn-primary{background:#3B82F6;color:#fff}
+        .tb-btn-green{background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3)!important;color:#34D399}
+        .tb-btn-purple{background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3)!important;color:#A78BFA}
+        .tb-btn-red{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2)!important;color:#F87171}
+        .tb-btn-gold{background:#CA8A04;color:#fff}
+        .tb-link-btn{background:none;border:none;cursor:pointer;font-family:Inter,system-ui;padding:0}
+        .tb-card{background:#111827;border:1px solid #1F2937;border-radius:12px;padding:1.25rem}
+        .tb-section-label{font-size:0.65rem;font-weight:700;color:#4B5563;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem}
+        .tb-input{background:#0F172A;border:1px solid #1F2937;color:#E2E8F0;padding:8px 12px;border-radius:8px;font-size:0.875rem;outline:none;font-family:Inter,system-ui;transition:border-color 0.15s}
+        .tb-input:focus{border-color:#3B82F6}
+        .tb-row{border-top:1px solid #1F2937}
+        .tb-row:hover td{background:rgba(255,255,255,0.015)}
+        .tb-ok{border-left:2px solid #10B981}
+        .tb-fail{border-left:2px solid #EF4444}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        .tb-live{animation:pulse 2s ease-in-out infinite}
+        details summary{list-style:none;cursor:pointer}
+        details summary::-webkit-details-marker{display:none}
+        input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5)}
+        select option{background:#111827}
       `}</style>
 
-      <nav className="tb-nav" style={{ padding: "0 2rem", display: "flex", alignItems: "center", gap: "0.75rem", height: 56, position: "sticky", top: 0, zIndex: 10 }}>
-        <Link href="/finance" style={{ color: "#60A5FA", fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>FreWork Finance</Link>
-        <svg width="6" height="10" viewBox="0 0 6 10" fill="none"><path d="M1 1l4 4-4 4" stroke="#2A4060" strokeWidth="1.5" strokeLinecap="round"/></svg>
-        <span style={{ color: "#DEE8F5", fontSize: "0.88rem", fontWeight: 600 }}>Tally Bridge</span>
+      {/* Nav */}
+      <nav style={{ background: "#0A0D14", borderBottom: "1px solid #1F2937", padding: "0 1.5rem", height: 52, display: "flex", alignItems: "center", gap: "0.5rem", position: "sticky", top: 0, zIndex: 10 }}>
+        <Link href="/finance" style={{ color: "#6B7280", fontSize: "0.875rem", textDecoration: "none", fontWeight: 500 }}>Finance</Link>
+        <span style={{ color: "#374151" }}>/</span>
+        <span style={{ color: "#E2E8F0", fontSize: "0.875rem", fontWeight: 600 }}>Tally Sync</span>
+        {connStatus === "connected" && (
+          <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 20, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 600, color: "#34D399" }}>
+            <span className="tb-live" style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D399", display: "block" }} />
+            {companyName || "Connected"}
+          </span>
+        )}
       </nav>
 
-      <div className="tb-bg" style={{ minHeight: "calc(100vh - 56px)" }}>
-        <div style={{ maxWidth: 880, margin: "0 auto", padding: "2rem 2rem 4rem" }}>
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "2rem 1.5rem 4rem" }}>
 
-          {/* ── PAGE HEADER ── */}
-          <div style={{ marginBottom: "2rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.4rem" }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#1E40AF,#2563EB)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem", flexShrink: 0 }}>🔗</div>
-              <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.02em" }}>Tally Bridge</h1>
-            </div>
-            <p style={{ margin: "0 0 0 52px", color: "#4A6FA5", fontSize: "0.88rem" }}>Push ledgers and vouchers directly into Tally Prime — no XML import file needed.</p>
-          </div>
+        {/* Header */}
+        <div style={{ marginBottom: "2rem" }}>
+          <h1 style={{ margin: "0 0 0.25rem", fontSize: "1.375rem", fontWeight: 700, letterSpacing: "-0.02em", color: "#F1F5F9" }}>Tally Sync</h1>
+          <p style={{ margin: 0, color: "#6B7280", fontSize: "0.875rem" }}>Import data from Tally Prime into FrePilot. Use XML upload (recommended) or live bridge.</p>
+        </div>
 
-          {/* ── SETUP STEPS ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
-            {/* Step 1 */}
-            <div className="tb-step tb-step-active">
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-                <span style={{ width: 22, height: 22, borderRadius: 6, background: "#2563EB", color: "#fff", fontWeight: 800, fontSize: "0.68rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>1</span>
-                <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.1em" }}>One-time setup</span>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.5rem", color: "#DEE8F5" }}>Download Bridge</div>
-              <p style={{ fontSize: "0.74rem", color: "#4A6FA5", margin: "0 0 0.9rem", lineHeight: 1.6 }}>
-                Browser security blocks direct Tally calls. Download and double-click the launcher.
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <a href="/run-tally-bridge.bat" download="run-tally-bridge.bat" className="tb-btn tb-btn-primary" style={{ padding: "9px 0", fontSize: "0.8rem", borderRadius: 8, textDecoration: "none" }}>
-                  ⬇ Download &amp; Run (.bat)
-                </a>
-                <a href="/tally-bridge.js" download="tally-bridge.js" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)", color: "#60A5FA", borderRadius: 8, padding: "7px 0", fontWeight: 600, fontSize: "0.72rem", textDecoration: "none" }}>
-                  ⬇ tally-bridge.js (manual)
-                </a>
-              </div>
-              <p style={{ fontSize: "0.67rem", color: "#2A4060", margin: "0.6rem 0 0", lineHeight: 1.5 }}>
-                Keep the .bat window open while syncing. Requires <a href="https://nodejs.org" target="_blank" rel="noopener noreferrer" style={{ color: "#60A5FA" }}>Node.js</a>.
-              </p>
-            </div>
-
-            {/* Step 2 */}
-            <div className="tb-step">
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-                <span style={{ width: 22, height: 22, borderRadius: 6, background: "#1B2E4A", color: "#4A6FA5", fontWeight: 800, fontSize: "0.68rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>2</span>
-                <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#4A6FA5", textTransform: "uppercase", letterSpacing: "0.1em" }}>In Tally</span>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.6rem", color: "#DEE8F5" }}>Enable HTTP Server</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
-                {["Open Tally Prime", "F12 → Client/Server config", "TallyPrime acts as → Both or Server", "Enable ODBC → Yes · Port → 9000", "Press Escape to save"].map((s, i) => (
-                  <div key={i} style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
-                    <span style={{ background: "#111E33", color: "#4A6FA5", width: 18, height: 18, borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.58rem", flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
-                    <span style={{ fontSize: "0.72rem", color: "#6E88A8", lineHeight: 1.5 }}>{s}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="tb-step tb-step-done">
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-                <span style={{ width: 22, height: 22, borderRadius: 6, background: "rgba(16,185,129,0.2)", color: "#10B981", fontWeight: 800, fontSize: "0.68rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>3</span>
-                <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "rgba(16,185,129,0.7)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Here</span>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.5rem", color: "#DEE8F5" }}>Connect &amp; Sync</div>
-              <p style={{ fontSize: "0.74rem", color: "#4A6FA5", margin: "0", lineHeight: 1.6 }}>
-                With the bridge running and Tally open, click <strong style={{ color: "#34D399" }}>Connect to Tally</strong> below, then sync ledgers and push vouchers.
-              </p>
-            </div>
-          </div>
-
-          {/* ── UPLOAD XML (no bridge needed) ── */}
-          <div className="tb-card" style={{ marginBottom: "1.5rem", border: "1px solid rgba(251,191,36,0.25)", background: "linear-gradient(135deg,rgba(251,191,36,0.04),rgba(16,24,40,0.9))" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-              <div style={{ width: 32, height: 32, borderRadius: 9, background: "rgba(251,191,36,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>📂</div>
+        {/* ── METHOD 1: XML Upload ── */}
+        <div style={{ marginBottom: "1rem" }}>
+          <div className="tb-section-label">Recommended — No setup required</div>
+          <div className="tb-card" style={{ borderColor: "rgba(59,130,246,0.2)" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#FCD34D" }}>Upload Tally XML — No Bridge Needed</div>
-                <div style={{ fontSize: "0.72rem", color: "rgba(252,211,77,0.5)" }}>Export from Tally → upload here. Works without the bridge.</div>
+                <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "#F1F5F9", marginBottom: "0.25rem" }}>Upload Tally XML</div>
+                <div style={{ color: "#6B7280", fontSize: "0.8125rem", lineHeight: 1.6 }}>
+                  Export from Tally → <span style={{ color: "#94A3B8" }}>Gateway → Display → Daybook → Alt+E → XML</span> → upload here.
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0, flexWrap: "wrap" }}>
+                <input ref={xmlFileRef} type="file" accept=".xml" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) importFromXmlFile(f); e.target.value = ""; }} />
+                <button onClick={() => xmlFileRef.current?.click()} disabled={!!syncing} className="tb-btn tb-btn-primary" style={{ padding: "9px 20px" }}>
+                  {syncing === "xmlUpload" ? (syncProgress ?? "Importing…") : "Upload XML"}
+                </button>
               </div>
             </div>
-            <div style={{ fontSize: "0.78rem", color: "#4A6FA5", marginBottom: "1rem", lineHeight: 1.7 }}>
-              <strong style={{ color: "#94A3B8" }}>How to export from Tally:</strong><br />
-              Gateway of Tally → <strong>Display</strong> → <strong>Daybook</strong> → set date range → press <strong>Alt+E</strong> → choose <strong>XML</strong> format → Save file
-            </div>
-            <input ref={xmlFileRef} type="file" accept=".xml" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) importFromXmlFile(f); e.target.value = ""; }} />
-            <button
-              onClick={() => xmlFileRef.current?.click()}
-              disabled={!!syncing}
-              style={{ width: "100%", padding: "12px 0", borderRadius: 10, border: "1px solid rgba(251,191,36,0.35)", background: "rgba(251,191,36,0.08)", color: "#FCD34D", fontWeight: 700, fontSize: "0.88rem", cursor: syncing ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: syncing ? 0.5 : 1 }}>
-              {syncing === "xmlUpload" ? (syncProgress ?? "Importing…") : "📂 Choose Tally XML File & Import"}
-            </button>
             {xmlUploadResult && (
-              <div style={{ marginTop: "0.75rem", fontSize: "0.82rem", fontWeight: 600, padding: "0.6rem 0.9rem", borderRadius: 9, color: xmlUploadResult.ok ? "#34D399" : "#FCD34D", background: xmlUploadResult.ok ? "rgba(52,211,153,0.06)" : "rgba(252,211,77,0.06)", border: `1px solid ${xmlUploadResult.ok ? "rgba(52,211,153,0.2)" : "rgba(252,211,77,0.2)"}` }}>
+              <div style={{ marginTop: "0.875rem", padding: "0.625rem 0.875rem", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 500, color: xmlUploadResult.ok ? "#34D399" : "#FBBF24", background: xmlUploadResult.ok ? "rgba(16,185,129,0.08)" : "rgba(251,191,36,0.08)", border: `1px solid ${xmlUploadResult.ok ? "rgba(16,185,129,0.2)" : "rgba(251,191,36,0.2)"}` }}>
                 {xmlUploadResult.msg}
               </div>
             )}
           </div>
+        </div>
 
-          {/* ── LIVE CONNECTOR ── */}
-          <div className="tb-card" style={{ marginBottom: "1.5rem" }}>
-            {/* Header row */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem", paddingBottom: "1.25rem", borderBottom: "1px solid #111E33" }}>
-              <div style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg,#0E2040,#1B3A6B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>⚡</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#DEE8F5" }}>Live Tally Connector</div>
-                <div style={{ fontSize: "0.72rem", color: "#2A4060" }}>Real-time sync over port {tallyPort}</div>
+        {/* ── METHOD 2: Live Bridge ── */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <div className="tb-section-label">Live Bridge — Requires Tally open on this PC</div>
+          <div className="tb-card">
+            {/* Setup steps — collapsed into a small info block */}
+            <details style={{ marginBottom: "1.25rem" }}>
+              <summary style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.8125rem", color: "#6B7280", fontWeight: 500, padding: "0.25rem 0" }}>
+                <span style={{ fontSize: "0.75rem" }}>▶</span> Setup instructions (first time only)
+              </summary>
+              <div style={{ marginTop: "0.875rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                <div style={{ background: "#0F172A", borderRadius: 8, padding: "0.875rem" }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#3B82F6", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Step 1 — Download Bridge</div>
+                  <p style={{ fontSize: "0.78rem", color: "#6B7280", margin: "0 0 0.75rem", lineHeight: 1.6 }}>Download and double-click the launcher. Keep the window open while syncing.</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                    <a href="/run-tally-bridge.bat" download="run-tally-bridge.bat" className="tb-btn tb-btn-primary" style={{ padding: "8px 0", textDecoration: "none", fontSize: "0.8rem" }}>Download .bat launcher</a>
+                    <a href="/tally-bridge.js" download="tally-bridge.js" style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "#6B7280", fontSize: "0.75rem", textDecoration: "none" }}>tally-bridge.js (manual / Node.js)</a>
+                  </div>
+                </div>
+                <div style={{ background: "#0F172A", borderRadius: 8, padding: "0.875rem" }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#10B981", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Step 2 — Enable in Tally</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                    {["F12 → Client/Server config", "Acts as: Both or Server", "Enable ODBC: Yes, Port 9000", "Press Escape to save"].map((s, i) => (
+                      <div key={i} style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+                        <span style={{ width: 16, height: 16, borderRadius: 4, background: "#1F2937", color: "#6B7280", fontSize: "0.6rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{i+1}</span>
+                        <span style={{ fontSize: "0.78rem", color: "#6B7280", lineHeight: 1.5 }}>{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.5rem", background: `${statusColors[connStatus]}14`, border: `1px solid ${statusColors[connStatus]}30`, borderRadius: 20, padding: "4px 12px" }}>
-                <span className={connStatus === "connected" ? "tb-pulse" : ""} style={{ width: 7, height: 7, borderRadius: "50%", background: statusColors[connStatus], display: "block", flexShrink: 0 }} />
-                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: statusColors[connStatus] }}>{statusLabels[connStatus]}</span>
+            </details>
+
+            {/* Connection row */}
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280", marginBottom: "0.3rem" }}>Port</div>
+                <input value={tallyPort} onChange={e => setTallyPort(e.target.value)} className="tb-input" style={{ width: 80 }} placeholder="7001" />
+              </div>
+              <button onClick={testConnection} disabled={connStatus === "connecting"} className="tb-btn tb-btn-primary" style={{ padding: "9px 20px" }}>
+                {connStatus === "connecting" ? "Connecting…" : connStatus === "connected" ? "Reconnect" : "Connect to Tally"}
+              </button>
+              {connStatus === "connected" && (
+                <button onClick={disconnect} className="tb-btn tb-btn-red" style={{ padding: "9px 16px" }}>Disconnect</button>
+              )}
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", fontWeight: 600, color: statusColors[connStatus] }}>
+                <span className={connStatus === "connected" ? "tb-live" : ""} style={{ width: 6, height: 6, borderRadius: "50%", background: statusColors[connStatus] }} />
+                {statusLabels[connStatus]}
               </div>
             </div>
 
-            {/* Connected company card */}
-            {connStatus === "connected" && (
-              <div style={{ background: "linear-gradient(135deg,#071A12,#091C14)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 12, padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem", flexShrink: 0 }}>🏢</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "0.6rem", color: "rgba(52,211,153,0.6)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Connected Tally Company</div>
-                    {allCompanies.length > 1 ? (
-                      <select
-                        value={companyName}
-                        onChange={e => { setCompanyName(e.target.value); localStorage.setItem("fw_tally_company", e.target.value); }}
-                        style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(52,211,153,0.35)", color: "#34D399", borderRadius: 8, padding: "5px 10px", fontSize: "0.95rem", fontWeight: 700, fontFamily: "inherit", cursor: "pointer", width: "100%" }}>
-                        <option value="">— select the correct company —</option>
-                        {allCompanies.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    ) : (
-                      <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#34D399", letterSpacing: "-0.01em" }}>{companyName || "—"}</div>
-                    )}
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: "0.62rem", color: "rgba(52,211,153,0.5)", fontWeight: 600 }}>● LIVE</div>
-                    <div style={{ fontSize: "0.68rem", color: "#2A4060", marginTop: 2 }}>Port {tallyPort}</div>
-                  </div>
-                </div>
-                {allCompanies.length > 1 && (
-                  <div style={{ fontSize: "0.72rem", color: "rgba(52,211,153,0.45)", marginTop: "0.6rem" }}>
-                    Multiple companies are open in Tally — select the one you want to sync.
-                  </div>
-                )}
-              </div>
-            )}
-
             {connStatus === "error" && connMsg && (
-              <div style={{ fontSize: "0.8rem", color: "#FCA5A5", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "0.65rem 1rem", marginBottom: "1.25rem" }}>
-                {connMsg}
-                <div style={{ marginTop: "0.4rem", color: "#7A93B4", fontSize: "0.74rem" }}>Make sure <code className="tb-mono" style={{ background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 3, fontSize: "0.7rem" }}>node tally-bridge.js</code> is running and Tally is open.</div>
+              <div style={{ marginTop: "0.875rem", padding: "0.625rem 0.875rem", borderRadius: 8, fontSize: "0.8rem", color: "#FCA5A5", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.15)" }}>
+                {connMsg} — Make sure <code className="tb-mono" style={{ fontSize: "0.75rem", background: "rgba(255,255,255,0.05)", padding: "1px 4px", borderRadius: 4 }}>node tally-bridge.js</code> is running.
               </div>
             )}
 
-            {/* Port + connect row */}
-            <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", marginBottom: "1.25rem", flexWrap: "wrap" }}>
-              <div>
-                <label className="tb-input-label">Bridge Port</label>
-                <input value={tallyPort} onChange={e => setTallyPort(e.target.value)} style={{ ...inp, width: 90 }} placeholder="7001" />
+            {connStatus === "connected" && allCompanies.length > 1 && (
+              <div style={{ marginTop: "0.875rem" }}>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280", marginBottom: "0.3rem" }}>Select Company</div>
+                <select value={companyName} onChange={e => { setCompanyName(e.target.value); localStorage.setItem("fw_tally_company", e.target.value); }}
+                  className="tb-input" style={{ width: "100%" }}>
+                  {allCompanies.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
-              <button onClick={testConnection} disabled={connStatus === "connecting"} className="tb-btn tb-btn-primary" style={{ padding: "9px 24px", fontSize: "0.875rem" }}>
-                {connStatus === "connecting" ? "Testing…" : connStatus === "connected" ? "Re-test" : "Connect to Tally"}
-              </button>
-              {connStatus === "connected" && (
-                <button onClick={disconnect} className="tb-btn" style={{ padding: "9px 20px", fontSize: "0.84rem", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#F87171", borderRadius: 10 }}>
-                  Disconnect
+            )}
+
+            {/* Date range — only relevant when connected */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginTop: "1rem" }}>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280", marginBottom: "0.3rem" }}>From Date</div>
+                <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="tb-input" style={{ width: "100%" }} />
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280", marginBottom: "0.3rem" }}>To Date</div>
+                <input type="date" value={to} onChange={e => setTo(e.target.value)} className="tb-input" style={{ width: "100%" }} />
+              </div>
+            </div>
+
+            {/* Tally → FrePilot buttons */}
+            <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #1F2937" }}>
+              <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280", marginBottom: "0.625rem" }}>Tally → FrePilot</div>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                <button onClick={importLedgers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-green" style={{ flex: 1, padding: "9px 0" }}>
+                  {syncing === "import" ? "Importing…" : "Import Ledgers"}
                 </button>
+                <button onClick={importVouchers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-purple" style={{ flex: 1, padding: "9px 0" }}>
+                  {syncing === "importVouchers" ? (syncProgress ?? "Syncing…") : "Import Vouchers"}
+                </button>
+                <button onClick={clearAndReimport} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-red" style={{ padding: "9px 14px" }} title="Delete all TLY imports and re-import fresh">
+                  Clear & Re-import
+                </button>
+              </div>
+              {importVoucherResult && (
+                <div style={{ marginTop: "0.75rem", padding: "0.625rem 0.875rem", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 500, color: importVoucherResult.ok ? "#34D399" : "#FBBF24", background: importVoucherResult.ok ? "rgba(16,185,129,0.08)" : "rgba(251,191,36,0.08)", border: `1px solid ${importVoucherResult.ok ? "rgba(16,185,129,0.2)" : "rgba(251,191,36,0.2)"}` }}>
+                  {importVoucherResult.msg}
+                </div>
               )}
             </div>
 
+            {/* FrePilot → Tally buttons */}
+            <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #1F2937" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.625rem" }}>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280" }}>FrePilot → Tally</div>
+                <button onClick={loadJournalPreview} className="tb-btn" style={{ background: "transparent", border: "1px solid #1F2937", color: "#6B7280", padding: "4px 12px", fontSize: "0.75rem" }}>
+                  {previewOpen ? "Refresh" : "Preview Journals"}
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                <button onClick={syncLedgers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn" style={{ flex: 1, padding: "9px 0", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.25)", color: "#60A5FA" }}>
+                  {syncing === "ledgers" ? "Pushing…" : "Push Ledgers to Tally"}
+                </button>
+                <button onClick={pushVouchers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn" style={{ flex: 1, padding: "9px 0", background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)", color: "#A78BFA" }}>
+                  {syncing === "vouchers" ? "Pushing…" : `Push Vouchers (${journalCount ?? "—"})`}
+                </button>
+              </div>
+            </div>
+
             {rawDebug && (
-              <details style={{ marginBottom: "1.25rem" }}>
-                <summary style={{ fontSize: "0.72rem", color: "#2A4060", cursor: "pointer", marginBottom: "0.4rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                  <span style={{ fontSize: "0.6rem" }}>▶</span> Raw Tally response
+              <details style={{ marginTop: "0.875rem" }}>
+                <summary style={{ fontSize: "0.75rem", color: "#4B5563", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <span style={{ fontSize: "0.6rem" }}>▶</span> Raw response
                 </summary>
-                <pre className="tb-mono" style={{ marginTop: "0.4rem", fontSize: "0.64rem", color: "#4A6FA5", background: "rgba(0,0,0,0.3)", padding: "0.75rem 1rem", borderRadius: 8, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", maxHeight: 180, overflowY: "auto", border: "1px solid #111E33" }}>
+                <pre className="tb-mono" style={{ marginTop: "0.5rem", fontSize: "0.65rem", color: "#4B5563", background: "#0F172A", padding: "0.75rem", borderRadius: 8, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", maxHeight: 160, overflowY: "auto", border: "1px solid #1F2937" }}>
                   {rawDebug}
                 </pre>
               </details>
             )}
 
-            {/* Date range */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1.25rem" }}>
-              <div>
-                <label className="tb-input-label">From Date</label>
-                <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ ...inp, width: "100%" }} />
-              </div>
-              <div>
-                <label className="tb-input-label">To Date</label>
-                <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ ...inp, width: "100%" }} />
-              </div>
-            </div>
-
-            {/* Tally → FrePilot */}
-            <div style={{ marginBottom: "0.5rem" }}>
-              <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "#2A4060", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.6rem" }}>Tally → FrePilot</div>
-              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-                <button onClick={importLedgers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-green" style={{ flex: 1, padding: "11px 0", fontSize: "0.86rem" }}>
-                  {syncing === "import" ? "Importing…" : "⬇ Import Ledgers"}
-                </button>
-                <button onClick={importVouchers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn" style={{ flex: 1, padding: "11px 0", fontSize: "0.86rem", background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#C4B5FD" }}>
-                  {syncing === "importVouchers" ? "Syncing…" : "⬇ Import Vouchers"}
-                </button>
-                <button onClick={clearAndReimport} disabled={connStatus !== "connected" || !!syncing} className="tb-btn" style={{ padding: "11px 16px", fontSize: "0.82rem", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#F87171", whiteSpace: "nowrap" }} title="Delete all existing TLY imports and re-import fresh">
-                  🗑 Clear & Re-import
-                </button>
-              </div>
-              {importVoucherResult && (
-                <div style={{ marginTop: "0.75rem", fontSize: "0.8rem", fontWeight: 600, color: importVoucherResult.ok ? "#34D399" : "#FCD34D", background: importVoucherResult.ok ? "rgba(16,185,129,0.07)" : "rgba(252,211,77,0.07)", border: `1px solid ${importVoucherResult.ok ? "rgba(16,185,129,0.2)" : "rgba(252,211,77,0.2)"}`, borderRadius: 9, padding: "0.65rem 0.9rem" }}>
-                  {importVoucherResult.ok ? "✓ " : "⚠ "}{importVoucherResult.msg}
-                  {importVoucherResult.ok && <span style={{ marginLeft: 8, fontSize: "0.72rem", fontWeight: 400, color: "rgba(52,211,153,0.6)" }}>— visible in Journal Entries</span>}
-                </div>
-              )}
-              {syncing === "importVouchers" && (
-                <div style={{ marginTop: "0.6rem", fontSize: "0.76rem", color: "#4A6FA5" }}>
-                  {syncProgress ?? "Starting sync… keep Tally idle."}
-                </div>
-              )}
-            </div>
-
-            {/* Divider */}
-            <div style={{ height: 1, background: "#111E33", margin: "1.25rem 0" }} />
-
-            {/* Journal Preview */}
-            <div style={{ marginBottom: "1rem" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-                <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "#2A4060", textTransform: "uppercase", letterSpacing: "0.1em" }}>FrePilot → Tally</div>
-                <button onClick={loadJournalPreview} className="tb-btn" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid #1B2E4A", color: "#6E88A8", padding: "5px 14px", borderRadius: 7, fontSize: "0.74rem", fontWeight: 600 }}>
-                  {previewOpen ? "↺ Refresh" : "👁 Preview Journals"}
-                </button>
-              </div>
-
-              {previewOpen && (
-                <div style={{ background: "#080D1C", border: "1px solid #111E33", borderRadius: 10, marginBottom: "1rem", overflow: "hidden" }}>
-                  {previewLoading ? (
-                    <div style={{ padding: "1.5rem", textAlign: "center", color: "#2A4060", fontSize: "0.82rem" }}>Loading journals…</div>
-                  ) : journals.length === 0 ? (
-                    <div style={{ padding: "1.5rem", textAlign: "center", color: "#2A4060", fontSize: "0.82rem" }}>No posted journals in this date range.</div>
-                  ) : (
-                    <div style={{ overflowX: "auto" }}>
-                      <table className="tb-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.76rem" }}>
-                        <thead>
-                          <tr style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid #111E33" }}>
-                            {["Entry No", "Date", "Type", "Narration", "DR (₹)", "CR (₹)"].map(h => (
-                              <th key={h} style={{ textAlign: "left", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {journals.map((j, i) => {
-                            const [tc, tbg] = typeColor[j.type] ?? ["#7A93B4","rgba(122,147,180,0.1)"];
-                            return (
-                              <tr key={j.id} className="tb-result-row" style={{ borderTop: i === 0 ? "none" : "1px solid #0D1827" }}>
-                                <td className="tb-mono" style={{ color: "#2A4060", whiteSpace: "nowrap", fontSize: "0.68rem" }}>{j.entry_no}</td>
-                                <td style={{ whiteSpace: "nowrap", color: "#6E88A8" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</td>
-                                <td>
-                                  <span style={{ fontSize: "0.62rem", fontWeight: 700, color: tc, background: tbg, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap" }}>{j.type}</span>
-                                </td>
-                                <td style={{ color: "#7A93B4", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
-                                <td className="tb-mono" style={{ textAlign: "right", color: "#10B981", whiteSpace: "nowrap" }}>₹{Number(j.total_debit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                                <td className="tb-mono" style={{ textAlign: "right", color: "#60A5FA", whiteSpace: "nowrap" }}>₹{Number(j.total_credit).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                        <tfoot>
-                          <tr style={{ borderTop: "1px solid #1B2E4A", background: "rgba(255,255,255,0.02)" }}>
-                            <td colSpan={4} style={{ fontWeight: 700, fontSize: "0.72rem", color: "#4A6FA5" }}>{journals.length} journal{journals.length !== 1 ? "s" : ""} ready to push</td>
-                            <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#10B981" }}>₹{journals.reduce((s, j) => s + Number(j.total_debit), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                            <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#60A5FA" }}>₹{journals.reduce((s, j) => s + Number(j.total_credit), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Push buttons */}
-            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-              <button onClick={syncLedgers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-blue" style={{ flex: 1, minWidth: 180, padding: "13px 0", fontSize: "0.86rem", border: "1px solid rgba(59,130,246,0.3)" }}>
-                {syncing === "ledgers" ? "Syncing…" : "📒 Push Ledgers to Tally"}
-              </button>
-              <button onClick={pushVouchers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-indigo" style={{ flex: 1, minWidth: 180, padding: "13px 0", fontSize: "0.86rem", border: "1px solid rgba(99,102,241,0.3)" }}>
-                {syncing === "vouchers" ? "Pushing…" : `🧾 Push Vouchers (${journalCount ?? "—"})${companyName ? ` → ${companyName}` : ""}`}
-              </button>
-            </div>
-
             {syncResult && (
-              <div style={{ marginTop: "1rem", fontSize: "0.83rem", fontWeight: 600, color: syncResult.ok ? "#34D399" : "#FCD34D", background: syncResult.ok ? "rgba(16,185,129,0.07)" : "rgba(252,211,77,0.07)", border: `1px solid ${syncResult.ok ? "rgba(16,185,129,0.2)" : "rgba(252,211,77,0.2)"}`, borderRadius: 10, padding: "0.75rem 1rem" }}>
-                {syncResult.ok ? "✓ " : "⚠ "}{syncResult.msg}
+              <div style={{ marginTop: "1rem", padding: "0.625rem 0.875rem", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 500, color: syncResult.ok ? "#34D399" : "#FBBF24", background: syncResult.ok ? "rgba(16,185,129,0.08)" : "rgba(251,191,36,0.08)", border: `1px solid ${syncResult.ok ? "rgba(16,185,129,0.2)" : "rgba(251,191,36,0.2)"}` }}>
+                {syncResult.msg}
               </div>
             )}
+          </div>
+        </div>
 
-            {/* Push results */}
-            {pushResults.length > 0 && (
-              <div style={{ marginTop: "1rem", background: "#080D1C", border: "1px solid #111E33", borderRadius: 12, overflow: "hidden" }}>
-                <div style={{ padding: "0.65rem 1rem", fontSize: "0.62rem", fontWeight: 700, color: "#2A4060", textTransform: "uppercase", letterSpacing: "0.1em", borderBottom: "1px solid #111E33", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                  <span>Push Results</span>
-                  <span style={{ color: "#10B981" }}>✓ {pushResults.filter(r => r.ok).length} passed</span>
-                  {pushResults.filter(r => !r.ok).length > 0 && <span style={{ color: "#EF4444" }}>✗ {pushResults.filter(r => !r.ok).length} failed</span>}
-                </div>
-
-                {pushResults.some(r => !r.ok) && (
-                  <div style={{ padding: "0.75rem 1rem", background: "rgba(252,211,77,0.05)", borderBottom: "1px solid rgba(252,211,77,0.12)", fontSize: "0.78rem", color: "#FCD34D", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                    <span style={{ flex: 1 }}>💡 Failed vouchers may have ledger names missing in Tally — create them first, then push again.</span>
-                    <button onClick={createMissingLedgers} disabled={creatingLedgers || connStatus !== "connected"} className="tb-btn tb-btn-gold" style={{ padding: "6px 16px", fontSize: "0.74rem", borderRadius: 7 }}>
-                      {creatingLedgers ? "Creating…" : "⚡ Create Missing Ledgers"}
-                    </button>
-                  </div>
-                )}
-
-                {createLedgerResult && (
-                  <div style={{ padding: "0.65rem 1rem", background: createLedgerResult.startsWith("✓") ? "rgba(16,185,129,0.07)" : "rgba(252,211,77,0.06)", borderBottom: "1px solid #111E33", fontSize: "0.78rem", color: createLedgerResult.startsWith("✓") ? "#34D399" : "#FCD34D" }}>
-                    {createLedgerResult}
-                  </div>
-                )}
-
-                <table className="tb-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+        {/* ── JOURNAL PREVIEW TABLE ── */}
+        {previewOpen && (
+          <div className="tb-card" style={{ marginBottom: "1.5rem", padding: 0, overflow: "hidden" }}>
+            {previewLoading ? (
+              <div style={{ padding: "2rem", textAlign: "center", color: "#4B5563", fontSize: "0.875rem" }}>Loading…</div>
+            ) : journals.length === 0 ? (
+              <div style={{ padding: "2rem", textAlign: "center", color: "#4B5563", fontSize: "0.875rem" }}>No posted journals in this date range.</div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                  <thead>
+                    <tr style={{ background: "#0F172A" }}>
+                      {["Entry", "Date", "Type", "Narration", "DR (₹)", "CR (₹)"].map(h => (
+                        <th key={h} style={{ textAlign: "left", color: "#4B5563", fontWeight: 600, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.07em", padding: "0.625rem 0.875rem", whiteSpace: "nowrap", borderBottom: "1px solid #1F2937" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
                   <tbody>
-                    {pushResults.map((r, i) => (
-                      <React.Fragment key={r.id}>
-                        <tr className={`tb-result-row ${r.ok ? "tb-result-ok" : "tb-result-fail"}`} style={{ borderTop: i === 0 ? "none" : "1px solid #0D1827" }}>
-                          <td style={{ width: 36, textAlign: "center" }}>
-                            <span style={{ width: 20, height: 20, borderRadius: "50%", background: r.ok ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem" }}>
-                              {r.ok ? "✓" : "✗"}
-                            </span>
+                    {journals.map((j, i) => {
+                      const [tc, tbg] = typeColor[j.type] ?? ["#6B7280","rgba(107,114,128,0.1)"];
+                      return (
+                        <tr key={j.id} className="tb-row" style={{ borderTop: i === 0 ? "none" : undefined }}>
+                          <td className="tb-mono" style={{ color: "#4B5563", whiteSpace: "nowrap", fontSize: "0.72rem", padding: "0.5rem 0.875rem" }}>{j.entry_no}</td>
+                          <td style={{ whiteSpace: "nowrap", color: "#6B7280", padding: "0.5rem 0.875rem" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
+                          <td style={{ padding: "0.5rem 0.875rem" }}>
+                            <span style={{ fontSize: "0.65rem", fontWeight: 600, color: tc, background: tbg, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap" }}>{j.type}</span>
                           </td>
-                          <td className="tb-mono" style={{ color: "#2A4060", fontSize: "0.67rem", whiteSpace: "nowrap" }}>{r.entry_no}</td>
-                          <td style={{ color: "#4A6FA5", whiteSpace: "nowrap", fontSize: "0.72rem" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
-                          <td style={{ color: r.ok ? "#6E88A8" : "#FCD34D", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.74rem" }}>
-                            {r.ok ? r.narration : (r.error || "Tally rejected — check ledger names")}
-                          </td>
-                          {!r.ok && (
-                            <td style={{ whiteSpace: "nowrap" }}>
-                              <a href={`/finance/journals/${r.id}/edit`} style={{ fontSize: "0.7rem", color: "#60A5FA", marginRight: 10, textDecoration: "none", fontWeight: 600 }}>✏ Edit</a>
-                              <button className="tb-link-btn" onClick={async () => {
-                                if (!confirm(`Delete journal ${r.entry_no}? This cannot be undone.`)) return;
-                                await supabase.from("fw_fin_journal_lines").delete().eq("journal_id", r.id);
-                                await supabase.from("fw_fin_journals").delete().eq("id", r.id);
-                                setPushResults(prev => prev.filter(x => x.id !== r.id));
-                                setJournals(prev => prev.filter(x => x.id !== r.id));
-                                setJournalCount(prev => (prev ?? 1) - 1);
-                              }} style={{ fontSize: "0.7rem", color: "#EF4444", fontWeight: 600 }}>🗑 Delete</button>
-                            </td>
-                          )}
-                          {r.ok && <td />}
+                          <td style={{ color: "#94A3B8", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>{j.narration}</td>
+                          <td className="tb-mono" style={{ textAlign: "right", color: "#10B981", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>₹{Number(j.total_debit).toLocaleString("en-IN")}</td>
+                          <td className="tb-mono" style={{ textAlign: "right", color: "#60A5FA", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>₹{Number(j.total_credit).toLocaleString("en-IN")}</td>
                         </tr>
-                        {!r.ok && (r.xml || r.tallyResponse) && (
-                          <tr style={{ borderTop: "none" }}>
-                            <td colSpan={5} style={{ padding: "0 1rem 0.6rem 2.5rem" }}>
-                              <details style={{ fontSize: "0.64rem" }}>
-                                <summary style={{ color: "#2A4060", cursor: "pointer", marginBottom: "0.3rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                                  <span style={{ fontSize: "0.55rem" }}>▶</span> Debug: XML sent / Tally response
-                                </summary>
-                                {r.xml && <><div style={{ color: "#2A4060", marginBottom: "0.2rem", marginTop: "0.4rem", fontWeight: 600 }}>XML sent:</div><pre className="tb-mono" style={{ background: "rgba(0,0,0,0.4)", padding: "0.6rem 0.75rem", borderRadius: 7, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#93C5FD", maxHeight: 160, overflowY: "auto", border: "1px solid #111E33", fontSize: "0.62rem" }}>{r.xml}</pre></>}
-                                {r.tallyResponse && <><div style={{ color: "#2A4060", marginBottom: "0.2rem", marginTop: "0.5rem", fontWeight: 600 }}>Tally response:</div><pre className="tb-mono" style={{ background: "rgba(0,0,0,0.4)", padding: "0.6rem 0.75rem", borderRadius: 7, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#FCA5A5", maxHeight: 160, overflowY: "auto", border: "1px solid #111E33", fontSize: "0.62rem" }}>{r.tallyResponse}</pre></>}
-                              </details>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
+                      );
+                    })}
                   </tbody>
+                  <tfoot>
+                    <tr style={{ borderTop: "1px solid #1F2937", background: "rgba(255,255,255,0.02)" }}>
+                      <td colSpan={4} style={{ fontWeight: 600, fontSize: "0.72rem", color: "#4B5563", padding: "0.5rem 0.875rem" }}>{journals.length} journal{journals.length !== 1 ? "s" : ""} ready to push</td>
+                      <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#10B981", padding: "0.5rem 0.875rem" }}>₹{journals.reduce((s, j) => s + Number(j.total_debit), 0).toLocaleString("en-IN")}</td>
+                      <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#60A5FA", padding: "0.5rem 0.875rem" }}>₹{journals.reduce((s, j) => s + Number(j.total_credit), 0).toLocaleString("en-IN")}</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             )}
           </div>
+        )}
 
-          {/* ── TIPS ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1.5rem" }}>
-            {[
-              { icon: "📒", color: "#3B82F6", title: "Sync Ledgers First", desc: "Always push Chart of Accounts before vouchers — Tally needs ledgers to exist first." },
-              { icon: "🏢", color: "#10B981", title: "Active Company", desc: "Vouchers go into whichever company is open in Tally. Switch company in Tally if needed." },
-              { icon: "🔁", color: "#F59E0B", title: "No Deduplication", desc: "Tally does not deduplicate on import. Push once per date range to avoid double entries." },
-              { icon: "💻", color: "#A78BFA", title: "Same PC Only", desc: "This browser must be on the same PC as Tally. Won't work from mobile or another device." },
-            ].map(t => (
-              <div key={t.title} style={{ background: "#0B1428", border: "1px solid #111E33", borderRadius: 12, padding: "1rem 1.1rem", display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 9, background: `${t.color}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>{t.icon}</div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: "0.82rem", marginBottom: "0.2rem", color: "#DEE8F5" }}>{t.title}</div>
-                  <div style={{ fontSize: "0.72rem", color: "#3A5070", lineHeight: 1.6 }}>{t.desc}</div>
-                </div>
+        {/* Push results */}
+        {pushResults.length > 0 && (
+          <div className="tb-card" style={{ marginBottom: "1.5rem", padding: 0, overflow: "hidden" }}>
+            <div style={{ padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", borderBottom: "1px solid #1F2937" }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.08em" }}>Push Results</span>
+              <span style={{ fontSize: "0.75rem", color: "#34D399", fontWeight: 600 }}>✓ {pushResults.filter(r => r.ok).length} ok</span>
+              {pushResults.filter(r => !r.ok).length > 0 && <span style={{ fontSize: "0.75rem", color: "#F87171", fontWeight: 600 }}>✗ {pushResults.filter(r => !r.ok).length} failed</span>}
+              {pushResults.some(r => !r.ok) && (
+                <button onClick={createMissingLedgers} disabled={creatingLedgers || connStatus !== "connected"} className="tb-btn tb-btn-gold" style={{ marginLeft: "auto", padding: "5px 14px", fontSize: "0.75rem" }}>
+                  {creatingLedgers ? "Creating…" : "Create Missing Ledgers"}
+                </button>
+              )}
+            </div>
+            {createLedgerResult && (
+              <div style={{ padding: "0.5rem 1rem", fontSize: "0.78rem", color: createLedgerResult.startsWith("✓") ? "#34D399" : "#FBBF24", borderBottom: "1px solid #1F2937" }}>
+                {createLedgerResult}
               </div>
-            ))}
+            )}
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+              <tbody>
+                {pushResults.map((r, i) => (
+                  <React.Fragment key={r.id}>
+                    <tr className="tb-row" style={{ borderLeft: `2px solid ${r.ok ? "#10B981" : "#EF4444"}`, borderTop: i === 0 ? "none" : undefined }}>
+                      <td style={{ width: 32, textAlign: "center", padding: "0.5rem" }}>
+                        <span style={{ fontSize: "0.75rem", color: r.ok ? "#34D399" : "#F87171" }}>{r.ok ? "✓" : "✗"}</span>
+                      </td>
+                      <td className="tb-mono" style={{ color: "#4B5563", fontSize: "0.72rem", whiteSpace: "nowrap", padding: "0.5rem 0" }}>{r.entry_no}</td>
+                      <td style={{ color: "#6B7280", whiteSpace: "nowrap", padding: "0.5rem 0.75rem", fontSize: "0.78rem" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
+                      <td style={{ color: r.ok ? "#94A3B8" : "#FBBF24", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240, padding: "0.5rem 0", fontSize: "0.8rem" }}>
+                        {r.ok ? r.narration : (r.error || "Tally rejected — check ledger names")}
+                      </td>
+                      {!r.ok && (
+                        <td style={{ whiteSpace: "nowrap", padding: "0.5rem 1rem" }}>
+                          <a href={`/finance/journals/${r.id}/edit`} style={{ fontSize: "0.72rem", color: "#60A5FA", marginRight: 10, textDecoration: "none", fontWeight: 600 }}>Edit</a>
+                          <button className="tb-link-btn" onClick={async () => {
+                            if (!confirm(`Delete journal ${r.entry_no}? This cannot be undone.`)) return;
+                            await supabase.from("fw_fin_journal_lines").delete().eq("journal_id", r.id);
+                            await supabase.from("fw_fin_journals").delete().eq("id", r.id);
+                            setPushResults(prev => prev.filter(x => x.id !== r.id));
+                            setJournals(prev => prev.filter(x => x.id !== r.id));
+                            setJournalCount(prev => (prev ?? 1) - 1);
+                          }} style={{ fontSize: "0.72rem", color: "#F87171", fontWeight: 600 }}>Delete</button>
+                        </td>
+                      )}
+                      {r.ok && <td />}
+                    </tr>
+                    {!r.ok && (r.xml || r.tallyResponse) && (
+                      <tr style={{ borderTop: "none" }}>
+                        <td colSpan={5} style={{ padding: "0 1rem 0.625rem 2.5rem" }}>
+                          <details style={{ fontSize: "0.72rem" }}>
+                            <summary style={{ color: "#4B5563", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                              <span>▶</span> Debug details
+                            </summary>
+                            {r.xml && <pre className="tb-mono" style={{ marginTop: "0.4rem", fontSize: "0.65rem", background: "#0F172A", padding: "0.6rem 0.75rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#93C5FD", maxHeight: 140, overflowY: "auto", border: "1px solid #1F2937" }}>{r.xml}</pre>}
+                            {r.tallyResponse && <pre className="tb-mono" style={{ marginTop: "0.4rem", fontSize: "0.65rem", background: "#0F172A", padding: "0.6rem 0.75rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#FCA5A5", maxHeight: 140, overflowY: "auto", border: "1px solid #1F2937" }}>{r.tallyResponse}</pre>}
+                          </details>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
           </div>
+        )}
 
-          {/* ── XML EXPORT FALLBACK ── */}
-          <div style={{ background: "#0B1428", border: "1px solid #111E33", borderRadius: 12, padding: "1.25rem 1.5rem" }}>
-            <div style={{ fontWeight: 700, marginBottom: "0.2rem", fontSize: "0.88rem", color: "#DEE8F5" }}>⬇ Manual XML Export</div>
-            <p style={{ margin: "0 0 1rem", fontSize: "0.76rem", color: "#3A5070" }}>Fallback: download XML and import via Gateway of Tally → Import → Vouchers.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+        {/* Export XML (fallback) */}
+        {bizId && (
+          <div className="tb-card" style={{ marginBottom: "1.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
               <div>
-                <label className="tb-input-label">Financial Year</label>
-                <select value={fyId ?? ""} onChange={e => setFyId(e.target.value)} style={{ ...inp, width: "100%", cursor: "pointer" }}>
+                <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#F1F5F9", marginBottom: "0.2rem" }}>Export FrePilot → Tally XML</div>
+                <div style={{ color: "#6B7280", fontSize: "0.8rem" }}>Download XML and import via Gateway of Tally → Import → Vouchers.</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                <select value={fyId ?? ""} onChange={e => setFyId(e.target.value)} className="tb-input" style={{ fontSize: "0.8125rem" }}>
                   {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
                 </select>
-              </div>
-              <div style={{ display: "flex", alignItems: "flex-end" }}>
-                {bizId && (
-                  <a href={buildExportUrl()} download style={{ display: "block", width: "100%", textAlign: "center", background: "rgba(255,255,255,0.05)", color: "#6E88A8", padding: "9px 0", borderRadius: 8, fontWeight: 700, textDecoration: "none", fontSize: "0.85rem", border: "1px solid #1B2E4A" }}>
-                    Download Tally XML
-                  </a>
-                )}
+                <a href={buildExportUrl()} download className="tb-btn" style={{ background: "transparent", border: "1px solid #1F2937", color: "#94A3B8", padding: "8px 16px", textDecoration: "none", fontSize: "0.8125rem" }}>
+                  Download XML
+                </a>
               </div>
             </div>
           </div>
+        )}
 
-        </div>
       </div>
     </div>
   );
