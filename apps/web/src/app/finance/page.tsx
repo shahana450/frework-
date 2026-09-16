@@ -84,8 +84,17 @@ const MODULES = [
     { icon: "📤", label: "Payables (AP)",       desc: "Who you owe, vendor aging",                 href: "/finance/payables",          accent: "#F87171" },
     { icon: "🏦", label: "Bank Reconciliation", desc: "Import CSV, auto-match entries",            href: "/finance/banking",           accent: "#60A5FA" },
   ]},
+  { group: "AI & Automation", items: [
+    { icon: "🤖", label: "Chat Bookkeeping",   desc: "Type or photo a bill — AI books instantly",  href: "/finance/chat-book",         accent: "#C9A84C" },
+    { icon: "💬", label: "WhatsApp Bot",       desc: "Book transactions via WhatsApp message",     href: "/finance/whatsapp",          accent: "#25D366" },
+    { icon: "🧾", label: "E-Invoice (IRN)",   desc: "Build IRP-compliant JSON, generate IRN",     href: "/finance/einvoice",          accent: "#60A5FA" },
+  ]},
+  { group: "HR & Compliance", items: [
+    { icon: "👔", label: "Payroll",            desc: "Salary slips, PF, ESI, PT, TDS auto-calc",  href: "/finance/payroll",           accent: "#A78BFA" },
+    { icon: "🏢", label: "CA Dashboard",      desc: "Manage multiple clients from one screen",    href: "/finance/ca-dashboard",      accent: "#34D399" },
+  ]},
   { group: "Setup", items: [
-    { icon: "🔄", label: "Tally Export",        desc: "Export as Tally-compatible XML",            href: "/finance/tally",             accent: "#FB923C" },
+    { icon: "🔄", label: "Tally Sync",         desc: "Export/Import as Tally-compatible XML",     href: "/finance/tally",             accent: "#FB923C" },
     { icon: "👥", label: "Contacts",            desc: "Customers & vendors with opening balances", href: "/finance/contacts",          accent: "#A78BFA" },
     { icon: "📊", label: "Chart of Accounts",  desc: "Indian account heads structure",             href: "/finance/chart-of-accounts", accent: "#60A5FA" },
   ]},
@@ -105,6 +114,7 @@ export default function FrePilotDashboard() {
   const [tallySyncing, setTallySyncing] = useState<"ledgers" | "vouchers" | null>(null);
   const [tallySyncMsg, setTallySyncMsg] = useState<{ ok: boolean; msg: string } | null>(null);
   const [tallySyncProgress, setTallySyncProgress] = useState<string | null>(null);
+  const [hindi, setHindi] = useState(false);
 
   const pingTally = useCallback(async () => {
     setTally(t => ({ ...t, state: "checking" }));
@@ -666,7 +676,11 @@ export default function FrePilotDashboard() {
         ) : (
           <Link href="/finance/tally" style={{ fontSize: "0.75rem", color: "#6B7280", textDecoration: "none", border: "1px solid #1F2937", padding: "4px 10px", borderRadius: 20 }}>Tally Sync</Link>
         )}
-        <Link href="/finance/virtual-ca" style={{ background: "#1E3A5F", color: "#93C5FD", padding: "5px 12px", borderRadius: 8, fontSize: "0.75rem", textDecoration: "none", fontWeight: 600 }}>Ask FrePilot</Link>
+        <button onClick={() => setHindi(h => !h)} style={{ background: hindi ? "rgba(201,168,76,0.12)" : "transparent", border: "1px solid #1F2937", color: hindi ? "#C9A84C" : "#6B7280", padding: "4px 10px", borderRadius: 20, fontSize: "0.72rem", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
+          {hindi ? "EN" : "हिं"}
+        </button>
+        <Link href="/finance/ca-dashboard" style={{ fontSize: "0.72rem", color: "#6B7280", textDecoration: "none", border: "1px solid #1F2937", padding: "4px 10px", borderRadius: 20 }}>CA View</Link>
+        <Link href="/finance/virtual-ca" style={{ background: "#1E3A5F", color: "#93C5FD", padding: "5px 12px", borderRadius: 8, fontSize: "0.75rem", textDecoration: "none", fontWeight: 600 }}>{hindi ? "फ्रीपायलट पूछें" : "Ask FrePilot"}</Link>
         <Link href="/finance/setup" style={{ color: "#4B5563", fontSize: "1rem", textDecoration: "none" }}>⚙</Link>
       </nav>
 
@@ -687,10 +701,10 @@ export default function FrePilotDashboard() {
               {/* KPI Cards */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
                 {[
-                  { label: "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#34D399", sub: `FY ${fyLabel}`, mono: true, href: "/finance/journals?type=sales,receipt&status=posted" },
-                  { label: "Net Profit", value: loading ? "—" : (stats.profit < 0 ? "−" : "") + fmt(stats.profit), color: stats.profit >= 0 ? "#34D399" : "#F87171", sub: stats.profit < 0 ? "Net loss" : "Net profit", mono: true, href: "/finance/audit" },
-                  { label: "Total Entries", value: loading ? "—" : String(stats.totalPosted), color: "#60A5FA", sub: "Posted journals", mono: false, href: "/finance/journals?status=posted" },
-                  { label: "Drafts", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#F59E0B" : "#4B5563", sub: stats.drafts > 0 ? "Needs review" : "All clear", mono: false, href: "/finance/journals?status=draft" },
+                  { label: hindi ? "राजस्व" : "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#34D399", sub: `FY ${fyLabel}`, mono: true, href: "/finance/journals?type=sales,receipt&status=posted" },
+                  { label: hindi ? "शुद्ध लाभ" : "Net Profit", value: loading ? "—" : (stats.profit < 0 ? "−" : "") + fmt(stats.profit), color: stats.profit >= 0 ? "#34D399" : "#F87171", sub: stats.profit < 0 ? (hindi ? "शुद्ध हानि" : "Net loss") : (hindi ? "शुद्ध लाभ" : "Net profit"), mono: true, href: "/finance/audit" },
+                  { label: hindi ? "कुल प्रविष्टियाँ" : "Total Entries", value: loading ? "—" : String(stats.totalPosted), color: "#60A5FA", sub: hindi ? "पोस्ट जर्नल" : "Posted journals", mono: false, href: "/finance/journals?status=posted" },
+                  { label: hindi ? "मसौदे" : "Drafts", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#F59E0B" : "#4B5563", sub: stats.drafts > 0 ? (hindi ? "समीक्षा आवश्यक" : "Needs review") : (hindi ? "सब ठीक" : "All clear"), mono: false, href: "/finance/journals?status=draft" },
                 ].map(k => (
                   <Link key={k.label} href={k.href} className="fp-kpi" style={{ textDecoration: "none", display: "block" }}>
                     <div style={{ fontSize: "0.65rem", color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: "0.625rem" }}>{k.label}</div>
@@ -702,7 +716,7 @@ export default function FrePilotDashboard() {
 
               {/* Quick Actions */}
               <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: "0.65rem", color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: "0.625rem" }}>Quick Actions</div>
+                <div style={{ fontSize: "0.65rem", color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: "0.625rem" }}>{hindi ? "त्वरित कार्य" : "Quick Actions"}</div>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {QUICK.map(q => (
                     <Link key={q.href} href={q.href} className="fp-quick">
@@ -714,6 +728,7 @@ export default function FrePilotDashboard() {
               </div>
 
               {/* Modules — flat 2-column grid */}
+              <div style={{ fontSize: "0.65rem", color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: "0.625rem", marginTop: "0.25rem" }}>{hindi ? "सभी मॉड्यूल" : "All Modules"}</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "0.5rem" }}>
                 {MODULES.flatMap(g => g.items).map(m => (
                   <Link key={m.href} href={m.href} className="fp-mod" style={{ textDecoration: "none" }}>
