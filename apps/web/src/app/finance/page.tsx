@@ -739,7 +739,7 @@ export default function FrePilotDashboard() {
 
                   <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                     {[
-                      { label: "Import Ledgers", onClick: doImportLedgers, active: tallySyncing === "import" },
+                      { label: "Import Ledgers", onClick: doImportLedgers, active: tallySyncing === "ledgers" },
                       { label: tallySyncing === "vouchers" ? (tallySyncProgress ?? "Syncing…") : "Import Vouchers", onClick: () => doImportVouchers(false), active: tallySyncing === "vouchers" },
                       { label: "Fix Duplicates", onClick: doFixDuplicates, active: false },
                     ].map(b => (
