@@ -56,7 +56,7 @@ async function checkTally(): Promise<TallyStatus & { _raw: string }> {
 
 
 type Business = { id: string; name: string; gstin: string | null; gst_registration_type: string; state: string | null };
-type Stats = { sales: number; expenses: number; drafts: number; pendingTds: number; revenue: number; profit: number; tallyLive?: boolean };
+type Stats = { sales: number; expenses: number; drafts: number; pendingTds: number; revenue: number; profit: number; tallyLive?: boolean; totalPosted: number };
 
 const QUICK = [
   { icon: "🧾", label: "New Invoice",    href: "/finance/sales/new",     color: "#F59E0B" },
@@ -96,7 +96,7 @@ export default function FrePilotDashboard() {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [activeBiz, setActiveBiz] = useState<Business | null>(null);
-  const [stats, setStats] = useState<Stats>({ sales: 0, expenses: 0, drafts: 0, pendingTds: 0, revenue: 0, profit: 0 });
+  const [stats, setStats] = useState<Stats>({ sales: 0, expenses: 0, drafts: 0, pendingTds: 0, revenue: 0, profit: 0, totalPosted: 0 });
   const [loading, setLoading] = useState(true);
   const [fyLabel, setFyLabel] = useState("2025-26");
   const [fyId, setFyId] = useState<string | null>(null);
@@ -332,6 +332,7 @@ export default function FrePilotDashboard() {
       revenue: salesRev,
       profit: salesRev - expTotal,
       tallyLive: false,
+      totalPosted: posted.length,
     }));
     setLoading(false);
   }
@@ -623,252 +624,141 @@ export default function FrePilotDashboard() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#050914", color: "#E8EDF5", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#0A0D14", color: "#E2E8F0", fontFamily: "Inter,system-ui,sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; }
-        .fp-bg { background-image: radial-gradient(circle, rgba(201,168,76,0.04) 1px, transparent 1px); background-size: 32px 32px; }
-        .fp-kpi { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 1.25rem 1.4rem; transition: border-color 0.2s; }
-        .fp-kpi:hover { border-color: rgba(255,255,255,0.14); }
-        .fp-quick { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.7rem 1.1rem; display: flex; align-items: center; gap: 0.55rem; text-decoration: none; transition: all 0.15s; white-space: nowrap; }
-        .fp-quick:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.16); transform: translateY(-1px); }
-        .fp-mod { background: rgba(255,255,255,0.018); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1rem 1.1rem; display: flex; gap: 0.85rem; align-items: flex-start; text-decoration: none; transition: all 0.15s; }
-        .fp-mod:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.12); transform: translateY(-1px); }
-        .fp-ai-banner { background: linear-gradient(135deg, rgba(201,168,76,0.1) 0%, rgba(201,168,76,0.03) 100%); border: 1px solid rgba(201,168,76,0.22); border-radius: 16px; padding: 1.2rem 1.5rem; display: flex; align-items: center; gap: 1.25rem; text-decoration: none; transition: border-color 0.2s; }
-        .fp-ai-banner:hover { border-color: rgba(201,168,76,0.45); }
-        select option { background: #0B1221; }
-        @keyframes tp-pulse { 0%,100%{opacity:1;box-shadow:0 0 6px rgba(52,211,153,0.6)} 50%{opacity:0.6;box-shadow:0 0 12px rgba(52,211,153,0.9)} }
-        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+        .fp-kpi { background: #111827; border: 1px solid #1F2937; border-radius: 12px; padding: 1.25rem; transition: border-color 0.15s; }
+        .fp-kpi:hover { border-color: #374151; }
+        .fp-quick { background: #111827; border: 1px solid #1F2937; border-radius: 8px; padding: 0.625rem 1rem; display: flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.15s; white-space: nowrap; }
+        .fp-quick:hover { background: #1F2937; }
+        .fp-mod { background: #111827; border: 1px solid #1F2937; border-radius: 10px; padding: 0.875rem 1rem; display: flex; gap: 0.75rem; align-items: flex-start; text-decoration: none; transition: border-color 0.15s; }
+        .fp-mod:hover { border-color: #374151; }
+        select option { background: #111827; }
+        @keyframes tp-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #1F2937; border-radius: 4px; }
       `}</style>
 
-      {/* Nav — ProVia-style: logo | business ▾ | FY ▾ | … | actions */}
-      <nav style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.6rem", height: 54, position: "sticky", top: 0, background: "rgba(5,9,20,0.95)", backdropFilter: "blur(16px)", zIndex: 30 }}>
-        {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 8 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 7, background: "linear-gradient(135deg,#1A2E5A,#C9A84C)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.85rem" }}>🛩️</div>
-          <span style={{ fontWeight: 800, fontSize: "0.92rem", color: "#C9A84C", letterSpacing: "-0.02em" }}>FrePilot</span>
+      <nav style={{ background: "#0A0D14", borderBottom: "1px solid #1F2937", padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.5rem", height: 52, position: "sticky", top: 0, zIndex: 30 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7, marginRight: 4 }}>
+          <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg,#1E40AF,#CA8A04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem" }}>🛩️</div>
+          <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "#F1F5F9" }}>FrePilot</span>
         </div>
-
-        {/* Divider */}
-        <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.08)" }} />
-
-        {/* Business selector — always visible */}
-        <select
-          value={activeBiz?.id ?? ""}
-          onChange={e => { const b = businesses.find(x => x.id === e.target.value); if (b) switchBiz(b); }}
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#E8EDF5", padding: "5px 28px 5px 10px", borderRadius: 8, fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", outline: "none", maxWidth: 200, appearance: "none",
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B7FA3' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-            backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}>
-          {businesses.map(b => <option key={b.id} value={b.id} style={{ background: "#0B1221" }}>{b.name}</option>)}
+        <div style={{ width: 1, height: 18, background: "#1F2937" }} />
+        <select value={activeBiz?.id ?? ""} onChange={e => { const b = businesses.find(x => x.id === e.target.value); if (b) switchBiz(b); }}
+          style={{ background: "transparent", border: "none", color: "#E2E8F0", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", outline: "none", maxWidth: 180 }}>
+          {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
-
-        {/* FY selector — always visible */}
-        <select
-          value={fyId ?? ""}
-          onChange={e => switchFy(e.target.value)}
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#E8EDF5", padding: "5px 28px 5px 10px", borderRadius: 8, fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", outline: "none", appearance: "none",
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236B7FA3' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-            backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}>
-          {financialYears.map(f => <option key={f.id} value={f.id} style={{ background: "#0B1221" }}>FY {f.label}</option>)}
+        <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)}
+          style={{ background: "transparent", border: "none", color: "#6B7280", fontSize: "0.8125rem", cursor: "pointer", fontFamily: "inherit", outline: "none" }}>
+          {financialYears.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
           {financialYears.length === 0 && <option value="">FY {fyLabel}</option>}
         </select>
-
         <div style={{ flex: 1 }} />
-
-        {/* Tally pill + disconnect */}
         {tally.state === "connected" ? (
-          <div style={{ display: "flex", alignItems: "center", borderRadius: 20, overflow: "hidden", border: "1px solid rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.08)" }}>
-            <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px 4px 11px", textDecoration: "none" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D399", flexShrink: 0, animation: "tp-pulse 2s ease-in-out infinite" }} />
-              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#34D399" }}>Tally · {tally.company}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 0, borderRadius: 20, overflow: "hidden", border: "1px solid rgba(52,211,153,0.25)", background: "rgba(52,211,153,0.07)" }}>
+            <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", textDecoration: "none" }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#34D399", animation: "tp-pulse 2s ease-in-out infinite" }} />
+              <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#34D399" }}>{tally.company}</span>
             </Link>
-            <button
-              onClick={doDisconnectTally}
-              title="Disconnect Tally"
-              style={{ background: "rgba(239,68,68,0.15)", border: "none", borderLeft: "1px solid rgba(52,211,153,0.2)", color: "#F87171", fontSize: "0.7rem", padding: "4px 8px", cursor: "pointer", lineHeight: 1, fontFamily: "inherit" }}>
-              ✕
-            </button>
+            <button onClick={doDisconnectTally} style={{ background: "transparent", border: "none", borderLeft: "1px solid rgba(52,211,153,0.2)", color: "#6B7280", fontSize: "0.7rem", padding: "4px 8px", cursor: "pointer", fontFamily: "inherit" }}>✕</button>
           </div>
         ) : (
-          <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 11px", borderRadius: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", textDecoration: "none" }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(232,237,245,0.15)", flexShrink: 0 }} />
-            <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "rgba(232,237,245,0.3)" }}>Connect Tally</span>
-          </Link>
+          <Link href="/finance/tally" style={{ fontSize: "0.75rem", color: "#6B7280", textDecoration: "none", border: "1px solid #1F2937", padding: "4px 10px", borderRadius: 20 }}>Tally Sync</Link>
         )}
-
-        <Link href="/finance/virtual-ca" style={{ background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.25)", color: "#C9A84C", padding: "5px 14px", borderRadius: 8, fontSize: "0.78rem", textDecoration: "none", fontWeight: 700 }}>
-          🛩️ Ask FrePilot
-        </Link>
-        <Link href="/finance/setup" style={{ color: "rgba(232,237,245,0.3)", fontSize: "1rem", textDecoration: "none", padding: "4px 6px", borderRadius: 6 }}>⚙</Link>
+        <Link href="/finance/virtual-ca" style={{ background: "#1E3A5F", color: "#93C5FD", padding: "5px 12px", borderRadius: 8, fontSize: "0.75rem", textDecoration: "none", fontWeight: 600 }}>Ask FrePilot</Link>
+        <Link href="/finance/setup" style={{ color: "#4B5563", fontSize: "1rem", textDecoration: "none" }}>⚙</Link>
       </nav>
 
-<div className="fp-bg" style={{ minHeight: "calc(100vh - 58px)" }}>
-        <div style={{ maxWidth: 1080, margin: "0 auto", padding: "2rem 1.75rem" }}>
+      <div style={{ minHeight: "calc(100vh - 52px)" }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "1.75rem 1.5rem" }}>
           {activeBiz && (
             <>
               {/* Header */}
-              <div style={{ marginBottom: "1.75rem" }}>
-                <div style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.3)", marginBottom: "0.25rem" }}>{greeting}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-                  <h1 style={{ margin: 0, fontSize: "1.8rem", fontWeight: 900, letterSpacing: "-0.03em", background: "linear-gradient(135deg,#E8EDF5 60%,rgba(232,237,245,0.5))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{activeBiz.name}</h1>
-                  {activeBiz.gstin && (
-                    <span style={{ fontSize: "0.68rem", color: "rgba(232,237,245,0.28)", fontFamily: "'IBM Plex Mono',monospace", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", padding: "3px 9px", borderRadius: 6 }}>
-                      GSTIN {activeBiz.gstin}
-                    </span>
-                  )}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <div style={{ fontSize: "0.75rem", color: "#4B5563", marginBottom: "0.2rem" }}>{greeting}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                  <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em", color: "#F1F5F9" }}>{activeBiz.name}</h1>
+                  {activeBiz.gstin && <span style={{ fontSize: "0.7rem", color: "#4B5563", fontFamily: "'JetBrains Mono',monospace", background: "#111827", border: "1px solid #1F2937", padding: "2px 8px", borderRadius: 5 }}>GSTIN {activeBiz.gstin}</span>}
+                  {loading && <span style={{ fontSize: "0.75rem", color: "#4B5563" }}>Loading…</span>}
                 </div>
               </div>
 
-              {/* AI Banner */}
-              <Link href="/finance/virtual-ca" className="fp-ai-banner" style={{ display: "flex", marginBottom: "1.75rem", textDecoration: "none" }}>
-                <div style={{ width: 42, height: 42, borderRadius: 12, background: "linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border: "1px solid rgba(201,168,76,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>🛩️</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, color: "#C9A84C", fontSize: "0.9rem", marginBottom: "0.2rem" }}>FrePilot AI — Your Virtual Accountant</div>
-                  <div style={{ fontSize: "0.76rem", color: "rgba(232,237,245,0.45)", lineHeight: 1.6 }}>Ask anything — GST rates, TDS sections, journal entries, compliance deadlines. Powered by Claude AI.</div>
-                </div>
-                <div style={{ color: "rgba(201,168,76,0.4)", fontSize: "1.1rem", flexShrink: 0, alignSelf: "center" }}>→</div>
-              </Link>
-
-              {/* KPI Cards — FrePilot app data */}
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.65rem" }}>
-                <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "3px 10px", borderRadius: 10, background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.2)", color: "#60A5FA" }}>📂 FrePilot · FY {fyLabel}</span>
-                {loading && <span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.2)" }}>Loading…</span>}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.85rem", marginBottom: "1.75rem" }}>
+              {/* KPI Cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
                 {[
-                  { label: "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#34D399", sub: stats.tallyLive ? "🟢 Live from Tally" : `FY ${fyLabel}`, mono: true, href: "/finance/journals?type=sales,receipt&status=posted", cta: "View Transactions →" },
-                  { label: "Net Profit", value: loading ? "—" : (stats.profit < 0 ? "−" : "") + fmt(stats.profit), color: stats.profit >= 0 ? "#34D399" : "#F87171", sub: stats.profit < 0 ? "Net loss" : "Net profit", mono: true, href: "/finance/audit", cta: "View P&L →" },
-                  { label: "Sales Invoices", value: loading ? "—" : String(stats.sales), color: "#F59E0B", sub: "Posted entries", mono: false, href: "/finance/journals?type=sales&status=posted", cta: "View Invoices →" },
-                  { label: "Draft Entries", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#FB923C" : "rgba(232,237,245,0.3)", sub: stats.drafts > 0 ? "Needs review" : "All clear", mono: false, alert: stats.drafts > 0, href: "/finance/journals?status=draft", cta: stats.drafts > 0 ? "Review Now →" : "View Journals →" },
+                  { label: "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#34D399", sub: `FY ${fyLabel}`, mono: true, href: "/finance/journals?type=sales,receipt&status=posted" },
+                  { label: "Net Profit", value: loading ? "—" : (stats.profit < 0 ? "−" : "") + fmt(stats.profit), color: stats.profit >= 0 ? "#34D399" : "#F87171", sub: stats.profit < 0 ? "Net loss" : "Net profit", mono: true, href: "/finance/audit" },
+                  { label: "Total Entries", value: loading ? "—" : String(stats.totalPosted), color: "#60A5FA", sub: "Posted journals", mono: false, href: "/finance/journals?status=posted" },
+                  { label: "Drafts", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#F59E0B" : "#4B5563", sub: stats.drafts > 0 ? "Needs review" : "All clear", mono: false, href: "/finance/journals?status=draft" },
                 ].map(k => (
-                  <Link key={k.label} href={k.href} className="fp-kpi" style={{ textDecoration: "none", display: "block", cursor: "pointer", ...(((k as {alert?:boolean}).alert) ? { background: "rgba(251,146,60,0.06)", borderColor: "rgba(251,146,60,0.2)" } : {}) }}>
-                    <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.75rem" }}>{k.label}</div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 900, color: k.color, fontFamily: k.mono ? "'IBM Plex Mono',monospace" : "inherit", letterSpacing: "-0.02em", lineHeight: 1, marginBottom: "0.4rem" }}>{k.value}</div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "0.5rem" }}>
-                      <div style={{ fontSize: "0.65rem", color: "rgba(232,237,245,0.25)", fontWeight: 500 }}>{k.sub}</div>
-                      <div style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.2)", fontWeight: 600 }}>{k.cta}</div>
-                    </div>
+                  <Link key={k.label} href={k.href} className="fp-kpi" style={{ textDecoration: "none", display: "block" }}>
+                    <div style={{ fontSize: "0.65rem", color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: "0.625rem" }}>{k.label}</div>
+                    <div style={{ fontSize: "1.375rem", fontWeight: 700, color: k.color, fontFamily: k.mono ? "'JetBrains Mono',monospace" : "inherit", letterSpacing: "-0.01em", lineHeight: 1, marginBottom: "0.375rem" }}>{k.value}</div>
+                    <div style={{ fontSize: "0.72rem", color: "#374151" }}>{k.sub}</div>
                   </Link>
                 ))}
               </div>
 
               {/* Quick Actions */}
-              <div style={{ marginBottom: "2rem" }}>
-                <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.25)", textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 700, marginBottom: "0.75rem" }}>Quick Actions</div>
-                <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+              <div style={{ marginBottom: "1.5rem" }}>
+                <div style={{ fontSize: "0.65rem", color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: "0.625rem" }}>Quick Actions</div>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {QUICK.map(q => (
                     <Link key={q.href} href={q.href} className="fp-quick">
-                      <span style={{ fontSize: "1rem" }}>{q.icon}</span>
-                      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: q.color }}>{q.label}</span>
+                      <span style={{ fontSize: "0.875rem" }}>{q.icon}</span>
+                      <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#E2E8F0" }}>{q.label}</span>
                     </Link>
                   ))}
                 </div>
               </div>
 
-              {/* Modules by group */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                {MODULES.map(group => (
-                  <div key={group.group}>
-                    <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.25)", textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 700, marginBottom: "0.65rem" }}>{group.group}</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0.65rem" }}>
-                      {group.items.map(m => (
-                        <Link key={m.href} href={m.href} className="fp-mod">
-                          <div style={{ width: 34, height: 34, borderRadius: 9, background: `rgba(255,255,255,0.04)`, border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>{m.icon}</div>
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#E8EDF5", marginBottom: "0.2rem" }}>{m.label}</div>
-                            <div style={{ fontSize: "0.68rem", color: "rgba(232,237,245,0.32)", lineHeight: 1.5 }}>{m.desc}</div>
-                          </div>
-                        </Link>
-                      ))}
+              {/* Modules — flat 2-column grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "0.5rem" }}>
+                {MODULES.flatMap(g => g.items).map(m => (
+                  <Link key={m.href} href={m.href} className="fp-mod" style={{ textDecoration: "none" }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 8, background: "#1F2937", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", flexShrink: 0 }}>{m.icon}</div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: "0.8125rem", color: "#E2E8F0", marginBottom: "0.15rem" }}>{m.label}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#4B5563", lineHeight: 1.4 }}>{m.desc}</div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
 
               {/* Tally Sync Card — shown when connected */}
               {tally.state === "connected" && (
-                <div style={{ marginTop: "2rem", background: "linear-gradient(135deg,rgba(52,211,153,0.04),rgba(52,211,153,0.01))", border: "1px solid rgba(52,211,153,0.18)", borderRadius: 16, padding: "1.25rem 1.5rem" }}>
-                  {/* Header */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#34D399", display: "inline-block", boxShadow: "0 0 6px #34D399" }} />
-                      <span style={{ fontWeight: 800, fontSize: "0.92rem", color: "#34D399" }}>Tally · {tally.company}</span>
-                      <span style={{ fontSize: "0.65rem", color: "rgba(52,211,153,0.5)", fontWeight: 600 }}>LIVE</span>
+                <div style={{ marginTop: "1.5rem", background: "#111827", border: "1px solid rgba(52,211,153,0.2)", borderRadius: 12, padding: "1rem 1.25rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D399", animation: "tp-pulse 2s ease-in-out infinite" }} />
+                      <span style={{ fontWeight: 600, fontSize: "0.875rem", color: "#34D399" }}>Tally Connected · {tally.company}</span>
                     </div>
-                    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                      <Link href="/finance/chat-book" style={{ fontSize: "0.72rem", color: "rgba(201,168,76,0.7)", textDecoration: "none", fontWeight: 600, padding: "3px 10px", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 6, background: "rgba(201,168,76,0.05)" }}>🤖 AI Bookkeeper</Link>
-                      <Link href="/finance/tally" style={{ fontSize: "0.72rem", color: "rgba(52,211,153,0.5)", textDecoration: "none", fontWeight: 600 }}>Advanced settings →</Link>
-                    </div>
+                    <Link href="/finance/tally" style={{ fontSize: "0.75rem", color: "#6B7280", textDecoration: "none" }}>Open Tally Sync →</Link>
                   </div>
 
-                  {/* Buttons */}
-                  <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: tallySyncMsg || tallySyncProgress ? "0.85rem" : 0 }}>
-                    <button
-                      onClick={async () => {
-                        if (!activeBiz || !fyId) return;
-                        setTallySyncing("ledgers"); setTallySyncMsg(null);
-                        const fy = financialYears.find(f => f.id === fyId);
-                        const { data: fyData } = await supabase.from("fw_fin_financial_years").select("start_date,end_date").eq("id", fyId).single();
-                        if (fyData) {
-                          const live = await fetchTallyPL(fyData.start_date, fyData.end_date);
-                          if (live) {
-                            setStats(prev => ({ ...prev, revenue: live.revenue, profit: live.profit, tallyLive: true }));
-                            setTallySyncMsg({ ok: true, msg: `✓ Live P&L from Tally — Revenue ₹${live.revenue.toLocaleString("en-IN")} · Net Profit ₹${live.profit.toLocaleString("en-IN")}` });
-                          } else {
-                            setTallySyncMsg({ ok: false, msg: "Could not read P&L from Tally. Make sure ODBC is enabled on port 9000." });
-                          }
-                        }
-                        setTallySyncing(null);
-                      }}
-                      disabled={!!tallySyncing}
-                      style={{ flex: 1, minWidth: 160, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.5)", background: "rgba(52,211,153,0.12)", color: "#34D399", fontWeight: 700, fontSize: "0.86rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
-                      {tallySyncing === "ledgers" ? "Reading…" : "📊 Fetch Live P&L"}
-                    </button>
-                    <button
-                      onClick={doImportLedgers}
-                      disabled={!!tallySyncing}
-                      style={{ flex: 1, minWidth: 140, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(52,211,153,0.05)", color: "#34D399", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
-                      ⬇ Import Ledgers
-                    </button>
-                    <button
-                      onClick={() => doImportVouchers(false)}
-                      disabled={!!tallySyncing}
-                      style={{ flex: 1, minWidth: 140, padding: "11px 0", borderRadius: 10, border: "1px solid rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.08)", color: "#C4B5FD", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
-                      {tallySyncing === "vouchers" ? (tallySyncProgress ?? "Syncing…") : "⬇ Import Vouchers"}
-                    </button>
-                    <button
-                      onClick={() => doImportVouchers(true)}
-                      disabled={!!tallySyncing}
-                      style={{ padding: "11px 18px", borderRadius: 10, border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.06)", color: "#F87171", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1, whiteSpace: "nowrap" }}
-                      title="Delete all TLY imports and re-import fresh">
-                      🗑 Clear & Re-import
-                    </button>
-                    <button
-                      onClick={doFixDuplicates}
-                      disabled={!!tallySyncing}
-                      style={{ padding: "11px 18px", borderRadius: 10, border: "1px solid rgba(251,191,36,0.25)", background: "rgba(251,191,36,0.06)", color: "#FCD34D", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1, whiteSpace: "nowrap" }}
-                      title="Remove duplicate Tally imports (same voucher number) — keeps latest">
-                      🔧 Fix Duplicates
-                    </button>
+                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                    {[
+                      { label: "Import Ledgers", onClick: doImportLedgers, active: tallySyncing === "import" },
+                      { label: tallySyncing === "vouchers" ? (tallySyncProgress ?? "Syncing…") : "Import Vouchers", onClick: () => doImportVouchers(false), active: tallySyncing === "vouchers" },
+                      { label: "Fix Duplicates", onClick: doFixDuplicates, active: false },
+                    ].map(b => (
+                      <button key={b.label} onClick={b.onClick} disabled={!!tallySyncing}
+                        style={{ padding: "7px 14px", borderRadius: 7, border: "1px solid #1F2937", background: "transparent", color: "#94A3B8", fontSize: "0.8rem", fontWeight: 500, cursor: tallySyncing ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
+                        {b.label}
+                      </button>
+                    ))}
                   </div>
-
-                  {/* Progress */}
-                  {tallySyncing === "vouchers" && tallySyncProgress && (
-                    <div style={{ fontSize: "0.76rem", color: "rgba(196,181,253,0.6)", marginBottom: "0.5rem" }}>{tallySyncProgress}</div>
-                  )}
-
-                  {/* Result */}
                   {tallySyncMsg && (
-                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: tallySyncMsg.ok ? "#34D399" : "#FCD34D", background: tallySyncMsg.ok ? "rgba(52,211,153,0.06)" : "rgba(252,211,77,0.06)", border: `1px solid ${tallySyncMsg.ok ? "rgba(52,211,153,0.2)" : "rgba(252,211,77,0.2)"}`, borderRadius: 9, padding: "0.6rem 0.9rem" }}>
+                    <div style={{ marginTop: "0.75rem", fontSize: "0.8rem", fontWeight: 500, color: tallySyncMsg.ok ? "#34D399" : "#FBBF24", padding: "0.5rem 0.75rem", borderRadius: 7, background: tallySyncMsg.ok ? "rgba(16,185,129,0.07)" : "rgba(251,191,36,0.07)", border: `1px solid ${tallySyncMsg.ok ? "rgba(16,185,129,0.2)" : "rgba(251,191,36,0.2)"}` }}>
                       {tallySyncMsg.msg}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Footer */}
-              <div style={{ marginTop: "3rem", textAlign: "center", fontSize: "0.68rem", color: "rgba(232,237,245,0.15)", letterSpacing: "0.02em" }}>
-                FrePilot · Powered by Claude AI · FY {fyLabel} · {activeBiz.name}
+              <div style={{ marginTop: "2rem", fontSize: "0.72rem", color: "#1F2937", textAlign: "center" }}>
+                FrePilot · FY {fyLabel} · {activeBiz.name}
               </div>
             </>
           )}
