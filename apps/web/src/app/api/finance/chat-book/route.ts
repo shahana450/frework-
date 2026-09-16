@@ -72,12 +72,65 @@ type ParsedEntry = {
   needs_clarification: string[];
 };
 
+async function extractFileContent(file: File): Promise<string> {
+  const bytes = await file.arrayBuffer();
+  const base64 = Buffer.from(bytes).toString("base64");
+  const mime = file.type as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+
+  if (!["image/jpeg", "image/png", "image/gif", "image/webp"].includes(mime)) {
+    return `[File attached: ${file.name} — ${file.type}. Extract any transaction amounts, dates, parties, or descriptions visible in this document.]`;
+  }
+
+  // Use Claude Vision to extract bill/receipt details
+  const visionResp = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 512,
+    messages: [{
+      role: "user",
+      content: [{
+        type: "image",
+        source: { type: "base64", media_type: mime, data: base64 },
+      }, {
+        type: "text",
+        text: "You are reading a bill, receipt, or invoice image. Extract ALL of: total amount, date, vendor/party name, item descriptions, GST/tax amounts if shown, invoice/receipt number. Output as a single concise line: 'Bill from [party] dated [date] for ₹[amount]. Items: [brief]. Ref: [number if any]. GST: [if shown]'. If it's not a financial document, describe what you see briefly.",
+      }],
+    }],
+  });
+
+  return visionResp.content[0].type === "text"
+    ? `[Image analysis: ${visionResp.content[0].text}]`
+    : `[Image attached: ${file.name}]`;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { message, business_id, user_id, session_id } = await req.json();
-    if (!message || !business_id || !user_id) {
-      return NextResponse.json({ error: "message, business_id, user_id required" }, { status: 400 });
+    let message: string, business_id: string, user_id: string, session_id: string | null = null;
+    let fileContext = "";
+
+    const ct = req.headers.get("content-type") ?? "";
+    if (ct.includes("multipart/form-data")) {
+      const form = await req.formData();
+      message = (form.get("message") as string) ?? "";
+      business_id = (form.get("business_id") as string) ?? "";
+      user_id = (form.get("user_id") as string) ?? "";
+      session_id = (form.get("session_id") as string) || null;
+      const file = form.get("file") as File | null;
+      if (file && file.size > 0) {
+        fileContext = await extractFileContent(file);
+      }
+    } else {
+      const body = await req.json();
+      ({ message, business_id, user_id } = body);
+      session_id = body.session_id ?? null;
     }
+
+    if (!message && !fileContext) {
+      return NextResponse.json({ error: "message or file required" }, { status: 400 });
+    }
+    if (!business_id || !user_id) {
+      return NextResponse.json({ error: "business_id, user_id required" }, { status: 400 });
+    }
+    if (!message) message = "Book this transaction from the attached document.";
 
     // Rate limit: 30 messages/user/hour
     const hourAgo = new Date(Date.now() - 3600000).toISOString();
@@ -132,9 +185,15 @@ export async function POST(req: NextRequest) {
       `Available accounts: ${accountList || "Cash, ICICI Bank, Sales, Purchases, Debtors Control, Creditors Control, Capital Account"}.`,
     ].filter(Boolean).join(" ");
 
+    const fullUserMessage = [
+      contextNote,
+      fileContext ? `\n${fileContext}` : "",
+      `\n\nUser message: ${message}`,
+    ].join("");
+
     const claudeMessages: Anthropic.MessageParam[] = [
       ...history.map(h => ({ role: h.role, content: h.content })),
-      { role: "user", content: `${contextNote}\n\nUser message: ${message}` },
+      { role: "user", content: fullUserMessage },
     ];
 
     const response = await anthropic.messages.create({
@@ -166,9 +225,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Persist session
+    const historyUserContent = fileContext ? `${message} ${fileContext}` : message;
     const newHistory = [
       ...history,
-      { role: "user" as const, content: message },
+      { role: "user" as const, content: historyUserContent },
       { role: "assistant" as const, content: raw },
     ].slice(-20);
 

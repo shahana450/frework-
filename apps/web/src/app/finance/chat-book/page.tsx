@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import Image from "next/image";
 
 type Line = { account: string; debit: number; credit: number };
 type ParsedEntry = {
@@ -18,7 +19,7 @@ type ParsedEntry = {
 };
 
 type ChatMsg =
-  | { role: "user"; text: string }
+  | { role: "user"; text: string; filePreview?: string; fileName?: string }
   | { role: "assistant"; text: string }
   | { role: "entry"; parsed: ParsedEntry; balanced: boolean }
   | { role: "confirmed"; entry_no: string; journal_id: string; confirmed_at: number }
@@ -48,8 +49,11 @@ export default function ChatBookPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [attachedPreview, setAttachedPreview] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -63,18 +67,56 @@ export default function ChatBookPage() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAttachedFile(file);
+    if (file.type.startsWith("image/")) {
+      const url = URL.createObjectURL(file);
+      setAttachedPreview(url);
+    } else {
+      setAttachedPreview(null);
+    }
+    e.target.value = "";
+  }, []);
+
+  const clearAttachment = useCallback(() => {
+    if (attachedPreview) URL.revokeObjectURL(attachedPreview);
+    setAttachedFile(null);
+    setAttachedPreview(null);
+  }, [attachedPreview]);
+
   const send = useCallback(async (text?: string) => {
     const msg = (text ?? input).trim();
-    if (!msg || !bizId || !userId || loading) return;
+    if ((!msg && !attachedFile) || !bizId || !userId || loading) return;
+    const previewUrl = attachedPreview;
+    const fileName = attachedFile?.name;
     setInput("");
-    setMessages(p => [...p, { role: "user", text: msg }]);
+    setMessages(p => [...p, { role: "user", text: msg || "📎 Document attached", filePreview: previewUrl ?? undefined, fileName }]);
     setLoading(true);
+
+    // Clear attachment state before async (keep local refs for upload)
+    const fileToSend = attachedFile;
+    setAttachedFile(null);
+    setAttachedPreview(null);
+
     try {
-      const res = await fetch("/api/finance/chat-book", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg, business_id: bizId, user_id: userId, session_id: sessionId }),
-      });
+      let res: Response;
+      if (fileToSend) {
+        const form = new FormData();
+        form.append("message", msg || "Book this transaction from the attached document.");
+        form.append("business_id", bizId);
+        form.append("user_id", userId);
+        if (sessionId) form.append("session_id", sessionId);
+        form.append("file", fileToSend);
+        res = await fetch("/api/finance/chat-book", { method: "POST", body: form });
+      } else {
+        res = await fetch("/api/finance/chat-book", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: msg, business_id: bizId, user_id: userId, session_id: sessionId }),
+        });
+      }
       const json = await res.json();
       if (!res.ok) { setMessages(p => [...p, { role: "error", text: json.error ?? "Failed" }]); return; }
       setSessionId(json.session_id);
@@ -149,8 +191,22 @@ export default function ChatBookPage() {
           {messages.map((m, i) => {
             if (m.role === "user") return (
               <div key={i} style={{ display: "flex", justifyContent: "flex-end" }}>
-                <div style={{ background: "#C9A84C", color: "#070C1A", borderRadius: "16px 16px 4px 16px", padding: "0.65rem 1rem", maxWidth: "72%", fontSize: "0.88rem", fontWeight: 500 }}>
-                  {m.text}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "flex-end", maxWidth: "72%" }}>
+                  {m.filePreview && (
+                    <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(201,168,76,0.3)" }}>
+                      <Image src={m.filePreview} alt={m.fileName ?? "attachment"} width={220} height={160} style={{ display: "block", objectFit: "cover" }} unoptimized />
+                    </div>
+                  )}
+                  {!m.filePreview && m.fileName && (
+                    <div style={{ background: "rgba(201,168,76,0.15)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 8, padding: "0.4rem 0.75rem", fontSize: "0.78rem", color: "#C9A84C" }}>
+                      📎 {m.fileName}
+                    </div>
+                  )}
+                  {m.text && (
+                    <div style={{ background: "#C9A84C", color: "#070C1A", borderRadius: "16px 16px 4px 16px", padding: "0.65rem 1rem", fontSize: "0.88rem", fontWeight: 500 }}>
+                      {m.text}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -287,23 +343,51 @@ export default function ChatBookPage() {
 
         {/* Input */}
         <div style={S.inputRow}>
+          {/* File attachment preview */}
+          {attachedFile && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", background: "rgba(201,168,76,0.07)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 8, padding: "0.5rem 0.75rem" }}>
+              {attachedPreview
+                ? <Image src={attachedPreview} alt="preview" width={40} height={40} style={{ borderRadius: 4, objectFit: "cover" }} unoptimized />
+                : <span style={{ fontSize: "1.2rem" }}>📎</span>
+              }
+              <span style={{ flex: 1, fontSize: "0.8rem", color: "#C9A84C", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{attachedFile.name}</span>
+              <button onClick={clearAttachment} style={{ background: "none", border: "none", color: "rgba(232,237,245,0.4)", cursor: "pointer", fontSize: "1rem", lineHeight: 1, padding: "0 4px" }}>✕</button>
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.pdf,.csv,.xlsx,.xls"
+              style={{ display: "none" }}
+              onChange={handleFileSelect}
+            />
+            {/* Attachment button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              title="Attach bill photo, PDF, or CSV"
+              style={{ padding: "0.65rem 0.7rem", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(232,237,245,0.5)", cursor: "pointer", fontSize: "1.1rem", lineHeight: 1, flexShrink: 0 }}>
+              📎
+            </button>
             <textarea
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder="Describe a transaction… (Enter to send, Shift+Enter for newline)"
+              placeholder={attachedFile ? "Add a note (optional)… or just press Send" : "Describe a transaction… or attach a bill photo 📎"}
               rows={2}
               style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)", color: "#E8EDF5", padding: "0.65rem 0.9rem", borderRadius: 10, fontSize: "0.88rem", outline: "none", fontFamily: "inherit", resize: "none", lineHeight: 1.5 }}
             />
-            <button onClick={() => send()} disabled={loading || !input.trim()}
-              style={{ padding: "0.65rem 1.25rem", borderRadius: 10, background: input.trim() ? "#C9A84C" : "rgba(201,168,76,0.2)", color: input.trim() ? "#070C1A" : "rgba(201,168,76,0.4)", fontWeight: 700, fontSize: "0.9rem", border: "none", cursor: input.trim() ? "pointer" : "default", fontFamily: "inherit", transition: "all 0.15s" }}>
+            <button onClick={() => send()} disabled={loading || (!input.trim() && !attachedFile)}
+              style={{ padding: "0.65rem 1.25rem", borderRadius: 10, background: (input.trim() || attachedFile) ? "#C9A84C" : "rgba(201,168,76,0.2)", color: (input.trim() || attachedFile) ? "#070C1A" : "rgba(201,168,76,0.4)", fontWeight: 700, fontSize: "0.9rem", border: "none", cursor: (input.trim() || attachedFile) ? "pointer" : "default", fontFamily: "inherit", transition: "all 0.15s" }}>
               Send
             </button>
           </div>
           <div style={{ fontSize: "0.68rem", color: "rgba(232,237,245,0.2)", textAlign: "center" }}>
-            AI-parsed entries require your confirmation before posting. Rate limit: 30 messages/hour.
+            Attach bill photos, PDFs, or CSVs — AI extracts and books automatically. Rate limit: 30/hour.
           </div>
         </div>
       </div>
