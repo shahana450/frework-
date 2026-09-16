@@ -251,10 +251,12 @@ export default function TallyPage() {
   });
   const [allCompanies, setAllCompanies] = useState<string[]>([]);
   const [rawDebug, setRawDebug] = useState<string>("");
-  const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | "import" | "importVouchers" | null>(null);
+  const [syncing, setSyncing] = useState<"ledgers" | "vouchers" | "import" | "importVouchers" | "xmlUpload" | null>(null);
   const [syncResult, setSyncResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [importVoucherResult, setImportVoucherResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
+  const [xmlUploadResult, setXmlUploadResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const xmlFileRef = useRef<HTMLInputElement>(null);
   const [autoSyncDone, setAutoSyncDone] = useState(false);
   const keepAliveFailsRef = useRef(0);
 
@@ -565,6 +567,59 @@ export default function TallyPage() {
     setSyncing(null); setSyncProgress(null);
     await importVouchers();
   }, [bizId, connStatus, importVouchers]);
+
+  // ── Upload Tally XML file (no bridge needed) ─────────────────────────────
+  const importFromXmlFile = useCallback(async (file: File) => {
+    if (!bizId) return;
+    setSyncing("xmlUpload"); setXmlUploadResult(null); setSyncProgress("Reading file…");
+    try {
+      const text = await file.text();
+      const vouchers = parseTallyVouchers(text);
+      if (!vouchers.length) {
+        setXmlUploadResult({ ok: false, msg: "No vouchers found in the file. Export from Tally: Gateway → Daybook → Alt+E → XML format." });
+        setSyncing(null); setSyncProgress(null); return;
+      }
+      setSyncProgress(`Parsed ${vouchers.length} vouchers. Loading accounts…`);
+      const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bizId);
+      const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,start_date,end_date").eq("business_id", bizId).order("start_date", { ascending: false });
+      const { data: existingJ } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).like("entry_no", "TLY-%");
+      const existingNos = new Set((existingJ ?? []).map(j => j.entry_no));
+      const accountMap = new Map((accounts ?? []).map(a => [a.name.toLowerCase().trim(), { id: a.id, type: a.type as string }]));
+
+      // Auto-create missing accounts
+      const missing = new Set<string>();
+      for (const v of vouchers) for (const l of v.lines) if (!accountMap.has(l.ledgerName.toLowerCase().trim())) missing.add(l.ledgerName);
+      if (missing.size > 0) {
+        const newAccs = Array.from(missing).map((name, i) => ({ business_id: bizId, code: `TU${String((accounts?.length??0)+i+1).padStart(3,"0")}`, name, type: "expense", description: "From Tally XML", is_system: false, is_group: false, sort_order: (accounts?.length??0)+i+1 }));
+        const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAccs).select("id,name,type");
+        for (const a of created ?? []) accountMap.set(a.name.toLowerCase().trim(), { id: a.id, type: a.type as string });
+      }
+
+      let imported = 0, skipped = 0, seq = 1;
+      for (const v of vouchers) {
+        const vNum = v.voucherNumber?.trim();
+        const entryNo = `TLY-${v.voucherType} ${vNum || seq}`;
+        if (existingNos.has(entryNo)) { skipped++; continue; }
+        const fpType = tallyVoucherTypeToFP(v.voucherType);
+        const activeFy = fys?.find(f => v.date >= f.start_date && v.date <= f.end_date) ?? fys?.[0];
+        const totalDr = v.lines.filter(l => l.isDeemed).reduce((s,l) => s+l.amount, 0);
+        const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s,l) => s+l.amount, 0);
+        const { data: jRow, error: jErr } = await supabase.from("fw_fin_journals").insert({
+          business_id: bizId, financial_year_id: activeFy?.id ?? null,
+          entry_no: entryNo, date: v.date, narration: v.narration || entryNo,
+          type: fpType, status: "posted", total_debit: totalDr||totalCr, total_credit: totalCr||totalDr,
+          reference_no: vNum || null,
+        }).select("id").single();
+        if (jErr || !jRow) { skipped++; continue; }
+        const lines = v.lines.map(l => { const acc = accountMap.get(l.ledgerName.toLowerCase().trim()); if (!acc) return null; return { journal_id: jRow.id, account_id: acc.id, narration: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }; }).filter(Boolean);
+        if (lines.length > 0) { await supabase.from("fw_fin_journal_lines").insert(lines as never[]); imported++; existingNos.add(entryNo); if (!vNum) seq++; }
+        else { await supabase.from("fw_fin_journals").delete().eq("id", jRow.id); skipped++; }
+        if (imported % 20 === 0) setSyncProgress(`Imported ${imported}/${vouchers.length}…`);
+      }
+      setXmlUploadResult({ ok: true, msg: `✓ Imported ${imported} voucher${imported!==1?"s":""}${skipped>0?` · ${skipped} skipped (already existed)`:""}` });
+    } catch (e) { setXmlUploadResult({ ok: false, msg: e instanceof Error ? e.message : "Error reading file" }); }
+    setSyncing(null); setSyncProgress(null);
+  }, [bizId]);
 
   // ── Test connection ──────────────────────────────────────────────────────
 
@@ -950,6 +1005,33 @@ export default function TallyPage() {
                 With the bridge running and Tally open, click <strong style={{ color: "#34D399" }}>Connect to Tally</strong> below, then sync ledgers and push vouchers.
               </p>
             </div>
+          </div>
+
+          {/* ── UPLOAD XML (no bridge needed) ── */}
+          <div className="tb-card" style={{ marginBottom: "1.5rem", border: "1px solid rgba(251,191,36,0.25)", background: "linear-gradient(135deg,rgba(251,191,36,0.04),rgba(16,24,40,0.9))" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: "rgba(251,191,36,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>📂</div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#FCD34D" }}>Upload Tally XML — No Bridge Needed</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(252,211,77,0.5)" }}>Export from Tally → upload here. Works without the bridge.</div>
+              </div>
+            </div>
+            <div style={{ fontSize: "0.78rem", color: "#4A6FA5", marginBottom: "1rem", lineHeight: 1.7 }}>
+              <strong style={{ color: "#94A3B8" }}>How to export from Tally:</strong><br />
+              Gateway of Tally → <strong>Display</strong> → <strong>Daybook</strong> → set date range → press <strong>Alt+E</strong> → choose <strong>XML</strong> format → Save file
+            </div>
+            <input ref={xmlFileRef} type="file" accept=".xml" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) importFromXmlFile(f); e.target.value = ""; }} />
+            <button
+              onClick={() => xmlFileRef.current?.click()}
+              disabled={!!syncing}
+              style={{ width: "100%", padding: "12px 0", borderRadius: 10, border: "1px solid rgba(251,191,36,0.35)", background: "rgba(251,191,36,0.08)", color: "#FCD34D", fontWeight: 700, fontSize: "0.88rem", cursor: syncing ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: syncing ? 0.5 : 1 }}>
+              {syncing === "xmlUpload" ? (syncProgress ?? "Importing…") : "📂 Choose Tally XML File & Import"}
+            </button>
+            {xmlUploadResult && (
+              <div style={{ marginTop: "0.75rem", fontSize: "0.82rem", fontWeight: 600, padding: "0.6rem 0.9rem", borderRadius: 9, color: xmlUploadResult.ok ? "#34D399" : "#FCD34D", background: xmlUploadResult.ok ? "rgba(52,211,153,0.06)" : "rgba(252,211,77,0.06)", border: `1px solid ${xmlUploadResult.ok ? "rgba(52,211,153,0.2)" : "rgba(252,211,77,0.2)"}` }}>
+                {xmlUploadResult.msg}
+              </div>
+            )}
           </div>
 
           {/* ── LIVE CONNECTOR ── */}
