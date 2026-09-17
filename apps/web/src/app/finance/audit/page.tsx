@@ -374,11 +374,9 @@ export default function AuditPage() {
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id,label,is_current,start_date").eq("business_id", saved).order("start_date", { ascending: false });
-      const tallyFyId = localStorage.getItem("fw_tally_fy_id") ?? "";
       const now = new Date();
       const curFyStart = now.getMonth() >= 3 ? `${now.getFullYear()}-04-01` : `${now.getFullYear() - 1}-04-01`;
-      const cur = (tallyFyId ? fysData?.find(f => f.id === tallyFyId) : undefined)
-        ?? fysData?.find(f => f.start_date === curFyStart)
+      const cur = fysData?.find(f => f.start_date === curFyStart)
         ?? fysData?.find(f => f.is_current)
         ?? fysData?.[0];
       setFys(fysData?.map(f => ({ id: f.id, label: f.label })) ?? []);
@@ -525,7 +523,7 @@ export default function AuditPage() {
           <div style={{ textAlign: "center", padding: "4rem" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📭</div>
             <div style={{ color: "rgba(232,237,245,0.4)", marginBottom: "1.5rem" }}>No transactions found for this FY. Sync from Tally first.</div>
-            <Link href="/finance/tally" style={{ background: "#2563EB", color: "#fff", padding: "10px 24px", borderRadius: 9, textDecoration: "none", fontWeight: 700 }}>Go to Tally Bridge →</Link>
+            <Link href="/finance/tally" style={{ background: "#2563EB", color: "#fff", padding: "10px 24px", borderRadius: 9, textDecoration: "none", fontWeight: 700 }}>Go to Tally Sync →</Link>
           </div>
         ) : (
 
