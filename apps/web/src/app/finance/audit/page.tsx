@@ -561,8 +561,10 @@ export default function AuditPage() {
         ) : journals.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📭</div>
-            <div style={{ color: "rgba(232,237,245,0.4)", marginBottom: "1.5rem" }}>No transactions found for this FY. Sync from Tally first.</div>
-            <Link href="/finance/tally" style={{ background: "#2563EB", color: "#fff", padding: "10px 24px", borderRadius: 9, textDecoration: "none", fontWeight: 700 }}>Go to Tally Sync →</Link>
+            <div style={{ fontWeight: 700, fontSize: "1rem", color: "#E8EDF5", marginBottom: "0.5rem" }}>No data imported yet</div>
+            <div style={{ color: "rgba(232,237,245,0.5)", fontSize: "0.85rem", marginBottom: "0.4rem" }}>Tally being <strong style={{color:"#34D399"}}>Connected</strong> only means the link is live.</div>
+            <div style={{ color: "rgba(232,237,245,0.5)", fontSize: "0.85rem", marginBottom: "1.75rem" }}>You still need to click <strong style={{color:"#fff"}}>"Import Vouchers"</strong> on the Tally Sync page to pull data into FrePilot.</div>
+            <Link href="/finance/tally" style={{ background: "#2563EB", color: "#fff", padding: "12px 28px", borderRadius: 9, textDecoration: "none", fontWeight: 700, fontSize: "0.95rem" }}>Go to Tally Sync → Click "Import Vouchers"</Link>
           </div>
         ) : (
 
