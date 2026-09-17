@@ -349,7 +349,7 @@ function buildBS(tb: TrialRow[], netProfit: number): BSSummary {
 export default function AuditPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [journals, setJournals] = useState<Journal[]>([]);
   const [lines, setLines] = useState<JournalLine[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -365,6 +365,8 @@ export default function AuditPage() {
   const [tbSearch, setTbSearch] = useState("");
 
   useEffect(() => {
+    // Hard stop — never show spinner forever
+    const mountTimer = setTimeout(() => setLoading(false), 15000);
     const saved2 = typeof window !== "undefined" ? (localStorage.getItem("fw_audit_reviewed") ?? "[]") : "[]";
     try { setReviewed(new Set(JSON.parse(saved2))); } catch { /* */ }
     // Auto-reload when Tally import fires in another tab
@@ -380,7 +382,7 @@ export default function AuditPage() {
       }
     };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    return () => { window.removeEventListener("storage", onStorage); clearTimeout(mountTimer); };
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
