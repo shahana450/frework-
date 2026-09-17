@@ -407,6 +407,7 @@ export default function AuditPage() {
 
   async function loadDataByRange(bid: string, start: string, end: string) {
     setLoading(true);
+    // Phase 1: load journals + accounts quickly → show overview immediately
     let jq = supabase.from("fw_fin_journals")
       .select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id,reference_no")
       .eq("business_id", bid).eq("status", "posted").order("date");
@@ -415,7 +416,10 @@ export default function AuditPage() {
     const journalData: Journal[] = jRes.data ?? [];
     setJournals(journalData);
     setAccounts(aRes.data ?? []);
+    setLoading(false); // show overview now
+    // Phase 2: load journal lines in background for detail tabs
     const jIds = journalData.map(j => j.id);
+    if (!jIds.length) return;
     const allLines: JournalLine[] = [];
     for (let i = 0; i < jIds.length; i += 200) {
       const { data: batch } = await supabase.from("fw_fin_journal_lines")
@@ -423,7 +427,6 @@ export default function AuditPage() {
       allLines.push(...(batch ?? []));
     }
     setLines(allLines);
-    setLoading(false);
   }
 
   const switchFy = useCallback(async (fid: string) => {
