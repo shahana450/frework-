@@ -560,6 +560,7 @@ export default function TallyPage() {
 
       setImportVoucherResult({ ok: imported > 0, msg: `Imported ${imported} voucher${imported !== 1 ? "s" : ""} from Tally${skipped > 0 ? ` (${skipped} skipped)` : ""}.` });
       setAutoSyncDone(true);
+      try { localStorage.setItem("fw_tally_last_import", Date.now().toString()); } catch { /* */ }
     } catch (e: unknown) {
       setImportVoucherResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
     }
@@ -632,6 +633,7 @@ export default function TallyPage() {
         if (imported % 20 === 0) setSyncProgress(`Imported ${imported}/${vouchers.length}…`);
       }
       setXmlUploadResult({ ok: true, msg: `✓ Imported ${imported} voucher${imported!==1?"s":""}${skipped>0?` · ${skipped} skipped (already existed)`:""}` });
+      try { localStorage.setItem("fw_tally_last_import", Date.now().toString()); } catch { /* */ }
     } catch (e) { setXmlUploadResult({ ok: false, msg: e instanceof Error ? e.message : "Error reading file" }); }
     setSyncing(null); setSyncProgress(null);
   }, [bizId]);

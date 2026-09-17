@@ -356,7 +356,7 @@ export default function AuditPage() {
   const [tab, setTab] = useState<"overview" | "flags" | "trial_balance" | "pl" | "balance_sheet" | "ledger">("overview");
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [fyId, setFyId] = useState<string | null>(null);
-  const [fys, setFys] = useState<{ id: string; label: string }[]>([]);
+  const [fys, setFys] = useState<{ id: string; label: string; start: string; end: string }[]>([]);
   // Flag filtering + reviewed state
   const [filterCat, setFilterCat] = useState<FlagCategory | "all">("all");
   const [filterSev, setFilterSev] = useState<"all" | "high" | "medium" | "low">("all");
@@ -367,32 +367,50 @@ export default function AuditPage() {
   useEffect(() => {
     const saved2 = typeof window !== "undefined" ? (localStorage.getItem("fw_audit_reviewed") ?? "[]") : "[]";
     try { setReviewed(new Set(JSON.parse(saved2))); } catch { /* */ }
+    // Auto-reload when Tally import fires in another tab
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "fw_tally_last_import") {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (!user) return;
+          const bid = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+          const now2 = new Date();
+          const yr2 = now2.getMonth() >= 3 ? now2.getFullYear() : now2.getFullYear() - 1;
+          if (bid) loadDataByRange(bid, `${yr2}-04-01`, `${yr2 + 1}-03-31`);
+        });
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
       const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
-      const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id,label,is_current,start_date").eq("business_id", saved).order("start_date", { ascending: false });
+      const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id,label,is_current,start_date,end_date").eq("business_id", saved).order("start_date", { ascending: false });
       const now = new Date();
-      const curFyStart = now.getMonth() >= 3 ? `${now.getFullYear()}-04-01` : `${now.getFullYear() - 1}-04-01`;
-      const cur = fysData?.find(f => f.start_date === curFyStart)
-        ?? fysData?.find(f => f.is_current)
-        ?? fysData?.[0];
-      setFys(fysData?.map(f => ({ id: f.id, label: f.label })) ?? []);
-      if (cur) { setFyId(cur.id); await loadData(saved, cur.id); }
-      else setLoading(false);
+      const yr = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      const curFyStart = `${yr}-04-01`;
+      const curFyEnd = `${yr + 1}-03-31`;
+      const curFyLabel = `${yr}-${String(yr + 1).slice(-2)}`;
+      const matchingFy = fysData?.find(f => f.start_date === curFyStart);
+      const fyList: { id: string; label: string; start: string; end: string }[] = (fysData ?? []).map(f => ({
+        id: f.id, label: f.label, start: f.start_date, end: f.end_date ?? `${parseInt(f.start_date)+1}-03-31`,
+      }));
+      if (!matchingFy) fyList.unshift({ id: `fy_cur_${yr}`, label: curFyLabel, start: curFyStart, end: curFyEnd });
+      setFys(fyList);
+      const cur = fyList[0];
+      setFyId(cur.id);
+      await loadDataByRange(saved, cur.start, cur.end);
     });
   }, []);
 
-  async function loadData(bid: string, fid: string) {
+  async function loadDataByRange(bid: string, start: string, end: string) {
     setLoading(true);
-    const { data: fyRow } = await supabase.from("fw_fin_financial_years").select("start_date,end_date").eq("id", fid).single();
     let jq = supabase.from("fw_fin_journals")
       .select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id,reference_no")
       .eq("business_id", bid).eq("status", "posted").order("date");
-    if (fyRow?.start_date) jq = jq.gte("date", fyRow.start_date);
-    if (fyRow?.end_date)   jq = jq.lte("date", fyRow.end_date);
+    jq = jq.gte("date", start).lte("date", end);
     const [jRes, aRes] = await Promise.all([jq, supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bid)]);
     const journalData: Journal[] = jRes.data ?? [];
     setJournals(journalData);
@@ -410,8 +428,9 @@ export default function AuditPage() {
 
   const switchFy = useCallback(async (fid: string) => {
     setFyId(fid);
-    if (bizId) await loadData(bizId, fid);
-  }, [bizId]);
+    const fy = fys.find(f => f.id === fid);
+    if (bizId && fy) await loadDataByRange(bizId, fy.start, fy.end);
+  }, [bizId, fys]);
 
   const markReviewed = useCallback((key: string) => {
     setReviewed(prev => {
