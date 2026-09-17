@@ -289,8 +289,10 @@ export default function TallyPage() {
           ?? fys.find(f => f.is_current)
           ?? fys[0];
         setFyId(cur.id);
-        setFrom(cur.start_date);
-        setTo(fyEnd(cur.start_date));
+        // Always use current Indian FY dates for the date pickers, not the DB FY
+        // (DB may have old FYs; user wants to import from today's FY)
+        setFrom(curFyStart);
+        setTo(fyEnd(curFyStart));
         // Update fw_tally_fy_id so dashboard/audit also pick up the correct FY
         localStorage.setItem("fw_tally_fy_id", cur.id);
       }
@@ -733,8 +735,10 @@ export default function TallyPage() {
     } catch (e: unknown) {
       setConnStatus("error");
       const msg = e instanceof Error ? e.message : "Unknown error";
-      if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("timeout") || msg.includes("aborted")) {
-        setConnMsg(`Cannot reach Tally on port ${tallyPort}. Check: 1) Tally Prime is open  2) HTTP server is enabled (F1 → F12 → Enable Tally HTTP Server → port ${tallyPort})`);
+      if (msg.toLowerCase().includes("fetch") || msg.toLowerCase().includes("network") ||
+          msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("timed") ||
+          msg.toLowerCase().includes("aborted") || msg.toLowerCase().includes("signal")) {
+        setConnMsg(`Tally is not responding on port ${tallyPort}. Fix: 1) Open Tally Prime  2) In Tally: F1 → Settings → Connectivity → Enable Tally HTTP Server → Port ${tallyPort} → Accept (Ctrl+A)  3) Click Connect again`);
       } else {
         setConnMsg(msg);
       }
