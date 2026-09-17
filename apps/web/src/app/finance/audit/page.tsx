@@ -407,26 +407,41 @@ export default function AuditPage() {
 
   async function loadDataByRange(bid: string, start: string, end: string) {
     setLoading(true);
-    // Phase 1: load journals + accounts quickly → show overview immediately
-    let jq = supabase.from("fw_fin_journals")
-      .select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id,reference_no")
-      .eq("business_id", bid).eq("status", "posted").order("date");
-    jq = jq.gte("date", start).lte("date", end);
-    const [jRes, aRes] = await Promise.all([jq, supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bid)]);
-    const journalData: Journal[] = jRes.data ?? [];
-    setJournals(journalData);
-    setAccounts(aRes.data ?? []);
-    setLoading(false); // show overview now
-    // Phase 2: load journal lines in background for detail tabs
-    const jIds = journalData.map(j => j.id);
-    if (!jIds.length) return;
-    const allLines: JournalLine[] = [];
-    for (let i = 0; i < jIds.length; i += 200) {
-      const { data: batch } = await supabase.from("fw_fin_journal_lines")
-        .select("id,journal_id,account_id,narration,dr_amount,cr_amount").in("journal_id", jIds.slice(i, i + 200));
-      allLines.push(...(batch ?? []));
+    // Safety timeout — never hang forever
+    const timer = setTimeout(() => setLoading(false), 12000);
+    try {
+      // Phase 1: load journals + accounts → show overview immediately
+      let jq = supabase.from("fw_fin_journals")
+        .select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id,reference_no")
+        .eq("business_id", bid).in("status", ["posted", "draft"]).order("date");
+      jq = jq.gte("date", start).lte("date", end);
+      const [jRes, aRes] = await Promise.all([jq, supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bid)]);
+      let journalData: Journal[] = jRes.data ?? [];
+      // If no data in selected range, fall back to ALL journals for this business
+      if (!journalData.length) {
+        const { data: allJ } = await supabase.from("fw_fin_journals")
+          .select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id,reference_no")
+          .eq("business_id", bid).order("date");
+        journalData = allJ ?? [];
+      }
+      setJournals(journalData);
+      setAccounts(aRes.data ?? []);
+      clearTimeout(timer);
+      setLoading(false); // show overview now
+      // Phase 2: load journal lines in background for detail tabs
+      const jIds = journalData.map(j => j.id);
+      if (!jIds.length) return;
+      const allLines: JournalLine[] = [];
+      for (let i = 0; i < jIds.length; i += 200) {
+        const { data: batch } = await supabase.from("fw_fin_journal_lines")
+          .select("id,journal_id,account_id,narration,dr_amount,cr_amount").in("journal_id", jIds.slice(i, i + 200));
+        allLines.push(...(batch ?? []));
+      }
+      setLines(allLines);
+    } catch {
+      clearTimeout(timer);
+      setLoading(false);
     }
-    setLines(allLines);
   }
 
   const switchFy = useCallback(async (fid: string) => {
