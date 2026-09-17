@@ -42,6 +42,8 @@ export default function BankingPage() {
 
   // Upload / parse state
   const [parsing, setParsing] = useState(false);
+  const [parseStep, setParseStep] = useState("");
+  const [parseProgress, setParseProgress] = useState(0);
   const [parseError, setParseError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -176,8 +178,27 @@ export default function BankingPage() {
   /* ── File drop / select ── */
   async function handleFile(file: File) {
     setParsing(true); setParseError(""); setRows([]); setSelected(new Set()); setPushResult(null);
+    setParseProgress(0); setParseStep("Reading file…");
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    // Animated progress for PDF (AI takes 15-40s)
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+    if (ext === "pdf") {
+      const steps = [
+        [5, "Reading file…"],
+        [15, "Sending to AI…"],
+        [30, "AI analysing statement…"],
+        [55, "Extracting transactions…"],
+        [75, "Parsing amounts & dates…"],
+        [88, "Almost done…"],
+      ] as [number, string][];
+      let si = 0;
+      progressInterval = setInterval(() => {
+        if (si < steps.length) { setParseProgress(steps[si][0]); setParseStep(steps[si][1]); si++; }
+      }, 2800);
+    } else {
+      setParseProgress(30); setParseStep("Parsing spreadsheet…");
+    }
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
       let txs: TxRow[];
       if (["xlsx", "xls", "csv"].includes(ext)) {
         txs = await parseExcel(file);
@@ -187,11 +208,15 @@ export default function BankingPage() {
         throw new Error("Unsupported file type. Upload PDF, Excel (.xlsx/.xls), or CSV.");
       }
       if (!txs.length) throw new Error("No transactions found in file.");
+      if (progressInterval) clearInterval(progressInterval);
+      setParseProgress(100); setParseStep(`Found ${txs.length} transactions!`);
+      await new Promise(r => setTimeout(r, 400));
       setRows(txs);
     } catch (e: unknown) {
+      if (progressInterval) clearInterval(progressInterval);
       setParseError(e instanceof Error ? e.message : String(e));
     } finally {
-      setParsing(false);
+      setParsing(false); setParseProgress(0); setParseStep("");
     }
   }
 
@@ -387,9 +412,27 @@ export default function BankingPage() {
               style={{ border: "2px dashed #1B2E4A", borderRadius: 16, padding: "3rem 2rem", textAlign: "center", cursor: "pointer", background: "#0B1428" }}
             >
               {parsing ? (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-                  <div className="spin" style={{ width: 36, height: 36, border: "3px solid #1B2E4A", borderTopColor: "#3B82F6", borderRadius: "50%" }} />
-                  <div style={{ color: "#4A6FA5" }}>Parsing statement…</div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", padding: "1rem 0" }}>
+                  {/* Progress bar */}
+                  <div style={{ width: "100%", maxWidth: 420, background: "#0D1827", borderRadius: 99, height: 8, overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 99, background: "linear-gradient(90deg,#2563EB,#60A5FA)", width: `${parseProgress}%`, transition: "width 0.6s ease" }} />
+                  </div>
+                  {/* Step label */}
+                  <div style={{ color: "#60A5FA", fontWeight: 600, fontSize: "0.9rem" }}>{parseStep || "Processing…"}</div>
+                  {/* Sub-steps */}
+                  <div style={{ display: "flex", gap: "2rem", marginTop: "0.25rem" }}>
+                    {[["📂","Read file"], ["🤖","AI parse"], ["📊","Extract rows"]].map(([icon, label], i) => {
+                      const done = parseProgress >= [20, 60, 90][i];
+                      const active = !done && parseProgress >= [0, 20, 60][i];
+                      return (
+                        <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem", opacity: done || active ? 1 : 0.3 }}>
+                          <div style={{ fontSize: "1.4rem" }}>{done ? "✅" : active ? icon : icon}</div>
+                          <div style={{ fontSize: "0.68rem", color: done ? "#34D399" : active ? "#60A5FA" : "#2A4060", fontWeight: 600 }}>{label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ fontSize: "0.74rem", color: "#2A4060" }}>PDF parsing takes ~20–30 sec via AI · Excel is instant</div>
                 </div>
               ) : (
                 <>
