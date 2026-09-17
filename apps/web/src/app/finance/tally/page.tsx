@@ -226,8 +226,16 @@ export default function TallyPage() {
   const [bizId, setBizId] = useState<string | null>(null);
   const [fyId, setFyId] = useState<string | null>(null);
   const [financialYears, setFinancialYears] = useState<{ id: string; label: string; start_date: string; end_date: string; is_current: boolean }[]>([]);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(() => {
+    const now = new Date();
+    const y = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    return `${y}-04-01`;
+  });
+  const [to, setTo] = useState(() => {
+    const now = new Date();
+    const y = now.getMonth() >= 3 ? now.getFullYear() + 1 : now.getFullYear();
+    return `${y}-03-31`;
+  });
   const [journalCount, setJournalCount] = useState<number | null>(null);
   const [journals, setJournals] = useState<{
     id: string; date: string; narration: string; type: string;
@@ -328,7 +336,7 @@ export default function TallyPage() {
       }
       if (keepAliveFailsRef.current >= 3) {
         setConnStatus("error");
-        setConnMsg("Tally connection lost — bridge or Tally may have closed. Click Connect to reconnect.");
+        setConnMsg("Tally stopped responding. Make sure Tally Prime is still open, then click Connect again.");
       }
     }, 30000);
     return () => clearInterval(id);
@@ -443,7 +451,12 @@ export default function TallyPage() {
     }
 
     try {
-      const months = monthsInRange(from || "2025-04-01", to || "2026-03-31");
+      // Default to current Indian FY if no dates set
+      const now = new Date();
+      const fyStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      const defaultFrom = `${fyStartYear}-04-01`;
+      const defaultTo = `${fyStartYear + 1}-03-31`;
+      const months = monthsInRange(from || defaultFrom, to || defaultTo);
 
       // Fetch months in parallel batches of 3 — no delay between batches
       const CONCURRENCY = 3;
@@ -720,10 +733,8 @@ export default function TallyPage() {
     } catch (e: unknown) {
       setConnStatus("error");
       const msg = e instanceof Error ? e.message : "Unknown error";
-      if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
-        setConnMsg("Cannot reach bridge on port " + tallyPort + ". Run: node tally-bridge.js in a terminal, then try again.");
-      } else if (msg.includes("timeout") || msg.includes("aborted")) {
-        setConnMsg("Connection timed out. Is the bridge script running? Run: node tally-bridge.js");
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("timeout") || msg.includes("aborted")) {
+        setConnMsg(`Cannot reach Tally on port ${tallyPort}. Check: 1) Tally Prime is open  2) HTTP server is enabled (F1 → F12 → Enable Tally HTTP Server → port ${tallyPort})`);
       } else {
         setConnMsg(msg);
       }
@@ -945,7 +956,7 @@ export default function TallyPage() {
         {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
           <h1 style={{ margin: "0 0 0.25rem", fontSize: "1.375rem", fontWeight: 700, letterSpacing: "-0.02em", color: "#F1F5F9" }}>Tally Sync</h1>
-          <p style={{ margin: 0, color: "#6B7280", fontSize: "0.875rem" }}>Import data from Tally Prime into FrePilot. Use XML upload (recommended) or live bridge.</p>
+          <p style={{ margin: 0, color: "#6B7280", fontSize: "0.875rem" }}>Import data from Tally Prime. Upload XML (easiest) or connect live if Tally is open on this PC.</p>
         </div>
 
         {/* ── METHOD 1: XML Upload ── */}
@@ -974,35 +985,20 @@ export default function TallyPage() {
           </div>
         </div>
 
-        {/* ── METHOD 2: Live Bridge ── */}
+        {/* ── METHOD 2: Live Connect ── */}
         <div style={{ marginBottom: "1.5rem" }}>
-          <div className="tb-section-label">Live Bridge — Requires Tally open on this PC</div>
+          <div className="tb-section-label">Live Connect — Tally must be open on this computer</div>
           <div className="tb-card">
-            {/* Setup steps — collapsed into a small info block */}
-            <details style={{ marginBottom: "1.25rem" }}>
-              <summary style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.8125rem", color: "#6B7280", fontWeight: 500, padding: "0.25rem 0" }}>
-                <span style={{ fontSize: "0.75rem" }}>▶</span> Setup instructions (first time only)
+
+            {/* One-time setup hint */}
+            <details style={{ marginBottom: "1rem" }}>
+              <summary style={{ fontSize: "0.8rem", color: "#6B7280", cursor: "pointer", padding: "0.2rem 0", fontWeight: 500 }}>
+                ▶ First time? Enable Tally HTTP Server (one step)
               </summary>
-              <div style={{ marginTop: "0.875rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                <div style={{ background: "#0F172A", borderRadius: 8, padding: "0.875rem" }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#3B82F6", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Step 1 — Download Bridge</div>
-                  <p style={{ fontSize: "0.78rem", color: "#6B7280", margin: "0 0 0.75rem", lineHeight: 1.6 }}>Download and double-click the launcher. Keep the window open while syncing.</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                    <a href="/run-tally-bridge.bat" download="run-tally-bridge.bat" className="tb-btn tb-btn-primary" style={{ padding: "8px 0", textDecoration: "none", fontSize: "0.8rem" }}>Download .bat launcher</a>
-                    <a href="/tally-bridge.js" download="tally-bridge.js" style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "#6B7280", fontSize: "0.75rem", textDecoration: "none" }}>tally-bridge.js (manual / Node.js)</a>
-                  </div>
-                </div>
-                <div style={{ background: "#0F172A", borderRadius: 8, padding: "0.875rem" }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#10B981", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Step 2 — Enable in Tally</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                    {["F12 → Client/Server config", "Acts as: Both or Server", "Enable ODBC: Yes, Port 9000", "Press Escape to save"].map((s, i) => (
-                      <div key={i} style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
-                        <span style={{ width: 16, height: 16, borderRadius: 4, background: "#1F2937", color: "#6B7280", fontSize: "0.6rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{i+1}</span>
-                        <span style={{ fontSize: "0.78rem", color: "#6B7280", lineHeight: 1.5 }}>{s}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              <div style={{ marginTop: "0.875rem", background: "#0A0D14", borderRadius: 8, padding: "1rem", fontSize: "0.82rem", color: "#9CA3AF", lineHeight: 2 }}>
+                <strong style={{ color: "#C9A84C" }}>In Tally Prime:</strong><br />
+                F1 (Help) → Settings → Connectivity → Enable Tally HTTP Server → Port: <strong>7001</strong> → Accept (Ctrl+A)<br />
+                <span style={{ color: "#6B7280", fontSize: "0.75rem" }}>Only needs to be done once. Tally must remain open while syncing.</span>
               </div>
             </details>
 
@@ -1012,8 +1008,8 @@ export default function TallyPage() {
                 <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280", marginBottom: "0.3rem" }}>Port</div>
                 <input value={tallyPort} onChange={e => setTallyPort(e.target.value)} className="tb-input" style={{ width: 80 }} placeholder="7001" />
               </div>
-              <button onClick={testConnection} disabled={connStatus === "connecting"} className="tb-btn tb-btn-primary" style={{ padding: "9px 20px" }}>
-                {connStatus === "connecting" ? "Connecting…" : connStatus === "connected" ? "Reconnect" : "Connect to Tally"}
+              <button onClick={testConnection} disabled={connStatus === "connecting"} className="tb-btn tb-btn-primary" style={{ padding: "9px 24px", fontSize: "0.88rem" }}>
+                {connStatus === "connecting" ? "Connecting…" : connStatus === "connected" ? "↺ Reconnect" : "Connect to Tally"}
               </button>
               {connStatus === "connected" && (
                 <button onClick={disconnect} className="tb-btn tb-btn-red" style={{ padding: "9px 16px" }}>Disconnect</button>
@@ -1025,8 +1021,8 @@ export default function TallyPage() {
             </div>
 
             {connStatus === "error" && connMsg && (
-              <div style={{ marginTop: "0.875rem", padding: "0.625rem 0.875rem", borderRadius: 8, fontSize: "0.8rem", color: "#FCA5A5", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.15)" }}>
-                {connMsg} — Make sure <code className="tb-mono" style={{ fontSize: "0.75rem", background: "rgba(255,255,255,0.05)", padding: "1px 4px", borderRadius: 4 }}>node tally-bridge.js</code> is running.
+              <div style={{ marginTop: "0.875rem", padding: "0.75rem 1rem", borderRadius: 8, fontSize: "0.82rem", color: "#FCA5A5", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.15)", lineHeight: 1.7 }}>
+                ⚠ {connMsg}
               </div>
             )}
 
