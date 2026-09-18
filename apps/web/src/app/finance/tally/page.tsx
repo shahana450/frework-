@@ -325,11 +325,12 @@ export default function TallyPage() {
     });
   }, []);
 
-  // Keep-alive ping every 30s — auto-disconnect after 3 consecutive failures
+  // Keep-alive ping every 60s — pause during import to avoid freezing Tally
   useEffect(() => {
     if (connStatus !== "connected") return;
     keepAliveFailsRef.current = 0;
     const id = setInterval(async () => {
+      if (syncing === "importVouchers") return; // don't ping while importing
       try {
         const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ping</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ping" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
         const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(4000) });
@@ -345,9 +346,9 @@ export default function TallyPage() {
         setConnStatus("error");
         setConnMsg("Tally stopped responding. Make sure Tally Prime is still open, then click Connect again.");
       }
-    }, 30000);
+    }, 60000);
     return () => clearInterval(id);
-  }, [connStatus, tallyUrl]);
+  }, [connStatus, tallyUrl, syncing]);
 
   function disconnect() {
     setConnStatus("idle");
@@ -465,21 +466,23 @@ export default function TallyPage() {
       const defaultTo = `${fyStartYear + 1}-03-31`;
       const months = monthsInRange(from || defaultFrom, to || defaultTo);
 
-      // Fetch months in parallel batches of 3 — no delay between batches
-      const CONCURRENCY = 3;
+      // Fetch ONE month at a time with a pause — prevents Tally from freezing
       const allVouchers: ReturnType<typeof parseTallyVouchers> = [];
-      for (let i = 0; i < months.length; i += CONCURRENCY) {
-        const batch = months.slice(i, i + CONCURRENCY);
-        setSyncProgress(`Fetching ${batch.map(b => b.label).join(", ")} (${Math.min(i + CONCURRENCY, months.length)}/${months.length})…`);
-        const results = await Promise.all(batch.map(async ({ from: mFrom, to: mTo }) => {
-          const fd = mFrom.replace(/-/g,""), td = mTo.replace(/-/g,"");
+      for (let i = 0; i < months.length; i++) {
+        const { from: mFrom, to: mTo, label } = months[i];
+        setSyncProgress(`Fetching ${label} (${i + 1}/${months.length})…`);
+        const results = await (async () => {
+          const { from: mFrom2, to: mTo2 } = { from: mFrom, to: mTo };
+          const fd = mFrom2.replace(/-/g,""), td = mTo2.replace(/-/g,"");
           const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
           try {
-            const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(25000) });
+            const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(30000) });
             return parseTallyVouchers(await res.text());
           } catch { return []; }
-        }));
-        allVouchers.push(...results.flat());
+        })();
+        allVouchers.push(...results);
+        // Pause between months — lets Tally breathe, prevents UI freeze
+        if (i < months.length - 1) await new Promise(r => setTimeout(r, 1500));
       }
 
       if (!allVouchers.length) {
