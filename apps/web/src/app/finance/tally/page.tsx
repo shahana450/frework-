@@ -483,7 +483,7 @@ export default function TallyPage() {
       }
 
       if (!allVouchers.length) {
-        setImportVoucherResult({ ok: false, msg: "No vouchers found in Tally for this date range." });
+        setImportVoucherResult({ ok: false, msg: `No vouchers found in Tally for ${from} to ${to}. Try changing the date range — your Tally data may be for a different financial year (e.g. 01-04-2025 to 31-03-2026).` });
         setSyncing(null); return;
       }
 
