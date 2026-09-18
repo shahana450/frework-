@@ -350,6 +350,8 @@ export default function AuditPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
   const [journals, setJournals] = useState<Journal[]>([]);
   const [lines, setLines] = useState<JournalLine[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -443,6 +445,26 @@ export default function AuditPage() {
     } catch {
       clearTimeout(timer);
       setLoading(false);
+    }
+  }
+
+  async function quickImport() {
+    if (!bizId) return;
+    setImporting(true); setImportMsg("Connecting to Tally…");
+    try {
+      const port = localStorage.getItem("fw_tally_port") ?? "7001";
+      const now = new Date(); const yr = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      const from = `${yr}0401`; const to = `${yr+1}0331`;
+      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>Day Book</REPORTNAME><STATICVARIABLES><SVFROMDATE>${from}</SVFROMDATE><SVTODATE>${to}</SVTODATE></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
+      const res = await fetch(`http://localhost:${port}`, { method: "POST", body: xml, signal: AbortSignal.timeout(10000) });
+      if (!res.ok) throw new Error("Tally not responding");
+      setImportMsg("Importing vouchers…");
+      // Fire the import via the tally page's logic — redirect with auto-import flag
+      localStorage.setItem("fw_audit_auto_import", "1");
+      window.location.href = "/finance/tally?autoImport=1";
+    } catch {
+      setImporting(false); setImportMsg("");
+      window.location.href = "/finance/tally";
     }
   }
 
@@ -560,11 +582,17 @@ export default function AuditPage() {
           </div>
         ) : journals.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📭</div>
-            <div style={{ fontWeight: 700, fontSize: "1rem", color: "#E8EDF5", marginBottom: "0.5rem" }}>No data imported yet</div>
-            <div style={{ color: "rgba(232,237,245,0.5)", fontSize: "0.85rem", marginBottom: "0.4rem" }}>Tally being <strong style={{color:"#34D399"}}>Connected</strong> only means the link is live.</div>
-            <div style={{ color: "rgba(232,237,245,0.5)", fontSize: "0.85rem", marginBottom: "1.75rem" }}>You still need to click <strong style={{color:"#fff"}}>"Import Vouchers"</strong> on the Tally Sync page to pull data into FrePilot.</div>
-            <Link href="/finance/tally" style={{ background: "#2563EB", color: "#fff", padding: "12px 28px", borderRadius: 9, textDecoration: "none", fontWeight: 700, fontSize: "0.95rem" }}>Go to Tally Sync → Click "Import Vouchers"</Link>
+            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📥</div>
+            <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "#E8EDF5", marginBottom: "0.4rem" }}>No vouchers imported yet</div>
+            <div style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.84rem", marginBottom: "1.75rem" }}>Import your Tally data once — all reports fill in automatically.</div>
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+              <button onClick={quickImport} disabled={importing} style={{ background: "#2563EB", color: "#fff", border: "none", padding: "12px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.95rem", cursor: importing ? "wait" : "pointer", fontFamily: "inherit" }}>
+                {importing ? importMsg || "Connecting…" : "⬇ Import from Tally"}
+              </button>
+              <Link href="/finance/tally" style={{ background: "transparent", color: "#6B7280", border: "1px solid #374151", padding: "12px 20px", borderRadius: 9, textDecoration: "none", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center" }}>
+                Tally Sync page →
+              </Link>
+            </div>
           </div>
         ) : (
 

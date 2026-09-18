@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
@@ -223,6 +223,7 @@ type ConnStatus = "idle" | "connecting" | "connected" | "error";
 
 export default function TallyPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [bizId, setBizId] = useState<string | null>(null);
   const [fyId, setFyId] = useState<string | null>(null);
   const [financialYears, setFinancialYears] = useState<{ id: string; label: string; start_date: string; end_date: string; is_current: boolean }[]>([]);
@@ -314,6 +315,10 @@ export default function TallyPage() {
             if (found) { localStorage.setItem("fw_tally_company", found); setCompanyName(found); }
             setConnStatus("connected");
             setConnMsg(`Connected — ${found || storedCompany}`);
+            // Auto-import if redirected from audit page
+            if (searchParams.get("autoImport") === "1") {
+              setTimeout(() => importVouchers(), 800);
+            }
           }
         } catch { /* bridge not running — stay idle, user will click Connect */ }
       }
