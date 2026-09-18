@@ -350,8 +350,8 @@ export default function AuditPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [importMsg, setImportMsg] = useState("");
+  const [importing] = useState(false);
+  const [importMsg] = useState("");
   const [journals, setJournals] = useState<Journal[]>([]);
   const [lines, setLines] = useState<JournalLine[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -448,24 +448,10 @@ export default function AuditPage() {
     }
   }
 
-  async function quickImport() {
-    if (!bizId) return;
-    setImporting(true); setImportMsg("Connecting to Tally…");
-    try {
-      const port = localStorage.getItem("fw_tally_port") ?? "7001";
-      const now = new Date(); const yr = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-      const from = `${yr}0401`; const to = `${yr+1}0331`;
-      const xml = `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>Day Book</REPORTNAME><STATICVARIABLES><SVFROMDATE>${from}</SVFROMDATE><SVTODATE>${to}</SVTODATE></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
-      const res = await fetch(`http://localhost:${port}`, { method: "POST", body: xml, signal: AbortSignal.timeout(10000) });
-      if (!res.ok) throw new Error("Tally not responding");
-      setImportMsg("Importing vouchers…");
-      // Fire the import via the tally page's logic — redirect with auto-import flag
-      localStorage.setItem("fw_audit_auto_import", "1");
-      window.location.href = "/finance/tally?autoImport=1";
-    } catch {
-      setImporting(false); setImportMsg("");
-      window.location.href = "/finance/tally";
-    }
+  function quickImport() {
+    // Direct redirect — browser blocks http://localhost from https pages (mixed content)
+    // Let the Tally page handle the connection and auto-start import
+    window.location.href = "/finance/tally?autoImport=1";
   }
 
   const switchFy = useCallback(async (fid: string) => {
