@@ -882,8 +882,8 @@ export default function TallyPage() {
           } catch (e) {
             allResults.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: false, error: e instanceof Error ? e.message : "Network error", xml: v.xml });
           }
-          // Small pause between vouchers — keeps Tally responsive
-          await new Promise(r => setTimeout(r, 300));
+          // Small pause between vouchers — lets Tally process before next request
+          await new Promise(r => setTimeout(r, 50));
         }
         setPushResults([...allResults]);
       }
@@ -1088,7 +1088,7 @@ export default function TallyPage() {
                   {syncing === "ledgers" ? "Pushing…" : "Push Ledgers to Tally"}
                 </button>
                 <button onClick={pushVouchers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn" style={{ flex: 1, padding: "9px 0", background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)", color: "#A78BFA" }}>
-                  {syncing === "vouchers" ? "Pushing…" : `Push Vouchers (${journalCount ?? "—"})`}
+                  {syncing === "vouchers" ? (syncProgress ?? "Pushing…") : `Push Vouchers (${journalCount ?? "—"})`}
                 </button>
               </div>
             </div>
