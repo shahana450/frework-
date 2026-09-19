@@ -843,65 +843,57 @@ export default function TallyPage() {
     if (!previewIds.length) { setSyncResult({ ok: false, msg: "No journals in preview. Click Refresh Preview first." }); setSyncing(null); return; }
 
     setPushResults([]);
+    const allResults: typeof pushResults = [];
+    const BATCH = 50; // send 50 journals per API call — stays within Supabase + Vercel limits
     try {
-      // Step 1: Get per-voucher XML from server (service role bypasses RLS)
-      const apiRes = await fetch("/api/finance/tally-push", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ journal_ids: previewIds, business_id: bizId, company_name: companyName }),
-      });
-      const apiData = await apiRes.json();
-      if (!apiRes.ok || !apiData.vouchers) { setSyncResult({ ok: false, msg: apiData.error ?? "Failed to build voucher XML" }); setSyncing(null); return; }
-      if (apiData.all_ledger_names) setAllLedgerNames(apiData.all_ledger_names);
+      for (let bStart = 0; bStart < previewIds.length; bStart += BATCH) {
+        const batchIds = previewIds.slice(bStart, bStart + BATCH);
+        setSyncProgress(`Building XML ${bStart + 1}–${Math.min(bStart + BATCH, previewIds.length)} of ${previewIds.length}…`);
 
-      // Step 1.5: Auto-create all ledgers used by these journals in Tally before pushing
-      if (apiData.all_ledger_names?.length) {
-        const ledgerXml = `<?xml version="1.0" encoding="utf-8"?>
-<ENVELOPE>
-  <HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
-  <BODY><IMPORTDATA>
-    <REQUESTDESC><REPORTNAME>All Masters</REPORTNAME>${companyName ? `<STATICVARIABLES><SVCURRENTCOMPANY>${companyName.replace(/&/g,"&amp;")}</SVCURRENTCOMPANY></STATICVARIABLES>` : ""}</REQUESTDESC>
-    <REQUESTDATA>
-      ${(apiData.all_ledger_names as { name: string; type: string }[]).map(a => {
-        const safeName = a.name.replace(/&/g,"&amp;").replace(/</g,"&lt;");
-        return `<TALLYMESSAGE><LEDGER NAME="${safeName}" ACTION="Create"><NAME>${safeName}</NAME><PARENT>${ledgerGroupForType(a.type)}</PARENT></LEDGER></TALLYMESSAGE>`;
-      }).join("")}
-    </REQUESTDATA>
-  </IMPORTDATA></BODY>
-</ENVELOPE>`;
-        try {
-          await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: ledgerXml, signal: AbortSignal.timeout(15000) });
-        } catch { /* ledger pre-create failed — continue anyway, push will surface real errors */ }
-      }
-
-      // Step 2: Push each voucher individually to local Tally bridge, track per-entry results
-      const results: typeof pushResults = [];
-      for (const v of apiData.vouchers as { id: string; entry_no: string; date: string; narration: string; xml: string }[]) {
-        try {
-          const tallyRes = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: v.xml, signal: AbortSignal.timeout(15000) });
-          const text = await tallyRes.text();
-          const hasError = /LINEERROR/i.test(text);
-          const errMatch = text.match(/<LINEERROR[^>]*>([^<]+)<\/LINEERROR>/i);
-          const rawErr = errMatch?.[1]?.trim() ?? "";
-          let decodedErr = rawErr.replace(/&apos;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
-          // "Voucher date is missing" is Tally's misleading error for missing ledgers — show actual ledger names instead
-          if (hasError && decodedErr.toLowerCase().includes("voucher date is missing")) {
-            const ledgerNames = [...v.xml.matchAll(/<LEDGERNAME>([^<]+)<\/LEDGERNAME>/g)].map(m => m[1]);
-            if (ledgerNames.length) decodedErr = `Missing ledgers in Tally: ${ledgerNames.join(", ")} — click ⚡ Create Missing Ledgers`;
-          }
-          results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: !hasError, error: decodedErr, xml: v.xml, tallyResponse: text.slice(0, 2000) });
-        } catch (e) {
-          results.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: false, error: e instanceof Error ? e.message : "Network error", xml: v.xml });
+        const apiRes = await fetch("/api/finance/tally-push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ journal_ids: batchIds, business_id: bizId, company_name: companyName }),
+        });
+        const apiData = await apiRes.json();
+        if (!apiRes.ok || !apiData.vouchers) { setSyncResult({ ok: false, msg: apiData.error ?? "Failed to build voucher XML" }); setSyncing(null); return; }
+        if (apiData.all_ledger_names?.length && bStart === 0) {
+          setAllLedgerNames(apiData.all_ledger_names);
+          // Create all ledgers in Tally once (first batch only)
+          const ledgerXml = `<?xml version="1.0" encoding="utf-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>All Masters</REPORTNAME>${companyName ? `<STATICVARIABLES><SVCURRENTCOMPANY>${companyName.replace(/&/g,"&amp;")}</SVCURRENTCOMPANY></STATICVARIABLES>` : ""}</REQUESTDESC><REQUESTDATA>${(apiData.all_ledger_names as { name: string; type: string }[]).map(a => { const safeName = a.name.replace(/&/g,"&amp;").replace(/</g,"&lt;"); return `<TALLYMESSAGE><LEDGER NAME="${safeName}" ACTION="Create"><NAME>${safeName}</NAME><PARENT>${ledgerGroupForType(a.type)}</PARENT></LEDGER></TALLYMESSAGE>`; }).join("")}</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
+          try { await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: ledgerXml, signal: AbortSignal.timeout(15000) }); } catch { /* ignore */ }
         }
+
+        // Push each voucher one at a time to Tally
+        for (const v of apiData.vouchers as { id: string; entry_no: string; date: string; narration: string; xml: string }[]) {
+          setSyncProgress(`Pushing ${v.entry_no} (${allResults.length + 1}/${previewIds.length})…`);
+          try {
+            const tallyRes = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: v.xml, signal: AbortSignal.timeout(15000) });
+            const text = await tallyRes.text();
+            const hasError = /LINEERROR/i.test(text);
+            const errMatch = text.match(/<LINEERROR[^>]*>([^<]+)<\/LINEERROR>/i);
+            const rawErr = errMatch?.[1]?.trim() ?? "";
+            let decodedErr = rawErr.replace(/&apos;/g,"'").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"');
+            if (hasError && decodedErr.toLowerCase().includes("voucher date is missing")) {
+              const ledgerNames = [...v.xml.matchAll(/<LEDGERNAME>([^<]+)<\/LEDGERNAME>/g)].map(m => m[1]);
+              if (ledgerNames.length) decodedErr = `Missing ledgers: ${ledgerNames.join(", ")} — click ⚡ Create Missing Ledgers`;
+            }
+            allResults.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: !hasError, error: decodedErr, xml: v.xml, tallyResponse: text.slice(0, 2000) });
+          } catch (e) {
+            allResults.push({ id: v.id, entry_no: v.entry_no, date: v.date, narration: v.narration, ok: false, error: e instanceof Error ? e.message : "Network error", xml: v.xml });
+          }
+          // Small pause between vouchers — keeps Tally responsive
+          await new Promise(r => setTimeout(r, 300));
+        }
+        setPushResults([...allResults]);
       }
-      setPushResults(results);
-      const succeeded = results.filter(r => r.ok).length;
-      const failed = results.filter(r => !r.ok).length;
+      const succeeded = allResults.filter(r => r.ok).length;
+      const failed = allResults.filter(r => !r.ok).length;
       setSyncResult({ ok: failed === 0, msg: failed === 0 ? `✓ All ${succeeded} vouchers pushed to Tally successfully.` : `${succeeded} pushed ✓ · ${failed} failed ✗ — see details below.` });
     } catch (e: unknown) {
-      setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error reaching Tally bridge" });
+      setSyncResult({ ok: false, msg: e instanceof Error ? e.message : "Network error reaching Tally" });
     }
-    setSyncing(null);
+    setSyncing(null); setSyncProgress(null);
   }, [bizId, connStatus, tallyUrl, companyName, journals]);
 
   function buildExportUrl() {
