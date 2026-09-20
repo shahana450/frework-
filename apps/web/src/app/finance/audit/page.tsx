@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
@@ -350,6 +350,7 @@ function buildBS(tb: TrialRow[], netProfit: number): BSSummary {
 export default function AuditPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
+  const bizIdRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState("");
@@ -418,7 +419,7 @@ export default function AuditPage() {
       if (!user) { router.replace("/login"); return; }
       const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
-      setBizId(saved);
+      setBizId(saved); bizIdRef.current = saved;
       const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id,label,is_current,start_date,end_date").eq("business_id", saved).order("start_date", { ascending: false });
       const now = new Date();
       const yr = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
@@ -477,7 +478,8 @@ export default function AuditPage() {
   }
 
   async function quickImport() {
-    if (importing || importDone || !bizId) return;
+    const bid = bizIdRef.current;
+    if (importing || importDone || !bid) return;
     setImporting(true); setImportMsg("Connecting to Tally…");
     try {
       const port = localStorage.getItem("fw_tally_port") ?? "7001";
@@ -498,18 +500,18 @@ export default function AuditPage() {
       }
       if (!allVouchers.length) { setImportMsg("No vouchers found in Tally for this FY. Check that the correct company is open."); setImporting(false); return; }
       setImportMsg("Preparing accounts…");
-      const { data: accs } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bizId);
+      const { data: accs } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bid);
       const accountMap = new Map((accs ?? []).map(a => [a.name.toLowerCase(), a]));
       const missing = new Set<string>();
       for (const v of allVouchers) for (const l of v.lines) if (!accountMap.has(l.ledgerName.toLowerCase())) missing.add(l.ledgerName);
       if (missing.size) {
-        const newAccs = Array.from(missing).map((name, idx) => ({ business_id: bizId, code: `TI${String((accs?.length ?? 0) + idx + 1).padStart(3,"0")}`, name, type: tallyParentToType(name), description: "Imported from Tally", is_system: false, is_group: false, sort_order: (accs?.length ?? 0) + idx + 1 }));
+        const newAccs = Array.from(missing).map((name, idx) => ({ business_id: bid, code: `TI${String((accs?.length ?? 0) + idx + 1).padStart(3,"0")}`, name, type: tallyParentToType(name), description: "Imported from Tally", is_system: false, is_group: false, sort_order: (accs?.length ?? 0) + idx + 1 }));
         const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAccs).select("id,name,type");
         for (const a of (created ?? [])) accountMap.set(a.name.toLowerCase(), a);
       }
-      const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id").eq("business_id", bizId).order("start_date", { ascending: false });
+      const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id").eq("business_id", bid).order("start_date", { ascending: false });
       const fyIdToUse = fysData?.[0]?.id ?? null;
-      const { data: existing } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).like("entry_no", "TLY-%");
+      const { data: existing } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bid).like("entry_no", "TLY-%");
       const existingNos = new Set<string>((existing ?? []).map(j => j.entry_no));
       let seq = existing?.length ? Math.max(0, ...existing.map(j => parseInt(j.entry_no.replace(/\D/g,"") || "0", 10))) + 1 : 1;
       type JRow = { business_id: string; financial_year_id: string|null; entry_no: string; date: string; narration: string; type: string; status: string; total_debit: number; total_credit: number; reference_no: string|null };
@@ -523,7 +525,7 @@ export default function AuditPage() {
         if (!lines.length) { skipped++; continue; }
         const totalDr = v.lines.filter(l => l.isDeemed).reduce((s,l) => s+l.amount,0);
         const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s,l) => s+l.amount,0);
-        jRows.push({ business_id: bizId, financial_year_id: fyIdToUse, entry_no: entryNo, date: v.date, narration: v.narration || entryNo, type: tallyVoucherTypeToFP(v.voucherType), status: "posted", total_debit: totalDr||totalCr, total_credit: totalCr||totalDr, reference_no: vNum||null });
+        jRows.push({ business_id: bid, financial_year_id: fyIdToUse, entry_no: entryNo, date: v.date, narration: v.narration || entryNo, type: tallyVoucherTypeToFP(v.voucherType), status: "posted", total_debit: totalDr||totalCr, total_credit: totalCr||totalDr, reference_no: vNum||null });
         lRows.push(lines); existingNos.add(entryNo); if (!vNum) seq++;
       }
       setImportMsg(`Saving ${jRows.length} vouchers…`);
@@ -541,7 +543,7 @@ export default function AuditPage() {
       setImportMsg(`✓ Imported ${imported} voucher${imported!==1?"s":""}${skipped>0?` · ${skipped} skipped`:""}`);
       setImportDone(true);
       // Reload audit data
-      if (bizId) await loadDataByRange(bizId, fyFrom, fyTo);
+      await loadDataByRange(bid, fyFrom, fyTo);
       const d = new Date(); setLastSync(d.toLocaleString("en-IN", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }));
     } catch (e) {
       setImportMsg(`Error: ${e instanceof Error ? e.message : "Unknown error"}`);
@@ -557,7 +559,7 @@ export default function AuditPage() {
     const delay = setTimeout(() => {
       if (journals.length > 0 || importDone) return;
       fetch("http://localhost:7002", { method:"POST", headers:{"Content-Type":"text/xml"}, body:"<ping/>", signal: AbortSignal.timeout(2500) })
-        .then(() => { if (bizId) quickImport(); })
+        .then(() => { if (bizIdRef.current) quickImport(); })
         .catch(() => {});
     }, 2500);
     return () => clearTimeout(delay);
