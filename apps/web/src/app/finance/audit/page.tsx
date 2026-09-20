@@ -365,6 +365,32 @@ export default function AuditPage() {
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
   const [showReviewed, setShowReviewed] = useState(false);
   const [tbSearch, setTbSearch] = useState("");
+  const [tallyCompany, setTallyCompany] = useState("");
+  const [tallyConnected, setTallyConnected] = useState<boolean | null>(null); // null = checking
+  const [lastSync, setLastSync] = useState<string>("");
+
+  // Read Tally status from localStorage + ping bridge
+  useEffect(() => {
+    const company = localStorage.getItem("fw_tally_company") ?? "";
+    const port = localStorage.getItem("fw_tally_port") ?? "7001";
+    const lastImport = localStorage.getItem("fw_tally_last_import");
+    if (company) setTallyCompany(company);
+    if (lastImport) {
+      const d = new Date(parseInt(lastImport));
+      setLastSync(d.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }));
+    }
+    // Ping bridge to check live connection
+    fetch(`http://localhost:${port}`, {
+      method: "POST", headers: { "Content-Type": "text/xml" },
+      body: "<ping/>", signal: AbortSignal.timeout(2500),
+    }).then(r => setTallyConnected(r.ok || true))
+      .catch(() => {
+        fetch("http://localhost:7002", {
+          method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port },
+          body: "<ping/>", signal: AbortSignal.timeout(2500),
+        }).then(() => setTallyConnected(true)).catch(() => setTallyConnected(false));
+      });
+  }, []);
 
   useEffect(() => {
     // Hard stop — never show spinner forever
@@ -578,10 +604,55 @@ export default function AuditPage() {
       <div style={{ maxWidth: 1160, margin: "0 auto", padding: "1.75rem 1.5rem" }}>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: "0.25rem", marginBottom: "1.5rem", flexWrap: "wrap", overflowX: "auto" }}>
+        <div style={{ display: "flex", gap: "0.25rem", marginBottom: "1rem", flexWrap: "wrap", overflowX: "auto" }}>
           {tabs.map(t => (
             <button key={t.key} onClick={() => setTab(t.key as typeof tab)} className={`au-tab${tab === t.key ? " au-tab-active" : ""}`}>{t.label}</button>
           ))}
+        </div>
+
+        {/* Tally sync status bar */}
+        <div style={{ display: "flex", gap: "0.625rem", flexWrap: "wrap", marginBottom: "1.25rem", alignItems: "center" }}>
+          {/* Connection */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: tallyConnected ? "rgba(52,211,153,0.07)" : tallyConnected === false ? "rgba(107,114,128,0.07)" : "rgba(107,114,128,0.05)", border: `1px solid ${tallyConnected ? "rgba(52,211,153,0.2)" : "rgba(107,114,128,0.15)"}`, borderRadius: 8, padding: "5px 10px" }}>
+            <span style={{ fontSize: "0.5rem", color: tallyConnected ? "#34D399" : tallyConnected === false ? "#6B7280" : "#6B7280" }}>●</span>
+            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: tallyConnected ? "#34D399" : "#6B7280" }}>
+              {tallyConnected === null ? "Checking Tally…" : tallyConnected ? "Tally Connected" : "Tally Not Connected"}
+            </span>
+            {tallyCompany && <span style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.6)", borderLeft: "1px solid rgba(255,255,255,0.1)", paddingLeft: 8 }}>{tallyCompany}</span>}
+          </div>
+          {/* Vouchers */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(96,165,250,0.06)", border: "1px solid rgba(96,165,250,0.15)", borderRadius: 8, padding: "5px 10px" }}>
+            <span style={{ fontSize: "0.72rem" }}>🧾</span>
+            <span style={{ fontSize: "0.75rem", color: journals.length > 0 ? "#60A5FA" : "#6B7280", fontWeight: 600 }}>
+              {journals.length > 0 ? `${journals.length} Vouchers` : "No Vouchers"}
+            </span>
+            <span style={{ fontSize: "0.68rem", color: journals.length > 0 ? "rgba(96,165,250,0.7)" : "#4B5563" }}>
+              {journals.length > 0 ? "imported" : "not imported"}
+            </span>
+          </div>
+          {/* Ledgers / Accounts */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 8, padding: "5px 10px" }}>
+            <span style={{ fontSize: "0.72rem" }}>📒</span>
+            <span style={{ fontSize: "0.75rem", color: accounts.length > 0 ? "#A78BFA" : "#6B7280", fontWeight: 600 }}>
+              {accounts.length > 0 ? `${accounts.length} Ledgers` : "No Ledgers"}
+            </span>
+            <span style={{ fontSize: "0.68rem", color: accounts.length > 0 ? "rgba(167,139,250,0.7)" : "#4B5563" }}>
+              {accounts.length > 0 ? "synced" : "not synced"}
+            </span>
+          </div>
+          {/* Last sync */}
+          {lastSync && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.12)", borderRadius: 8, padding: "5px 10px" }}>
+              <span style={{ fontSize: "0.72rem" }}>🕐</span>
+              <span style={{ fontSize: "0.72rem", color: "rgba(251,191,36,0.7)" }}>Last sync: {lastSync}</span>
+            </div>
+          )}
+          {/* Action */}
+          {(!tallyConnected || journals.length === 0) && (
+            <Link href="/finance/tally?autoImport=1&redirect=%2Ffinance%2Faudit" style={{ marginLeft: "auto", fontSize: "0.75rem", fontWeight: 700, color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", padding: "5px 14px", borderRadius: 7, textDecoration: "none" }}>
+              ⬇ Sync Now
+            </Link>
+          )}
         </div>
 
         {loading ? (
