@@ -184,23 +184,35 @@ export async function POST(req: NextRequest) {
       knownFacts.txnType ? `transaction type: ${knownFacts.txnType}` : "",
     ].filter(Boolean).join(", ");
 
-    // Find the last assistant message — if it was a plain-text question (not JSON), surface it as the pending question
-    const lastAssistant = history.length >= 2 ? history[history.length - 1] : null;
+    // Find the last assistant message — if it was a plain-text question (not JSON), it's a pending clarification
+    const lastAssistant = history.length > 0 ? history[history.length - 1] : null;
     const pendingQuestion = lastAssistant?.role === "assistant" && !lastAssistant.content.trim().startsWith("{")
       ? lastAssistant.content.trim()
       : null;
 
+    // If there is a pending question and the user replied, build a synthesized statement so Claude
+    // doesn't have to "figure out" what the reply answers — make it unambiguous.
+    const firstUserMsg = history.find(h => h.role === "user")?.content ?? "";
+    // Strip contextNote prefix from stored user message to get raw transaction text
+    const rawFirstUser = firstUserMsg.includes("User message:")
+      ? firstUserMsg.split("User message:").pop()?.trim() ?? firstUserMsg
+      : firstUserMsg;
+
+    let synthesizedMessage = message;
+    if (pendingQuestion && message && rawFirstUser) {
+      synthesizedMessage = `Transaction: "${rawFirstUser}". You asked: "${pendingQuestion}". Answer: "${message}". Now produce the complete journal entry using all this information.`;
+    }
+
     const contextNote = [
       `Today: ${today}.`,
-      factsNote ? `Known facts from this conversation (use directly, do NOT ask again): ${factsNote}.` : "",
-      pendingQuestion ? `PENDING QUESTION you asked: "${pendingQuestion}". The user's current message answers it — combine with history and build the journal entry now.` : "",
+      factsNote ? `Known facts (use directly, do NOT ask again): ${factsNote}.` : "",
       `Available accounts: ${accountList || "Cash, ICICI Bank, Sales, Purchases, Debtors Control, Creditors Control, Capital Account"}.`,
     ].filter(Boolean).join(" ");
 
     const fullUserMessage = [
       contextNote,
       fileContext ? `\n${fileContext}` : "",
-      `\n\nUser message: ${message}`,
+      `\n\nUser message: ${synthesizedMessage}`,
     ].join("");
 
     const claudeMessages: Anthropic.MessageParam[] = [
