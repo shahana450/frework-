@@ -1048,7 +1048,7 @@ export default function TallyPage() {
                 <div style={{ fontSize: "1.4rem", flexShrink: 0 }}>🖥️</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#86EFAC", marginBottom: 1 }}>Tally Bridge App <span style={{ fontWeight: 400, color: "#6B7280", fontSize: "0.72rem" }}>Recommended</span></div>
-                  <div style={{ fontSize: "0.73rem", color: "#6B7280", lineHeight: 1.4 }}>Windows tray app — install once, runs in background, works with any browser.</div>
+                  <div style={{ fontSize: "0.73rem", color: "#6B7280", lineHeight: 1.4 }}>Windows app — runs in background, works with any browser. If SmartScreen blocks it: click <strong style={{color:"#9CA3AF"}}>More info → Run anyway</strong>.</div>
                 </div>
                 <a href="/tally-bridge-setup.exe" download style={{ flexShrink: 0, background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", color: "#86EFAC", borderRadius: 7, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>⬇ .exe</a>
               </div>
