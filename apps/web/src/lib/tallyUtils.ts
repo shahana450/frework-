@@ -109,17 +109,30 @@ export function tallyVoucherTypeToFP(t: string): string {
   return "journal";
 }
 
-export function tallyParentToType(parent: string): "asset" | "liability" | "equity" | "income" | "expense" {
+export function tallyParentToType(parent: string): string {
   const p = parent.toLowerCase();
+  // Assets
   if (p.includes("bank") || p.includes("cash") || p.includes("fixed asset") || p.includes("plant") ||
       p.includes("machinery") || p.includes("computer") || p.includes("laptop") || p.includes("furniture") ||
       p.includes("sundry debt") || p.includes("receivable") || p.includes("debtor") ||
-      p.includes("current asset") || p.includes("loan") || p.includes("deposit") || p.includes("investment")) return "asset";
+      p.includes("current asset") || p.includes("deposit") || p.includes("investment")) return "asset";
+  // Loans — separate from asset to distinguish long-term loans given vs. taken
+  if (p.includes("loan") && (p.includes("given") || p.includes("advance") || p.includes("staff"))) return "asset";
+  // Equity / Capital
   if (p.includes("capital") || p.includes("reserve") || p.includes("equity") || p.includes("proprietor") ||
-      p.includes("retained")) return "equity";
-  if (p.includes("sales") || p.includes("income") || p.includes("revenue") || p.includes("interest income")) return "income";
+      p.includes("partner") || p.includes("retained")) return "equity";
+  // Income / Revenue
+  if (p.includes("sales") || p.includes("income") || p.includes("revenue") ||
+      p.includes("indirect income") || p.includes("other income")) return "income";
+  // Liabilities
   if (p.includes("current liab") || p.includes("sundry cred") || p.includes("payable") ||
-      p.includes("creditor") || p.includes("borrowing") || p.includes("overdraft")) return "liability";
+      p.includes("creditor") || p.includes("borrowing") || p.includes("overdraft") ||
+      p.includes("loan") || p.includes("provision") || p.includes("duties") || p.includes("tax payable")) return "liability";
+  // COGS — purchase accounts and direct expenses (appear above Gross Profit in Tally P&L)
+  if (p.includes("purchase") || p.includes("direct expense") || p.includes("cost of goods") ||
+      p.includes("trading") || p.includes("cost of sales") || p.includes("raw material") ||
+      p.includes("freight inward") || p.includes("carriage inward")) return "purchase";
+  // Default: indirect expense
   return "expense";
 }
 

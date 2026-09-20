@@ -332,9 +332,15 @@ function buildTrialBalance(accounts: Account[], lines: JournalLine[], journalIds
 type PLSummary = { revenue: number; cogs: number; grossProfit: number; expenses: number; netProfit: number };
 
 function buildPL(tb: TrialRow[]): PLSummary {
-  const revenue  = tb.filter(r => ["income","sales"].includes(r.type)).reduce((s,r) => s + Math.abs(r.cr - r.dr), 0);
-  const cogs     = tb.filter(r => r.type === "cost_of_goods").reduce((s,r) => s + Math.abs(r.dr - r.cr), 0);
-  const expenses = tb.filter(r => r.type === "expense").reduce((s,r) => s + Math.abs(r.dr - r.cr), 0);
+  // Income: credit-heavy accounts (sales, income, receipts)
+  const revenue  = tb.filter(r => ["income","sales","receipt"].includes(r.type))
+                     .reduce((s,r) => s + Math.max(0, r.cr - r.dr), 0);
+  // COGS: purchase accounts + direct expenses (above Gross Profit line in Tally)
+  const cogs     = tb.filter(r => ["cost_of_goods","purchase","direct_expense"].includes(r.type))
+                     .reduce((s,r) => s + Math.abs(r.dr - r.cr), 0);
+  // Indirect expenses (below Gross Profit line)
+  const expenses = tb.filter(r => r.type === "expense")
+                     .reduce((s,r) => s + Math.abs(r.dr - r.cr), 0);
   return { revenue, cogs, grossProfit: revenue - cogs, expenses, netProfit: revenue - cogs - expenses };
 }
 
@@ -812,11 +818,11 @@ export default function AuditPage() {
                       <button onClick={() => setTab("pl")} style={{ ...inp, padding: "3px 10px", fontSize: "0.72rem" }}>Full P&L →</button>
                     </div>
                     {[
-                      { label: "Revenue",            val: pl.revenue,     color: "#34D399" },
-                      { label: "Cost of Goods Sold", val: -pl.cogs,       color: "#F87171" },
-                      { label: "Gross Profit",        val: pl.grossProfit, color: "#60A5FA", bold: true },
-                      { label: "Operating Expenses", val: -pl.expenses,   color: "#F87171" },
-                      { label: "Net Profit / Loss",  val: pl.netProfit,   color: pl.netProfit >= 0 ? "#34D399" : "#F87171", bold: true },
+                      { label: "Sales / Revenue",      val: pl.revenue,     color: "#34D399" },
+                      { label: "Purchase / Direct Exp",val: -pl.cogs,       color: "#F87171" },
+                      { label: "Gross Profit",          val: pl.grossProfit, color: "#60A5FA", bold: true },
+                      { label: "Indirect Expenses",    val: -pl.expenses,   color: "#F87171" },
+                      { label: pl.netProfit >= 0 ? "Net Profit" : "Net Loss", val: pl.netProfit, color: pl.netProfit >= 0 ? "#34D399" : "#F87171", bold: true },
                     ].map(r => (
                       <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.38rem 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontWeight: r.bold ? 700 : 400, fontSize: r.bold ? "0.88rem" : "0.83rem" }}>
                         <span style={{ color: "rgba(232,237,245,0.6)" }}>{r.label}</span>
@@ -1081,12 +1087,12 @@ export default function AuditPage() {
               <div className="au-card">
                 <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "1.25rem" }}>Profit & Loss Statement</div>
                 {[
-                  { title: "INCOME", rows: tb.filter(r => ["income","sales"].includes(r.type)), sign: -1 as const },
-                  { title: "COST OF GOODS SOLD", rows: tb.filter(r => r.type === "cost_of_goods"), sign: 1 as const },
-                  { title: "OPERATING EXPENSES", rows: tb.filter(r => r.type === "expense"), sign: 1 as const },
+                  { title: "SALES / INCOME", rows: tb.filter(r => ["income","sales","receipt"].includes(r.type)), sign: -1 as const, color: "#34D399" },
+                  { title: "PURCHASE ACCOUNTS / DIRECT EXPENSES (COGS)", rows: tb.filter(r => ["cost_of_goods","purchase","direct_expense"].includes(r.type)), sign: 1 as const, color: "#F87171" },
+                  { title: "INDIRECT EXPENSES", rows: tb.filter(r => r.type === "expense"), sign: 1 as const, color: "#FB923C" },
                 ].map(sec => sec.rows.length === 0 ? null : (
                   <div key={sec.title} style={{ marginBottom: "1.5rem" }}>
-                    <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "0.5rem", padding: "0.35rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{sec.title}</div>
+                    <div style={{ fontSize: "0.6rem", fontWeight: 700, color: sec.color, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "0.5rem", padding: "0.35rem 0", borderBottom: `1px solid ${sec.color}22` }}>{sec.title}</div>
                     {sec.rows.map(r => (
                       <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.38rem 0", fontSize: "0.84rem" }}>
                         <span style={{ color: "rgba(232,237,245,0.65)" }}>{r.name}</span>
@@ -1094,15 +1100,15 @@ export default function AuditPage() {
                       </div>
                     ))}
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderTop: "1px solid rgba(255,255,255,0.08)", fontWeight: 700, fontSize: "0.85rem" }}>
-                      <span style={{ color: "rgba(232,237,245,0.4)" }}>Total {sec.title}</span>
-                      <span className="au-mono">{fmtDec(sec.rows.reduce((s,r) => s + (sec.sign === -1 ? r.cr - r.dr : r.dr - r.cr), 0))}</span>
+                      <span style={{ color: "rgba(232,237,245,0.4)" }}>Total</span>
+                      <span className="au-mono" style={{ color: sec.color }}>{fmtDec(sec.rows.reduce((s,r) => s + (sec.sign === -1 ? r.cr - r.dr : r.dr - r.cr), 0))}</span>
                     </div>
                   </div>
                 ))}
                 <div style={{ borderTop: "2px solid rgba(255,255,255,0.12)", paddingTop: "1rem" }}>
                   {[
-                    { label: "Gross Profit",      val: pl.grossProfit },
-                    { label: "Net Profit / Loss",  val: pl.netProfit },
+                    { label: "Gross Profit",                               val: pl.grossProfit },
+                    { label: pl.netProfit >= 0 ? "Net Profit" : "Net Loss", val: pl.netProfit },
                   ].map(r => (
                     <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", fontWeight: 800, fontSize: "0.92rem" }}>
                       <span>{r.label}</span>
