@@ -20,10 +20,10 @@ function tallyFetch(url: string, body: string, timeoutMs = 15000): Promise<Respo
   // 1. Try direct HTTP (works on Firefox or non-HTTPS pages)
   return fetch(url, opts)
     .catch(() => {
-      // 2. Try desktop app bridge — HTTPS proxy on localhost:7002
-      const appUrl = url.replace(/^http:\/\/localhost:\d+/, "https://localhost:7002");
+      // 2. Try desktop app bridge — HTTP CORS proxy on localhost:7002
+      // Chrome exempts http://localhost from mixed-content blocking
       const port = url.match(/:(\d+)/)?.[1] ?? "7001";
-      return fetch(appUrl, { ...opts, signal: AbortSignal.timeout(timeoutMs), headers: { "Content-Type": "text/xml", "X-Tally-Port": port } });
+      return fetch("http://localhost:7002", { method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port }, body, signal: AbortSignal.timeout(timeoutMs) });
     })
     .catch(() => {
       // 3. Try Chrome extension bridge
