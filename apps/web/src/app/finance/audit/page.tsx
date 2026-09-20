@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { tallyFetch, parseTallyVouchers, tallyVoucherTypeToFP, tallyParentToType, monthsInRange, VOUCHER_FETCH_XML } from "@/lib/tallyUtils";
 
 type Journal = {
   id: string; entry_no: string; date: string; narration: string;
@@ -350,8 +351,9 @@ export default function AuditPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [importing] = useState(false);
-  const [importMsg] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
+  const [importDone, setImportDone] = useState(false);
   const [journals, setJournals] = useState<Journal[]>([]);
   const [lines, setLines] = useState<JournalLine[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -474,33 +476,93 @@ export default function AuditPage() {
     }
   }
 
-  function quickImport() {
-    window.location.href = "/finance/tally?autoImport=1&redirect=%2Ffinance%2Faudit";
+  async function quickImport() {
+    if (importing || importDone || !bizId) return;
+    setImporting(true); setImportMsg("Connecting to Tally…");
+    try {
+      const port = localStorage.getItem("fw_tally_port") ?? "7001";
+      const tallyUrl = `http://localhost:${port}`;
+      const now = new Date();
+      const fyStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      const fyFrom = `${fyStartYear}-04-01`, fyTo = `${fyStartYear + 1}-03-31`;
+      const months = monthsInRange(fyFrom, fyTo);
+      const allVouchers: ReturnType<typeof parseTallyVouchers> = [];
+      for (let i = 0; i < months.length; i++) {
+        const { from: mf, to: mt, label } = months[i];
+        setImportMsg(`Fetching ${label} (${i + 1}/${months.length})…`);
+        try {
+          const res = await tallyFetch(tallyUrl, VOUCHER_FETCH_XML(mf.replace(/-/g,""), mt.replace(/-/g,"")), 30000);
+          allVouchers.push(...parseTallyVouchers(await res.text()));
+        } catch { /* skip month on error */ }
+        if (i < months.length - 1) await new Promise(r => setTimeout(r, 1000));
+      }
+      if (!allVouchers.length) { setImportMsg("No vouchers found in Tally for this FY. Check that the correct company is open."); setImporting(false); return; }
+      setImportMsg("Preparing accounts…");
+      const { data: accs } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bizId);
+      const accountMap = new Map((accs ?? []).map(a => [a.name.toLowerCase(), a]));
+      const missing = new Set<string>();
+      for (const v of allVouchers) for (const l of v.lines) if (!accountMap.has(l.ledgerName.toLowerCase())) missing.add(l.ledgerName);
+      if (missing.size) {
+        const newAccs = Array.from(missing).map((name, idx) => ({ business_id: bizId, code: `TI${String((accs?.length ?? 0) + idx + 1).padStart(3,"0")}`, name, type: tallyParentToType(name), description: "Imported from Tally", is_system: false, is_group: false, sort_order: (accs?.length ?? 0) + idx + 1 }));
+        const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAccs).select("id,name,type");
+        for (const a of (created ?? [])) accountMap.set(a.name.toLowerCase(), a);
+      }
+      const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id").eq("business_id", bizId).order("start_date", { ascending: false });
+      const fyIdToUse = fysData?.[0]?.id ?? null;
+      const { data: existing } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).like("entry_no", "TLY-%");
+      const existingNos = new Set<string>((existing ?? []).map(j => j.entry_no));
+      let seq = existing?.length ? Math.max(0, ...existing.map(j => parseInt(j.entry_no.replace(/\D/g,"") || "0", 10))) + 1 : 1;
+      type JRow = { business_id: string; financial_year_id: string|null; entry_no: string; date: string; narration: string; type: string; status: string; total_debit: number; total_credit: number; reference_no: string|null };
+      type LRow = { account_id: string; narration: string; dr_amount: number; cr_amount: number };
+      const jRows: JRow[] = []; const lRows: LRow[][] = []; let skipped = 0;
+      for (const v of allVouchers) {
+        const vNum = v.voucherNumber?.trim();
+        const entryNo = `TLY-${vNum ? `${v.voucherType} ${vNum}` : `${v.voucherType}-${seq}`}`;
+        if (existingNos.has(entryNo)) { skipped++; continue; }
+        const lines: LRow[] = v.lines.flatMap(l => { const acc = accountMap.get(l.ledgerName.toLowerCase()); if (!acc) return []; return [{ account_id: acc.id, narration: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }]; });
+        if (!lines.length) { skipped++; continue; }
+        const totalDr = v.lines.filter(l => l.isDeemed).reduce((s,l) => s+l.amount,0);
+        const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s,l) => s+l.amount,0);
+        jRows.push({ business_id: bizId, financial_year_id: fyIdToUse, entry_no: entryNo, date: v.date, narration: v.narration || entryNo, type: tallyVoucherTypeToFP(v.voucherType), status: "posted", total_debit: totalDr||totalCr, total_credit: totalCr||totalDr, reference_no: vNum||null });
+        lRows.push(lines); existingNos.add(entryNo); if (!vNum) seq++;
+      }
+      setImportMsg(`Saving ${jRows.length} vouchers…`);
+      let imported = 0;
+      for (let i = 0; i < jRows.length; i += 50) {
+        const { data: ins } = await supabase.from("fw_fin_journals").insert(jRows.slice(i,i+50)).select("id");
+        if (!ins?.length) continue;
+        const allL: (LRow & {journal_id:string})[] = [];
+        for (let j=0;j<ins.length;j++) for (const l of lRows[i+j]) allL.push({...l, journal_id: ins[j].id});
+        for (let li=0;li<allL.length;li+=200) await supabase.from("fw_fin_journal_lines").insert(allL.slice(li,li+200));
+        imported += ins.length;
+        setImportMsg(`Saved ${imported}/${jRows.length} vouchers…`);
+      }
+      try { localStorage.setItem("fw_tally_last_import", Date.now().toString()); } catch { /* */ }
+      setImportMsg(`✓ Imported ${imported} voucher${imported!==1?"s":""}${skipped>0?` · ${skipped} skipped`:""}`);
+      setImportDone(true);
+      // Reload audit data
+      if (bizId) await loadDataByRange(bizId, fyFrom, fyTo);
+      const d = new Date(); setLastSync(d.toLocaleString("en-IN", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }));
+    } catch (e) {
+      setImportMsg(`Error: ${e instanceof Error ? e.message : "Unknown error"}`);
+    }
+    setImporting(false);
   }
 
-  // Auto-detect bridge and redirect when no data exists
+  // Auto-detect bridge on load — if bridge running and no data, auto-start import
   useEffect(() => {
-    if (journals.length > 0) return;
+    if (journals.length > 0 || importDone) return;
     const lastImport = localStorage.getItem("fw_tally_last_import");
-    // If recent import (<5 min ago) don't loop-redirect — data may still be loading
     if (lastImport && Date.now() - parseInt(lastImport) < 5 * 60 * 1000) return;
-    // Wait for initial data load to finish before deciding there's nothing
     const delay = setTimeout(() => {
-      if (journals.length > 0) return;
-      // Ping bridge — works even on first-time device (no localStorage needed)
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 2500);
-      fetch("http://localhost:7002", {
-        method: "POST", headers: { "Content-Type": "text/xml" },
-        body: "<ping/>", signal: ctrl.signal,
-      }).then(() => {
-        clearTimeout(timer);
-        window.location.href = "/finance/tally?autoImport=1&redirect=%2Ffinance%2Faudit";
-      }).catch(() => { clearTimeout(timer); });
-    }, 2000); // wait 2s for DB load to complete first
+      if (journals.length > 0 || importDone) return;
+      fetch("http://localhost:7002", { method:"POST", headers:{"Content-Type":"text/xml"}, body:"<ping/>", signal: AbortSignal.timeout(2500) })
+        .then(() => { if (bizId) quickImport(); })
+        .catch(() => {});
+    }, 2500);
     return () => clearTimeout(delay);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journals.length]);
+  }, [journals.length, bizId, importDone]);
 
   const switchFy = useCallback(async (fid: string) => {
     setFyId(fid);
@@ -580,6 +642,8 @@ export default function AuditPage() {
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes slide { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
       `}</style>
 
       {/* Nav */}
@@ -647,12 +711,19 @@ export default function AuditPage() {
               <span style={{ fontSize: "0.72rem", color: "rgba(251,191,36,0.7)" }}>Last sync: {lastSync}</span>
             </div>
           )}
-          {/* Action */}
-          {(!tallyConnected || journals.length === 0) && (
-            <Link href="/finance/tally?autoImport=1&redirect=%2Ffinance%2Faudit" style={{ marginLeft: "auto", fontSize: "0.75rem", fontWeight: 700, color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", padding: "5px 14px", borderRadius: 7, textDecoration: "none" }}>
+          {/* Action / progress */}
+          {importing ? (
+            <div style={{ marginLeft: "auto", fontSize: "0.73rem", color: "#60A5FA", display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ display: "inline-block", width: 10, height: 10, border: "2px solid #60A5FA", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+              {importMsg}
+            </div>
+          ) : importDone ? (
+            <div style={{ marginLeft: "auto", fontSize: "0.73rem", color: "#34D399", fontWeight: 600 }}>{importMsg}</div>
+          ) : journals.length === 0 ? (
+            <button onClick={quickImport} disabled={importing} style={{ marginLeft: "auto", fontSize: "0.75rem", fontWeight: 700, color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", padding: "5px 14px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit" }}>
               ⬇ Sync Now
-            </Link>
-          )}
+            </button>
+          ) : null}
         </div>
 
         {loading ? (
@@ -661,17 +732,30 @@ export default function AuditPage() {
           </div>
         ) : journals.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📥</div>
-            <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "#E8EDF5", marginBottom: "0.4rem" }}>No vouchers imported yet</div>
-            <div style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.84rem", marginBottom: "1.75rem" }}>Import your Tally data once — all reports fill in automatically.</div>
-            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-              <button onClick={quickImport} disabled={importing} style={{ background: "#2563EB", color: "#fff", border: "none", padding: "12px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.95rem", cursor: importing ? "wait" : "pointer", fontFamily: "inherit" }}>
-                {importing ? importMsg || "Connecting…" : "⬇ Import from Tally"}
-              </button>
-              <Link href="/finance/tally" style={{ background: "transparent", color: "#6B7280", border: "1px solid #374151", padding: "12px 20px", borderRadius: 9, textDecoration: "none", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center" }}>
-                Tally Sync page →
-              </Link>
+            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>{importing ? "⏳" : "📥"}</div>
+            <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "#E8EDF5", marginBottom: "0.4rem" }}>
+              {importing ? "Importing from Tally…" : "No vouchers imported yet"}
             </div>
+            <div style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.84rem", marginBottom: importing ? "0.5rem" : "1.75rem" }}>
+              {importing ? importMsg : "Import your Tally data once — all reports fill in automatically."}
+            </div>
+            {importing && (
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
+                <div style={{ width: 180, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ height: "100%", background: "#3B82F6", width: "60%", borderRadius: 4, animation: "slide 1.2s ease-in-out infinite" }} />
+                </div>
+              </div>
+            )}
+            {!importing && (
+              <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+                <button onClick={quickImport} style={{ background: "#2563EB", color: "#fff", border: "none", padding: "12px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", fontFamily: "inherit" }}>
+                  ⬇ Import from Tally
+                </button>
+                <Link href="/finance/tally" style={{ background: "transparent", color: "#6B7280", border: "1px solid #374151", padding: "12px 20px", borderRadius: 9, textDecoration: "none", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center" }}>
+                  Tally Sync page →
+                </Link>
+              </div>
+            )}
           </div>
         ) : (
 
