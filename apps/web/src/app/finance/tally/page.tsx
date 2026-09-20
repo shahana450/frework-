@@ -15,27 +15,31 @@ if (typeof window !== "undefined") {
 }
 
 function tallyFetch(url: string, body: string, timeoutMs = 15000): Promise<Response> {
-  // Try direct fetch first (works on HTTP pages or Firefox)
-  return fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "text/xml" },
-    body,
-    signal: AbortSignal.timeout(timeoutMs),
-  }).catch(() => {
-    // Mixed-content blocked — relay through Chrome extension bridge
-    if (!_bridgeReady) throw new Error("Cannot reach Tally. Install the FreWork Chrome Extension to connect from this browser.");
-    return new Promise<Response>((resolve, reject) => {
-      const id = Math.random().toString(36).slice(2);
-      const handler = (e: MessageEvent) => {
-        if (e.data?.type !== "TALLY_BRIDGE_RESPONSE" || e.data.id !== id) return;
-        window.removeEventListener("message", handler);
-        if (e.data.ok) resolve(new Response(e.data.text, { status: e.data.status ?? 200 }));
-        else reject(new Error(e.data.error ?? "Bridge error"));
-      };
-      window.addEventListener("message", handler);
-      window.postMessage({ type: "TALLY_BRIDGE_REQUEST", id, url, method: "POST", body, timeout: timeoutMs }, "*");
+  const opts = { method: "POST", headers: { "Content-Type": "text/xml" }, body, signal: AbortSignal.timeout(timeoutMs) };
+
+  // 1. Try direct HTTP (works on Firefox or non-HTTPS pages)
+  return fetch(url, opts)
+    .catch(() => {
+      // 2. Try desktop app bridge — HTTPS proxy on localhost:7002
+      const appUrl = url.replace(/^http:\/\/localhost:\d+/, "https://localhost:7002");
+      const port = url.match(/:(\d+)/)?.[1] ?? "7001";
+      return fetch(appUrl, { ...opts, signal: AbortSignal.timeout(timeoutMs), headers: { "Content-Type": "text/xml", "X-Tally-Port": port } });
+    })
+    .catch(() => {
+      // 3. Try Chrome extension bridge
+      if (!_bridgeReady) throw new Error("Cannot reach Tally. Install the FreWork Tally Bridge app (or Chrome Extension) from the download link below.");
+      return new Promise<Response>((resolve, reject) => {
+        const id = Math.random().toString(36).slice(2);
+        const handler = (e: MessageEvent) => {
+          if (e.data?.type !== "TALLY_BRIDGE_RESPONSE" || e.data.id !== id) return;
+          window.removeEventListener("message", handler);
+          if (e.data.ok) resolve(new Response(e.data.text, { status: e.data.status ?? 200 }));
+          else reject(new Error(e.data.error ?? "Bridge error"));
+        };
+        window.addEventListener("message", handler);
+        window.postMessage({ type: "TALLY_BRIDGE_REQUEST", id, url, method: "POST", body, timeout: timeoutMs }, "*");
+      });
     });
-  });
 }
 
 // ── Tally XML helpers ────────────────────────────────────────────────────────
@@ -1037,22 +1041,26 @@ export default function TallyPage() {
               </div>
             </details>
 
-            {/* Chrome Extension bridge download */}
-            <div style={{ marginBottom: "1.25rem", background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 10, padding: "0.875rem 1rem", display: "flex", alignItems: "center", gap: "0.875rem" }}>
-              <div style={{ fontSize: "1.5rem", flexShrink: 0 }}>🔌</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#C4B5FD", marginBottom: 2 }}>FreWork Tally Bridge — Chrome Extension</div>
-                <div style={{ fontSize: "0.75rem", color: "#6B7280", lineHeight: 1.5 }}>
-                  Required if Chrome blocks the connection. Install once per computer — works silently in background.
+            {/* Bridge downloads */}
+            <div style={{ marginBottom: "1.25rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              {/* Desktop app */}
+              <div style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <div style={{ fontSize: "1.4rem", flexShrink: 0 }}>🖥️</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#86EFAC", marginBottom: 1 }}>Tally Bridge App <span style={{ fontWeight: 400, color: "#6B7280", fontSize: "0.72rem" }}>Recommended</span></div>
+                  <div style={{ fontSize: "0.73rem", color: "#6B7280", lineHeight: 1.4 }}>Windows tray app — install once, runs in background, works with any browser.</div>
                 </div>
+                <a href="/tally-bridge-setup.exe" download style={{ flexShrink: 0, background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", color: "#86EFAC", borderRadius: 7, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>⬇ .exe</a>
               </div>
-              <a
-                href="/tally-bridge.zip"
-                download="FreWork-Tally-Bridge.zip"
-                style={{ flexShrink: 0, background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.35)", color: "#A78BFA", borderRadius: 7, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}
-              >
-                ⬇ Download
-              </a>
+              {/* Chrome extension */}
+              <div style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.18)", borderRadius: 10, padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <div style={{ fontSize: "1.4rem", flexShrink: 0 }}>🔌</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#C4B5FD", marginBottom: 1 }}>Chrome Extension</div>
+                  <div style={{ fontSize: "0.73rem", color: "#6B7280", lineHeight: 1.4 }}>Alternative if you prefer not to install an app. Load via chrome://extensions.</div>
+                </div>
+                <a href="/tally-bridge.zip" download="FreWork-Tally-Bridge.zip" style={{ flexShrink: 0, background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#A78BFA", borderRadius: 7, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>⬇ .zip</a>
+              </div>
             </div>
 
             {/* Connection row */}
