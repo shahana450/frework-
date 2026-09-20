@@ -306,6 +306,8 @@ export default function TallyPage() {
   const xmlFileRef = useRef<HTMLInputElement>(null);
   const [autoSyncDone, setAutoSyncDone] = useState(false);
   const keepAliveFailsRef = useRef(0);
+  // Signals that connect succeeded — importVouchers effect watches this
+  const [triggerImport, setTriggerImport] = useState(0);
 
   const tallyUrl = `http://localhost:${tallyPort}`;
 
@@ -353,8 +355,8 @@ export default function TallyPage() {
             if (found) { localStorage.setItem("fw_tally_company", found); setCompanyName(found); }
             setConnStatus("connected");
             setConnMsg(`Connected — ${found || storedCompany}`);
-            // Auto-import when Tally reconnects so all tabs stay in sync
-            setTimeout(() => importVouchers(), 800);
+            // Signal to the import effect — runs once bizId is ready
+            setTriggerImport(t => t + 1);
           }
         } catch { /* bridge not running — stay idle, user will click Connect */ }
       }
@@ -385,6 +387,13 @@ export default function TallyPage() {
     }, 60000);
     return () => clearInterval(id);
   }, [connStatus, tallyUrl, syncing]);
+
+  // Auto-import effect — fires when triggerImport increments AND bizId is ready
+  useEffect(() => {
+    if (!triggerImport || !bizId || connStatus !== "connected" || syncing) return;
+    importVouchers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerImport, bizId, connStatus]);
 
   function disconnect() {
     setConnStatus("idle");
@@ -776,8 +785,8 @@ export default function TallyPage() {
             }
           }
         }
-        // Auto-import after manual connect so all tabs populate immediately
-        setTimeout(() => importVouchers(), 800);
+        // Signal to the import effect — bizId is guaranteed set by this point
+        setTriggerImport(t => t + 1);
       } else {
         setConnStatus("error"); setConnMsg(`Tally responded with HTTP ${res.status}`);
       }
