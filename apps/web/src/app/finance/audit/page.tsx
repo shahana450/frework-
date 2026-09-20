@@ -51,16 +51,20 @@ function isRoundNumber(n: number) { return n >= 10000 && n % 1000 === 0; }
 function isWeekend(d: string) { const day = new Date(d).getDay(); return day === 0 || day === 6; }
 
 // Returns true if an account name looks like a cash ledger (not bank)
+const BANK_KEYWORDS = ["bank", "hdfc", "sbi", "icici", "axis", "kotak", "yes bank", "pnb", "canara", "union bank",
+  "indian bank", "uco", "central bank", "idbi", "indusind", "rbl", "federal", "current a/c",
+  "savings a/c", "od a/c", "cc a/c", "overdraft", "neft", "rtgs", "imps"];
+
+function isBankAccount(name: string): boolean {
+  const n = name.toLowerCase();
+  return BANK_KEYWORDS.some(k => n.includes(k));
+}
+
 function isCashAccount(name: string): boolean {
   const n = name.toLowerCase();
-  // Explicit cash indicators
   if (/\bcash\b/.test(n) || n.includes("petty cash") || n.includes("cash in hand") || n.includes("cash at hand")) return true;
-  // Bank indicators — if any of these, it is NOT cash
-  const bankKeywords = ["bank", "hdfc", "sbi", "icici", "axis", "kotak", "yes bank", "pnb", "canara", "union bank",
-    "indian bank", "uco", "central bank", "idbi", "indusind", "rbl", "federal", "current a/c",
-    "savings a/c", "od a/c", "cc a/c", "overdraft", "neft", "rtgs", "imps"];
-  if (bankKeywords.some(k => n.includes(k))) return false;
-  return false; // default: not cash — be conservative to avoid false positives
+  if (BANK_KEYWORDS.some(k => n.includes(k))) return false;
+  return false;
 }
 
 // Narration keyword hints for TDS applicability
@@ -70,7 +74,7 @@ function tdsHint(narration: string, accNames: string[]): string | null {
   if (/professional|consultant|legal|audit|ca |cs |doctor|medical|architect|engineer/.test(n)) return "Professional fee — TDS @10% u/s 194-J (IT Act 2025, Sch. IV)";
   if (/contract|labour|work|transport|freight|clearing|loading/.test(n)) return "Contractor — TDS @1-2% u/s 194-C (IT Act 2025, Sch. IV)";
   if (/commission|brokerage|agent/.test(n)) return "Commission — TDS @5% u/s 194-H (IT Act 2025, Sch. IV)";
-  if (/interest/.test(n)) return "Interest — TDS @10% u/s 194-A (IT Act 2025, Sch. IV)";
+  if (/interest/.test(n) && !BANK_KEYWORDS.some(k => n.includes(k))) return "Interest — TDS @10% u/s 194-A (IT Act 2025, Sch. IV)";
   if (/royalt/.test(n)) return "Royalty — TDS @10% u/s 194-J (IT Act 2025, Sch. IV)";
   if (/salary|wages|payroll/.test(n)) return "Salary — TDS u/s 192 (IT Act 2025) — check Form 16";
   return null;
@@ -187,11 +191,16 @@ function buildFlags(journals: Journal[], lines: JournalLine[], accounts: Account
         detail: "TDS @5% on commission/brokerage payments. Threshold ₹15k per year per payee.",
         action: "View Entry", actionHref: `/finance/journals?id=${j.id}&from=audit` });
 
-    // 194-A: Interest (non-bank) ≥ ₹5k / bank ≥ ₹40k
-    if (amt >= 5000 && (j.type === "payment") && /interest/.test(narr))
+    // 194-A: Interest to NON-BANK party ≥ ₹5k
+    // Exempt: interest paid TO a bank/financial institution (Sec 194-A(3)(iii))
+    // Check credit-side accounts — if any is a bank ledger, no TDS applies
+    const creditAccNames = jLines.filter(l => l.cr_amount > 0).map(l => accMap.get(l.account_id)?.name ?? "");
+    const interestPaidToBank = creditAccNames.some(n => isBankAccount(n)) ||
+      /\bbank\b|od interest|overdraft interest|bank interest|loan interest.*bank|hdfc|sbi|icici|axis|kotak/.test(narr);
+    if (amt >= 5000 && j.type === "payment" && /interest/.test(narr) && !interestPaidToBank)
       flags.push({ ...j, amount: amt, category: "compliance", severity: "medium",
-        reason: "Interest payment — TDS @10% u/s 194-A [IT Act 2025, Sch. IV]",
-        detail: "Non-bank interest: TDS if ≥ ₹5k/year. Bank/post office: TDS if ≥ ₹40k/year (₹50k for seniors). Rate: 10%.",
+        reason: "Interest to non-bank party — TDS @10% u/s 194-A [IT Act 2025, Sch. IV]",
+        detail: "TDS @10% on interest paid to non-banking entities if ≥ ₹5k/year. Exempt: interest paid to banks, financial institutions, or government (Sec 194-A(3)(iii)).",
         action: "View Entry", actionHref: `/finance/journals?id=${j.id}&from=audit` });
 
     // Generic payment ≥ ₹30k without reference — check TDS applicability
