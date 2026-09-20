@@ -1,8 +1,28 @@
 ﻿"use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+
+const PING_XML = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ping</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ping" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+
+async function pingTally(port: string): Promise<boolean> {
+  try {
+    const res = await fetch(`http://localhost:${port}`, {
+      method: "POST", headers: { "Content-Type": "text/xml" }, body: PING_XML,
+      signal: AbortSignal.timeout(3000),
+    });
+    return res.ok;
+  } catch {
+    try {
+      const res2 = await fetch("http://localhost:7002", {
+        method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port }, body: PING_XML,
+        signal: AbortSignal.timeout(3000),
+      });
+      return res2.ok;
+    } catch { return false; }
+  }
+}
 
 const NAV_GROUPS = [
   {
@@ -75,6 +95,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const [bizCount, setBizCount] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
   const [subChecked, setSubChecked] = useState(false);
+  const [tallyCompany, setTallyCompany] = useState("");
+  const [tallyConnected, setTallyConnected] = useState(false);
+  const tallyPortRef = useRef("7001");
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -109,6 +132,51 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       }
     });
   }, [pathname]);
+
+  // Refresh Tally company name from localStorage on page navigation
+  useEffect(() => {
+    const company = localStorage.getItem("fw_tally_company") ?? "";
+    if (company) setTallyCompany(company);
+  }, [pathname]);
+
+  // Tally connection keep-alive — check on mount and every 60s
+  useEffect(() => {
+    const company = localStorage.getItem("fw_tally_company") ?? "";
+    const port = localStorage.getItem("fw_tally_port") ?? "7001";
+    tallyPortRef.current = port;
+    if (!company) return;
+    setTallyCompany(company);
+
+    let alive = true;
+    async function check() {
+      const ok = await pingTally(tallyPortRef.current);
+      if (!alive) return;
+      setTallyConnected(ok);
+      if (!ok) {
+        // Tally closed — clear persisted company so we don't show stale status
+        // (keep fw_tally_company so it can auto-reconnect next time)
+      }
+    }
+    check();
+    const id = setInterval(check, 60000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
+  // Listen for storage changes (Tally sync page updates company name)
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === "fw_tally_company") {
+        const c = e.newValue ?? "";
+        setTallyCompany(c);
+        if (!c) setTallyConnected(false);
+      }
+      if (e.key === "fw_tally_port" && e.newValue) {
+        tallyPortRef.current = e.newValue;
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   // Don't show sidebar on setup/pricing/admin pages, and wait for sub check
   if (UNGUARDED.some(p => pathname.startsWith(p))) return <>{children}</>;
@@ -164,6 +232,32 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             }}>
               <span style={{ fontSize: "0.75rem" }}>＋</span> Add Business
             </Link>
+          </div>
+        )}
+
+        {/* Tally connection badge */}
+        {!collapsed && tallyCompany && (
+          <div style={{ padding: "6px 10px", borderBottom: "1px solid rgba(237,232,220,0.05)" }}>
+            <Link href="/finance/tally" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 6,
+              background: tallyConnected ? "rgba(52,211,153,0.07)" : "rgba(107,114,128,0.07)",
+              border: `1px solid ${tallyConnected ? "rgba(52,211,153,0.2)" : "rgba(107,114,128,0.15)"}`,
+              borderRadius: 8, padding: "5px 8px",
+            }}>
+              <span style={{ fontSize: "0.55rem", color: tallyConnected ? "#34D399" : "#6B7280", flexShrink: 0 }}>●</span>
+              <div style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "0.58rem", color: tallyConnected ? "#34D399" : "#6B7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Tally {tallyConnected ? "Connected" : "Disconnected"}
+                </div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "rgba(237,232,220,0.75)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {tallyCompany}
+                </div>
+              </div>
+            </Link>
+          </div>
+        )}
+        {collapsed && tallyCompany && (
+          <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(237,232,220,0.05)", textAlign: "center" }}>
+            <Link href="/finance/tally" title={`Tally: ${tallyCompany}`} style={{ textDecoration: "none", fontSize: "0.65rem", color: tallyConnected ? "#34D399" : "#6B7280" }}>●</Link>
           </div>
         )}
 
