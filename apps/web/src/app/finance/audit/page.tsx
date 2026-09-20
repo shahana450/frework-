@@ -532,9 +532,12 @@ export default function AuditPage() {
         const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAccs).select("id,name,type");
         for (const a of (created ?? [])) accountMap.set(a.name.toLowerCase(), a);
       }
-      const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id").eq("business_id", bid).order("start_date", { ascending: false });
-      const fyIdToUse = fysData?.[0]?.id ?? null;
-      const { data: existing } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bid).like("entry_no", "TLY-%");
+      const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id,start_date").eq("business_id", bid).order("start_date", { ascending: false });
+      const fyTag = `FY${String(fyStartYear).slice(2)}`; // e.g. FY26 for FY2026-27
+      const fyPrefix = `TLY-${fyTag}-`;
+      const matchFy = fysData?.find(f => f.start_date?.startsWith(String(fyStartYear)));
+      const fyIdToUse = matchFy?.id ?? fysData?.[0]?.id ?? null;
+      const { data: existing } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bid).like("entry_no", `${fyPrefix}%`);
       const existingNos = new Set<string>((existing ?? []).map(j => j.entry_no));
       let seq = existing?.length ? Math.max(0, ...existing.map(j => parseInt(j.entry_no.replace(/\D/g,"") || "0", 10))) + 1 : 1;
       type JRow = { business_id: string; financial_year_id: string|null; entry_no: string; date: string; narration: string; type: string; status: string; total_debit: number; total_credit: number; reference_no: string|null };
@@ -542,7 +545,7 @@ export default function AuditPage() {
       const jRows: JRow[] = []; const lRows: LRow[][] = []; let skipped = 0;
       for (const v of allVouchers) {
         const vNum = v.voucherNumber?.trim();
-        const entryNo = `TLY-${vNum ? `${v.voucherType} ${vNum}` : `${v.voucherType}-${seq}`}`;
+        const entryNo = `${fyPrefix}${vNum ? `${v.voucherType} ${vNum}` : `${v.voucherType}-${seq}`}`;
         if (existingNos.has(entryNo)) { skipped++; continue; }
         const lines: LRow[] = v.lines.flatMap(l => { const acc = accountMap.get(l.ledgerName.toLowerCase()); if (!acc) return []; return [{ account_id: acc.id, narration: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }]; });
         if (!lines.length) { skipped++; continue; }

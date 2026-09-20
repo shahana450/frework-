@@ -562,9 +562,16 @@ export default function TallyPage() {
       }
 
       // Get FY + existing entry_nos
-      const { data: fys } = await supabase.from("fw_fin_financial_years").select("id").eq("business_id", bizId).order("start_date", { ascending: false });
-      const fyIdToUse = fys?.[0]?.id ?? null;
-      const { data: existingTly } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).like("entry_no", "TLY-%");
+      const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,start_date").eq("business_id", bizId).order("start_date", { ascending: false });
+      // Find the FY that matches the import date range
+      const importFrom = from || `${new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1}-04-01`;
+      const importFromYear = parseInt(importFrom.slice(0, 4));
+      const fyTag = `FY${String(importFromYear).slice(2)}`; // e.g. "FY25" for 2025-26
+      const matchingFy = fys?.find(f => f.start_date?.startsWith(String(importFromYear)));
+      const fyIdToUse = matchingFy?.id ?? fys?.[0]?.id ?? null;
+      // Only check for duplicates within the same FY tag to avoid cross-year collisions
+      const fyPrefix = `TLY-${fyTag}-`;
+      const { data: existingTly } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).like("entry_no", `${fyPrefix}%`);
       const existingEntryNos = new Set<string>((existingTly ?? []).map(j => j.entry_no));
       let entrySeq = existingTly?.length
         ? Math.max(0, ...existingTly.map(j => parseInt(j.entry_no.replace(/\D/g,"") || "0", 10))) + 1 : 1;
@@ -579,7 +586,7 @@ export default function TallyPage() {
       for (const v of allVouchers) {
         const vNum = v.voucherNumber?.trim();
         const tallyLabel = vNum ? `${v.voucherType} ${vNum}` : `${v.voucherType}-${entrySeq}`;
-        const entryNo = `TLY-${tallyLabel}`;
+        const entryNo = `${fyPrefix}${tallyLabel}`;
         if (existingEntryNos.has(entryNo)) { skipped++; continue; }
 
         const lines: LRow[] = v.lines.flatMap(l => {
@@ -665,7 +672,12 @@ export default function TallyPage() {
       setSyncProgress(`Parsed ${vouchers.length} vouchers. Loading accounts…`);
       const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bizId);
       const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,start_date,end_date").eq("business_id", bizId).order("start_date", { ascending: false });
-      const { data: existingJ } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).like("entry_no", "TLY-%");
+      // Derive FY tag from the first voucher's date (for entry_no uniqueness across years)
+      const firstDate = vouchers[0]?.date ?? new Date().toISOString().slice(0,10);
+      const xmlFyYear = parseInt(firstDate.slice(0, 4));
+      const xmlFyTag = `FY${String(new Date(firstDate).getMonth() >= 3 ? xmlFyYear : xmlFyYear - 1).slice(2)}`;
+      const xmlFyPrefix = `TLY-${xmlFyTag}-`;
+      const { data: existingJ } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).like("entry_no", `${xmlFyPrefix}%`);
       const existingNos = new Set((existingJ ?? []).map(j => j.entry_no));
       const accountMap = new Map((accounts ?? []).map(a => [a.name.toLowerCase().trim(), { id: a.id, type: a.type as string }]));
 
@@ -673,7 +685,7 @@ export default function TallyPage() {
       const missing = new Set<string>();
       for (const v of vouchers) for (const l of v.lines) if (!accountMap.has(l.ledgerName.toLowerCase().trim())) missing.add(l.ledgerName);
       if (missing.size > 0) {
-        const newAccs = Array.from(missing).map((name, i) => ({ business_id: bizId, code: `TU${String((accounts?.length??0)+i+1).padStart(3,"0")}`, name, type: "expense", description: "From Tally XML", is_system: false, is_group: false, sort_order: (accounts?.length??0)+i+1 }));
+        const newAccs = Array.from(missing).map((name, i) => ({ business_id: bizId, code: `TU${String((accounts?.length??0)+i+1).padStart(3,"0")}`, name, type: tallyParentToType(name), description: "From Tally XML", is_system: false, is_group: false, sort_order: (accounts?.length??0)+i+1 }));
         const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAccs).select("id,name,type");
         for (const a of created ?? []) accountMap.set(a.name.toLowerCase().trim(), { id: a.id, type: a.type as string });
       }
@@ -681,7 +693,7 @@ export default function TallyPage() {
       let imported = 0, skipped = 0, seq = 1;
       for (const v of vouchers) {
         const vNum = v.voucherNumber?.trim();
-        const entryNo = `TLY-${v.voucherType} ${vNum || seq}`;
+        const entryNo = `${xmlFyPrefix}${v.voucherType} ${vNum || seq}`;
         if (existingNos.has(entryNo)) { skipped++; continue; }
         const fpType = tallyVoucherTypeToFP(v.voucherType);
         const activeFy = fys?.find(f => v.date >= f.start_date && v.date <= f.end_date) ?? fys?.[0];
