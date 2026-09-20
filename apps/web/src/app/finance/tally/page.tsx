@@ -4,6 +4,40 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
+// ── Chrome extension bridge ──────────────────────────────────────────────────
+// Lets HTTPS pages reach Tally's HTTP server via the FreWork Tally Bridge extension.
+
+let _bridgeReady = false;
+if (typeof window !== "undefined") {
+  window.addEventListener("message", (e) => {
+    if (e.data?.type === "TALLY_BRIDGE_READY") _bridgeReady = true;
+  });
+}
+
+function tallyFetch(url: string, body: string, timeoutMs = 15000): Promise<Response> {
+  // Try direct fetch first (works on HTTP pages or Firefox)
+  return fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "text/xml" },
+    body,
+    signal: AbortSignal.timeout(timeoutMs),
+  }).catch(() => {
+    // Mixed-content blocked — relay through Chrome extension bridge
+    if (!_bridgeReady) throw new Error("Cannot reach Tally. Install the FreWork Chrome Extension to connect from this browser.");
+    return new Promise<Response>((resolve, reject) => {
+      const id = Math.random().toString(36).slice(2);
+      const handler = (e: MessageEvent) => {
+        if (e.data?.type !== "TALLY_BRIDGE_RESPONSE" || e.data.id !== id) return;
+        window.removeEventListener("message", handler);
+        if (e.data.ok) resolve(new Response(e.data.text, { status: e.data.status ?? 200 }));
+        else reject(new Error(e.data.error ?? "Bridge error"));
+      };
+      window.addEventListener("message", handler);
+      window.postMessage({ type: "TALLY_BRIDGE_REQUEST", id, url, method: "POST", body, timeout: timeoutMs }, "*");
+    });
+  });
+}
+
 // ── Tally XML helpers ────────────────────────────────────────────────────────
 
 function tallyDate(iso: string) {
@@ -308,7 +342,7 @@ export default function TallyPage() {
         setTallyPort(storedPort);
         // Silently test connection in background
         try {
-          const res = await fetch(`http://localhost:${storedPort}`, { method: "POST", headers: { "Content-Type": "text/xml" }, body: TALLY_CURCOMP_XML, signal: AbortSignal.timeout(3000) });
+          const res = await tallyFetch(`http://localhost:${storedPort}`, TALLY_CURCOMP_XML, 3000);
           if (res.ok) {
             const txt = await res.text();
             const found = extractCompanyName(txt);
@@ -333,7 +367,7 @@ export default function TallyPage() {
       if (syncing === "importVouchers") return; // don't ping while importing
       try {
         const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ping</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ping" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-        const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(4000) });
+        const res = await tallyFetch(tallyUrl, xml, 4000);
         if (res.ok) {
           keepAliveFailsRef.current = 0;
         } else {
@@ -426,7 +460,7 @@ export default function TallyPage() {
 </ENVELOPE>`;
 
     try {
-      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: ledgerXml, signal: AbortSignal.timeout(15000) });
+      const res = await tallyFetch(tallyUrl, ledgerXml, 15000);
       const text = await res.text();
       const errors = (text.match(/LINEERROR/gi) ?? []).length;
       setCreateLedgerResult(errors === 0
@@ -476,7 +510,7 @@ export default function TallyPage() {
           const fd = mFrom2.replace(/-/g,""), td = mTo2.replace(/-/g,"");
           const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
           try {
-            const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(30000) });
+            const res = await tallyFetch(tallyUrl, xml, 30000);
             return parseTallyVouchers(await res.text());
           } catch { return []; }
         })();
@@ -653,12 +687,7 @@ export default function TallyPage() {
     try {
       // Use $$CurrentCompany TDL Report — always returns the active company
       const xml = TALLY_CURCOMP_XML;
-      const res = await fetch(tallyUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/xml" },
-        body: xml,
-        signal: AbortSignal.timeout(5000),
-      });
+      const res = await tallyFetch(tallyUrl, xml, 5000);
       if (res.ok) {
         const text = await res.text();
         const found = extractCompanyName(text);
@@ -670,7 +699,7 @@ export default function TallyPage() {
         // Also fetch full company list so user can manually select the right one
         try {
           const listXml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_AllCo</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_AllCo" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-          const listRes = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: listXml, signal: AbortSignal.timeout(4000) });
+          const listRes = await tallyFetch(tallyUrl, listXml, 4000);
           const listText = await listRes.text();
           const names: string[] = [];
           const re = /NAME="([^"]+)"/gi; let m;
@@ -768,7 +797,7 @@ export default function TallyPage() {
     if (!accounts?.length) { setSyncResult({ ok: false, msg: "No accounts found in Chart of Accounts." }); setSyncing(null); return; }
     const xml = buildLedgerXML(accounts);
     try {
-      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(15000) });
+      const res = await tallyFetch(tallyUrl, xml, 15000);
       const text = await res.text();
       const errors = (text.match(/LINEERROR/gi) ?? []).length;
       setSyncResult({ ok: errors === 0, msg: errors === 0 ? `${accounts.length} ledgers pushed to Tally successfully.` : `Pushed ${accounts.length} ledgers — ${errors} already exist or had name mismatch (normal if already created).` });
@@ -786,7 +815,7 @@ export default function TallyPage() {
     try {
       // Tally Prime format: Collection export using VERSION + TYPE=Collection + DESC
       const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ledgers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ledgers" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-      const res = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: xml, signal: AbortSignal.timeout(20000) });
+      const res = await tallyFetch(tallyUrl, xml, 20000);
       const text = await res.text();
       setRawDebug(text.slice(0, 2000));
       const ledgers = parseTallyLedgers(text);
@@ -861,14 +890,14 @@ export default function TallyPage() {
           setAllLedgerNames(apiData.all_ledger_names);
           // Create all ledgers in Tally once (first batch only)
           const ledgerXml = `<?xml version="1.0" encoding="utf-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>All Masters</REPORTNAME>${companyName ? `<STATICVARIABLES><SVCURRENTCOMPANY>${companyName.replace(/&/g,"&amp;")}</SVCURRENTCOMPANY></STATICVARIABLES>` : ""}</REQUESTDESC><REQUESTDATA>${(apiData.all_ledger_names as { name: string; type: string }[]).map(a => { const safeName = a.name.replace(/&/g,"&amp;").replace(/</g,"&lt;"); return `<TALLYMESSAGE><LEDGER NAME="${safeName}" ACTION="Create"><NAME>${safeName}</NAME><PARENT>${ledgerGroupForType(a.type)}</PARENT></LEDGER></TALLYMESSAGE>`; }).join("")}</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
-          try { await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: ledgerXml, signal: AbortSignal.timeout(15000) }); } catch { /* ignore */ }
+          try { await tallyFetch(tallyUrl, ledgerXml, 15000); } catch { /* ignore */ }
         }
 
         // Push each voucher one at a time to Tally
         for (const v of apiData.vouchers as { id: string; entry_no: string; date: string; narration: string; xml: string }[]) {
           setSyncProgress(`Pushing ${v.entry_no} (${allResults.length + 1}/${previewIds.length})…`);
           try {
-            const tallyRes = await fetch(tallyUrl, { method: "POST", headers: { "Content-Type": "text/xml" }, body: v.xml, signal: AbortSignal.timeout(15000) });
+            const tallyRes = await tallyFetch(tallyUrl, v.xml, 15000);
             const text = await tallyRes.text();
             const hasError = /LINEERROR/i.test(text);
             const errMatch = text.match(/<LINEERROR[^>]*>([^<]+)<\/LINEERROR>/i);
