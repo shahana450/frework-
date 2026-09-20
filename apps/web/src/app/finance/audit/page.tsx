@@ -413,7 +413,6 @@ export default function AuditPage() {
       }
     };
     window.addEventListener("storage", onStorage);
-    return () => { window.removeEventListener("storage", onStorage); clearTimeout(mountTimer); };
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
@@ -436,6 +435,8 @@ export default function AuditPage() {
       setFyId(cur.id);
       await loadDataByRange(saved, cur.start, cur.end);
     });
+
+    return () => { window.removeEventListener("storage", onStorage); clearTimeout(mountTimer); };
   }, []);
 
   async function loadDataByRange(bid: string, start: string, end: string) {
@@ -541,7 +542,7 @@ export default function AuditPage() {
       }
       try { localStorage.setItem("fw_tally_last_import", Date.now().toString()); } catch { /* */ }
       setImportMsg(`✓ Imported ${imported} voucher${imported!==1?"s":""}${skipped>0?` · ${skipped} skipped`:""}`);
-      setImportDone(true);
+      if (imported > 0) setImportDone(true);
       // Reload audit data
       await loadDataByRange(bid, fyFrom, fyTo);
       const d = new Date(); setLastSync(d.toLocaleString("en-IN", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }));
@@ -721,6 +722,13 @@ export default function AuditPage() {
             </div>
           ) : importDone ? (
             <div style={{ marginLeft: "auto", fontSize: "0.73rem", color: "#34D399", fontWeight: 600 }}>{importMsg}</div>
+          ) : importMsg.startsWith("Error:") ? (
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: "0.72rem", color: "#F87171" }}>{importMsg}</span>
+              <button onClick={() => { setImportMsg(""); quickImport(); }} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#F87171", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: "inherit" }}>
+                Retry
+              </button>
+            </div>
           ) : journals.length === 0 ? (
             <button onClick={quickImport} disabled={importing} style={{ marginLeft: "auto", fontSize: "0.75rem", fontWeight: 700, color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", padding: "5px 14px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit" }}>
               ⬇ Sync Now
