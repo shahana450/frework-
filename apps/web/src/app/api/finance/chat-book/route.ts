@@ -160,13 +160,6 @@ export async function POST(req: NextRequest) {
       if (sess?.messages) history = (sess.messages as typeof history).slice(-12);
     }
 
-    // Pre-extract facts from entire conversation so far (including current message)
-    const allUserTexts = [
-      ...history.filter(h => h.role === "user").map(h => h.content),
-      message,
-    ];
-    const knownFacts = extractFacts(allUserTexts);
-
     // Fetch chart of accounts for context
     const { data: accounts } = await supabase
       .from("fw_fin_chart_of_accounts")
@@ -177,48 +170,69 @@ export async function POST(req: NextRequest) {
     const accountList = (accounts ?? []).map(a => `${a.name} (${a.type})`).join(", ");
 
     const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
-    const factsNote = [
-      knownFacts.amount ? `amount: ₹${knownFacts.amount}` : "",
-      knownFacts.mode ? `payment mode: ${knownFacts.mode}` : "",
-      knownFacts.party ? `party: ${knownFacts.party}` : "",
-      knownFacts.txnType ? `transaction type: ${knownFacts.txnType}` : "",
-    ].filter(Boolean).join(", ");
+    const accountsCtx = `Available accounts: ${accountList || "Cash, ICICI Bank, Sales, Purchases, Debtors Control, Creditors Control, Capital Account"}.`;
 
-    // Find the last assistant message — if it was a plain-text question (not JSON), it's a pending clarification
+    // ── Detect pending clarification ─────────────────────────────────────────
+    // If last assistant message was a plain-text question (not JSON), the user's current
+    // message is its answer. Merge ALL prior user messages + current answer into ONE
+    // complete transaction sentence and send as a fresh single-turn request.
+    // This bypasses Claude's tendency to re-ask when given multi-turn history.
     const lastAssistant = history.length > 0 ? history[history.length - 1] : null;
     const pendingQuestion = lastAssistant?.role === "assistant" && !lastAssistant.content.trim().startsWith("{")
       ? lastAssistant.content.trim()
       : null;
 
-    // If there is a pending question and the user replied, build a synthesized statement so Claude
-    // doesn't have to "figure out" what the reply answers — make it unambiguous.
-    const firstUserMsg = history.find(h => h.role === "user")?.content ?? "";
-    // Strip contextNote prefix from stored user message to get raw transaction text
-    const rawFirstUser = firstUserMsg.includes("User message:")
-      ? firstUserMsg.split("User message:").pop()?.trim() ?? firstUserMsg
-      : firstUserMsg;
+    let claudeMessages: Anthropic.MessageParam[];
+    let fullUserMessage: string;
 
-    let synthesizedMessage = message;
-    if (pendingQuestion && message && rawFirstUser) {
-      synthesizedMessage = `Transaction: "${rawFirstUser}". You asked: "${pendingQuestion}". Answer: "${message}". Now produce the complete journal entry using all this information.`;
+    if (pendingQuestion) {
+      // Collect every raw user message from history (they are stored as raw text)
+      const priorUserMsgs = history.filter(h => h.role === "user").map(h => h.content).join("; ");
+      // Extract all facts from combined user texts
+      const allUserTexts = history.filter(h => h.role === "user").map(h => h.content).concat(message);
+      const knownFacts = extractFacts(allUserTexts);
+      const factsNote = [
+        knownFacts.amount ? `₹${knownFacts.amount}` : "",
+        knownFacts.mode ? `via ${knownFacts.mode}` : "",
+        knownFacts.party ? `party: ${knownFacts.party}` : "",
+        knownFacts.txnType ? `type: ${knownFacts.txnType}` : "",
+      ].filter(Boolean).join(", ");
+
+      // Build one complete, unambiguous transaction description — send fresh (no history)
+      fullUserMessage = [
+        `Today: ${today}. ${accountsCtx}`,
+        fileContext ? `\n${fileContext}` : "",
+        `\n\nBook this transaction: "${priorUserMsgs}". `,
+        `The missing detail that was asked for ("${pendingQuestion}") is: "${message}".`,
+        factsNote ? ` Confirmed facts: ${factsNote}.` : "",
+        ` Produce the complete double-entry journal now. Do NOT use needs_clarification.`,
+      ].filter(Boolean).join("");
+
+      // Send as single fresh user turn — no confusing multi-turn history
+      claudeMessages = [{ role: "user", content: fullUserMessage }];
+    } else {
+      // Normal first message — standard single-turn with account context
+      const knownFacts = extractFacts([message]);
+      const factsNote = [
+        knownFacts.amount ? `amount: ₹${knownFacts.amount}` : "",
+        knownFacts.mode ? `payment mode: ${knownFacts.mode}` : "",
+        knownFacts.party ? `party: ${knownFacts.party}` : "",
+        knownFacts.txnType ? `transaction type: ${knownFacts.txnType}` : "",
+      ].filter(Boolean).join(", ");
+
+      fullUserMessage = [
+        `Today: ${today}.`,
+        factsNote ? ` Known facts: ${factsNote}.` : "",
+        ` ${accountsCtx}`,
+        fileContext ? `\n${fileContext}` : "",
+        `\n\nUser message: ${message}`,
+      ].filter(Boolean).join("");
+
+      claudeMessages = [
+        ...history.map(h => ({ role: h.role, content: h.content })),
+        { role: "user", content: fullUserMessage },
+      ];
     }
-
-    const contextNote = [
-      `Today: ${today}.`,
-      factsNote ? `Known facts (use directly, do NOT ask again): ${factsNote}.` : "",
-      `Available accounts: ${accountList || "Cash, ICICI Bank, Sales, Purchases, Debtors Control, Creditors Control, Capital Account"}.`,
-    ].filter(Boolean).join(" ");
-
-    const fullUserMessage = [
-      contextNote,
-      fileContext ? `\n${fileContext}` : "",
-      `\n\nUser message: ${synthesizedMessage}`,
-    ].join("");
-
-    const claudeMessages: Anthropic.MessageParam[] = [
-      ...history.map(h => ({ role: h.role, content: h.content })),
-      { role: "user", content: fullUserMessage },
-    ];
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
