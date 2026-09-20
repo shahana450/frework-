@@ -449,10 +449,28 @@ export default function AuditPage() {
   }
 
   function quickImport() {
-    // Direct redirect — browser blocks http://localhost from https pages (mixed content)
-    // Let the Tally page handle the connection and auto-start import
-    window.location.href = "/finance/tally?autoImport=1";
+    window.location.href = "/finance/tally?autoImport=1&redirect=%2Ffinance%2Faudit";
   }
+
+  // Auto-detect bridge and redirect when no data exists
+  useEffect(() => {
+    if (loading || journals.length > 0) return;
+    const lastImport = localStorage.getItem("fw_tally_last_import");
+    // If there was a recent import (<5 min ago) don't auto-redirect — data should be here
+    if (lastImport && Date.now() - parseInt(lastImport) < 5 * 60 * 1000) return;
+    const storedCompany = localStorage.getItem("fw_tally_company") ?? "";
+    if (!storedCompany) return; // never connected Tally
+    // Silently ping the bridge; if it responds, auto-redirect to Tally sync
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 2000);
+    fetch("http://localhost:7002", {
+      method: "POST", headers: { "Content-Type": "text/xml" },
+      body: "<ping/>", signal: ctrl.signal,
+    }).then(() => {
+      clearTimeout(timer);
+      window.location.href = "/finance/tally?autoImport=1&redirect=%2Ffinance%2Faudit";
+    }).catch(() => { clearTimeout(timer); });
+  }, [loading, journals.length]);
 
   const switchFy = useCallback(async (fid: string) => {
     setFyId(fid);

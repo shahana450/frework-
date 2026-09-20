@@ -605,6 +605,12 @@ export default function TallyPage() {
       setImportVoucherResult({ ok: imported > 0, msg: `Imported ${imported} voucher${imported !== 1 ? "s" : ""} from Tally${skipped > 0 ? ` (${skipped} skipped)` : ""}.` });
       setAutoSyncDone(true);
       try { localStorage.setItem("fw_tally_last_import", Date.now().toString()); } catch { /* */ }
+      // Auto-redirect back if came from another page
+      const redirectTo = searchParams.get("redirect");
+      if (imported > 0 && redirectTo) {
+        setSyncProgress("Synced! Redirecting…");
+        setTimeout(() => { window.location.href = redirectTo; }, 1500);
+      }
     } catch (e: unknown) {
       setImportVoucherResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
     }
