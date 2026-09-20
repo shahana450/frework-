@@ -1037,6 +1037,24 @@ export default function TallyPage() {
               </div>
             </details>
 
+            {/* Chrome Extension bridge download */}
+            <div style={{ marginBottom: "1.25rem", background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 10, padding: "0.875rem 1rem", display: "flex", alignItems: "center", gap: "0.875rem" }}>
+              <div style={{ fontSize: "1.5rem", flexShrink: 0 }}>🔌</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#C4B5FD", marginBottom: 2 }}>FreWork Tally Bridge — Chrome Extension</div>
+                <div style={{ fontSize: "0.75rem", color: "#6B7280", lineHeight: 1.5 }}>
+                  Required if Chrome blocks the connection. Install once per computer — works silently in background.
+                </div>
+              </div>
+              <a
+                href="/tally-bridge.zip"
+                download="FreWork-Tally-Bridge.zip"
+                style={{ flexShrink: 0, background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.35)", color: "#A78BFA", borderRadius: 7, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}
+              >
+                ⬇ Download
+              </a>
+            </div>
+
             {/* Connection row */}
             <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap" }}>
               <div>
