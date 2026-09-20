@@ -7,21 +7,18 @@ import { supabase } from "@/lib/supabase";
 const PING_XML = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ping</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ping" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
 
 async function pingTally(port: string): Promise<boolean> {
-  try {
-    const res = await fetch(`http://localhost:${port}`, {
-      method: "POST", headers: { "Content-Type": "text/xml" }, body: PING_XML,
-      signal: AbortSignal.timeout(3000),
-    });
-    return res.ok;
-  } catch {
+  // Must get a real Tally XML response — not just a 200 from the bridge app
+  async function tryUrl(url: string, headers: Record<string, string>): Promise<boolean> {
     try {
-      const res2 = await fetch("http://localhost:7002", {
-        method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port }, body: PING_XML,
-        signal: AbortSignal.timeout(3000),
-      });
-      return res2.ok;
+      const res = await fetch(url, { method: "POST", headers, body: PING_XML, signal: AbortSignal.timeout(3500) });
+      if (!res.ok) return false;
+      const text = await res.text();
+      return /<ENVELOPE|<COMPANY|<COLLECTION/i.test(text);
     } catch { return false; }
   }
+  // Try bridge first (works from HTTPS), then direct (works from HTTP dev)
+  return (await tryUrl("http://localhost:7002", { "Content-Type": "text/xml", "X-Tally-Port": port }))
+      || (await tryUrl(`http://localhost:${port}`, { "Content-Type": "text/xml" }));
 }
 
 const NAV_GROUPS = [

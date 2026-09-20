@@ -391,17 +391,24 @@ export default function AuditPage() {
       const d = new Date(parseInt(lastImport));
       setLastSync(d.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }));
     }
-    // Ping bridge to check live connection
-    fetch(`http://localhost:${port}`, {
-      method: "POST", headers: { "Content-Type": "text/xml" },
-      body: "<ping/>", signal: AbortSignal.timeout(2500),
-    }).then(r => setTallyConnected(r.ok || true))
-      .catch(() => {
-        fetch("http://localhost:7002", {
-          method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port },
-          body: "<ping/>", signal: AbortSignal.timeout(2500),
-        }).then(() => setTallyConnected(true)).catch(() => setTallyConnected(false));
-      });
+    // Send a real Tally XML request — only Tally itself produces <RESPONSE> in the body
+    const tallyXml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Co</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Co" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+    async function checkTally() {
+      const tryFetch = (url: string, headers: Record<string,string>) =>
+        fetch(url, { method: "POST", headers, body: tallyXml, signal: AbortSignal.timeout(3000) });
+      try {
+        // Try direct (works if bridge app running on 7002 proxying to Tally on port)
+        const r = await tryFetch("http://localhost:7002", { "Content-Type": "text/xml", "X-Tally-Port": port }).catch(() => null)
+          ?? await tryFetch(`http://localhost:${port}`, { "Content-Type": "text/xml" }).catch(() => null);
+        if (!r || !r.ok) { setTallyConnected(false); return; }
+        const text = await r.text();
+        // Real Tally response contains ENVELOPE or COMPANY tags; bridge-only 200 does not
+        setTallyConnected(/<ENVELOPE|<COMPANY|<COLLECTION/i.test(text));
+      } catch {
+        setTallyConnected(false);
+      }
+    }
+    checkTally();
   }, []);
 
   useEffect(() => {
