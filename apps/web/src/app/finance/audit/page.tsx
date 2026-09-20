@@ -362,6 +362,8 @@ function buildBS(tb: TrialRow[], netProfit: number): BSSummary {
   return { assets, fixedAssets, liabilities, loans, taxes, equity, totalAssets, totalLiabEq };
 }
 
+type ModalJournal = Journal & { modalLines?: { account: string; accountType: string; dr: number; cr: number; narration: string }[] };
+
 export default function AuditPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
@@ -377,6 +379,9 @@ export default function AuditPage() {
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [fyId, setFyId] = useState<string | null>(null);
   const [fys, setFys] = useState<{ id: string; label: string; start: string; end: string }[]>([]);
+  // Entry detail modal
+  const [modalJournal, setModalJournal] = useState<ModalJournal | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
   // Flag filtering + reviewed state
   const [filterCat, setFilterCat] = useState<FlagCategory | "all">("all");
   const [filterSev, setFilterSev] = useState<"all" | "high" | "medium" | "low">("all");
@@ -591,6 +596,23 @@ export default function AuditPage() {
     return () => clearTimeout(delay);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journals.length, bizId, importDone]);
+
+  async function openEntryModal(journalId: string) {
+    const j = journals.find(x => x.id === journalId);
+    if (!j) return;
+    setModalJournal(j);
+    setModalLoading(true);
+    const { data: jLines } = await supabase.from("fw_fin_journal_lines")
+      .select("id,account_id,narration,dr_amount,cr_amount").eq("journal_id", journalId);
+    const accMap = new Map(accounts.map(a => [a.id, a]));
+    const modalLines = (jLines ?? []).map(l => ({
+      account: accMap.get(l.account_id)?.name ?? l.account_id.slice(0,8),
+      accountType: accMap.get(l.account_id)?.type ?? "",
+      dr: l.dr_amount || 0, cr: l.cr_amount || 0, narration: l.narration || "",
+    }));
+    setModalJournal({ ...j, modalLines });
+    setModalLoading(false);
+  }
 
   const switchFy = useCallback(async (fid: string) => {
     setFyId(fid);
@@ -1018,9 +1040,9 @@ export default function AuditPage() {
                                 <div className="au-mono" style={{ fontWeight: 800, color: "#E8EDF5", fontSize: "0.9rem" }}>{fmt(f.amount)}</div>
                                 <div style={{ display: "flex", gap: 5 }}>
                                   {f.actionHref && (
-                                    <Link href={f.actionHref} className="au-act" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.color }}>
+                                    <button onClick={() => openEntryModal(f.id)} className="au-act" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.color }}>
                                       {f.action ?? "View"}
-                                    </Link>
+                                    </button>
                                   )}
                                   <button onClick={() => markReviewed(key)} className="au-act"
                                     style={{ background: isRev ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.05)", border: isRev ? "1px solid rgba(52,211,153,0.3)" : "1px solid rgba(255,255,255,0.1)", color: isRev ? "#34D399" : "rgba(232,237,245,0.4)" }}>
@@ -1235,6 +1257,91 @@ export default function AuditPage() {
           </>
         )}
       </div>
+
+      {/* ── Entry Detail Modal ───────────────────────────────────────────── */}
+      {modalJournal && (
+        <div onClick={() => setModalJournal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#0B1221", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, width: "100%", maxWidth: 560, maxHeight: "85vh", overflow: "auto", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}>
+
+            {/* Header */}
+            <div style={{ padding: "1.1rem 1.25rem 0.9rem", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: "'IBM Plex Mono',monospace", color: "#C9A84C", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 }}>{modalJournal.entry_no}</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#E8EDF5", lineHeight: 1.4 }}>{modalJournal.narration || "—"}</div>
+              </div>
+              <button onClick={() => setModalJournal(null)} style={{ background: "rgba(255,255,255,0.07)", border: "none", color: "rgba(232,237,245,0.5)", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: "1.1rem", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            </div>
+
+            {/* Meta */}
+            <div style={{ padding: "0.7rem 1.25rem", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center" }}>
+              <span style={{ fontSize: "0.78rem", color: "rgba(232,237,245,0.5)" }}>{new Date(modalJournal.date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</span>
+              {(() => { const c = { sales:"#34D399",receipt:"#34D399",income:"#34D399",payment:"#F87171",purchase:"#F87171",expense:"#F87171",journal:"#60A5FA",contra:"#A78BFA",debit_note:"#FBBF24",credit_note:"#FBBF24" } as Record<string,string>; const col = c[modalJournal.type] ?? "#E8EDF5"; return <span style={{ fontSize: "0.72rem", fontWeight: 700, color: col, background: col+"15", padding: "2px 10px", borderRadius: 20 }}>{modalJournal.type}</span>; })()}
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: modalJournal.status==="posted"?"#4ade80":"#f59e0b", background: modalJournal.status==="posted"?"rgba(74,222,128,0.1)":"rgba(245,158,11,0.1)", padding: "2px 10px", borderRadius: 20 }}>{modalJournal.status}</span>
+              {modalJournal.reference_no && <span style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.4)" }}>Ref: {modalJournal.reference_no}</span>}
+            </div>
+
+            {/* Totals */}
+            <div style={{ padding: "0.8rem 1.25rem", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: "2rem" }}>
+              {[
+                { label: "Total Debit", val: modalJournal.total_debit, color: "#F87171" },
+                { label: "Total Credit", val: modalJournal.total_credit, color: "#34D399" },
+                { label: "Difference", val: Math.abs(modalJournal.total_debit - modalJournal.total_credit), color: Math.abs(modalJournal.total_debit - modalJournal.total_credit) < 1 ? "#34D399" : "#F87171" },
+              ].map(t => (
+                <div key={t.label}>
+                  <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{t.label}</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.05rem", fontWeight: 700, color: t.color }}>{fmt(t.val)}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Lines */}
+            <div style={{ padding: "0.8rem 1.25rem 1.1rem" }}>
+              <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.6rem" }}>Double-Entry Lines</div>
+              {modalLoading ? (
+                <div style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.82rem", padding: "1rem 0", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ display: "inline-block", width: 12, height: 12, border: "2px solid #60A5FA", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                  Loading lines…
+                </div>
+              ) : !modalJournal.modalLines?.length ? (
+                <div style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.82rem" }}>No line items found.</div>
+              ) : (
+                <div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.3rem 0", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: "0.25rem" }}>
+                    <span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Account</span>
+                    <span style={{ fontSize: "0.62rem", color: "#F87171", fontWeight: 700, textTransform: "uppercase", textAlign: "right" }}>Debit</span>
+                    <span style={{ fontSize: "0.62rem", color: "#34D399", fontWeight: 700, textTransform: "uppercase", textAlign: "right" }}>Credit</span>
+                  </div>
+                  {modalJournal.modalLines.map((l, i) => (
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.42rem 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div>
+                        <div style={{ fontSize: "0.84rem", color: "#E8EDF5", fontWeight: 500 }}>{l.account}</div>
+                        {l.accountType && <div style={{ fontSize: "0.65rem", color: "rgba(232,237,245,0.3)", marginTop: 1 }}>{l.accountType}</div>}
+                      </div>
+                      <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.dr > 0 ? "#F87171" : "rgba(232,237,245,0.2)", fontWeight: l.dr > 0 ? 600 : 400 }}>
+                        {l.dr > 0 ? l.dr.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
+                      </div>
+                      <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.cr > 0 ? "#34D399" : "rgba(232,237,245,0.2)", fontWeight: l.cr > 0 ? 600 : 400 }}>
+                        {l.cr > 0 ? l.cr.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
+                      </div>
+                    </div>
+                  ))}
+                  {/* Totals footer */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.55rem 0 0", borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: "0.2rem" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(232,237,245,0.45)" }}>Total</span>
+                    <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#F87171" }}>{modalJournal.modalLines.reduce((s,l) => s+l.dr, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                    <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#34D399" }}>{modalJournal.modalLines.reduce((s,l) => s+l.cr, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: "0.75rem 1.25rem 1rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <button onClick={() => setModalJournal(null)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(232,237,245,0.5)", padding: "9px", borderRadius: 8, fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
