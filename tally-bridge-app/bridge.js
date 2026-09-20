@@ -130,8 +130,32 @@ function startServer(cert, key) {
   });
 }
 
+// ── Desktop shortcut ──────────────────────────────────────────────────────────
+function createDesktopShortcut() {
+  try {
+    const desktop = path.join(os.homedir(), "Desktop");
+    const lnk = path.join(desktop, "FreWork Tally Bridge.lnk");
+    if (fs.existsSync(lnk)) return;
+    const exe = process.execPath.replace(/'/g, "''");
+    const dir = path.dirname(process.execPath).replace(/'/g, "''");
+    const dest = lnk.replace(/'/g, "''");
+    const ps = [
+      `$ws = New-Object -ComObject WScript.Shell`,
+      `$sc = $ws.CreateShortcut('${dest}')`,
+      `$sc.TargetPath = '${exe}'`,
+      `$sc.WorkingDirectory = '${dir}'`,
+      `$sc.Description = 'FreWork Tally Bridge'`,
+      `$sc.IconLocation = '${exe},0'`,
+      `$sc.Save()`,
+    ].join("; ");
+    execSync(`powershell -NoProfile -WindowStyle Hidden -Command "${ps}"`, { stdio: "ignore", windowsHide: true });
+    status("🖥️", "Shortcut created on Desktop");
+  } catch { /* non-fatal */ }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 banner();
+createDesktopShortcut();
 const { cert, key } = ensureCert();
 installCert(cert);
 startServer(cert, key);
