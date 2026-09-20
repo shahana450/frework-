@@ -8,8 +8,8 @@ const supabase = createClient(
 );
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-// ── Extract facts from plain text (amount, mode, party) ───────────────────────
-function extractFacts(texts: string[]): { amount?: number; mode?: string; party?: string } {
+// ── Extract facts from plain text (amount, mode, party, txnType) ──────────────
+function extractFacts(texts: string[]): { amount?: number; mode?: string; party?: string; txnType?: string } {
   const combined = texts.join(" ");
   // Amount: ₹1,23,456 or Rs 5000 or plain 5000
   const amtMatch = combined.match(/(?:₹|rs\.?\s*)[\s]?([0-9,]+(?:\.[0-9]{1,2})?)/i)
@@ -18,22 +18,26 @@ function extractFacts(texts: string[]): { amount?: number; mode?: string; party?
   // Payment mode
   const modeMatch = combined.match(/\b(cash|bank|upi|neft|rtgs|imps|cheque|check|online|hdfc|sbi|icici|axis|kotak)\b/i);
   const mode = modeMatch ? modeMatch[1].toLowerCase() : undefined;
-  // Party: "from X", "to X", "by X" — simple heuristic
-  const partyMatch = combined.match(/(?:from|to|by|paid to|received from|for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})/);
+  // Party: "from/to/by/paid to/received from" — case-insensitive
+  const partyMatch = combined.match(/(?:from|to|by|paid to|received from|for)\s+([a-z][a-z\s]{1,40}?)(?:\s*(?:by|via|for|rs|₹|\d|$))/i);
   const party = partyMatch ? partyMatch[1].trim() : undefined;
-  return { amount, mode, party };
+  // Transaction type hint
+  const txnTypeMatch = combined.match(/\b(rent|salary|wages|electricity|fuel|purchase|sales|sale|stationery|office supplies|commission|interest|loan|freight|conveyance|telephone|internet|maintenance|repair|insurance|advertisement|travelling|travel)\b/i);
+  const txnType = txnTypeMatch ? txnTypeMatch[1].toLowerCase() : undefined;
+  return { amount, mode, party, txnType };
 }
 
 const SYSTEM_PROMPT = `You are a double-entry bookkeeping engine for Indian SMBs. Output ONLY valid JSON — no prose, no markdown.
 
 CRITICAL BEHAVIOUR RULES:
-1. Read the ENTIRE conversation history to extract facts. Never ask again for something already given.
-2. Ask ONLY ONE clarifying question at a time — the single most important missing fact.
-   Priority: amount (if zero/unknown) > party name (for payables/receivables) > payment mode (only if truly unclear).
-3. If you have enough info to build a balanced entry, DO IT — show the entry, don't ask more questions.
-4. "known_facts" in the context tells you what has already been extracted — use these directly.
-5. Payment mode heuristics: if "by cash/cash" → Cash account. If "by bank/UPI/NEFT/online/bank name" → use the named bank account or "ICICI Bank" as default. If unclear and amount > 10000, assume bank.
-6. Account name heuristics from available accounts list — always pick the closest match.
+1. Read the ENTIRE conversation history. Every prior user message and your prior questions are context — use them ALL.
+2. When the context says "PENDING QUESTION: ...", the user's current message is the DIRECT ANSWER to that question. Combine it with everything else in the history to build the entry immediately.
+3. NEVER ask for something already provided anywhere in the conversation. Check all previous messages first.
+4. Ask ONLY ONE clarifying question at a time, and ONLY if truly needed after checking history.
+   Priority: amount (if zero/unknown) > payment mode (only if truly unclear — if amount ≤ 10000 assume cash, if > 10000 assume bank). Never ask for party if it was already named.
+5. If you have enough info to build a balanced entry, DO IT — show the entry, don't ask more questions.
+6. Payment mode heuristics: "cash/hand/petty cash" → Cash. "bank/UPI/NEFT/RTGS/IMPS/online/cheque/[bank name]" → Bank account or named bank. Amount ≤ 10000 with no mode → assume Cash. Amount > 10000 → assume Bank.
+7. Account name: always pick the closest match from the available accounts list provided.
 
 ACCOUNTING RULES:
 - Double-entry: sum(debit) MUST equal sum(credit). Never produce unbalanced entries.
@@ -174,14 +178,22 @@ export async function POST(req: NextRequest) {
 
     const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
     const factsNote = [
-      knownFacts.amount ? `known amount: ₹${knownFacts.amount}` : "",
-      knownFacts.mode ? `known payment mode: ${knownFacts.mode}` : "",
-      knownFacts.party ? `known party: ${knownFacts.party}` : "",
-    ].filter(Boolean).join("; ");
+      knownFacts.amount ? `amount: ₹${knownFacts.amount}` : "",
+      knownFacts.mode ? `payment mode: ${knownFacts.mode}` : "",
+      knownFacts.party ? `party: ${knownFacts.party}` : "",
+      knownFacts.txnType ? `transaction type: ${knownFacts.txnType}` : "",
+    ].filter(Boolean).join(", ");
+
+    // Find the last assistant message — if it was a plain-text question (not JSON), surface it as the pending question
+    const lastAssistant = history.length >= 2 ? history[history.length - 1] : null;
+    const pendingQuestion = lastAssistant?.role === "assistant" && !lastAssistant.content.trim().startsWith("{")
+      ? lastAssistant.content.trim()
+      : null;
 
     const contextNote = [
       `Today: ${today}.`,
-      factsNote ? `Known facts from conversation: ${factsNote}. Use these — do not ask for them again.` : "",
+      factsNote ? `Known facts from this conversation (use directly, do NOT ask again): ${factsNote}.` : "",
+      pendingQuestion ? `PENDING QUESTION you asked: "${pendingQuestion}". The user's current message answers it — combine with history and build the journal entry now.` : "",
       `Available accounts: ${accountList || "Cash, ICICI Bank, Sales, Purchases, Debtors Control, Creditors Control, Capital Account"}.`,
     ].filter(Boolean).join(" ");
 
@@ -224,12 +236,15 @@ export async function POST(req: NextRequest) {
       parsed.needs_clarification = [`Entry doesn't balance (Dr ₹${totalDr} ≠ Cr ₹${totalCr}). What's the correct amount?`];
     }
 
-    // Persist session
+    // Persist session — store clarification question as plain text so Claude reads it naturally in next turn
     const historyUserContent = fileContext ? `${message} ${fileContext}` : message;
+    const assistantHistoryContent = parsed.needs_clarification.length > 0
+      ? parsed.needs_clarification[0]   // plain question, not JSON
+      : raw;                             // full JSON for completed entries
     const newHistory = [
       ...history,
       { role: "user" as const, content: historyUserContent },
-      { role: "assistant" as const, content: raw },
+      { role: "assistant" as const, content: assistantHistoryContent },
     ].slice(-20);
 
     if (chatSessionId) {
