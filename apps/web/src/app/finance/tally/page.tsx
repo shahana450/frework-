@@ -1041,30 +1041,20 @@ export default function TallyPage() {
               </div>
             </details>
 
-            {/* Bridge downloads */}
-            <div style={{ marginBottom: "1.25rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-              {/* Desktop app */}
-              <div style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "0.75rem 1rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                  <div style={{ fontSize: "1.4rem", flexShrink: 0 }}>🖥️</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#86EFAC", marginBottom: 1 }}>Tally Bridge App <span style={{ fontWeight: 400, color: "#6B7280", fontSize: "0.72rem" }}>Recommended</span></div>
-                    <div style={{ fontSize: "0.73rem", color: "#6B7280", lineHeight: 1.4 }}>Windows app — runs in background, works with any browser.</div>
-                  </div>
-                  <a href="/tally-bridge-setup.exe" download style={{ flexShrink: 0, background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", color: "#86EFAC", borderRadius: 7, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>⬇ .exe</a>
-                </div>
-                <div style={{ background: "rgba(0,0,0,0.25)", borderRadius: 7, padding: "0.5rem 0.75rem", fontSize: "0.73rem", color: "#9CA3AF", lineHeight: 1.8 }}>
-                  <strong style={{ color: "#D1FAE5" }}>After downloading:</strong> Right-click the file → <strong style={{ color: "#D1FAE5" }}>Properties</strong> → tick <strong style={{ color: "#D1FAE5" }}>Unblock</strong> at the bottom → OK → then double-click to run.
-                </div>
-              </div>
-              {/* Chrome extension */}
-              <div style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.18)", borderRadius: 10, padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <div style={{ fontSize: "1.4rem", flexShrink: 0 }}>🔌</div>
+            {/* Bridge download */}
+            <div style={{ marginBottom: "1.25rem", background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "0.875rem 1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.6rem" }}>
+                <div style={{ fontSize: "1.4rem", flexShrink: 0 }}>🔗</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#C4B5FD", marginBottom: 1 }}>Chrome Extension</div>
-                  <div style={{ fontSize: "0.73rem", color: "#6B7280", lineHeight: 1.4 }}>Alternative if you prefer not to install an app. Load via chrome://extensions.</div>
+                  <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#86EFAC", marginBottom: 1 }}>Tally Bridge <span style={{ fontWeight: 400, color: "#6B7280", fontSize: "0.72rem" }}>Requires Node.js</span></div>
+                  <div style={{ fontSize: "0.73rem", color: "#6B7280", lineHeight: 1.4 }}>Tiny 2KB script — no SmartScreen, no install. Just double-click and keep open.</div>
                 </div>
-                <a href="/tally-bridge.zip" download="FreWork-Tally-Bridge.zip" style={{ flexShrink: 0, background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)", color: "#A78BFA", borderRadius: 7, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>⬇ .zip</a>
+                <a href="/tally-bridge-node.zip" download="FreWork-Tally-Bridge.zip" style={{ flexShrink: 0, background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", color: "#86EFAC", borderRadius: 7, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>⬇ Download</a>
+              </div>
+              <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 7, padding: "0.5rem 0.75rem", fontSize: "0.73rem", color: "#9CA3AF", lineHeight: 1.9 }}>
+                1. <a href="https://nodejs.org/en/download" target="_blank" rel="noreferrer" style={{ color: "#86EFAC" }}>Install Node.js</a> (one-time, if not already installed)<br />
+                2. Extract the zip → double-click <strong style={{ color: "#D1FAE5" }}>run-tally-bridge.bat</strong><br />
+                3. Keep the window open → click Connect to Tally
               </div>
             </div>
 
