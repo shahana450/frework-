@@ -14,32 +14,40 @@ if (typeof window !== "undefined") {
   });
 }
 
+function tryExtensionBridge(url: string, body: string, timeoutMs: number): Promise<Response> {
+  return new Promise<Response>((resolve, reject) => {
+    const id = Math.random().toString(36).slice(2);
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled) return; settled = true;
+      window.removeEventListener("message", handler);
+      reject(new Error(
+        _bridgeReady
+          ? "Tally did not respond via Chrome extension."
+          : "Cannot reach Tally. Run the FreWork Tally Bridge app, or install the Chrome Extension from the download link below."
+      ));
+    }, Math.min(timeoutMs, 8000));
+    function handler(e: MessageEvent) {
+      if (e.data?.type !== "TALLY_BRIDGE_RESPONSE" || e.data.id !== id) return;
+      if (settled) return; settled = true;
+      clearTimeout(timeout);
+      window.removeEventListener("message", handler);
+      if (e.data.ok) resolve(new Response(e.data.text, { status: e.data.status ?? 200 }));
+      else reject(new Error(e.data.error ?? "Bridge error"));
+    }
+    window.addEventListener("message", handler);
+    window.postMessage({ type: "TALLY_BRIDGE_REQUEST", id, url, method: "POST", body, timeout: timeoutMs }, "*");
+  });
+}
+
 function tallyFetch(url: string, body: string, timeoutMs = 15000): Promise<Response> {
   const opts = { method: "POST", headers: { "Content-Type": "text/xml" }, body, signal: AbortSignal.timeout(timeoutMs) };
-
-  // 1. Try direct HTTP (works on Firefox or non-HTTPS pages)
   return fetch(url, opts)
     .catch(() => {
-      // 2. Try desktop app bridge — HTTP CORS proxy on localhost:7002
-      // Chrome exempts http://localhost from mixed-content blocking
       const port = url.match(/:(\d+)/)?.[1] ?? "7001";
-      return fetch("http://localhost:7002", { method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port }, body, signal: AbortSignal.timeout(timeoutMs) });
+      return fetch("http://localhost:7002", { method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port }, body, signal: AbortSignal.timeout(Math.min(timeoutMs, 8000)) });
     })
-    .catch(() => {
-      // 3. Try Chrome extension bridge
-      if (!_bridgeReady) throw new Error("Cannot reach Tally. Install the FreWork Tally Bridge app (or Chrome Extension) from the download link below.");
-      return new Promise<Response>((resolve, reject) => {
-        const id = Math.random().toString(36).slice(2);
-        const handler = (e: MessageEvent) => {
-          if (e.data?.type !== "TALLY_BRIDGE_RESPONSE" || e.data.id !== id) return;
-          window.removeEventListener("message", handler);
-          if (e.data.ok) resolve(new Response(e.data.text, { status: e.data.status ?? 200 }));
-          else reject(new Error(e.data.error ?? "Bridge error"));
-        };
-        window.addEventListener("message", handler);
-        window.postMessage({ type: "TALLY_BRIDGE_REQUEST", id, url, method: "POST", body, timeout: timeoutMs }, "*");
-      });
-    });
+    .catch(() => tryExtensionBridge(url, body, timeoutMs));
 }
 
 // ── Tally XML helpers ────────────────────────────────────────────────────────

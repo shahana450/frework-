@@ -1,9 +1,15 @@
 // FreWork Tally Bridge — content script
-// Injected into frework.online pages. Relays postMessage <-> chrome.runtime,
-// letting the HTTPS page talk to localhost through the extension.
+// Injected into frework.online pages. Relays postMessage <-> chrome.runtime.
 
-// Tell the page the bridge is ready
-window.postMessage({ type: "TALLY_BRIDGE_READY" }, "*");
+// Send READY immediately, then repeat a few times so the app catches it
+// regardless of when Next.js finishes loading.
+function announceReady() {
+  window.postMessage({ type: "TALLY_BRIDGE_READY" }, "*");
+}
+announceReady();
+setTimeout(announceReady, 500);
+setTimeout(announceReady, 1500);
+setTimeout(announceReady, 3000);
 
 // Relay requests from the page to the background service worker
 window.addEventListener("message", (event) => {
