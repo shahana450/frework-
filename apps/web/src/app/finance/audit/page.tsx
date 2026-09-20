@@ -454,23 +454,27 @@ export default function AuditPage() {
 
   // Auto-detect bridge and redirect when no data exists
   useEffect(() => {
-    if (loading || journals.length > 0) return;
+    if (journals.length > 0) return;
     const lastImport = localStorage.getItem("fw_tally_last_import");
-    // If there was a recent import (<5 min ago) don't auto-redirect — data should be here
+    // If recent import (<5 min ago) don't loop-redirect — data may still be loading
     if (lastImport && Date.now() - parseInt(lastImport) < 5 * 60 * 1000) return;
-    const storedCompany = localStorage.getItem("fw_tally_company") ?? "";
-    if (!storedCompany) return; // never connected Tally
-    // Silently ping the bridge; if it responds, auto-redirect to Tally sync
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 2000);
-    fetch("http://localhost:7002", {
-      method: "POST", headers: { "Content-Type": "text/xml" },
-      body: "<ping/>", signal: ctrl.signal,
-    }).then(() => {
-      clearTimeout(timer);
-      window.location.href = "/finance/tally?autoImport=1&redirect=%2Ffinance%2Faudit";
-    }).catch(() => { clearTimeout(timer); });
-  }, [loading, journals.length]);
+    // Wait for initial data load to finish before deciding there's nothing
+    const delay = setTimeout(() => {
+      if (journals.length > 0) return;
+      // Ping bridge — works even on first-time device (no localStorage needed)
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 2500);
+      fetch("http://localhost:7002", {
+        method: "POST", headers: { "Content-Type": "text/xml" },
+        body: "<ping/>", signal: ctrl.signal,
+      }).then(() => {
+        clearTimeout(timer);
+        window.location.href = "/finance/tally?autoImport=1&redirect=%2Ffinance%2Faudit";
+      }).catch(() => { clearTimeout(timer); });
+    }, 2000); // wait 2s for DB load to complete first
+    return () => clearTimeout(delay);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journals.length]);
 
   const switchFy = useCallback(async (fid: string) => {
     setFyId(fid);
