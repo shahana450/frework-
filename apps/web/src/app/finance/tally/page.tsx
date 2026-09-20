@@ -353,10 +353,8 @@ export default function TallyPage() {
             if (found) { localStorage.setItem("fw_tally_company", found); setCompanyName(found); }
             setConnStatus("connected");
             setConnMsg(`Connected — ${found || storedCompany}`);
-            // Auto-import if redirected from audit page
-            if (searchParams.get("autoImport") === "1") {
-              setTimeout(() => importVouchers(), 800);
-            }
+            // Auto-import when Tally reconnects so all tabs stay in sync
+            setTimeout(() => importVouchers(), 800);
           }
         } catch { /* bridge not running — stay idle, user will click Connect */ }
       }
@@ -772,6 +770,8 @@ export default function TallyPage() {
             }
           }
         }
+        // Auto-import after manual connect so all tabs populate immediately
+        setTimeout(() => importVouchers(), 800);
       } else {
         setConnStatus("error"); setConnMsg(`Tally responded with HTTP ${res.status}`);
       }
@@ -1121,6 +1121,11 @@ export default function TallyPage() {
               {importVoucherResult && (
                 <div style={{ marginTop: "0.75rem", padding: "0.625rem 0.875rem", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 500, color: importVoucherResult.ok ? "#34D399" : "#FBBF24", background: importVoucherResult.ok ? "rgba(16,185,129,0.08)" : "rgba(251,191,36,0.08)", border: `1px solid ${importVoucherResult.ok ? "rgba(16,185,129,0.2)" : "rgba(251,191,36,0.2)"}` }}>
                   {importVoucherResult.msg}
+                  {importVoucherResult.ok && (
+                    <span style={{ marginLeft: "0.75rem" }}>
+                      <a href="/finance/audit" style={{ color: "#818CF8", textDecoration: "underline" }}>View Audit & Reports →</a>
+                    </span>
+                  )}
                 </div>
               )}
             </div>
