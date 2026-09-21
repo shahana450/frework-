@@ -710,6 +710,9 @@ export default function AuditPage() {
         <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} style={inp}>
           {fys.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
         </select>
+        <Link href="/finance/audit/gst-recon" style={{ fontSize: "0.78rem", color: "#A78BFA", background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.2)", padding: "5px 12px", borderRadius: 7, textDecoration: "none", fontWeight: 600 }}>
+          🏷 GST Recon
+        </Link>
         <Link href="/finance/tally" style={{ fontSize: "0.78rem", color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", padding: "5px 12px", borderRadius: 7, textDecoration: "none", fontWeight: 600 }}>
           ⬇ Sync Tally
         </Link>
