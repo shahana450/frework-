@@ -5,6 +5,10 @@ import { supabase } from "@/lib/supabase";
 import { isIncomeEntry } from "@/lib/invoiceDoc";
 import Link from "next/link";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import TallyBar from "@/components/TallyBar";
+import { useTally } from "@/lib/tallyConnection";
+import { pushToTally, loadPushStatus, type PushState } from "@/lib/tallyPushRun";
+import { explainTallyError } from "@/lib/integrations/tally";
 
 type Journal = {
   id: string;
@@ -73,6 +77,14 @@ export default function JournalsPage() {
   const [drawerLoading, setDrawerLoading] = useState(false);
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
+  // Tally: select and push from this list
+  const tally = useTally();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [pushed, setPushed] = useState<Record<string, PushState>>({});
+  const [pushing, setPushing] = useState(false);
+  const [pushMsg, setPushMsg] = useState("");
+  const [bizName, setBizName] = useState("");
+
   useEffect(() => {
     if (statusParam === "draft") setFilter("draft");
     else if (statusParam === "posted") setFilter("posted");
@@ -85,11 +97,19 @@ export default function JournalsPage() {
       const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
-      const { data } = await supabase.from("fw_fin_journals")
-        .select("id,entry_no,date,narration,type,status,total_debit,total_credit,reference_no,ai_generated,created_at,reversed_by,reversal_of")
-        .eq("business_id", saved)
-        .order("date", { ascending: false });
-      const rows = data ?? [];
+      loadPushStatus(saved).then(setPushed);
+      supabase.from("fw_fin_businesses").select("name").eq("id", saved).single().then(({ data: b }) => { if (b) setBizName(b.name); });
+      // The database returns at most 1000 rows per request — page through all of them
+      const rows: Journal[] = [];
+      for (let from = 0; from < 100000; from += 1000) {
+        const { data } = await supabase.from("fw_fin_journals")
+          .select("id,entry_no,date,narration,type,status,total_debit,total_credit,reference_no,ai_generated,created_at,reversed_by,reversal_of")
+          .eq("business_id", saved)
+          .order("date", { ascending: false }).order("entry_no", { ascending: false })
+          .range(from, from + 999);
+        rows.push(...((data ?? []) as Journal[]));
+        if (!data || data.length < 1000) break;
+      }
       setJournals(rows);
       setLoading(false);
 
@@ -157,6 +177,24 @@ export default function JournalsPage() {
 
   const referer = searchParams.get("from") ?? "";
 
+  const pushable = (j: Journal) => j.status === "posted" && !j.entry_no?.startsWith("TLY-");
+  const isPushed = (id: string) => { const p = pushed[id]; return !!p && "at" in p; };
+  const selectableHere = filtered.filter(pushable);
+  const allSelected = selectableHere.length > 0 && selectableHere.every(j => selected.has(j.id));
+  const toggle = (id: string) => setSelected(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const notPushed = selectableHere.filter(j => !isPushed(j.id));
+
+  async function pushSelected(ids: string[]) {
+    if (!bizId || tally.status !== "connected" || !ids.length || pushing) return;
+    const already = ids.filter(isPushed).length;
+    if (already && !window.confirm(`${already} of the selected entr${already === 1 ? "y is" : "ies are"} already marked as pushed. Pushing again can create duplicates in Tally. Continue?`)) return;
+    setPushing(true); setPushMsg("");
+    const dates = Object.fromEntries(journals.filter(j => ids.includes(j.id)).map(j => [j.id, j.date.slice(0, 10)]));
+    const r = await pushToTally({ bizId, ids, dates, company: tally.company, port: tally.port, educational: tally.educational, onProgress: setPushMsg });
+    setPushed(p => ({ ...p, ...r.results }));
+    setPushMsg(r.message); setSelected(new Set()); setPushing(false);
+  }
+
   return (
     <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
       <style>{`
@@ -204,6 +242,25 @@ export default function JournalsPage() {
             </div>
           </div>
 
+          <div style={{ marginBottom: "1rem", display: "flex", flexDirection: "column", gap: 8 }}>
+            <TallyBar preferName={bizName} returnTo="/finance/journals">
+              {tally.status === "connected" && (
+                <>
+                  <button onClick={() => pushSelected([...selected])} disabled={pushing || !selected.size}
+                    style={{ height: 34, padding: "0 14px", borderRadius: 9, border: "none", background: selected.size ? "#0B7A55" : "#9FC9B8", color: "#FFFFFF", fontWeight: 800, fontSize: "0.8rem", cursor: pushing ? "wait" : selected.size ? "pointer" : "default", fontFamily: "inherit" }}>
+                    {pushing ? "Pushing…" : `⇪ Push selected (${selected.size})`}
+                  </button>
+                  <button onClick={() => pushSelected(notPushed.map(j => j.id))} disabled={pushing || !notPushed.length}
+                    style={{ height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid #D8CDB4", background: "#FFFFFF", color: "#10241F", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer", fontFamily: "inherit", opacity: notPushed.length ? 1 : 0.5 }}>
+                    Push all not pushed ({notPushed.length})
+                  </button>
+                </>
+              )}
+            </TallyBar>
+            {tally.status === "connected" && tally.educational && <div style={{ fontSize: "0.8rem", color: "#8A5A00", background: "#FFF4DB", borderRadius: 10, padding: "8px 12px" }}>Tally is in Educational mode: only entries dated the 1st, 2nd or 31st will be accepted. Others are held back, not sent.</div>}
+            {pushMsg && <div role="status" style={{ fontSize: "0.82rem", fontWeight: 600, color: pushMsg.startsWith("✓") ? "#0B7A55" : "#10241F", background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 10, padding: "8px 12px" }}>{pushMsg}</div>}
+          </div>
+
           <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 12, overflow: "hidden" }}>
             {loading ? (
               <div style={{ padding: "4rem", textAlign: "center", color: "rgba(20,26,58,0.55)" }}>Loading…</div>
@@ -218,7 +275,11 @@ export default function JournalsPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#FFFFFF" }}>
-                      {["Entry No", "Date", "Type", "Narration", "Debit (₹)", "Credit (₹)", "Status", ""].map(h => (
+                      <th style={{ padding: "0.6rem 0 0.6rem 1rem", width: 28 }}>
+                        <input type="checkbox" aria-label="Select all entries that can be pushed" checked={allSelected} disabled={!selectableHere.length}
+                          onChange={() => setSelected(allSelected ? new Set() : new Set(selectableHere.map(j => j.id)))} />
+                      </th>
+                      {["Entry No", "Date", "Type", "Narration", "Debit (₹)", "Credit (₹)", "Status", "Tally", ""].map(h => (
                         <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h === "Debit (₹)" || h === "Credit (₹)" ? "right" : "left", fontSize: "0.68rem", color: "rgba(20,26,58,0.60)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
@@ -235,6 +296,9 @@ export default function JournalsPage() {
                           onClick={() => openDrawer(j)}
                           style={{ borderTop: "1px solid rgba(20,26,58,0.08)", cursor: "pointer" }}
                         >
+                          <td style={{ padding: "0.65rem 0 0.65rem 1rem" }} onClick={e => e.stopPropagation()}>
+                            {pushable(j) && <input type="checkbox" aria-label={`Select ${j.entry_no}`} checked={selected.has(j.id)} onChange={() => toggle(j.id)} />}
+                          </td>
                           <td style={{ padding: "0.65rem 1rem", fontSize: "0.78rem", fontFamily: "'IBM Plex Mono',monospace", color: "#232A63", whiteSpace: "nowrap" }}>{j.entry_no}</td>
                           <td style={{ padding: "0.65rem 1rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.80)", whiteSpace: "nowrap" }}>
                             {new Date(j.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
@@ -258,6 +322,12 @@ export default function JournalsPage() {
                             {/* B13 — reversal pairs are linked both ways */}
                             {(j as { reversed_by?: string | null }).reversed_by && <div style={{ fontSize: "0.68rem", color: "#C2321F", marginTop: 3 }}>Reversed by {journals.find(x => x.id === (j as { reversed_by?: string | null }).reversed_by)?.entry_no ?? "a reversal"}</div>}
                             {(j as { reversal_of?: string | null }).reversal_of && <div style={{ fontSize: "0.68rem", color: "#5A6080", marginTop: 3 }}>Reverses {journals.find(x => x.id === (j as { reversal_of?: string | null }).reversal_of)?.entry_no ?? "an entry"}</div>}
+                          </td>
+                          <td style={{ padding: "0.65rem 1rem", fontSize: "0.7rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+                            {j.entry_no?.startsWith("TLY-") ? <span style={{ color: "#5E6B66" }}>From Tally</span>
+                              : isPushed(j.id) ? <span style={{ color: "#0B7A55" }}>✓ Pushed</span>
+                              : pushed[j.id] && "error" in pushed[j.id] ? <span style={{ color: "#C2321F" }} title={explainTallyError((pushed[j.id] as { error: string }).error, tally.educational)}>✗ Failed</span>
+                              : j.status === "posted" ? <span style={{ color: "#8A5A00" }}>Not pushed</span> : null}
                           </td>
                           <td style={{ padding: "0.65rem 0.75rem", whiteSpace: "nowrap" }}>
                             {j.ai_generated && <span style={{ fontSize: "0.68rem", color: "#5B4BC4", background: "rgba(91,75,196,0.1)", padding: "2px 6px", borderRadius: 4 }}>AI</span>}
