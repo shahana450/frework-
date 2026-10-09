@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { saveEntry } from "@/lib/postEntry";
 import Link from "next/link";
 
 type Contact = { id: string; name: string; state: string | null };
@@ -71,46 +72,31 @@ export default function CreditNotePage() {
   const totalAmt = amt + gstAmt;
 
   async function handlePost() {
-    if (!bizId || !fyId || !amt || !salesAccountId || !debtorAccountId) { setError("Fill all required fields"); return; }
+    if (!bizId || !amt || !salesAccountId || !debtorAccountId) { setError("Fill all required fields"); return; }
     setSaving(true); setError(""); setSuccess("");
 
-    const { count } = await supabase.from("fw_fin_journals").select("id", { count: "exact" }).eq("business_id", bizId).eq("type", "credit_note");
-    const entryNo = `CN-${String((count ?? 0) + 1).padStart(4, "0")}`;
     const contactName = contacts.find(c => c.id === contactId)?.name ?? "Customer";
-
-    const lines: { account_id: string; dr_amount: number; cr_amount: number; narration: string }[] = [
-      { account_id: salesAccountId, dr_amount: amt, cr_amount: 0, narration: `Credit Note — ${reason.replace("_", " ")} to ${contactName}` },
-    ];
-
-    // GST reversal — find GST accounts
     const cgstAcc = accounts.find(a => a.name.toLowerCase().includes("cgst") && a.name.toLowerCase().includes("output"));
     const sgstAcc = accounts.find(a => a.name.toLowerCase().includes("sgst") && a.name.toLowerCase().includes("output"));
     const igstAcc = accounts.find(a => a.name.toLowerCase().includes("igst") && a.name.toLowerCase().includes("output"));
-
-    if (gstAmt > 0) {
-      if (!isInterState && cgstAcc && sgstAcc) {
-        lines.push({ account_id: cgstAcc.id, dr_amount: cgst, cr_amount: 0, narration: "CGST reversed" });
-        lines.push({ account_id: sgstAcc.id, dr_amount: sgst, cr_amount: 0, narration: "SGST reversed" });
-      } else if (isInterState && igstAcc) {
-        lines.push({ account_id: igstAcc.id, dr_amount: igst, cr_amount: 0, narration: "IGST reversed" });
-      }
-    }
-
-    lines.push({ account_id: debtorAccountId, dr_amount: 0, cr_amount: totalAmt, narration: `AR reduced — CN ${entryNo}` });
-
-    const totalDr = lines.reduce((s, l) => s + l.dr_amount, 0);
-    const totalCr = lines.reduce((s, l) => s + l.cr_amount, 0);
-
-    const { data: journal, error: jErr } = await supabase.from("fw_fin_journals").insert({
-      business_id: bizId, fy_id: fyId, date, entry_no: entryNo, type: "credit_note",
-      narration: narration || `Credit Note to ${contactName} — ${reason.replace("_", " ")}`,
-      reference_no: refInvoice || null, contact_id: contactId || null,
-      total_debit: totalDr, total_credit: totalCr, status: "posted", ai_generated: false,
-    }).select("id").single();
-
-    if (jErr || !journal) { setError(jErr?.message ?? "Failed"); setSaving(false); return; }
-    await supabase.from("fw_fin_journal_lines").insert(lines.map(l => ({ ...l, journal_id: journal.id })));
-
+    const intra = gstAmt > 0 && !isInterState, inter = gstAmt > 0 && isInterState;
+    // Dr Sales (return), Dr Output GST (reversed) — Cr Debtors
+    let entryNo = "";
+    try {
+      const r = await saveEntry({
+        business_id: bizId!, date, type: "credit_note", source: "credit_note",
+        narration: narration || `Credit Note to ${contactName} — ${reason.replace("_", " ")}`,
+        reference_no: refInvoice || null, party_name: contactName, contact_id: contactId || null,
+        lines: [
+          { account_id: salesAccountId, dr: amt, cr: 0, narration: `Credit Note — ${reason.replace("_", " ")} to ${contactName}` },
+          { account_id: cgstAcc?.id, account_name: cgstAcc ? null : "Output CGST", dr: intra ? cgst : 0, cr: 0, narration: "CGST reversed" },
+          { account_id: sgstAcc?.id, account_name: sgstAcc ? null : "Output SGST", dr: intra ? sgst : 0, cr: 0, narration: "SGST reversed" },
+          { account_id: igstAcc?.id, account_name: igstAcc ? null : "Output IGST", dr: inter ? igst : 0, cr: 0, narration: "IGST reversed" },
+          { account_id: debtorAccountId, dr: 0, cr: totalAmt, narration: "AR reduced by credit note" },
+        ],
+      });
+      entryNo = r.entry_no;
+    } catch (e) { setError(e instanceof Error ? e.message : "Failed"); setSaving(false); return; }
     setSuccess(`Posted: ${entryNo} — ₹${totalAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`);
     setAmount(""); setNarration(""); setRefInvoice(""); setContactId("");
     setSaving(false);
@@ -119,27 +105,27 @@ export default function CreditNotePage() {
     setRecent(rec ?? []);
   }
 
-  const inputStyle = { background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
-  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
+  const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
+  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Credit Note</span>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Credit Note</span>
       </nav>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem", maxWidth: 1000, margin: "0 auto", padding: "2rem" }}>
         <div>
           <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Credit Note</h1>
-          <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Issue a credit note to a customer — reduces their outstanding (AR) balance</p>
+          <p style={{ margin: "0 0 1.5rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Issue a credit note to a customer — reduces their outstanding (AR) balance</p>
 
-          {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
-          {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
+          {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#C2321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
+          {success && <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", color: "#0B7A55", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem" }}>
+          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div><label style={labelStyle}>Date</label><input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} /></div>
               <div>
@@ -183,20 +169,20 @@ export default function CreditNotePage() {
               </div>
               <div>
                 <label style={labelStyle}>GST Type</label>
-                <input value={isInterState ? "IGST (Inter-state)" : "CGST + SGST (Intra-state)"} readOnly style={{ ...inputStyle, color: "rgba(237,232,220,0.5)", background: "rgba(237,232,220,0.02)" }} />
+                <input value={isInterState ? "IGST (Inter-state)" : "CGST + SGST (Intra-state)"} readOnly style={{ ...inputStyle, color: "rgba(20,26,58,0.75)", background: "rgba(20,26,58,0.08)" }} />
               </div>
             </div>
 
             {/* Amount breakdown */}
             {amt > 0 && (
-              <div style={{ background: "rgba(237,232,220,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8rem" }}>
+              <div style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Base Amount</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(amt)}</span></div>
                 {!isInterState && cgst > 0 && <>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>CGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(cgst)}</span></div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>SGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(sgst)}</span></div>
                 </>}
                 {isInterState && igst > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>IGST @ {gstRate}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(igst)}</span></div>}
-                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, borderTop: "1px solid rgba(237,232,220,0.08)", paddingTop: 6, marginTop: 6, color: "#f87171" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, borderTop: "1px solid rgba(20,26,58,0.11)", paddingTop: 6, marginTop: 6, color: "#C2321F" }}>
                   <span>Total Credit Note Value</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalAmt)}</span>
                 </div>
               </div>
@@ -207,7 +193,7 @@ export default function CreditNotePage() {
               <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder="e.g. Sales return against INV-0001 — damaged goods" rows={2} style={{ ...inputStyle, resize: "vertical" }} />
             </div>
 
-            <button onClick={handlePost} disabled={saving || !amt} style={{ background: "#f87171", border: "none", color: "#070C1A", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: (!amt || saving) ? 0.5 : 1 }}>
+            <button onClick={handlePost} disabled={saving || !amt} style={{ background: "#C2321F", border: "none", color: "#F5F6FA", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: (!amt || saving) ? 0.5 : 1 }}>
               {saving ? "Posting…" : "Post Credit Note"}
             </button>
           </div>
@@ -215,21 +201,21 @@ export default function CreditNotePage() {
 
         {/* Recent */}
         <div>
-          <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Credit Notes</div>
+          <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Credit Notes</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {recent.map(r => (
-              <div key={r.id} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
+              <div key={r.id} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.2rem" }}>
-                  <span style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "rgba(248,113,113,0.6)" }}>{r.entry_no}</span>
-                  <span style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.3)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                  <span style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "rgba(194,50,31,0.6)" }}>{r.entry_no}</span>
+                  <span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.55)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                 </div>
                 <div style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration}</div>
-                <div style={{ textAlign: "right", marginTop: "0.25rem", fontSize: "0.82rem", fontWeight: 700, color: "#f87171" }}>₹{fmt(r.total_debit)}</div>
+                <div style={{ textAlign: "right", marginTop: "0.25rem", fontSize: "0.82rem", fontWeight: 700, color: "#C2321F" }}>₹{fmt(r.total_debit)}</div>
               </div>
             ))}
-            {recent.length === 0 && <div style={{ color: "rgba(237,232,220,0.25)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No credit notes yet</div>}
+            {recent.length === 0 && <div style={{ color: "rgba(20,26,58,0.35)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No credit notes yet</div>}
           </div>
-          <Link href="/finance/debit-note" style={{ display: "block", marginTop: "1rem", background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.2)", color: "#4ade80", padding: "8px 14px", borderRadius: 8, textDecoration: "none", fontSize: "0.8rem", textAlign: "center", fontWeight: 600 }}>
+          <Link href="/finance/debit-note" style={{ display: "block", marginTop: "1rem", background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.2)", color: "#0B7A55", padding: "8px 14px", borderRadius: 8, textDecoration: "none", fontSize: "0.8rem", textAlign: "center", fontWeight: 600 }}>
             → Debit Note (from vendor)
           </Link>
         </div>

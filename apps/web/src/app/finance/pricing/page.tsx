@@ -27,7 +27,7 @@ const PLANS = [
     name: "Professional",
     price: 3999,
     badge: "Most Popular",
-    color: "#C9A84C",
+    color: "#232A63",
     features: [
       "Everything in Starter",
       "GST Returns — GSTR-1 & GSTR-3B auto-prep",
@@ -44,7 +44,7 @@ const PLANS = [
     name: "Enterprise",
     price: 4999,
     badge: "AI Powered",
-    color: "#a78bfa",
+    color: "#5B4BC4",
     features: [
       "Everything in Professional",
       "AI FrePilot — ask anything about your books",
@@ -116,7 +116,7 @@ export default function PricingPage() {
         description: `${plan.name} Plan — ₹${plan.price.toLocaleString("en-IN")}/month`,
         order_id,
         prefill: { name: user.name, email: user.email },
-        theme: { color: "#C9A84C" },
+        theme: { color: "#232A63" },
         handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
           await fetch("/api/finance/subscription/verify", {
             method: "POST",
@@ -137,14 +137,14 @@ export default function PricingPage() {
   const fmt = (n: number) => n.toLocaleString("en-IN");
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
       {/* Nav */}
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/" style={{ color: "#C9A84C", fontWeight: 900, textDecoration: "none", fontSize: "0.95rem" }}>FreWork</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>FrePilot Pricing</span>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/" style={{ color: "#232A63", fontWeight: 900, textDecoration: "none", fontSize: "0.95rem" }}>FreWork</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>FrePilot Pricing</span>
         <div style={{ flex: 1 }} />
-        {user && <span style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>{user.email}</span>}
+        {user && <span style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>{user.email}</span>}
       </nav>
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "3rem 2rem" }}>
@@ -152,19 +152,19 @@ export default function PricingPage() {
         <div style={{ textAlign: "center", marginBottom: "3rem" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🛩️</div>
           <h1 style={{ fontSize: "2.2rem", fontWeight: 900, margin: "0 0 0.5rem", letterSpacing: "-0.03em" }}>
-            Choose your <span style={{ color: "#C9A84C" }}>FrePilot</span> plan
+            Choose your <span style={{ color: "#232A63" }}>FrePilot</span> plan
           </h1>
-          <p style={{ color: "rgba(237,232,220,0.5)", fontSize: "1rem", margin: 0 }}>
+          <p style={{ color: "rgba(20,26,58,0.75)", fontSize: "1rem", margin: 0 }}>
             Full-stack accounting for Indian SMBs. GST, TDS, Journals, AI — all in one.
           </p>
         </div>
 
         {/* Current subscription banner */}
         {currentSub && (
-          <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", borderRadius: 10, padding: "0.85rem 1.5rem", marginBottom: "2rem", textAlign: "center", fontSize: "0.88rem", color: "#4ade80" }}>
+          <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", borderRadius: 10, padding: "0.85rem 1.5rem", marginBottom: "2rem", textAlign: "center", fontSize: "0.88rem", color: "#0B7A55" }}>
             You are on the <strong>{currentSub.plan}</strong> plan ({currentSub.status}).
             {currentSub.ends_at && ` Renews/expires: ${new Date(currentSub.ends_at).toLocaleDateString("en-IN")}.`}
-            <Link href="/finance" style={{ color: "#C9A84C", marginLeft: "1rem", fontWeight: 700, textDecoration: "none" }}>Go to Dashboard →</Link>
+            <Link href="/finance" style={{ color: "#232A63", marginLeft: "1rem", fontWeight: 700, textDecoration: "none" }}>Go to Dashboard →</Link>
           </div>
         )}
 
@@ -175,33 +175,33 @@ export default function PricingPage() {
             const isPopular = !!plan.badge;
             return (
               <div key={plan.id} style={{
-                background: isPopular ? "linear-gradient(160deg,#1a1400 0%,#0f0c00 100%)" : "rgba(255,255,255,0.02)",
-                border: `1px solid ${isPopular ? "rgba(201,168,76,0.5)" : "rgba(237,232,220,0.08)"}`,
+                background: isPopular ? "linear-gradient(160deg,#FFF4DB 0%,#FFF4DB 100%)" : "#FFFFFF",
+                border: `1px solid ${isPopular ? "rgba(20,26,58,0.5)" : "rgba(20,26,58,0.11)"}`,
                 borderRadius: 16, padding: "1.75rem", position: "relative", display: "flex", flexDirection: "column",
               }}>
                 {plan.badge && (
-                  <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: "#C9A84C", color: "#070C1A", fontSize: "0.68rem", fontWeight: 800, padding: "3px 14px", borderRadius: 20, whiteSpace: "nowrap", letterSpacing: "0.05em" }}>
+                  <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: "#232A63", color: "#F5F6FA", fontSize: "0.68rem", fontWeight: 800, padding: "3px 14px", borderRadius: 20, whiteSpace: "nowrap", letterSpacing: "0.05em" }}>
                     {plan.badge}
                   </div>
                 )}
                 <div style={{ marginBottom: "0.5rem", fontSize: "0.8rem", fontWeight: 700, color: plan.color, letterSpacing: "0.08em", textTransform: "uppercase" }}>{plan.name}</div>
                 <div style={{ marginBottom: "0.25rem" }}>
-                  <span style={{ fontSize: "0.85rem", color: "rgba(237,232,220,0.5)" }}>₹</span>
+                  <span style={{ fontSize: "0.85rem", color: "rgba(20,26,58,0.75)" }}>₹</span>
                   <span style={{ fontSize: "2.6rem", fontWeight: 900, letterSpacing: "-0.04em", fontVariantNumeric: "tabular-nums" }}>{fmt(plan.price)}</span>
-                  <span style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>/month</span>
+                  <span style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>/month</span>
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.3)", marginBottom: "1.5rem" }}>+ GST · billed monthly · cancel anytime</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.55)", marginBottom: "1.5rem" }}>+ GST · billed monthly · cancel anytime</div>
 
                 <div style={{ flex: 1 }}>
                   {plan.features.map(f => (
                     <div key={f} style={{ display: "flex", gap: "0.6rem", marginBottom: "0.55rem", alignItems: "flex-start" }}>
-                      <span style={{ color: "#4ade80", fontSize: "0.75rem", marginTop: "0.1rem", flexShrink: 0 }}>✓</span>
-                      <span style={{ fontSize: "0.82rem", color: "rgba(237,232,220,0.8)" }}>{f}</span>
+                      <span style={{ color: "#0B7A55", fontSize: "0.75rem", marginTop: "0.1rem", flexShrink: 0 }}>✓</span>
+                      <span style={{ fontSize: "0.82rem", color: "rgba(20,26,58,1.00)" }}>{f}</span>
                     </div>
                   ))}
                   {plan.excluded.map(f => (
                     <div key={f} style={{ display: "flex", gap: "0.6rem", marginBottom: "0.45rem", alignItems: "flex-start", opacity: 0.35 }}>
-                      <span style={{ color: "#f87171", fontSize: "0.75rem", marginTop: "0.1rem", flexShrink: 0 }}>✕</span>
+                      <span style={{ color: "#C2321F", fontSize: "0.75rem", marginTop: "0.1rem", flexShrink: 0 }}>✕</span>
                       <span style={{ fontSize: "0.78rem" }}>{f}</span>
                     </div>
                   ))}
@@ -213,10 +213,10 @@ export default function PricingPage() {
                   style={{
                     marginTop: "1.5rem", width: "100%", padding: "12px", borderRadius: 10, cursor: "pointer",
                     fontWeight: 700, fontSize: "0.9rem",
-                    background: isCurrent ? "rgba(74,222,128,0.15)" : isPopular ? "#C9A84C" : `rgba(${plan.id === "enterprise" ? "167,139,250" : "201,168,76"},0.15)`,
-                    color: isCurrent ? "#4ade80" : isPopular ? "#070C1A" : plan.color,
+                    background: isCurrent ? "rgba(11,122,85,0.15)" : isPopular ? "#232A63" : `rgba(${plan.id === "enterprise" ? "167,139,250" : "201,168,76"},0.15)`,
+                    color: isCurrent ? "#0B7A55" : isPopular ? "#F5F6FA" : plan.color,
                     opacity: paying && paying !== plan.id ? 0.5 : 1,
-                    border: isCurrent ? "1px solid rgba(74,222,128,0.3)" : isPopular ? "none" : `1px solid ${plan.color}40`,
+                    border: isCurrent ? "1px solid rgba(11,122,85,0.3)" : isPopular ? "none" : `1px solid ${plan.color}40`,
                   }}
                 >
                   {isCurrent ? "✓ Current Plan" : paying === plan.id ? "Opening payment…" : `Subscribe · ₹${fmt(plan.price)}/mo`}
@@ -227,7 +227,7 @@ export default function PricingPage() {
         </div>
 
         {/* Trust line */}
-        <div style={{ textAlign: "center", fontSize: "0.78rem", color: "rgba(237,232,220,0.25)", lineHeight: 1.8 }}>
+        <div style={{ textAlign: "center", fontSize: "0.78rem", color: "rgba(20,26,58,0.35)", lineHeight: 1.8 }}>
           Payments secured by Razorpay · Indian GST compliant · Cancel anytime · Data stored in India
         </div>
       </div>

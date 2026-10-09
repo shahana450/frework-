@@ -36,7 +36,7 @@ function timeAgo(dateStr: string): string {
 const CATEGORY_STYLE: Record<string, { tagBg: string; tagColor: string; dotColor: string }> = {
   "Income Tax": { tagBg: "rgba(37,99,235,0.08)", tagColor: "#1D4ED8", dotColor: "#2563EB" },
   GST:          { tagBg: "rgba(5,150,105,0.08)",  tagColor: "#065F46",  dotColor: "#059669" },
-  Compliance:   { tagBg: "rgba(184,144,58,0.10)", tagColor: "#8C6A1E",  dotColor: "#B8903A" },
+  Compliance:   { tagBg: "rgba(240,102,43,0.10)", tagColor: "#B5461A",  dotColor: "#C2410C" },
   General:      { tagBg: "rgba(100,100,100,0.08)", tagColor: "#374151", dotColor: "#6B7280" },
 };
 
@@ -45,10 +45,10 @@ export async function TaxNewsSection() {
 
   const L = {
     bg: "#FAFAF5", bgAlt: "#F4EFE6", bgCard: "#FFFFFF",
-    text: "#1A1208", textSub: "#6B5B3E", textMuted: "#9C8B70",
-    gold: "#B8903A", goldLight: "#E8C97A", goldDark: "#8C6A1E",
-    border: "rgba(184,144,58,0.18)", borderLight: "rgba(184,144,58,0.1)",
-    shadow: "0 2px 20px rgba(139,108,50,0.07), 0 1px 3px rgba(139,108,50,0.05)",
+    text: "#141A3A", textSub: "#5A6080", textMuted: "#5A6080",
+    gold: "#F0662B", goldLight: "#FFD3BD", goldDark: "#B5461A",
+    border: "rgba(240,102,43,0.18)", borderLight: "rgba(240,102,43,0.1)",
+    shadow: "0 2px 20px rgba(35,42,99,0.07), 0 1px 3px rgba(35,42,99,0.05)",
   };
 
   return (
@@ -95,7 +95,7 @@ export async function TaxNewsSection() {
           <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20please%20set%20up%20tax%20deadline%20reminders%20for%20me`}
             target="_blank" rel="noopener noreferrer"
             className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm"
-            style={{ background: `linear-gradient(135deg, #E8C97A, #B8903A)`, color: "#fff", boxShadow: "0 4px 14px rgba(184,144,58,0.3)" }}>
+            style={{ background: `linear-gradient(135deg, #C2410C, #9A3412)`, color: "#fff", boxShadow: "0 4px 14px rgba(240,102,43,0.3)" }}>
             <Bell size={14} /> Get Free Reminders
           </a>
         </div>
@@ -113,9 +113,9 @@ function FallbackCards() {
   ];
 
   const L = {
-    bgCard: "#FFFFFF", text: "#1A1208", textSub: "#6B5B3E", textMuted: "#9C8B70",
-    border: "rgba(184,144,58,0.18)", borderLight: "rgba(184,144,58,0.1)",
-    shadow: "0 2px 20px rgba(139,108,50,0.07)",
+    bgCard: "#FFFFFF", text: "#141A3A", textSub: "#5A6080", textMuted: "#5A6080",
+    border: "rgba(240,102,43,0.18)", borderLight: "rgba(240,102,43,0.1)",
+    shadow: "0 2px 20px rgba(35,42,99,0.07)",
   };
 
   return (

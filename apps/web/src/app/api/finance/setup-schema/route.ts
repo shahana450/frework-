@@ -26,10 +26,15 @@ CREATE TABLE IF NOT EXISTS fw_fin_businesses (
   phone text,
   business_type text DEFAULT 'sole_proprietorship',
   gst_registration_type text DEFAULT 'unregistered',
+  gst_username text,
+  gst_trade_name text,
   financial_year_start text DEFAULT '04-01',
   currency text DEFAULT 'INR',
   is_active boolean DEFAULT true
 );
+-- Migration: add GST portal fields if upgrading existing DB
+ALTER TABLE fw_fin_businesses ADD COLUMN IF NOT EXISTS gst_username text;
+ALTER TABLE fw_fin_businesses ADD COLUMN IF NOT EXISTS gst_trade_name text;
 
 -- fw_fin_financial_years
 CREATE TABLE IF NOT EXISTS fw_fin_financial_years (

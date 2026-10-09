@@ -4,6 +4,7 @@ import Script from "next/script";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { QueryProvider } from "@/components/shared/query-provider";
 import { Toaster } from "sonner";
+import ApiAuthInstaller from "@/components/ApiAuthInstaller";
 import "@/styles/globals.css";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
@@ -24,6 +25,9 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL((process.env.NEXT_PUBLIC_APP_URL ?? "https://frework.online").replace(/^﻿/, "")),
+  // Short name under the icon when added to an iPhone / Android home screen
+  applicationName: "FreWork",
+  appleWebApp: { capable: true, title: "FreWork", statusBarStyle: "default" },
   title: {
     default: "FreWork – GST Registration, ITR Filing & Business Services Online India",
     template: "%s | FreWork",
@@ -176,6 +180,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
+        <ApiAuthInstaller />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <QueryProvider>
             {children}

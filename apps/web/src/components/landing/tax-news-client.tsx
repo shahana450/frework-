@@ -8,16 +8,16 @@ import type { TaxNewsItem } from "@/app/api/tax-news/route";
 
 const CATEGORY_STYLE: Record<string, { tagBg: string; tagColor: string; dotColor: string; borderUrgent?: string }> = {
   "Income Tax": { tagBg: "rgba(37,99,235,0.08)",   tagColor: "#1D4ED8", dotColor: "#2563EB" },
-  GST:          { tagBg: "rgba(5,150,105,0.08)",   tagColor: "#065F46", dotColor: "#059669" },
-  Compliance:   { tagBg: "rgba(184,144,58,0.10)",  tagColor: "#8C6A1E", dotColor: "#B8903A" },
+  GST:          { tagBg: "rgba(5,150,105,0.08)",   tagColor: "#065F46", dotColor: "#047857" },
+  Compliance:   { tagBg: "rgba(240,102,43,0.10)",  tagColor: "#9A3412", dotColor: "#C2410C" },
   General:      { tagBg: "rgba(100,100,100,0.08)", tagColor: "#374151", dotColor: "#6B7280" },
 };
 
 const L = {
-  bgCard: "#FFFFFF", text: "#1A1208", textSub: "#6B5B3E", textMuted: "#9C8B70",
-  gold: "#B8903A", border: "rgba(184,144,58,0.18)", borderLight: "rgba(184,144,58,0.1)",
-  shadow: "0 2px 20px rgba(139,108,50,0.07), 0 1px 3px rgba(139,108,50,0.05)",
-  shadowHover: "0 12px 48px rgba(139,108,50,0.14), 0 2px 8px rgba(139,108,50,0.08)",
+  bgCard: "#FFFFFF", text: "#141A3A", textSub: "#4A5070", textMuted: "#5A6080",
+  gold: "#C2410C", border: "rgba(240,102,43,0.18)", borderLight: "rgba(240,102,43,0.1)",
+  shadow: "0 2px 20px rgba(35,42,99,0.07), 0 1px 3px rgba(35,42,99,0.05)",
+  shadowHover: "0 12px 48px rgba(35,42,99,0.14), 0 2px 8px rgba(35,42,99,0.08)",
 };
 
 const FILTERS = ["All", "Income Tax", "GST", "Compliance"] as const;
@@ -52,7 +52,7 @@ export function TaxNewsClient({ items }: { items: TaxNewsItem[] }) {
               background: filter === f ? L.gold : "transparent",
               borderColor: filter === f ? L.gold : L.border,
               color: filter === f ? "#fff" : L.textSub,
-              boxShadow: filter === f ? "0 4px 14px rgba(184,144,58,0.3)" : "none",
+              boxShadow: filter === f ? "0 4px 14px rgba(240,102,43,0.3)" : "none",
             }}>
             {f}
           </button>

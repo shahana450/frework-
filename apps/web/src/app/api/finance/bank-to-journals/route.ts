@@ -1,107 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireBusiness, serverError } from "@/lib/apiAuth";
+import { postJournal, postingErrorMessage } from "@/lib/posting";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-type TxIn = {
-  id: string;
-  date: string;
-  description: string;
-  debit: number;
-  credit: number;
-  ledger_id: string;
-};
+type TxIn = { id: string; date: string; description: string; debit: number; credit: number; ledger_id: string };
 
-function pad(n: number) { return String(n).padStart(2, "0"); }
-
-function nextEntryNo(existing: string[]): string {
-  const nums = existing
-    .map(e => parseInt(e.replace(/[^0-9]/g, "") || "0"))
-    .filter(n => !isNaN(n));
-  const max = nums.length ? Math.max(...nums) : 0;
-  return `BANK/${Date.now()}`;
-}
-
+// Money out: Dr chosen ledger / Cr bank. Money in: Dr bank / Cr chosen ledger. One atomic entry per row.
 export async function POST(req: NextRequest) {
   try {
-    const { business_id, bank_account_id, transactions } = await req.json() as {
-      business_id: string;
-      bank_account_id: string;
-      transactions: TxIn[];
-    };
-
-    if (!business_id || !bank_account_id || !transactions?.length) {
-      return NextResponse.json({ error: "business_id, bank_account_id and transactions required" }, { status: 400 });
+    const { business_id, bank_account_id, transactions } = await req.json() as { business_id: string; bank_account_id: string; transactions: TxIn[] };
+    const gate = await requireBusiness(req, business_id, { write: true });
+    if (gate instanceof NextResponse) return gate;
+    if (!bank_account_id || !transactions?.length) {
+      return NextResponse.json({ error: "Choose the bank account and at least one transaction." }, { status: 400 });
     }
-
-    // Get current financial year
-    const { data: fy } = await supabase
-      .from("fw_fin_financial_years")
-      .select("id")
-      .eq("business_id", business_id)
-      .eq("is_current", true)
-      .single();
-
-    const fyId = fy?.id ?? null;
-
-    // Get bank account name for narration
-    const { data: bankCoa } = await supabase
-      .from("fw_fin_chart_of_accounts")
-      .select("name")
-      .eq("id", bank_account_id)
-      .single();
-    const bankName = bankCoa?.name ?? "Bank";
 
     const created: string[] = [];
-
+    const failures: { id: string; error: string }[] = [];
     for (const tx of transactions) {
-      const isDebit = tx.debit > 0; // money going OUT of bank
-      const amount = isDebit ? tx.debit : tx.credit;
-      const vtype = isDebit ? "payment" : "receipt";
-      const entryNo = `BANK/${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-
-      // Create journal
-      const { data: journal, error: je } = await supabase
-        .from("fw_fin_journals")
-        .insert({
-          business_id,
-          financial_year_id: fyId,
-          entry_no: entryNo,
-          date: tx.date,
-          type: vtype,
-          status: "posted",
-          narration: tx.description.slice(0, 200),
-          total_debit: amount,
-          total_credit: amount,
-        })
-        .select("id")
-        .single();
-
-      if (je || !journal) continue;
-
-      // Lines: debit side, credit side
-      if (isDebit) {
-        // Money out: DR Expense/Payable ledger, CR Bank
-        await supabase.from("fw_fin_journal_lines").insert([
-          { journal_id: journal.id, account_id: tx.ledger_id, dr_amount: amount, cr_amount: 0, narration: tx.description.slice(0, 100) },
-          { journal_id: journal.id, account_id: bank_account_id, dr_amount: 0, cr_amount: amount, narration: tx.description.slice(0, 100) },
-        ]);
-      } else {
-        // Money in: DR Bank, CR Income/Receivable ledger
-        await supabase.from("fw_fin_journal_lines").insert([
-          { journal_id: journal.id, account_id: bank_account_id, dr_amount: amount, cr_amount: 0, narration: tx.description.slice(0, 100) },
-          { journal_id: journal.id, account_id: tx.ledger_id, dr_amount: 0, cr_amount: amount, narration: tx.description.slice(0, 100) },
-        ]);
+      const out = (tx.debit || 0) > 0;
+      const amount = out ? tx.debit : tx.credit;
+      try {
+        const r = await postJournal(supabase, {
+          businessId: business_id, actorId: gate.user.id, date: String(tx.date).slice(0, 10),
+          type: out ? "payment" : "receipt", narration: (tx.description ?? "").slice(0, 200), source: "bank_import",
+          lines: out
+            ? [{ accountId: tx.ledger_id, dr: amount, cr: 0 }, { accountId: bank_account_id, dr: 0, cr: amount }]
+            : [{ accountId: bank_account_id, dr: amount, cr: 0 }, { accountId: tx.ledger_id, dr: 0, cr: amount }],
+          metadata: { bank_row_id: tx.id },
+        });
+        created.push(r.id);
+      } catch (e) {
+        failures.push({ id: tx.id, error: postingErrorMessage(e).message });
       }
-
-      created.push(journal.id);
     }
-
-    return NextResponse.json({ created: created.length, journal_ids: created });
-  } catch (e: unknown) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return NextResponse.json({ created: created.length, journal_ids: created, failures });
+  } catch (e) {
+    return serverError("bank-to-journals", e, "We couldn't post these bank transactions. Please try again.");
   }
 }

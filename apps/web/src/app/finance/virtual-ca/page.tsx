@@ -21,9 +21,9 @@ function MarkdownText({ text }: { text: string }) {
   const html = text
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`(.+?)`/g, '<code style="background:rgba(201,168,76,0.15);padding:1px 5px;border-radius:3px;font-size:0.9em">$1</code>')
-    .replace(/^### (.+)$/gm, '<div style="font-weight:700;font-size:0.95em;color:#C9A84C;margin:0.75rem 0 0.3rem">$1</div>')
-    .replace(/^## (.+)$/gm, '<div style="font-weight:800;font-size:1em;color:#C9A84C;margin:0.75rem 0 0.35rem">$1</div>')
+    .replace(/`(.+?)`/g, '<code style="background:rgba(35,42,99,0.15);padding:1px 5px;border-radius:3px;font-size:0.9em">$1</code>')
+    .replace(/^### (.+)$/gm, '<div style="font-weight:700;font-size:0.95em;color:#232A63;margin:0.75rem 0 0.3rem">$1</div>')
+    .replace(/^## (.+)$/gm, '<div style="font-weight:800;font-size:1em;color:#232A63;margin:0.75rem 0 0.35rem">$1</div>')
     .replace(/^- (.+)$/gm, '<div style="padding-left:1rem;margin:0.15rem 0">• $1</div>')
     .replace(/^\d+\. (.+)$/gm, '<div style="padding-left:1rem;margin:0.15rem 0">$1</div>')
     .replace(/\n\n/g, '<div style="margin:0.5rem 0"></div>')
@@ -103,18 +103,18 @@ export default function FrePilotPage() {
   }
 
   return (
-    <div style={{ height: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif", display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif", display: "flex", flexDirection: "column" }}>
       {/* Nav */}
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56, flexShrink: 0 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56, flexShrink: 0 }}>
+        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
         <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
-          <span style={{ color: "#C9A84C", fontWeight: 800, fontSize: "0.88rem" }}>FrePilot</span>
-          <span style={{ color: "rgba(237,232,220,0.25)", fontSize: "0.6rem", letterSpacing: "0.04em" }}>You Build We Pilot</span>
+          <span style={{ color: "#232A63", fontWeight: 800, fontSize: "0.88rem" }}>FrePilot</span>
+          <span style={{ color: "rgba(20,26,58,0.35)", fontSize: "0.6rem", letterSpacing: "0.04em" }}>You Build We Pilot</span>
         </div>
         <div style={{ flex: 1 }} />
-        {bizName && <span style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>{bizName}</span>}
-        <button onClick={clearChat} style={{ background: "rgba(237,232,220,0.05)", border: "1px solid rgba(237,232,220,0.1)", color: "rgba(237,232,220,0.4)", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem" }}>
+        {bizName && <span style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>{bizName}</span>}
+        <button onClick={clearChat} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "rgba(20,26,58,0.65)", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem" }}>
           Clear
         </button>
       </nav>
@@ -130,15 +130,15 @@ export default function FrePilotPage() {
               }}>
                 <div style={{
                   width: 34, height: 34, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem",
-                  background: msg.role === "assistant" ? "rgba(201,168,76,0.15)" : "rgba(96,165,250,0.15)",
-                  border: `1px solid ${msg.role === "assistant" ? "rgba(201,168,76,0.3)" : "rgba(96,165,250,0.3)"}`,
+                  background: msg.role === "assistant" ? "rgba(35,42,99,0.15)" : "rgba(31,94,255,0.15)",
+                  border: `1px solid ${msg.role === "assistant" ? "rgba(35,42,99,0.3)" : "rgba(31,94,255,0.3)"}`,
                 }}>
                   {msg.role === "assistant" ? "🛩️" : "👤"}
                 </div>
                 <div style={{
                   maxWidth: "78%", padding: "0.85rem 1.1rem", borderRadius: msg.role === "user" ? "14px 4px 14px 14px" : "4px 14px 14px 14px",
-                  background: msg.role === "assistant" ? "rgba(255,255,255,0.04)" : "rgba(96,165,250,0.1)",
-                  border: `1px solid ${msg.role === "assistant" ? "rgba(237,232,220,0.07)" : "rgba(96,165,250,0.2)"}`,
+                  background: msg.role === "assistant" ? "#FFFFFF" : "rgba(31,94,255,0.1)",
+                  border: `1px solid ${msg.role === "assistant" ? "rgba(20,26,58,0.10)" : "rgba(31,94,255,0.2)"}`,
                 }}>
                   {msg.role === "assistant" ? <MarkdownText text={msg.content} /> : (
                     <div style={{ fontSize: "0.88rem", lineHeight: 1.55 }}>{msg.content}</div>
@@ -149,11 +149,11 @@ export default function FrePilotPage() {
 
             {loading && (
               <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem" }}>
-                <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(201,168,76,0.15)", border: "1px solid rgba(201,168,76,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>🛩️</div>
-                <div style={{ padding: "0.85rem 1.1rem", borderRadius: "4px 14px 14px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(237,232,220,0.07)" }}>
+                <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(35,42,99,0.15)", border: "1px solid rgba(35,42,99,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>🛩️</div>
+                <div style={{ padding: "0.85rem 1.1rem", borderRadius: "4px 14px 14px 14px", background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)" }}>
                   <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                     {[0, 1, 2].map(i => (
-                      <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#C9A84C", animation: `pulse 1.2s ${i * 0.2}s infinite`, opacity: 0.7 }} />
+                      <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#232A63", animation: `pulse 1.2s ${i * 0.2}s infinite`, opacity: 0.7 }} />
                     ))}
                   </div>
                 </div>
@@ -167,7 +167,7 @@ export default function FrePilotPage() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", paddingBottom: "0.75rem" }}>
               {QUICK_PROMPTS.map(q => (
                 <button key={q} onClick={() => sendMessage(q)} style={{
-                  background: "rgba(201,168,76,0.07)", border: "1px solid rgba(201,168,76,0.2)", color: "rgba(237,232,220,0.7)",
+                  background: "rgba(35,42,99,0.07)", border: "1px solid rgba(35,42,99,0.2)", color: "rgba(20,26,58,0.95)",
                   padding: "5px 12px", borderRadius: 16, cursor: "pointer", fontSize: "0.78rem", textAlign: "left", lineHeight: 1.4,
                 }}>{q}</button>
               ))}
@@ -175,8 +175,8 @@ export default function FrePilotPage() {
           )}
 
           {/* Input */}
-          <div style={{ borderTop: "1px solid rgba(237,232,220,0.08)", paddingTop: "1rem", paddingBottom: "1rem" }}>
-            {error && <div style={{ color: "#f87171", fontSize: "0.78rem", marginBottom: "0.5rem" }}>{error}</div>}
+          <div style={{ borderTop: "1px solid rgba(20,26,58,0.11)", paddingTop: "1rem", paddingBottom: "1rem" }}>
+            {error && <div style={{ color: "#C2321F", fontSize: "0.78rem", marginBottom: "0.5rem" }}>{error}</div>}
             <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end" }}>
               <textarea
                 ref={textareaRef}
@@ -186,7 +186,7 @@ export default function FrePilotPage() {
                 placeholder="Ask FrePilot anything — GST, TDS, ITR, journal entries, financial advice…"
                 rows={2}
                 style={{
-                  flex: 1, background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.15)", color: "#EDE8DC",
+                  flex: 1, background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.21)", color: "#141A3A",
                   padding: "10px 14px", borderRadius: 10, fontSize: "0.88rem", resize: "none", outline: "none", lineHeight: 1.55, fontFamily: "inherit",
                 }}
               />
@@ -194,7 +194,7 @@ export default function FrePilotPage() {
                 onClick={() => sendMessage()}
                 disabled={loading || !input.trim()}
                 style={{
-                  background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 20px", borderRadius: 10,
+                  background: "#232A63", border: "none", color: "#F5F6FA", padding: "10px 20px", borderRadius: 10,
                   cursor: "pointer", fontWeight: 700, fontSize: "0.88rem", height: 44,
                   opacity: (loading || !input.trim()) ? 0.5 : 1,
                 }}
@@ -202,7 +202,7 @@ export default function FrePilotPage() {
                 {loading ? "…" : "Send"}
               </button>
             </div>
-            <div style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.25)", marginTop: "0.4rem" }}>Press Enter to send · Shift+Enter for new line · FrePilot powered by Claude AI</div>
+            <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.35)", marginTop: "0.4rem" }}>Press Enter to send · Shift+Enter for new line · FrePilot powered by Claude AI</div>
           </div>
         </div>
       </div>

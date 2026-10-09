@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { saveEntry } from "@/lib/postEntry";
 import Link from "next/link";
 
 type Account = { id: string; code: string; name: string; type: string };
@@ -93,25 +94,11 @@ export default function NewJournalPage() {
     setSaving(true); setError("");
 
     try {
-      const { data: j, error: jErr } = await supabase.from("fw_fin_journals").insert({
-        business_id: bizId,
-        financial_year_id: fyId,
-        entry_no: `JE/${Date.now()}`,
-        date, narration, type, reference_no: refNo || null, status,
-        total_debit: totalDr, total_credit: totalCr, ai_generated: false,
-      }).select("id").single();
-      if (jErr) throw new Error(jErr.message);
-
-      await supabase.from("fw_fin_journal_lines").insert(
-        lines.filter(l => l.account_id).map((l, i) => ({
-          journal_id: j.id,
-          account_id: l.account_id,
-          dr_amount: parseFloat(l.dr) || 0,
-          cr_amount: parseFloat(l.cr) || 0,
-          narration: l.narration || narration,
-          sort_order: i,
-        }))
-      );
+      await saveEntry({
+        business_id: bizId, mode: status === "posted" ? "post" : "draft", date, narration, type, source: "manual_journal",
+        reference_no: refNo || null,
+        lines: lines.filter(l => l.account_id).map(l => ({ account_id: l.account_id, dr: parseFloat(l.dr) || 0, cr: parseFloat(l.cr) || 0, narration: l.narration || narration })),
+      });
 
       router.push("/finance/journals");
     } catch (e: unknown) {
@@ -127,16 +114,16 @@ export default function NewJournalPage() {
     return accounts.filter(a => a.name.toLowerCase().includes(q) || a.code.includes(q)).slice(0, 10);
   };
 
-  const inp: React.CSSProperties = { background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "8px 12px", borderRadius: 6, fontSize: "0.85rem", outline: "none" };
+  const inp: React.CSSProperties = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "8px 12px", borderRadius: 6, fontSize: "0.85rem", outline: "none" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }} onClick={() => setShowDropdown(null)}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <Link href="/finance/journals" style={{ color: "rgba(237,232,220,0.5)", fontSize: "0.85rem", textDecoration: "none" }}>Journal Entries</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>New Entry</span>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }} onClick={() => setShowDropdown(null)}>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <Link href="/finance/journals" style={{ color: "rgba(20,26,58,0.75)", fontSize: "0.85rem", textDecoration: "none" }}>Journal Entries</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>New Entry</span>
       </nav>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "2rem" }}>
@@ -145,40 +132,40 @@ export default function NewJournalPage() {
         {/* Header Fields */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
           <div>
-            <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Date *</label>
+            <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Date *</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Voucher Type</label>
+            <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Voucher Type</label>
             <select value={type} onChange={e => setType(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box", cursor: "pointer" }}>
               {VOUCHER_TYPES.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
             </select>
           </div>
           <div>
-            <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Reference No.</label>
+            <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Reference No.</label>
             <input value={refNo} onChange={e => setRefNo(e.target.value)} placeholder="Bill/Invoice No." style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Narration</label>
+            <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Narration</label>
             <input value={narration} onChange={e => setNarration(e.target.value)} placeholder="Description of entry" style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
           </div>
         </div>
 
         {/* Journal Lines */}
-        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 12, overflow: "hidden", marginBottom: "1rem" }}>
+        <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 12, overflow: "hidden", marginBottom: "1rem" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ background: "rgba(255,255,255,0.02)" }}>
-                <th style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", width: "40%" }}>Account</th>
-                <th style={{ padding: "0.6rem 1rem", textAlign: "right", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", width: "18%" }}>Debit (₹)</th>
-                <th style={{ padding: "0.6rem 1rem", textAlign: "right", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", width: "18%" }}>Credit (₹)</th>
-                <th style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(237,232,220,0.4)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Narration</th>
+              <tr style={{ background: "#FFFFFF" }}>
+                <th style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", width: "40%" }}>Account</th>
+                <th style={{ padding: "0.6rem 1rem", textAlign: "right", fontSize: "0.7rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", width: "18%" }}>Debit (₹)</th>
+                <th style={{ padding: "0.6rem 1rem", textAlign: "right", fontSize: "0.7rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", width: "18%" }}>Credit (₹)</th>
+                <th style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Narration</th>
                 <th style={{ width: 36 }}></th>
               </tr>
             </thead>
             <tbody>
               {lines.map((line, i) => (
-                <tr key={i} style={{ borderTop: "1px solid rgba(237,232,220,0.06)" }}>
+                <tr key={i} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
                   {/* Account Search */}
                   <td style={{ padding: "0.5rem 0.75rem", position: "relative" }} onClick={e => e.stopPropagation()}>
                     <input
@@ -189,10 +176,10 @@ export default function NewJournalPage() {
                       style={{ ...inp, width: "100%", boxSizing: "border-box" }}
                     />
                     {showDropdown === i && filteredAccounts(i).length > 0 && (
-                      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#0d1526", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 6, zIndex: 50, maxHeight: 220, overflowY: "auto" }}>
+                      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#FFFFFF", border: "1px solid rgba(35,42,99,0.3)", borderRadius: 6, zIndex: 50, maxHeight: 220, overflowY: "auto" }}>
                         {filteredAccounts(i).map(acc => (
                           <div key={acc.id} onMouseDown={() => selectAccount(i, acc)} style={{ padding: "8px 12px", cursor: "pointer", fontSize: "0.83rem", display: "flex", gap: "0.5rem" }}>
-                            <span style={{ color: "rgba(237,232,220,0.4)", fontFamily: "monospace", fontSize: "0.75rem" }}>{acc.code}</span>
+                            <span style={{ color: "rgba(20,26,58,0.65)", fontFamily: "monospace", fontSize: "0.75rem" }}>{acc.code}</span>
                             <span>{acc.name}</span>
                           </div>
                         ))}
@@ -216,17 +203,17 @@ export default function NewJournalPage() {
                       style={{ ...inp, width: "100%", boxSizing: "border-box" }} />
                   </td>
                   <td style={{ padding: "0.5rem 0.5rem" }}>
-                    <button onClick={() => removeLine(i)} disabled={lines.length <= 2} style={{ background: "none", border: "none", color: "rgba(237,232,220,0.3)", cursor: "pointer", fontSize: "1rem", opacity: lines.length <= 2 ? 0.3 : 1 }}>×</button>
+                    <button onClick={() => removeLine(i)} disabled={lines.length <= 2} style={{ background: "none", border: "none", color: "rgba(20,26,58,0.55)", cursor: "pointer", fontSize: "1rem", opacity: lines.length <= 2 ? 0.3 : 1 }}>×</button>
                   </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr style={{ borderTop: "2px solid rgba(237,232,220,0.1)", background: "rgba(255,255,255,0.02)" }}>
+              <tr style={{ borderTop: "2px solid rgba(20,26,58,0.14)", background: "#FFFFFF" }}>
                 <td style={{ padding: "0.6rem 1rem", fontWeight: 700, fontSize: "0.85rem" }}>Total</td>
-                <td style={{ padding: "0.6rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#EDE8DC" }}>{totalDr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                <td style={{ padding: "0.6rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#EDE8DC" }}>{totalCr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                <td colSpan={2} style={{ padding: "0.6rem 1rem", fontSize: "0.78rem", color: balanced ? "#4ade80" : "#f87171", fontWeight: 600, textAlign: "right" }}>
+                <td style={{ padding: "0.6rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#141A3A" }}>{totalDr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: "0.6rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#141A3A" }}>{totalCr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                <td colSpan={2} style={{ padding: "0.6rem 1rem", fontSize: "0.78rem", color: balanced ? "#0B7A55" : "#C2321F", fontWeight: 600, textAlign: "right" }}>
                   {balanced ? "✓ Balanced" : `⚠ Difference: ₹${Math.abs(diff).toFixed(2)}`}
                 </td>
               </tr>
@@ -234,16 +221,16 @@ export default function NewJournalPage() {
           </table>
         </div>
 
-        <button onClick={addLine} style={{ background: "none", border: "1px dashed rgba(237,232,220,0.2)", color: "rgba(237,232,220,0.4)", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem", marginBottom: "1.5rem" }}>
+        <button onClick={addLine} style={{ background: "none", border: "1px dashed rgba(20,26,58,0.28)", color: "rgba(20,26,58,0.65)", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem", marginBottom: "1.5rem" }}>
           + Add Line
         </button>
 
-        {error && <div style={{ color: "#f87171", background: "rgba(248,113,113,0.08)", padding: "0.75rem 1rem", borderRadius: 6, fontSize: "0.85rem", marginBottom: "1rem" }}>{error}</div>}
+        {error && <div style={{ color: "#C2321F", background: "rgba(194,50,31,0.08)", padding: "0.75rem 1rem", borderRadius: 6, fontSize: "0.85rem", marginBottom: "1rem" }}>{error}</div>}
 
         <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-          <Link href="/finance/journals" style={{ background: "rgba(237,232,220,0.06)", border: "none", color: "#EDE8DC", padding: "10px 24px", borderRadius: 8, textDecoration: "none", fontSize: "0.9rem" }}>Cancel</Link>
-          <button onClick={() => save("draft")} disabled={saving} style={{ background: "rgba(237,232,220,0.08)", border: "1px solid rgba(237,232,220,0.15)", color: "#EDE8DC", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem" }}>Save as Draft</button>
-          <button onClick={() => save("posted")} disabled={saving || !balanced} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: (!balanced || saving) ? 0.6 : 1 }}>
+          <Link href="/finance/journals" style={{ background: "rgba(20,26,58,0.08)", border: "none", color: "#141A3A", padding: "10px 24px", borderRadius: 8, textDecoration: "none", fontSize: "0.9rem" }}>Cancel</Link>
+          <button onClick={() => save("draft")} disabled={saving} style={{ background: "rgba(20,26,58,0.11)", border: "1px solid rgba(20,26,58,0.21)", color: "#141A3A", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem" }}>Save as Draft</button>
+          <button onClick={() => save("posted")} disabled={saving || !balanced} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: (!balanced || saving) ? 0.6 : 1 }}>
             {saving ? "Posting…" : "Post Entry"}
           </button>
         </div>

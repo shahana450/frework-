@@ -99,60 +99,60 @@ export default function ReceivablesPage() {
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
   function agingBucket(days: number) {
-    if (days <= 30) return { label: "0–30 days", color: "#4ade80" };
-    if (days <= 60) return { label: "31–60 days", color: "#C9A84C" };
-    if (days <= 90) return { label: "61–90 days", color: "#fb923c" };
-    return { label: "90+ days", color: "#f87171" };
+    if (days <= 30) return { label: "0–30 days", color: "#0B7A55" };
+    if (days <= 60) return { label: "31–60 days", color: "#232A63" };
+    if (days <= 90) return { label: "61–90 days", color: "#B4561E" };
+    return { label: "90+ days", color: "#C2321F" };
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Receivables (AR)</span>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Receivables (AR)</span>
         <div style={{ flex: 1 }} />
-        <Link href="/finance/sales/new" style={{ background: "#C9A84C", color: "#070C1A", padding: "6px 16px", borderRadius: 8, fontWeight: 700, textDecoration: "none", fontSize: "0.82rem" }}>
+        <Link href="/finance/sales/new" style={{ background: "#232A63", color: "#F5F6FA", padding: "6px 16px", borderRadius: 8, fontWeight: 700, textDecoration: "none", fontSize: "0.82rem" }}>
           + New Invoice
         </Link>
       </nav>
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "2rem" }}>
         <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Accounts Receivable</h1>
-        <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Aging report — money customers owe you</p>
+        <p style={{ margin: "0 0 1.5rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Aging report — money customers owe you</p>
 
         {/* KPI Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem", marginBottom: "2rem" }}>
           {[
-            { label: "Total Outstanding", value: totalOutstanding, color: "#C9A84C", icon: "💰" },
-            { label: "Overdue > 30 days", value: overdueAmount, color: "#f87171", icon: "⚠️" },
-            { label: "Customers with dues", value: entries.length, color: "#60a5fa", icon: "👥", isCount: true },
-            { label: "Avg per Customer", value: entries.length ? totalOutstanding / entries.length : 0, color: "rgba(237,232,220,0.7)", icon: "📊" },
+            { label: "Total Outstanding", value: totalOutstanding, color: "#232A63", icon: "💰" },
+            { label: "Overdue > 30 days", value: overdueAmount, color: "#C2321F", icon: "⚠️" },
+            { label: "Customers with dues", value: entries.length, color: "#1F5EFF", icon: "👥", isCount: true },
+            { label: "Avg per Customer", value: entries.length ? totalOutstanding / entries.length : 0, color: "rgba(20,26,58,0.95)", icon: "📊" },
           ].map(k => (
-            <div key={k.label} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 10, padding: "1rem" }}>
+            <div key={k.label} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 10, padding: "1rem" }}>
               <div style={{ fontSize: "1.2rem", marginBottom: "0.4rem" }}>{k.icon}</div>
               <div style={{ fontSize: "1.3rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>
                 {k.isCount ? k.value : `₹${fmt(k.value)}`}
               </div>
-              <div style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.35)", marginTop: "0.2rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>{k.label}</div>
+              <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.60)", marginTop: "0.2rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>{k.label}</div>
             </div>
           ))}
         </div>
 
         {/* Aging Summary */}
-        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1rem 1.25rem", marginBottom: "1.5rem" }}>
-          <div style={{ fontSize: "0.75rem", fontWeight: 700, marginBottom: "0.75rem", color: "rgba(237,232,220,0.5)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Aging Breakdown</div>
+        <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1rem 1.25rem", marginBottom: "1.5rem" }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 700, marginBottom: "0.75rem", color: "rgba(20,26,58,0.75)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Aging Breakdown</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem" }}>
             {[
-              { label: "0–30 days", amount: entries.filter(e => e.days_overdue <= 30).reduce((s, e) => s + e.outstanding, 0), color: "#4ade80" },
-              { label: "31–60 days", amount: entries.filter(e => e.days_overdue > 30 && e.days_overdue <= 60).reduce((s, e) => s + e.outstanding, 0), color: "#C9A84C" },
-              { label: "61–90 days", amount: entries.filter(e => e.days_overdue > 60 && e.days_overdue <= 90).reduce((s, e) => s + e.outstanding, 0), color: "#fb923c" },
-              { label: "90+ days", amount: entries.filter(e => e.days_overdue > 90).reduce((s, e) => s + e.outstanding, 0), color: "#f87171" },
+              { label: "0–30 days", amount: entries.filter(e => e.days_overdue <= 30).reduce((s, e) => s + e.outstanding, 0), color: "#0B7A55" },
+              { label: "31–60 days", amount: entries.filter(e => e.days_overdue > 30 && e.days_overdue <= 60).reduce((s, e) => s + e.outstanding, 0), color: "#232A63" },
+              { label: "61–90 days", amount: entries.filter(e => e.days_overdue > 60 && e.days_overdue <= 90).reduce((s, e) => s + e.outstanding, 0), color: "#B4561E" },
+              { label: "90+ days", amount: entries.filter(e => e.days_overdue > 90).reduce((s, e) => s + e.outstanding, 0), color: "#C2321F" },
             ].map(bucket => (
               <div key={bucket.label} style={{ textAlign: "center" }}>
                 <div style={{ fontSize: "1rem", fontWeight: 800, color: bucket.color, fontVariantNumeric: "tabular-nums" }}>₹{fmt(bucket.amount)}</div>
-                <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.4)", marginTop: "0.2rem" }}>{bucket.label}</div>
-                <div style={{ height: 3, background: bucket.amount > 0 ? bucket.color : "rgba(237,232,220,0.08)", borderRadius: 2, marginTop: "0.4rem", opacity: 0.6 }} />
+                <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>{bucket.label}</div>
+                <div style={{ height: 3, background: bucket.amount > 0 ? bucket.color : "rgba(20,26,58,0.11)", borderRadius: 2, marginTop: "0.4rem", opacity: 0.6 }} />
               </div>
             ))}
           </div>
@@ -160,23 +160,23 @@ export default function ReceivablesPage() {
 
         {/* Table */}
         {loading ? (
-          <div style={{ textAlign: "center", padding: "3rem", color: "rgba(237,232,220,0.3)" }}>Loading receivables…</div>
+          <div style={{ textAlign: "center", padding: "3rem", color: "rgba(20,26,58,0.55)" }}>Loading receivables…</div>
         ) : entries.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>✅</div>
             <div style={{ fontWeight: 700, marginBottom: "0.5rem" }}>No outstanding receivables</div>
-            <div style={{ color: "rgba(237,232,220,0.4)", fontSize: "0.85rem" }}>All customer invoices are settled, or no sales invoices posted yet.</div>
-            <Link href="/finance/sales/new" style={{ display: "inline-block", marginTop: "1.5rem", background: "#C9A84C", color: "#070C1A", padding: "9px 22px", borderRadius: 8, fontWeight: 700, textDecoration: "none", fontSize: "0.88rem" }}>
+            <div style={{ color: "rgba(20,26,58,0.65)", fontSize: "0.85rem" }}>All customer invoices are settled, or no sales invoices posted yet.</div>
+            <Link href="/finance/sales/new" style={{ display: "inline-block", marginTop: "1.5rem", background: "#232A63", color: "#F5F6FA", padding: "9px 22px", borderRadius: 8, fontWeight: 700, textDecoration: "none", fontSize: "0.88rem" }}>
               Raise Sales Invoice →
             </Link>
           </div>
         ) : (
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "rgba(255,255,255,0.02)" }}>
+                <tr style={{ background: "#FFFFFF" }}>
                   {["Customer", "Invoices", "Total Invoiced", "Received", "Outstanding", "Oldest Invoice", "Aging", "Action"].map(h => (
-                    <th key={h} style={{ padding: "0.6rem 0.85rem", textAlign: ["Total Invoiced", "Received", "Outstanding"].includes(h) ? "right" : "left", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
+                    <th key={h} style={{ padding: "0.6rem 0.85rem", textAlign: ["Total Invoiced", "Received", "Outstanding"].includes(h) ? "right" : "left", fontSize: "0.65rem", color: "rgba(20,26,58,0.60)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -184,13 +184,13 @@ export default function ReceivablesPage() {
                 {entries.map((e, i) => {
                   const aging = agingBucket(e.days_overdue);
                   return (
-                    <tr key={i} style={{ borderTop: "1px solid rgba(237,232,220,0.04)" }}>
+                    <tr key={i} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
                       <td style={{ padding: "0.75rem 0.85rem", fontWeight: 600, fontSize: "0.85rem" }}>{e.contact_name}</td>
-                      <td style={{ padding: "0.75rem 0.85rem", fontSize: "0.82rem", color: "rgba(237,232,220,0.5)" }}>{e.invoice_count}</td>
+                      <td style={{ padding: "0.75rem 0.85rem", fontSize: "0.82rem", color: "rgba(20,26,58,0.75)" }}>{e.invoice_count}</td>
                       <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>₹{fmt(e.total_invoiced)}</td>
-                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "#4ade80" }}>₹{fmt(e.total_received)}</td>
+                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "#0B7A55" }}>₹{fmt(e.total_received)}</td>
                       <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontWeight: 800, fontSize: "0.9rem", fontVariantNumeric: "tabular-nums", color: aging.color }}>₹{fmt(e.outstanding)}</td>
-                      <td style={{ padding: "0.75rem 0.85rem", fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>
+                      <td style={{ padding: "0.75rem 0.85rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>
                         {new Date(e.oldest_invoice).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
                       </td>
                       <td style={{ padding: "0.75rem 0.85rem" }}>
@@ -199,7 +199,7 @@ export default function ReceivablesPage() {
                         </span>
                       </td>
                       <td style={{ padding: "0.75rem 0.85rem" }}>
-                        <Link href={`/finance/sales/new?contact=${e.contact_id}`} style={{ fontSize: "0.75rem", color: "#C9A84C", textDecoration: "none" }}>
+                        <Link href={`/finance/sales/new?contact=${e.contact_id}`} style={{ fontSize: "0.75rem", color: "#232A63", textDecoration: "none" }}>
                           New Invoice →
                         </Link>
                       </td>
@@ -208,9 +208,9 @@ export default function ReceivablesPage() {
                 })}
               </tbody>
               <tfoot>
-                <tr style={{ borderTop: "2px solid rgba(201,168,76,0.3)", background: "rgba(201,168,76,0.05)" }}>
+                <tr style={{ borderTop: "2px solid rgba(35,42,99,0.3)", background: "rgba(35,42,99,0.05)" }}>
                   <td colSpan={4} style={{ padding: "0.7rem 0.85rem", fontWeight: 800, fontSize: "0.85rem" }}>Total Outstanding</td>
-                  <td style={{ padding: "0.7rem 0.85rem", textAlign: "right", fontWeight: 900, fontSize: "1rem", color: "#C9A84C", fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalOutstanding)}</td>
+                  <td style={{ padding: "0.7rem 0.85rem", textAlign: "right", fontWeight: 900, fontSize: "1rem", color: "#232A63", fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalOutstanding)}</td>
                   <td colSpan={3} />
                 </tr>
               </tfoot>

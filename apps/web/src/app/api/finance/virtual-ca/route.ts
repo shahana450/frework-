@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireBusiness } from "@/lib/apiAuth";
 import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
+import { getAI } from "@/lib/ai";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+const anthropic = getAI();
 
 export async function POST(req: NextRequest) {
   try {
     const { message, business_id, history } = await req.json();
-    if (!message || !business_id) return NextResponse.json({ error: "message and business_id required" }, { status: 400 });
+    const gate = await requireBusiness(req, business_id);
+    if (gate instanceof NextResponse) return gate;
+    if (!message) return NextResponse.json({ error: "message required" }, { status: 400 });
 
     // Fetch business context
     const [bizRes, fyRes, docsRes, journalRes] = await Promise.all([

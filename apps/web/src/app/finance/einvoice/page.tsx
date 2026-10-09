@@ -125,14 +125,14 @@ export default function EInvoicePage() {
   };
 
   const S = {
-    page: { minHeight: "100vh", background: "#0A0D14", color: "#E8EDF5", fontFamily: "Inter,system-ui,sans-serif" },
-    nav: { borderBottom: "1px solid #1F2937", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 52 },
+    page: { minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "Inter,system-ui,sans-serif" },
+    nav: { borderBottom: "1px solid #E1E4EE", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 52 },
     main: { maxWidth: 900, margin: "0 auto", padding: "2rem 1rem" },
-    card: { background: "#111827", border: "1px solid #1F2937", borderRadius: 12, padding: "1.5rem", marginBottom: "1rem" },
+    card: { background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 12, padding: "1.5rem", marginBottom: "1rem" },
     label: { fontSize: "0.72rem", color: "#6B7280", marginBottom: "0.3rem", display: "block", textTransform: "uppercase" as const, letterSpacing: "0.04em" },
-    input: { width: "100%", background: "#0A0D14", border: "1px solid #374151", color: "#E8EDF5", padding: "0.5rem 0.75rem", borderRadius: 8, fontSize: "0.85rem", fontFamily: "inherit", boxSizing: "border-box" as const },
-    tabBtn: (a: boolean) => ({ padding: "0.45rem 1rem", borderRadius: 6, border: "none", cursor: "pointer", fontSize: "0.84rem", fontFamily: "inherit", background: a ? "#C9A84C" : "transparent", color: a ? "#0A0D14" : "#9CA3AF", fontWeight: a ? 700 : 400 }),
-    btnPrimary: { padding: "0.55rem 1.3rem", borderRadius: 8, border: "none", background: "#C9A84C", color: "#0A0D14", fontWeight: 700, cursor: "pointer", fontSize: "0.85rem", fontFamily: "inherit" },
+    input: { width: "100%", background: "#F5F6FA", border: "1px solid #5A6080", color: "#141A3A", padding: "0.5rem 0.75rem", borderRadius: 8, fontSize: "0.85rem", fontFamily: "inherit", boxSizing: "border-box" as const },
+    tabBtn: (a: boolean) => ({ padding: "0.45rem 1rem", borderRadius: 6, border: "none", cursor: "pointer", fontSize: "0.84rem", fontFamily: "inherit", background: a ? "#232A63" : "transparent", color: a ? "#F5F6FA" : "#9CA3AF", fontWeight: a ? 700 : 400 }),
+    btnPrimary: { padding: "0.55rem 1.3rem", borderRadius: 8, border: "none", background: "#232A63", color: "#F5F6FA", fontWeight: 700, cursor: "pointer", fontSize: "0.85rem", fontFamily: "inherit" },
   };
 
   const jsonStr = JSON.stringify(buildJSON(), null, 2);
@@ -141,8 +141,8 @@ export default function EInvoicePage() {
   return (
     <div style={S.page}>
       <nav style={S.nav}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "#374151" }}>›</span>
+        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "#5A6080" }}>›</span>
         <span style={{ color: "#9CA3AF", fontSize: "0.85rem" }}>E-Invoice (IRN)</span>
         <div style={{ flex: 1 }} />
         <a href="https://einvoice1.gst.gov.in" target="_blank" rel="noopener" style={{ fontSize: "0.75rem", color: "#6B7280", textDecoration: "none" }}>IRP Portal ↗</a>
@@ -256,8 +256,8 @@ export default function EInvoicePage() {
             </div>
 
             {/* Tax summary */}
-            <div style={{ ...S.card, background: "rgba(201,168,76,0.04)", borderColor: "rgba(201,168,76,0.2)" }}>
-              <div style={{ fontWeight: 600, marginBottom: "1rem", fontSize: "0.9rem", color: "#C9A84C" }}>Tax Summary</div>
+            <div style={{ ...S.card, background: "rgba(35,42,99,0.04)", borderColor: "rgba(35,42,99,0.2)" }}>
+              <div style={{ fontWeight: 600, marginBottom: "1rem", fontSize: "0.9rem", color: "#232A63" }}>Tax Summary</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "1rem", fontSize: "0.85rem" }}>
                 {[
                   { label: "Taxable Value", value: fmtR(d.TaxableValue) },
@@ -268,7 +268,7 @@ export default function EInvoicePage() {
                 ].map(({ label, value, highlight }) => (
                   <div key={label}>
                     <div style={{ color: "#6B7280", fontSize: "0.72rem", marginBottom: "0.25rem" }}>{label}</div>
-                    <div style={{ fontWeight: 700, fontSize: "1rem", color: highlight ? "#C9A84C" : "#E8EDF5", fontVariantNumeric: "tabular-nums" }}>{value}</div>
+                    <div style={{ fontWeight: 700, fontSize: "1rem", color: highlight ? "#232A63" : "#141A3A", fontVariantNumeric: "tabular-nums" }}>{value}</div>
                   </div>
                 ))}
               </div>
@@ -276,7 +276,7 @@ export default function EInvoicePage() {
 
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button style={S.btnPrimary} onClick={generateIRN}>Generate IRN →</button>
-              <button onClick={() => setTab("json")} style={{ ...S.btnPrimary, background: "#1F2937", color: "#E8EDF5" }}>View JSON</button>
+              <button onClick={() => setTab("json")} style={{ ...S.btnPrimary, background: "#E1E4EE", color: "#141A3A" }}>View JSON</button>
             </div>
           </>
         )}
@@ -293,7 +293,7 @@ export default function EInvoicePage() {
                 {copied ? "Copied!" : "Copy JSON"}
               </button>
             </div>
-            <pre style={{ background: "#0A0D14", border: "1px solid #374151", borderRadius: 8, padding: "1rem", overflowX: "auto", fontSize: "0.75rem", color: "#34D399", lineHeight: 1.6, margin: 0 }}>
+            <pre style={{ background: "#F5F6FA", border: "1px solid #5A6080", borderRadius: 8, padding: "1rem", overflowX: "auto", fontSize: "0.75rem", color: "#0B7A55", lineHeight: 1.6, margin: 0 }}>
               {jsonStr}
             </pre>
           </div>
@@ -303,18 +303,18 @@ export default function EInvoicePage() {
         {tab === "irn" && (
           generatedIRN ? (
             <div>
-              <div style={{ ...S.card, background: "rgba(52,211,153,0.04)", borderColor: "rgba(52,211,153,0.25)" }}>
+              <div style={{ ...S.card, background: "rgba(11,122,85,0.04)", borderColor: "rgba(11,122,85,0.25)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(52,211,153,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>✓</div>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(11,122,85,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>✓</div>
                   <div>
-                    <div style={{ fontWeight: 700, color: "#34D399" }}>IRN Generated Successfully</div>
+                    <div style={{ fontWeight: 700, color: "#0B7A55" }}>IRN Generated Successfully</div>
                     <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>Note: This is a demo IRN. Connect to NIC/GSTN IRP for production use.</div>
                   </div>
                 </div>
                 <div style={{ marginBottom: "1rem" }}>
                   <label style={S.label}>Invoice Reference Number (IRN)</label>
                   <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                    <code style={{ flex: 1, background: "#0A0D14", border: "1px solid #374151", borderRadius: 6, padding: "0.6rem 0.9rem", fontSize: "0.78rem", color: "#34D399", wordBreak: "break-all" }}>{generatedIRN}</code>
+                    <code style={{ flex: 1, background: "#F5F6FA", border: "1px solid #5A6080", borderRadius: 6, padding: "0.6rem 0.9rem", fontSize: "0.78rem", color: "#0B7A55", wordBreak: "break-all" }}>{generatedIRN}</code>
                     <button style={{ ...S.btnPrimary, flexShrink: 0 }} onClick={() => copy(generatedIRN)}>{copied ? "Copied!" : "Copy"}</button>
                   </div>
                 </div>
@@ -327,7 +327,7 @@ export default function EInvoicePage() {
                     { k: "Taxable Value", v: fmtR(d.TaxableValue) },
                     { k: "Grand Total", v: fmtR(d.GrandTotal) },
                   ].map(({ k, v }) => (
-                    <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid #1F2937" }}>
+                    <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid #E1E4EE" }}>
                       <span style={{ color: "#6B7280" }}>{k}</span>
                       <span style={{ fontWeight: 600 }}>{v}</span>
                     </div>
@@ -335,7 +335,7 @@ export default function EInvoicePage() {
                 </div>
               </div>
               <div style={{ ...S.card, fontSize: "0.8rem", color: "#6B7280" }}>
-                <strong style={{ color: "#F59E0B" }}>Production Integration:</strong> To get real IRNs, you need to:
+                <strong style={{ color: "#8A5A00" }}>Production Integration:</strong> To get real IRNs, you need to:
                 <ol style={{ margin: "0.5rem 0 0 1rem", lineHeight: 2 }}>
                   <li>Register on <strong>einvoice1.gst.gov.in</strong> (NIC IRP)</li>
                   <li>Or use a GSP (GSTN Suvidha Provider) like ClearTax, Tally, Zoho</li>
@@ -346,7 +346,7 @@ export default function EInvoicePage() {
             </div>
           ) : (
             <div style={{ ...S.card, textAlign: "center", padding: "3rem", color: "#6B7280" }}>
-              Fill the invoice details and click <strong style={{ color: "#C9A84C" }}>Generate IRN</strong> first.
+              Fill the invoice details and click <strong style={{ color: "#232A63" }}>Generate IRN</strong> first.
             </div>
           )
         )}

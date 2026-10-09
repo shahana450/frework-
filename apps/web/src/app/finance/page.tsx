@@ -1,8 +1,37 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useTally, disconnectTally } from "@/lib/tallyConnection";
+import TallyBar from "@/components/TallyBar";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import type { Dashboard } from "@/lib/dashboard";
+import { readTallyLedgerGroups, importTallyVouchers, summaryText } from "@/lib/integrations/tallyClient";
+import type { TallyVoucher } from "@/lib/tallyUtils";
+import { formatMoney } from "@/lib/money";
 import Link from "next/link";
+import HomeDesk from "./HomeDesk";
+
+// Dashboard period presets; "fy" uses the financial-year picker
+const PERIODS = [
+  { key: "fy", label: "Whole financial year" }, { key: "this_month", label: "This month" }, { key: "last_month", label: "Last month" },
+  { key: "this_quarter", label: "This quarter" }, { key: "last_quarter", label: "Last quarter" }, { key: "last_30", label: "Last 30 days" },
+  { key: "last_90", label: "Last 90 days" }, { key: "custom", label: "Custom range…" },
+];
+function periodRange(key: string, custom: { from: string; to: string }): { from: string; to: string; label: string } | null {
+  const iso = (d: Date) => d.toLocaleDateString("en-CA");
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+  const mon = (d: Date) => d.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+  const qStart = m - (((m - 3) % 3) + 3) % 3; // Indian quarters: Apr–Jun, Jul–Sep, Oct–Dec, Jan–Mar
+  switch (key) {
+    case "this_month": return { from: iso(new Date(y, m, 1)), to: iso(new Date(y, m + 1, 0)), label: mon(now) };
+    case "last_month": { const s = new Date(y, m - 1, 1); return { from: iso(s), to: iso(new Date(y, m, 0)), label: mon(s) }; }
+    case "this_quarter": { const s = new Date(y, qStart, 1), e = new Date(y, qStart + 3, 0); return { from: iso(s), to: iso(e), label: `${mon(s)} – ${mon(e)}` }; }
+    case "last_quarter": { const s = new Date(y, qStart - 3, 1), e = new Date(y, qStart, 0); return { from: iso(s), to: iso(e), label: `${mon(s)} – ${mon(e)}` }; }
+    case "last_30": case "last_90": { const n = key === "last_30" ? 30 : 90; const s = new Date(y, m, now.getDate() - (n - 1)); return { from: iso(s), to: iso(now), label: `Last ${n} days` }; }
+    case "custom": return custom.from && custom.to && custom.from <= custom.to ? { from: custom.from, to: custom.to, label: `${new Date(custom.from + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })} – ${new Date(custom.to + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}` } : null;
+    default: return null;
+  }
+}
 
 type TallyStatus = { state: "idle" | "checking" | "connected" | "disconnected"; company: string };
 
@@ -59,44 +88,44 @@ type Business = { id: string; name: string; gstin: string | null; gst_registrati
 type Stats = { sales: number; expenses: number; drafts: number; pendingTds: number; revenue: number; profit: number; tallyLive?: boolean; totalPosted: number };
 
 const QUICK = [
-  { icon: "🧾", label: "New Invoice",    href: "/finance/sales/new",     color: "#F59E0B" },
-  { icon: "📦", label: "Purchase Bill",  href: "/finance/purchases/new", color: "#60A5FA" },
-  { icon: "💸", label: "Record Expense", href: "/finance/expenses",      color: "#A78BFA" },
-  { icon: "📤", label: "Upload Doc",     href: "/finance/upload",        color: "#34D399" },
-  { icon: "💳", label: "Payment Entry",  href: "/finance/payment",       color: "#FB923C" },
-  { icon: "🛩️", label: "Ask FrePilot",  href: "/finance/virtual-ca",    color: "#F59E0B" },
+  { icon: "🧾", label: "New Invoice",    href: "/finance/sales/new",     color: "#8A5A00" },
+  { icon: "📦", label: "Purchase Bill",  href: "/finance/purchases/new", color: "#1F5EFF" },
+  { icon: "💸", label: "Record Expense", href: "/finance/expenses",      color: "#5B4BC4" },
+  { icon: "📤", label: "Upload Doc",     href: "/finance/upload",        color: "#0B7A55" },
+  { icon: "💳", label: "Payment Entry",  href: "/finance/payment",       color: "#B4561E" },
+  { icon: "🛩️", label: "Ask FrePilot",  href: "/finance/virtual-ca",    color: "#8A5A00" },
 ];
 
 const MODULES = [
   { group: "Reports", items: [
-    { icon: "🔍", label: "Audit & Reports",     desc: "Trial balance, P&L, Balance Sheet, audit flags", href: "/finance/audit",          accent: "#34D399" },
-    { icon: "📈", label: "P&L / Reports",      desc: "Income statement, balance sheet, cash flow", href: "/finance/reports",           accent: "#34D399" },
-    { icon: "🏛️", label: "GST Returns",        desc: "GSTR-1, GSTR-3B — auto-prepared",           href: "/finance/gst",               accent: "#60A5FA" },
-    { icon: "🔖", label: "TDS Tracker",         desc: "Section-wise TDS, due dates, calculator",   href: "/finance/tds",               accent: "#F59E0B" },
+    { icon: "🔍", label: "Audit & Reports",     desc: "Trial balance, P&L, Balance Sheet, audit flags", href: "/finance/audit",          accent: "#0B7A55" },
+    { icon: "📈", label: "P&L / Reports",      desc: "Income statement, balance sheet, cash flow", href: "/finance/reports",           accent: "#0B7A55" },
+    { icon: "🏛️", label: "GST Returns",        desc: "GSTR-1, GSTR-3B — auto-prepared",           href: "/finance/gst",               accent: "#1F5EFF" },
+    { icon: "🔖", label: "TDS Tracker",         desc: "Section-wise TDS, due dates, calculator",   href: "/finance/tds",               accent: "#8A5A00" },
   ]},
   { group: "Books", items: [
-    { icon: "📒", label: "Journal Entries",    desc: "Double-entry ledger — Dr = Cr enforced",     href: "/finance/journals",          accent: "#A78BFA" },
-    { icon: "🔴", label: "Credit Notes",       desc: "Issue CN to customers — sales returns",      href: "/finance/credit-note",       accent: "#F87171" },
-    { icon: "🟢", label: "Debit Notes",        desc: "Issue DN to vendors — purchase returns",     href: "/finance/debit-note",        accent: "#34D399" },
+    { icon: "📒", label: "Journal Entries",    desc: "Double-entry ledger — Dr = Cr enforced",     href: "/finance/journals",          accent: "#5B4BC4" },
+    { icon: "🔴", label: "Credit Notes",       desc: "Issue CN to customers — sales returns",      href: "/finance/credit-note",       accent: "#C2321F" },
+    { icon: "🟢", label: "Debit Notes",        desc: "Issue DN to vendors — purchase returns",     href: "/finance/debit-note",        accent: "#0B7A55" },
   ]},
   { group: "Receivables & Payables", items: [
-    { icon: "📥", label: "Receivables (AR)",   desc: "Who owes you money, aging report",           href: "/finance/receivables",       accent: "#34D399" },
-    { icon: "📤", label: "Payables (AP)",       desc: "Who you owe, vendor aging",                 href: "/finance/payables",          accent: "#F87171" },
-    { icon: "🏦", label: "Bank Reconciliation", desc: "Import CSV, auto-match entries",            href: "/finance/banking",           accent: "#60A5FA" },
+    { icon: "📥", label: "Receivables (AR)",   desc: "Who owes you money, aging report",           href: "/finance/receivables",       accent: "#0B7A55" },
+    { icon: "📤", label: "Payables (AP)",       desc: "Who you owe, vendor aging",                 href: "/finance/payables",          accent: "#C2321F" },
+    { icon: "🏦", label: "Bank Reconciliation", desc: "Import CSV, auto-match entries",            href: "/finance/banking",           accent: "#1F5EFF" },
   ]},
   { group: "AI & Automation", items: [
-    { icon: "🤖", label: "Chat Bookkeeping",   desc: "Type or photo a bill — AI books instantly",  href: "/finance/chat-book",         accent: "#C9A84C" },
+    { icon: "🤖", label: "Chat Bookkeeping",   desc: "Type or photo a bill — AI books instantly",  href: "/finance/chat-book",         accent: "#232A63" },
     { icon: "💬", label: "WhatsApp Bot",       desc: "Book transactions via WhatsApp message",     href: "/finance/whatsapp",          accent: "#25D366" },
-    { icon: "🧾", label: "E-Invoice (IRN)",   desc: "Build IRP-compliant JSON, generate IRN",     href: "/finance/einvoice",          accent: "#60A5FA" },
+    { icon: "🧾", label: "E-Invoice (IRN)",   desc: "Build IRP-compliant JSON, generate IRN",     href: "/finance/einvoice",          accent: "#1F5EFF" },
   ]},
   { group: "HR & Compliance", items: [
-    { icon: "👔", label: "Payroll",            desc: "Salary slips, PF, ESI, PT, TDS auto-calc",  href: "/finance/payroll",           accent: "#A78BFA" },
-    { icon: "🏢", label: "CA Dashboard",      desc: "Manage multiple clients from one screen",    href: "/finance/ca-dashboard",      accent: "#34D399" },
+    { icon: "👔", label: "Payroll",            desc: "Salary slips, PF, ESI, PT, TDS auto-calc",  href: "/finance/payroll",           accent: "#5B4BC4" },
+    { icon: "🏢", label: "CA Dashboard",      desc: "Manage multiple clients from one screen",    href: "/finance/ca-dashboard",      accent: "#0B7A55" },
   ]},
   { group: "Setup", items: [
-    { icon: "🔄", label: "Tally Sync",         desc: "Export/Import as Tally-compatible XML",     href: "/finance/tally",             accent: "#FB923C" },
-    { icon: "👥", label: "Contacts",            desc: "Customers & vendors with opening balances", href: "/finance/contacts",          accent: "#A78BFA" },
-    { icon: "📊", label: "Chart of Accounts",  desc: "Indian account heads structure",             href: "/finance/chart-of-accounts", accent: "#60A5FA" },
+    { icon: "🔄", label: "Tally Sync",         desc: "Export/Import as Tally-compatible XML",     href: "/finance/tally",             accent: "#B4561E" },
+    { icon: "👥", label: "Contacts",            desc: "Customers & vendors with opening balances", href: "/finance/contacts",          accent: "#5B4BC4" },
+    { icon: "📊", label: "Chart of Accounts",  desc: "Indian account heads structure",             href: "/finance/chart-of-accounts", accent: "#1F5EFF" },
   ]},
 ];
 
@@ -109,18 +138,21 @@ export default function FrePilotDashboard() {
   const [loading, setLoading] = useState(true);
   const [fyLabel, setFyLabel] = useState("2025-26");
   const [fyId, setFyId] = useState<string | null>(null);
+  const [dash, setDash] = useState<Dashboard | null>(null);
+  const [dashErr, setDashErr] = useState("");
+  const [command, setCommand] = useState("");
+  const [dashTick, setDashTick] = useState(0);
+  const [periodKey, setPeriodKey] = useState("fy");
+  const [custom, setCustom] = useState({ from: "", to: "" });
   const [financialYears, setFinancialYears] = useState<{ id: string; label: string }[]>([]);
-  const [tally, setTally] = useState<TallyStatus>({ state: "idle", company: "" });
+  const [missingFy, setMissingFy] = useState<{ label: string; start: string; end: string } | null>(null);
+  // The app-wide Tally connection (set up on the Tally page)
+  const shared = useTally();
+  const tally: TallyStatus = { state: shared.status === "connected" ? "connected" : shared.status === "connecting" ? "checking" : shared.status === "error" ? "disconnected" : "idle", company: shared.company };
   const [tallySyncing, setTallySyncing] = useState<"ledgers" | "vouchers" | null>(null);
   const [tallySyncMsg, setTallySyncMsg] = useState<{ ok: boolean; msg: string } | null>(null);
   const [tallySyncProgress, setTallySyncProgress] = useState<string | null>(null);
   const [hindi, setHindi] = useState(false);
-
-  const pingTally = useCallback(async () => {
-    setTally(t => ({ ...t, state: "checking" }));
-    const result = await checkTally();
-    setTally(result);
-  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -128,9 +160,6 @@ export default function FrePilotDashboard() {
       setUser({ id: u.id, email: u.email ?? "" });
       loadBusinesses(u.id);
     });
-    pingTally();
-    const id = setInterval(pingTally, 30000);
-    return () => clearInterval(id);
   }, []);
 
   // Auto-sync: at most once every 60 minutes per business, stored in localStorage
@@ -261,12 +290,17 @@ export default function FrePilotDashboard() {
     const curFyStart = today.getMonth() >= 3
       ? `${today.getFullYear()}-04-01`
       : `${today.getFullYear() - 1}-04-01`;
+    // Today's year wins; the Tally sync year is only a fallback
+    const todayIso = today.toLocaleDateString("en-CA");
     const activeFy = selectedFyId
       ? allFys.find(f => f.id === selectedFyId)
-      : (tallyFyId ? allFys.find(f => f.id === tallyFyId) : undefined)
+      : allFys.find(f => f.start_date <= todayIso && f.end_date >= todayIso)
         ?? allFys.find(f => f.start_date === curFyStart)
+        ?? (tallyFyId ? allFys.find(f => f.id === tallyFyId) : undefined)
         ?? allFys.find(f => f.is_current)
         ?? allFys[0];
+    const curStartYear = +curFyStart.slice(0, 4);
+    setMissingFy(allFys.some(f => f.start_date <= todayIso && f.end_date >= todayIso) ? null : { label: `${curStartYear}-${String(curStartYear + 1).slice(2)}`, start: curFyStart, end: `${curStartYear + 1}-03-31` });
     if (activeFy) { setFyLabel(activeFy.label); setFyId(activeFy.id); }
 
     // 2. Count journals by date range (for counts + drafts)
@@ -352,7 +386,20 @@ export default function FrePilotDashboard() {
     if (user) { localStorage.setItem(`fw_fin_biz_${user.id}`, biz.id); loadStats(biz.id, user.id, null); }
   }
 
+  async function createCurrentFy() {
+    if (!activeBiz || !user || !missingFy) return;
+    if (!window.confirm(`Create financial year ${missingFy.label} (1 Apr ${missingFy.start.slice(0, 4)} – 31 Mar ${missingFy.end.slice(0, 4)})?`)) return;
+    const { data, error } = await supabase.from("fw_fin_financial_years").insert({
+      business_id: activeBiz.id, label: missingFy.label, start_date: missingFy.start, end_date: missingFy.end, is_current: true, is_locked: false,
+    }).select("id").single();
+    if (error || !data) { window.alert(`Couldn't create the year: ${error?.message ?? "unknown error"}`); return; }
+    await supabase.from("fw_fin_financial_years").update({ is_current: false }).eq("business_id", activeBiz.id).neq("id", data.id);
+    setMissingFy(null);
+    loadStats(activeBiz.id, user.id, data.id);
+  }
+
   function switchFy(selectedId: string) {
+    if (selectedId === "__create") { createCurrentFy(); return; }
     setFyId(selectedId);
     if (activeBiz && user) loadStats(activeBiz.id, user.id, selectedId);
   }
@@ -365,7 +412,7 @@ export default function FrePilotDashboard() {
       localStorage.removeItem(`fw_tally_last_sync_${activeBiz.id}`);
       sessionStorage.removeItem(`fw_tally_synced_${activeBiz.id}`);
     }
-    setTally({ state: "disconnected", company: "" });
+    disconnectTally();
   }
 
   function tallyParentToType(parent: string): "asset" | "liability" | "equity" | "income" | "expense" {
@@ -527,64 +574,16 @@ export default function FrePilotDashboard() {
 
     if (!allVouchers.length) { setTallySyncMsg({ ok: true, msg: "✓ No new vouchers found — data is up to date." }); setTallySyncing(null); setTallySyncProgress(null); return; }
 
-    const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", activeBiz.id);
-    const accountMap = new Map((accounts ?? []).map(a => [a.name.toLowerCase(), a]));
-    // Build a map of ledger name → voucher type context to infer account type correctly
-    const ledgerVoucherContext = new Map<string, string>();
-    for (const v of allVouchers) for (const l of v.lines) ledgerVoucherContext.set(l.ledgerName, v.voucherType);
-    const missing = new Set<string>();
-    for (const v of allVouchers) for (const l of v.lines) if (!accountMap.has(l.ledgerName.toLowerCase())) missing.add(l.ledgerName);
-    if (missing.size) {
-      const newAcc = Array.from(missing).map((name, i) => {
-        const ctx = ledgerVoucherContext.get(name) ?? "";
-        // Use voucher type context: Sales voucher credit side → income; Purchase debit side → expense
-        let type: string = tallyParentToType(name);
-        if (ctx === "Sales" || ctx === "Credit Note") type = "income";
-        else if (ctx === "Purchase" || ctx === "Debit Note") type = "expense";
-        return { business_id: activeBiz.id, code: `TI${String((accounts?.length ?? 0)+i+1).padStart(3,"0")}`, name, type, description: "From Tally", is_system: false, is_group: false, sort_order: (accounts?.length ?? 0)+i+1 };
-      });
-      const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAcc).select("id,name,type");
-      for (const a of created ?? []) accountMap.set(a.name.toLowerCase(), a);
-    }
-
-    // Dedup by Tally entry_no (TLY-Sales-105, TLY-Receipt-23, etc.)
-    const { data: existingTly } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
-    const existingEntryNos = new Set((existingTly ?? []).map(j => j.entry_no));
-    // Fallback seq counter for unnumbered vouchers
-    let seq = existingTly?.length
-      ? Math.max(0, ...existingTly.map(j => parseInt(j.entry_no.replace(/\D/g,"") || "0", 10))) + 1
-      : 1;
-
-    const typeMap: Record<string,string> = { "Sales":"sales","Purchase":"purchase","Payment":"payment","Receipt":"receipt","Contra":"contra","Journal":"journal","Debit Note":"debit_note","Credit Note":"credit_note" };
-    let imported = 0, skipped = 0;
-    for (const v of allVouchers) {
-      // Build entry_no mirroring Tally: "TLY-Sales 105", "TLY-Receipt 23"
-      const vNum = v.voucherNumber?.trim();
-      const tallyLabel = vNum ? `${v.voucherType} ${vNum}` : `${v.voucherType}-${seq}`;
-      const entryNo = `TLY-${tallyLabel}`;
-      // Skip already-imported vouchers (dedup by entry_no)
-      if (existingEntryNos.has(entryNo)) { skipped++; continue; }
-
-      const fpType = typeMap[v.voucherType] ?? "journal";
-      const totalDr = v.lines.filter(l => l.isDeemed).reduce((s,l) => s+l.amount, 0);
-      const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s,l) => s+l.amount, 0);
-      const narration = v.narration || tallyLabel;
-      const { data: jRow, error: jErr } = await supabase.from("fw_fin_journals").insert({
-        business_id: activeBiz.id, financial_year_id: activeFy?.id ?? null,
-        entry_no: entryNo, date: v.date, narration, type: fpType,
-        status: "posted", total_debit: totalDr||totalCr, total_credit: totalCr||totalDr,
-        reference_no: vNum || null,
-      }).select("id").single();
-      if (jErr || !jRow) { skipped++; continue; }
-      const lines = v.lines.map(l => { const acc = accountMap.get(l.ledgerName.toLowerCase()); if (!acc) return null; return { journal_id: jRow.id, account_id: acc.id, narration: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }; }).filter(Boolean);
-      if (lines.length > 0) {
-        await supabase.from("fw_fin_journal_lines").insert(lines as {journal_id:string;account_id:string;narration:string;dr_amount:number;cr_amount:number}[]);
-        imported++; if (!vNum) seq++; existingEntryNos.add(entryNo);
-      } else { await supabase.from("fw_fin_journals").delete().eq("id", jRow.id); skipped++; }
+    // Import through FreWork's posting engine (validation, year locks, audit log, duplicate-safe numbering)
+    try {
+      const groups = await readTallyLedgerGroups(tallyUrl, tally.company || null);
+      const sum = await importTallyVouchers(activeBiz.id, allVouchers as TallyVoucher[], { ledgerGroups: groups, company: tally.company || null, onProgress: setTallySyncProgress });
+      setTallySyncMsg({ ok: sum.failedCount === 0, msg: summaryText(sum) });
+    } catch (e) {
+      setTallySyncMsg({ ok: false, msg: e instanceof Error ? e.message : "Import failed." });
     }
     // Update last-sync timestamp so auto-sync cooldown resets after a manual import
     if (activeBiz) localStorage.setItem(`fw_tally_last_sync_${activeBiz.id}`, String(Date.now()));
-    setTallySyncMsg({ ok: imported > 0, msg: imported > 0 ? `✓ Imported ${imported} voucher${imported!==1?"s":""}${skipped>0?` (${skipped} skipped, already existed)`:""}.` : `No new vouchers to import${skipped>0?` (${skipped} already existed)`:""}.` });
     if (activeBiz && user) loadStats(activeBiz.id, user.id, fyId);
     setTallySyncing(null); setTallySyncProgress(null);
   }, [activeBiz, tally.state, tallyUrl, fyId, user]);
@@ -617,167 +616,121 @@ export default function FrePilotDashboard() {
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  // Live figures from posted entries (same engine as the reports)
+  useEffect(() => {
+    if (!activeBiz) return;
+    let cancelled = false;
+    setDash(null); setDashErr("");
+    const pr = periodRange(periodKey, custom);
+    if (periodKey === "custom" && !pr) return;
+    fetch(`/api/finance/dashboard?business_id=${activeBiz.id}${fyId ? `&fy_id=${fyId}` : ""}${pr ? `&from=${pr.from}&to=${pr.to}&label=${encodeURIComponent(pr.label)}` : ""}`)
+      .then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error ?? "We couldn't load your dashboard right now."); return d; })
+      .then(d => { if (!cancelled) setDash(d); })
+      .catch(e => { if (!cancelled) setDashErr(e instanceof Error ? e.message : "We couldn't load your dashboard right now."); });
+    return () => { cancelled = true; };
+  }, [activeBiz, fyId, dashTick, periodKey, custom]);
   const fmt = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   if (!loading && businesses.length === 0) {
     return (
-      <div style={{ minHeight: "100vh", background: "#050914", color: "#E8EDF5", fontFamily: "'DM Sans',system-ui,sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "2rem" }}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');`}</style>
-        <div style={{ width: 64, height: 64, borderRadius: 18, background: "linear-gradient(135deg,#1A2E5A,#C9A84C)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.8rem", marginBottom: "1.5rem", boxShadow: "0 0 40px rgba(201,168,76,0.3)" }}>🛩️</div>
-        <h1 style={{ fontSize: "2.2rem", fontWeight: 900, background: "linear-gradient(135deg,#E8EDF5,#C9A84C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", margin: "0 0 0.5rem", letterSpacing: "-0.03em" }}>Welcome to FrePilot</h1>
-        <p style={{ color: "rgba(232,237,245,0.45)", fontSize: "1rem", maxWidth: 380, lineHeight: 1.7, margin: "0 0 2.5rem" }}>Your AI accountant is ready. Set up your business in 2 minutes.</p>
-        <Link href="/finance/setup" style={{ background: "linear-gradient(135deg,#B8922A,#C9A84C)", color: "#050914", padding: "14px 40px", borderRadius: 12, fontWeight: 800, textDecoration: "none", fontSize: "0.95rem", letterSpacing: "0.01em", boxShadow: "0 8px 32px rgba(201,168,76,0.35)" }}>
+      <div style={{ minHeight: "100vh", background: "#F6F1E6", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "2rem", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;500;600;700&display=swap');`}</style>
+        <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: "3rem", color: "#B4501E", marginBottom: "1rem", fontStyle: "italic", fontWeight: 500 }}>FrePilot</div>
+        <h1 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: "1.75rem", fontWeight: 600, color: "#2B2214", margin: "0 0 0.75rem" }}>Welcome to your accounting desk</h1>
+        <p style={{ color: "#847457", fontSize: "1rem", maxWidth: 380, lineHeight: 1.7, margin: "0 0 2.5rem" }}>Your AI accountant is ready. Set up your business in 2 minutes.</p>
+        <Link href="/finance/setup" style={{ background: "#B4501E", color: "#FFFDF8", padding: "12px 36px", borderRadius: 2, fontWeight: 700, textDecoration: "none", fontSize: "0.9rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>
           Set Up My Business →
         </Link>
       </div>
     );
   }
 
+  const WE = {
+    bg: "#F6F1E7", surface: "#FFFFFF", surfaceAlt: "#EFE8D9", border: "#E6DFD0",
+    ink: "#10241F", inkSoft: "#5E6B66", accent: "#0F2B25", rule: "#E6DFD0",
+    green: "#0B7A55", blue: "#0F2B25",
+  };
+
   return (
-    <div style={{ minHeight: "100vh", background: "#0A0D14", color: "#E2E8F0", fontFamily: "Inter,system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: WE.bg, color: WE.ink, fontFamily: "'Manrope',system-ui,sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; }
-        .fp-kpi { background: #111827; border: 1px solid #1F2937; border-radius: 12px; padding: 1.25rem; transition: border-color 0.15s; }
-        .fp-kpi:hover { border-color: #374151; }
-        .fp-quick { background: #111827; border: 1px solid #1F2937; border-radius: 8px; padding: 0.625rem 1rem; display: flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.15s; white-space: nowrap; }
-        .fp-quick:hover { background: #1F2937; }
-        .fp-mod { background: #111827; border: 1px solid #1F2937; border-radius: 10px; padding: 0.875rem 1rem; display: flex; gap: 0.75rem; align-items: flex-start; text-decoration: none; transition: border-color 0.15s; }
-        .fp-mod:hover { border-color: #374151; }
-        select option { background: #111827; }
+        .we-serif { font-family: 'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif; font-style: normal !important; font-weight: 700; }
+        .we-nav-link { display:flex;align-items:center;gap:10px;padding:8px 10px 8px 13px;color:${WE.ink};font-size:13.5px;text-decoration:none;transition:color 0.15s; }
+        .we-nav-link:hover { color:${WE.accent}; }
+        .we-nav-active { display:flex;align-items:center;gap:10px;padding:8px 10px;border-left:3px solid ${WE.accent};background:${WE.surface};color:${WE.accent};font-size:13.5px;font-weight:600;text-decoration:none; }
+        .we-kpi { padding:22px;cursor:pointer;text-decoration:none;display:block;transition:background 0.15s; }
+        .we-kpi:hover { background:${WE.surface}; }
+        .we-quick { background:${WE.surface};border-right:1px solid ${WE.rule};border-bottom:1px solid ${WE.rule};padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11.5px;font-weight:600;color:${WE.ink};text-decoration:none;transition:background 0.15s; }
+        .we-quick:hover { background:${WE.surfaceAlt}; }
+        .we-mod { background:${WE.surface};border-right:1px solid ${WE.rule};border-bottom:1px solid ${WE.rule};padding:16px 18px;display:flex;align-items:flex-start;gap:12px;text-decoration:none;transition:background 0.15s; }
+        .we-mod:hover { background:${WE.surfaceAlt}; }
+        select option { background:${WE.surface}; color:${WE.ink}; }
+        @media (max-width: 760px) { .we-desk { grid-template-columns: 1fr !important; } main { padding: 20px 16px !important; } }
         @keyframes tp-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #1F2937; border-radius: 4px; }
+        @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.3);opacity:0.7} }
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background:${WE.rule}; border-radius: 4px; }
       `}</style>
 
-      <nav style={{ background: "#0A0D14", borderBottom: "1px solid #1F2937", padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.5rem", height: 52, position: "sticky", top: 0, zIndex: 30 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7, marginRight: 4 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg,#1E40AF,#CA8A04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem" }}>🛩️</div>
-          <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "#F1F5F9" }}>FrePilot</span>
-        </div>
-        <div style={{ width: 1, height: 18, background: "#1F2937" }} />
-        <select value={activeBiz?.id ?? ""} onChange={e => { const b = businesses.find(x => x.id === e.target.value); if (b) switchBiz(b); }}
-          style={{ background: "transparent", border: "none", color: "#E2E8F0", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", outline: "none", maxWidth: 180 }}>
-          {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </select>
-        <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)}
-          style={{ background: "transparent", border: "none", color: "#6B7280", fontSize: "0.8125rem", cursor: "pointer", fontFamily: "inherit", outline: "none" }}>
-          {financialYears.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
-          {financialYears.length === 0 && <option value="">FY {fyLabel}</option>}
-        </select>
-        <div style={{ flex: 1 }} />
-        {tally.state === "connected" ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 0, borderRadius: 20, overflow: "hidden", border: "1px solid rgba(52,211,153,0.25)", background: "rgba(52,211,153,0.07)" }}>
-            <Link href="/finance/tally" style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", textDecoration: "none" }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#34D399", animation: "tp-pulse 2s ease-in-out infinite" }} />
-              <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#34D399" }}>{tally.company}</span>
-            </Link>
-            <button onClick={doDisconnectTally} style={{ background: "transparent", border: "none", borderLeft: "1px solid rgba(52,211,153,0.2)", color: "#6B7280", fontSize: "0.7rem", padding: "4px 8px", cursor: "pointer", fontFamily: "inherit" }}>✕</button>
-          </div>
-        ) : (
-          <Link href="/finance/tally" style={{ fontSize: "0.75rem", color: "#6B7280", textDecoration: "none", border: "1px solid #1F2937", padding: "4px 10px", borderRadius: 20 }}>Tally Sync</Link>
-        )}
-        <button onClick={() => setHindi(h => !h)} style={{ background: hindi ? "rgba(201,168,76,0.12)" : "transparent", border: "1px solid #1F2937", color: hindi ? "#C9A84C" : "#6B7280", padding: "4px 10px", borderRadius: 20, fontSize: "0.72rem", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
-          {hindi ? "EN" : "हिं"}
-        </button>
-        <Link href="/finance/ca-dashboard" style={{ fontSize: "0.72rem", color: "#6B7280", textDecoration: "none", border: "1px solid #1F2937", padding: "4px 10px", borderRadius: 20 }}>CA View</Link>
-        <Link href="/finance/virtual-ca" style={{ background: "#1E3A5F", color: "#93C5FD", padding: "5px 12px", borderRadius: 8, fontSize: "0.75rem", textDecoration: "none", fontWeight: 600 }}>{hindi ? "फ्रीपायलट पूछें" : "Ask FrePilot"}</Link>
-        <Link href="/finance/setup" style={{ color: "#4B5563", fontSize: "1rem", textDecoration: "none" }}>⚙</Link>
-      </nav>
+      <div style={{ display: "flex", minHeight: "100vh" }}>
 
-      <div style={{ minHeight: "calc(100vh - 52px)" }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "1.75rem 1.5rem" }}>
+        {/* ── Main ────────────────────────────────────────────────────── */}
+        <main style={{ flex: 1, minWidth: 0, padding: "36px 48px", display: "flex", flexDirection: "column", gap: 26, overflowY: "auto" }}>
           {activeBiz && (
             <>
-              {/* Header */}
-              <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: "0.75rem", color: "#4B5563", marginBottom: "0.2rem" }}>{greeting}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                  <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em", color: "#F1F5F9" }}>{activeBiz.name}</h1>
-                  {activeBiz.gstin && <span style={{ fontSize: "0.7rem", color: "#4B5563", fontFamily: "'JetBrains Mono',monospace", background: "#111827", border: "1px solid #1F2937", padding: "2px 8px", borderRadius: 5 }}>GSTIN {activeBiz.gstin}</span>}
-                  {loading && <span style={{ fontSize: "0.75rem", color: "#4B5563" }}>Loading…</span>}
-                </div>
-              </div>
+              <HomeDesk dash={dash} bizName={activeBiz.name} greeting={greeting} dashErr={dashErr} onRetry={() => setDashTick(t => t + 1)}
+                controls={<>
+                  <select value={activeBiz?.id ?? ""} onChange={e => { const b = businesses.find(x => x.id === e.target.value); if (b) switchBiz(b); }} title="Business"
+                    style={{ height: 40, background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 10px", fontSize: 13, color: "#141A3A", maxWidth: 200 }}>
+                    {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                  <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} title="Financial year"
+                    style={{ height: 40, background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 10px", fontSize: 13, color: "#141A3A" }}>
+                    {financialYears.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
+                    {financialYears.length === 0 && <option value="">FY {fyLabel}</option>}
+                    {missingFy && <option value="__create">＋ FY {missingFy.label} — create</option>}
+                  </select>
+                  <select value={periodKey} onChange={e => setPeriodKey(e.target.value)} title="Period"
+                    style={{ height: 40, background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 10px", fontSize: 13, color: "#141A3A" }}>
+                    {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+                  </select>
+                  {periodKey === "custom" && <>
+                    <input type="date" aria-label="From" value={custom.from} onChange={e => setCustom(c => ({ ...c, from: e.target.value }))} style={{ height: 40, border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 8px", fontSize: 13, color: "#141A3A", background: "#FFFFFF" }} />
+                    <input type="date" aria-label="To" value={custom.to} min={custom.from || undefined} onChange={e => setCustom(c => ({ ...c, to: e.target.value }))} style={{ height: 40, border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 8px", fontSize: 13, color: "#141A3A", background: "#FFFFFF" }} />
+                  </>}
+                  <Link href="/finance/tally" style={{ height: 40, padding: "0 14px", borderRadius: 11, border: "1px solid #C9CEDF", color: "#141A3A", fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", textDecoration: "none" }}>Tally</Link>
+                </>} />
 
-              {/* KPI Cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
-                {[
-                  { label: hindi ? "राजस्व" : "Revenue", value: loading ? "—" : fmt(stats.revenue), color: "#34D399", sub: `FY ${fyLabel}`, mono: true, href: "/finance/journals?type=sales,receipt&status=posted" },
-                  { label: hindi ? "शुद्ध लाभ" : "Net Profit", value: loading ? "—" : (stats.profit < 0 ? "−" : "") + fmt(stats.profit), color: stats.profit >= 0 ? "#34D399" : "#F87171", sub: stats.profit < 0 ? (hindi ? "शुद्ध हानि" : "Net loss") : (hindi ? "शुद्ध लाभ" : "Net profit"), mono: true, href: "/finance/audit" },
-                  { label: hindi ? "कुल प्रविष्टियाँ" : "Total Entries", value: loading ? "—" : String(stats.totalPosted), color: "#60A5FA", sub: hindi ? "पोस्ट जर्नल" : "Posted journals", mono: false, href: "/finance/journals?status=posted" },
-                  { label: hindi ? "मसौदे" : "Drafts", value: loading ? "—" : String(stats.drafts), color: stats.drafts > 0 ? "#F59E0B" : "#4B5563", sub: stats.drafts > 0 ? (hindi ? "समीक्षा आवश्यक" : "Needs review") : (hindi ? "सब ठीक" : "All clear"), mono: false, href: "/finance/journals?status=draft" },
-                ].map(k => (
-                  <Link key={k.label} href={k.href} className="fp-kpi" style={{ textDecoration: "none", display: "block" }}>
-                    <div style={{ fontSize: "0.65rem", color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: "0.625rem" }}>{k.label}</div>
-                    <div style={{ fontSize: "1.375rem", fontWeight: 700, color: k.color, fontFamily: k.mono ? "'JetBrains Mono',monospace" : "inherit", letterSpacing: "-0.01em", lineHeight: 1, marginBottom: "0.375rem" }}>{k.value}</div>
-                    <div style={{ fontSize: "0.72rem", color: "#374151" }}>{k.sub}</div>
-                  </Link>
-                ))}
-              </div>
-
-              {/* Quick Actions */}
-              <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: "0.65rem", color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: "0.625rem" }}>{hindi ? "त्वरित कार्य" : "Quick Actions"}</div>
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  {QUICK.map(q => (
-                    <Link key={q.href} href={q.href} className="fp-quick">
-                      <span style={{ fontSize: "0.875rem" }}>{q.icon}</span>
-                      <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#E2E8F0" }}>{q.label}</span>
+              {/* All Modules */}
+              <div style={{ position: "relative", zIndex: 1 }}>
+                <details><summary className="we-serif" style={{ fontSize: 15, fontStyle: "italic", color: WE.inkSoft, marginBottom: 10, cursor: "pointer" }}>{hindi ? "सभी मॉड्यूल" : "All modules"}</summary>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", borderTop: `1px solid ${WE.rule}`, borderLeft: `1px solid ${WE.rule}` }}>
+                  {MODULES.flatMap(g => g.items).map(m => (
+                    <Link key={m.href} href={m.href} className="we-mod">
+                      <div style={{ width: 34, height: 34, color: WE.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `1px solid ${WE.accent}`, borderRadius: 2, fontSize: "1rem" }}>{m.icon}</div>
+                      <div>
+                        <div className="we-serif" style={{ fontSize: 14.5, fontWeight: 600, color: WE.ink }}>{m.label}</div>
+                        <div style={{ fontSize: 12, color: WE.inkSoft, marginTop: 3, lineHeight: 1.4 }}>{m.desc}</div>
+                      </div>
                     </Link>
                   ))}
                 </div>
+                </details>
               </div>
 
-              {/* Modules — flat 2-column grid */}
-              <div style={{ fontSize: "0.65rem", color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, marginBottom: "0.625rem", marginTop: "0.25rem" }}>{hindi ? "सभी मॉड्यूल" : "All Modules"}</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "0.5rem" }}>
-                {MODULES.flatMap(g => g.items).map(m => (
-                  <Link key={m.href} href={m.href} className="fp-mod" style={{ textDecoration: "none" }}>
-                    <div style={{ width: 30, height: 30, borderRadius: 8, background: "#1F2937", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", flexShrink: 0 }}>{m.icon}</div>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: "0.8125rem", color: "#E2E8F0", marginBottom: "0.15rem" }}>{m.label}</div>
-                      <div style={{ fontSize: "0.72rem", color: "#4B5563", lineHeight: 1.4 }}>{m.desc}</div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              {/* Tally Sync Card */}
+              {/* Tally: the same status as every other page; import and push happen on the Tally page */}
+              {shared.company && <TallyBar preferName={activeBiz.name} returnTo="/finance" />}
+              {tallySyncMsg && <div style={{ fontSize: 12, color: tallySyncMsg.ok ? WE.green : "#8A6D3B" }}>{tallySyncMsg.msg}</div>}
 
-              {/* Tally Sync Card — shown when connected */}
-              {tally.state === "connected" && (
-                <div style={{ marginTop: "1.5rem", background: "#111827", border: "1px solid rgba(52,211,153,0.2)", borderRadius: 12, padding: "1rem 1.25rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem", flexWrap: "wrap", gap: "0.5rem" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D399", animation: "tp-pulse 2s ease-in-out infinite" }} />
-                      <span style={{ fontWeight: 600, fontSize: "0.875rem", color: "#34D399" }}>Tally Connected · {tally.company}</span>
-                    </div>
-                    <Link href="/finance/tally" style={{ fontSize: "0.75rem", color: "#6B7280", textDecoration: "none" }}>Open Tally Sync →</Link>
-                  </div>
-
-                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                    {[
-                      { label: "Import Ledgers", onClick: doImportLedgers, active: tallySyncing === "ledgers" },
-                      { label: tallySyncing === "vouchers" ? (tallySyncProgress ?? "Syncing…") : "Import Vouchers", onClick: () => doImportVouchers(false), active: tallySyncing === "vouchers" },
-                      { label: "Fix Duplicates", onClick: doFixDuplicates, active: false },
-                    ].map(b => (
-                      <button key={b.label} onClick={b.onClick} disabled={!!tallySyncing}
-                        style={{ padding: "7px 14px", borderRadius: 7, border: "1px solid #1F2937", background: "transparent", color: "#94A3B8", fontSize: "0.8rem", fontWeight: 500, cursor: tallySyncing ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: tallySyncing ? 0.5 : 1 }}>
-                        {b.label}
-                      </button>
-                    ))}
-                  </div>
-                  {tallySyncMsg && (
-                    <div style={{ marginTop: "0.75rem", fontSize: "0.8rem", fontWeight: 500, color: tallySyncMsg.ok ? "#34D399" : "#FBBF24", padding: "0.5rem 0.75rem", borderRadius: 7, background: tallySyncMsg.ok ? "rgba(16,185,129,0.07)" : "rgba(251,191,36,0.07)", border: `1px solid ${tallySyncMsg.ok ? "rgba(16,185,129,0.2)" : "rgba(251,191,36,0.2)"}` }}>
-                      {tallySyncMsg.msg}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div style={{ marginTop: "2rem", fontSize: "0.72rem", color: "#1F2937", textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: WE.rule, textAlign: "center", paddingTop: 8 }}>
                 FrePilot · FY {fyLabel} · {activeBiz.name}
               </div>
             </>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );

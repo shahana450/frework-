@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { saveEntry } from "@/lib/postEntry";
 import Link from "next/link";
 
 type Contact = { id: string; name: string; gstin: string | null; email: string | null };
@@ -107,7 +108,7 @@ export default function NewSalesInvoicePage() {
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
   async function handleSubmit(mode: "draft" | "post") {
-    if (!bizId || !fyId || !salesAccountId) { setError("Missing required fields"); return; }
+    if (!bizId || !salesAccountId) { setError("Choose the sales account"); return; }
     if (lines.every(l => !l.amount)) { setError("Add at least one line item with amount"); return; }
     setSaving(true);
     setError("");
@@ -120,69 +121,62 @@ export default function NewSalesInvoicePage() {
     const igstAcc = accounts.find(a => a.name.toLowerCase().includes("igst output") || (a.name.toLowerCase().includes("igst") && a.type === "liability"));
     const debtorAcc = accounts.find(a => a.sub_type === "trade_receivables" || a.name.toLowerCase().includes("debtor") || a.name.toLowerCase().includes("receivable"));
 
-    // Build journal lines
-    // For credit sales: Dr Debtors/Bank/Cash, Cr Sales, Cr GST
-    const jLines: { account_id: string; dr_amount: number; cr_amount: number; narration: string }[] = [];
-
-    const debitAccId = paymentMode === "credit" ? (debtorAcc?.id ?? salesAccountId) : bankAccountId;
-
-    jLines.push({ account_id: debitAccId, dr_amount: grandTotal, cr_amount: 0, narration: `Sales to ${customer?.name ?? "Customer"}` });
-    jLines.push({ account_id: salesAccountId, dr_amount: 0, cr_amount: subtotal, narration: `Sales - ${invoiceNo}` });
-    if (totalCGST > 0 && cgstAcc) jLines.push({ account_id: cgstAcc.id, dr_amount: 0, cr_amount: totalCGST, narration: "CGST Output" });
-    if (totalSGST > 0 && sgstAcc) jLines.push({ account_id: sgstAcc.id, dr_amount: 0, cr_amount: totalSGST, narration: "SGST Output" });
-    if (totalIGST > 0 && igstAcc) jLines.push({ account_id: igstAcc.id, dr_amount: 0, cr_amount: totalIGST, narration: "IGST Output" });
-
-    const { data: journal, error: jErr } = await supabase.from("fw_fin_journals").insert({
-      business_id: bizId,
-      fy_id: fyId,
-      date: invoiceDate,
-      entry_no: invoiceNo,
-      type: "sales",
-      narration: narration || `Sales Invoice ${invoiceNo} - ${customer?.name ?? "Customer"}`,
-      total_debit: grandTotal,
-      total_credit: grandTotal,
-      status: mode === "post" ? "posted" : "draft",
-      reference_no: invoiceNo,
-      contact_id: customerId || null,
-      ai_generated: false,
-    }).select("id").single();
-
-    if (jErr || !journal) { setError(jErr?.message ?? "Failed to save journal"); setSaving(false); return; }
-
-    await supabase.from("fw_fin_journal_lines").insert(jLines.map(l => ({ ...l, journal_id: journal.id })));
+    // Credit sale: Dr Debtors · Cash/bank sale: Dr Bank — Cr Sales, Cr Output GST
+    if (paymentMode !== "credit" && !bankAccountId) { setError("Choose the bank or cash account received into"); setSaving(false); return; }
+    try {
+      await saveEntry({
+        business_id: bizId, mode: mode === "post" ? "post" : "draft", date: invoiceDate, type: "sales", source: "sales_invoice",
+        narration: narration || `Sales Invoice ${invoiceNo} - ${customer?.name ?? "Customer"}`,
+        reference_no: invoiceNo, party_name: customer?.name ?? null, contact_id: customerId || null,
+        // Item detail for GSTR-1 (HSN, rate, quantity, place of supply)
+        metadata: { gst_invoice: {
+          customer_gstin: customer?.gstin || null, customer_state: customerState || null, pos: (isIGST ? customerState : bizState) || null,
+          items: lines.filter(l => l.amount).map(l => ({ hsn: l.hsn_sac.trim() || undefined, desc: l.description.slice(0, 30), uqc: "NOS", qty: parseFloat(l.qty) || 0, gst_rate: parseFloat(l.gst_rate) || 0, taxable: l.amount, igst: l.igst, cgst: l.cgst, sgst: l.sgst })),
+        } },
+        lines: [
+          paymentMode === "credit"
+            ? { account_id: debtorAcc?.id, account_name: debtorAcc ? null : "Debtors Control", dr: grandTotal, cr: 0, narration: `Sales to ${customer?.name ?? "Customer"}` }
+            : { account_id: bankAccountId, dr: grandTotal, cr: 0, narration: `Sales to ${customer?.name ?? "Customer"}` },
+          { account_id: salesAccountId, dr: 0, cr: subtotal, narration: `Sales - ${invoiceNo}` },
+          { account_id: cgstAcc?.id, account_name: cgstAcc ? null : "Output CGST", dr: 0, cr: totalCGST, narration: "CGST Output" },
+          { account_id: sgstAcc?.id, account_name: sgstAcc ? null : "Output SGST", dr: 0, cr: totalSGST, narration: "SGST Output" },
+          { account_id: igstAcc?.id, account_name: igstAcc ? null : "Output IGST", dr: 0, cr: totalIGST, narration: "IGST Output" },
+        ],
+      });
+    } catch (e) { setError(e instanceof Error ? e.message : "Failed to save"); setSaving(false); return; }
 
     router.push("/finance/journals");
   }
 
-  const inputStyle = { background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
-  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
+  const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
+  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <Link href="/finance/journals" style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem", textDecoration: "none" }}>Journals</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>New Sales Invoice</span>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <Link href="/finance/journals" style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem", textDecoration: "none" }}>Journals</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>New Sales Invoice</span>
       </nav>
 
       <div style={{ maxWidth: 980, margin: "0 auto", padding: "2rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
           <div>
             <h1 style={{ margin: "0 0 0.2rem", fontSize: "1.3rem", fontWeight: 800 }}>New Sales Invoice</h1>
-            <p style={{ margin: 0, color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Create a sales invoice — journal entry is auto-generated</p>
+            <p style={{ margin: 0, color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Create a sales invoice — journal entry is auto-generated</p>
           </div>
           <div style={{ display: "flex", gap: "0.75rem" }}>
-            <button onClick={() => handleSubmit("draft")} disabled={saving} style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
-            <button onClick={() => handleSubmit("post")} disabled={saving} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>Post Invoice</button>
+            <button onClick={() => handleSubmit("draft")} disabled={saving} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
+            <button onClick={() => handleSubmit("post")} disabled={saving} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>Post Invoice</button>
           </div>
         </div>
 
-        {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
+        {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#C2321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
 
         {/* Header Section */}
-        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem", marginBottom: "1rem" }}>
+        <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem", marginBottom: "1rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
             <div>
               <label style={labelStyle}>Invoice No</label>
@@ -234,22 +228,22 @@ export default function NewSalesInvoicePage() {
         </div>
 
         {/* Line Items */}
-        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, overflow: "hidden", marginBottom: "1rem" }}>
-          <div style={{ padding: "0.85rem 1.25rem", borderBottom: "1px solid rgba(237,232,220,0.06)", fontWeight: 700, fontSize: "0.88rem" }}>
-            Line Items {isIGST && <span style={{ marginLeft: "0.5rem", fontSize: "0.7rem", background: "rgba(201,168,76,0.1)", color: "#C9A84C", padding: "2px 8px", borderRadius: 10 }}>IGST (inter-state)</span>}
+        <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, overflow: "hidden", marginBottom: "1rem" }}>
+          <div style={{ padding: "0.85rem 1.25rem", borderBottom: "1px solid rgba(20,26,58,0.08)", fontWeight: 700, fontSize: "0.88rem" }}>
+            Line Items {isIGST && <span style={{ marginLeft: "0.5rem", fontSize: "0.7rem", background: "rgba(35,42,99,0.1)", color: "#232A63", padding: "2px 8px", borderRadius: 10 }}>IGST (inter-state)</span>}
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "rgba(255,255,255,0.01)" }}>
+                <tr style={{ background: "#FFFFFF" }}>
                   {["Description", "HSN/SAC", "Qty", "Rate (₹)", `GST %`, "Base (₹)", isIGST ? "IGST (₹)" : "CGST+SGST (₹)", ""].map(h => (
-                    <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: h.includes("₹") || h.includes("%") ? "right" : "left", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>{h}</th>
+                    <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: h.includes("₹") || h.includes("%") ? "right" : "left", fontSize: "0.65rem", color: "rgba(20,26,58,0.60)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {lines.map((line, i) => (
-                  <tr key={i} style={{ borderTop: "1px solid rgba(237,232,220,0.04)" }}>
+                  <tr key={i} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
                     <td style={{ padding: "0.4rem 0.75rem", minWidth: 180 }}>
                       <input value={line.description} onChange={e => updateLine(i, "description", e.target.value)} placeholder="Item description" style={{ ...inputStyle, minWidth: 160 }} />
                     </td>
@@ -267,15 +261,15 @@ export default function NewSalesInvoicePage() {
                         {GST_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
                       </select>
                     </td>
-                    <td style={{ padding: "0.4rem 0.75rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "rgba(237,232,220,0.7)" }}>
+                    <td style={{ padding: "0.4rem 0.75rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "rgba(20,26,58,0.95)" }}>
                       {fmt(line.amount)}
                     </td>
-                    <td style={{ padding: "0.4rem 0.75rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "#C9A84C" }}>
+                    <td style={{ padding: "0.4rem 0.75rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "#232A63" }}>
                       {isIGST ? fmt(line.igst) : fmt(line.cgst + line.sgst)}
                     </td>
                     <td style={{ padding: "0.4rem 0.75rem" }}>
                       {lines.length > 1 && (
-                        <button onClick={() => removeLine(i)} style={{ background: "none", border: "none", color: "rgba(248,113,113,0.5)", cursor: "pointer", fontSize: "1rem", padding: "2px 4px" }}>✕</button>
+                        <button onClick={() => removeLine(i)} style={{ background: "none", border: "none", color: "rgba(194,50,31,0.5)", cursor: "pointer", fontSize: "1rem", padding: "2px 4px" }}>✕</button>
                       )}
                     </td>
                   </tr>
@@ -283,8 +277,8 @@ export default function NewSalesInvoicePage() {
               </tbody>
             </table>
           </div>
-          <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid rgba(237,232,220,0.06)" }}>
-            <button onClick={addLine} style={{ background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", color: "#C9A84C", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
+          <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid rgba(20,26,58,0.08)" }}>
+            <button onClick={addLine} style={{ background: "rgba(35,42,99,0.08)", border: "1px solid rgba(35,42,99,0.2)", color: "#232A63", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
               + Add Line
             </button>
           </div>
@@ -292,27 +286,27 @@ export default function NewSalesInvoicePage() {
 
         {/* Totals + Narration */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem" }}>
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem" }}>
+          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem" }}>
             <label style={labelStyle}>Narration</label>
             <textarea value={narration} onChange={e => setNarration(e.target.value)}
               placeholder={`Sales Invoice ${invoiceNo}`} rows={3}
               style={{ ...inputStyle, resize: "vertical", lineHeight: 1.55 }} />
           </div>
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem", minWidth: 240 }}>
+          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem", minWidth: 240 }}>
             {[
-              { label: "Subtotal", value: subtotal, color: "rgba(237,232,220,0.8)" },
-              ...(isIGST ? [{ label: "IGST", value: totalIGST, color: "rgba(237,232,220,0.6)" }]
-                : [{ label: "CGST", value: totalCGST, color: "rgba(237,232,220,0.6)" }, { label: "SGST", value: totalSGST, color: "rgba(237,232,220,0.6)" }]),
+              { label: "Subtotal", value: subtotal, color: "rgba(20,26,58,1.00)" },
+              ...(isIGST ? [{ label: "IGST", value: totalIGST, color: "rgba(20,26,58,0.85)" }]
+                : [{ label: "CGST", value: totalCGST, color: "rgba(20,26,58,0.85)" }, { label: "SGST", value: totalSGST, color: "rgba(20,26,58,0.85)" }]),
             ].map(row => (
               <div key={row.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                <span style={{ fontSize: "0.8rem", color: "rgba(237,232,220,0.45)" }}>{row.label}</span>
+                <span style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.70)" }}>{row.label}</span>
                 <span style={{ fontSize: "0.8rem", color: row.color, fontVariantNumeric: "tabular-nums" }}>₹{fmt(row.value)}</span>
               </div>
             ))}
-            <div style={{ height: 1, background: "rgba(201,168,76,0.2)", margin: "0.75rem 0" }} />
+            <div style={{ height: 1, background: "rgba(35,42,99,0.2)", margin: "0.75rem 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ fontWeight: 800, fontSize: "1rem" }}>Grand Total</span>
-              <span style={{ fontWeight: 900, fontSize: "1.2rem", color: "#C9A84C", fontVariantNumeric: "tabular-nums" }}>₹{fmt(grandTotal)}</span>
+              <span style={{ fontWeight: 900, fontSize: "1.2rem", color: "#232A63", fontVariantNumeric: "tabular-nums" }}>₹{fmt(grandTotal)}</span>
             </div>
           </div>
         </div>

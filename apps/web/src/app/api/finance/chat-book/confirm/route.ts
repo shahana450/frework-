@@ -1,127 +1,113 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import type { ParsedTransaction } from "../route";
+import { resolveLedgers } from "@/lib/ledgerResolve";
+import { postJournal, validateEntry, voucherTypeFor, postingErrorMessage } from "@/lib/posting";
+import { requireBusiness, serverError } from "@/lib/apiAuth";
+import { can } from "@/lib/permissions";
+
+// Runs at the edge nearest the user (Mumbai for India) — next to the database, not across the world
+export const runtime = "edge";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-type Line = { account: string; debit: number; credit: number };
-
 export async function POST(req: NextRequest) {
   try {
-    const { business_id, user_id, parsed, session_id } = await req.json();
-    if (!business_id || !user_id || !parsed) {
-      return NextResponse.json({ error: "business_id, user_id, parsed required" }, { status: 400 });
+    const body = await req.json();
+    const { transaction, business_id, session_id, original_message, force_post: forceRequested, account_heads, client_key }: {
+      client_key?: string;
+      transaction: ParsedTransaction;
+      business_id: string;
+      session_id: string | null;
+      original_message: string;
+      force_post?: boolean;
+      account_heads?: Record<string, string>;
+    } = body;
+
+    const gate = await requireBusiness(req, business_id, { write: true });
+    if (gate instanceof NextResponse) return gate;
+    const user_id = gate.user.id;
+    // Only the owner or an admin may post into a locked period
+    const force_post = !!forceRequested && can(gate.role, "lock");
+
+    // Idempotency: the same chat entry is posted only once, however many times it is sent
+    const key = typeof client_key === "string" && client_key.length <= 120 ? client_key : null;
+    const already = async () => {
+      if (!key) return null;
+      const { data } = await supabase.from("fw_fin_journals").select("id,entry_no").eq("business_id", business_id).eq("metadata->>client_key", key).neq("status", "voided").limit(1).maybeSingle();
+      return data ? NextResponse.json({ success: true, already_posted: true, journal_id: data.id, entry_no: data.entry_no }) : null;
+    };
+    const prior = await already();
+    if (prior) return prior;
+
+    if (!transaction?.lines?.length) {
+      return NextResponse.json({ error: "Nothing to post." }, { status: 400 });
     }
 
-    // Verify user owns this business
-    const { data: biz } = await supabase
-      .from("fw_fin_businesses")
-      .select("id")
-      .eq("id", business_id)
-      .eq("owner_id", user_id)
-      .single();
-    if (!biz) return NextResponse.json({ error: "Unauthorised" }, { status: 403 });
+    // Check the amounts before creating any ledgers
+    try { validateEntry(transaction.lines.map(l => ({ accountId: l.account || "?", dr: l.debit ?? 0, cr: l.credit ?? 0 })), transaction.transaction_date); }
+    catch (e) { const p = postingErrorMessage(e); return NextResponse.json({ error: p.message }, { status: p.status }); }
 
-    // Resolve accounts — fuzzy match by name (case-insensitive)
-    const { data: accounts } = await supabase
-      .from("fw_fin_chart_of_accounts")
-      .select("id, name, type")
-      .eq("business_id", business_id)
-      .eq("is_group", false);
-    const accMap = new Map((accounts ?? []).map(a => [a.name.toLowerCase(), a]));
+    const resolved = await resolveLedgers(supabase, business_id, transaction.lines.map(l => ({ name: l.account, suggestedType: l.suggested_type })), account_heads ?? {});
+    if (!resolved.ok) return NextResponse.json({ needs_heads: resolved.needHeads, will_create: resolved.willCreate });
 
-    // Auto-create missing accounts
-    const missing = parsed.lines
-      .map((l: Line) => l.account)
-      .filter((n: string) => !accMap.has(n.toLowerCase()));
-    const uniqueMissing = [...new Set<string>(missing)];
-    if (uniqueMissing.length) {
-      const typeGuess = (name: string) => {
-        const n = name.toLowerCase();
-        if (n.includes("cash") || n.includes("bank") || n.includes("debtor") || n.includes("receivable")) return "asset";
-        if (n.includes("creditor") || n.includes("payable") || n.includes("gst")) return "liability";
-        if (n.includes("capital") || n.includes("drawing")) return "equity";
-        if (n.includes("sales") || n.includes("income") || n.includes("revenue")) return "income";
-        return "expense";
-      };
-      const newRows = uniqueMissing.map((name, i) => ({
-        business_id,
-        code: `CH${String((accounts?.length ?? 0) + i + 1).padStart(3, "0")}`,
-        name,
-        type: typeGuess(name),
-        is_system: false,
-        is_group: false,
-        sort_order: (accounts?.length ?? 0) + i + 1,
-      }));
-      const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newRows).select("id,name,type");
-      for (const a of created ?? []) accMap.set(a.name.toLowerCase(), a);
+    const narration = transaction.narrative || original_message?.slice(0, 200) || "FreBook entry";
+    const resolvedLines = transaction.lines.map(l => {
+      const acc = resolved.ids.get(l.account.trim())!;
+      return { account_id: acc.id, account_name: acc.name, dr_amount: l.debit ?? 0, cr_amount: l.credit ?? 0, fc_dr: l.fc_debit, fc_cr: l.fc_credit };
+    });
+
+    let posted;
+    try {
+      posted = await postJournal(supabase, {
+        businessId: business_id, actorId: user_id, date: transaction.transaction_date,
+        type: voucherTypeFor(transaction.transaction_type), narration, referenceNo: transaction.invoice_number,
+        partyName: transaction.party_name, source: "ai_copilot", aiGenerated: true, force: force_post,
+        lines: resolvedLines.map(l => ({ accountId: l.account_id, dr: l.dr_amount, cr: l.cr_amount, fcDr: l.fc_dr, fcCr: l.fc_cr })),
+        currency: transaction.fx?.currency ?? null, exchangeRate: transaction.fx?.rate ?? null,
+        checkDuplicate: req.headers.get("x-confirm-duplicate") !== "1",
+        metadata: {
+          client_key: key,
+          original_message, ai_narrative: transaction.narrative, transaction_type: transaction.transaction_type,
+          party: transaction.party_name, gst: transaction.gst, tds: transaction.tds, ai_confidence: transaction.confidence,
+          warnings: transaction.warnings, document_summary: transaction.document_summary ?? null, confirmed_by: user_id, fx: transaction.fx ?? null,
+        },
+      });
+    } catch (e) {
+      // Two sends at the same moment: the database lets only one through — return that one
+      if (key && /client_key/i.test(e instanceof Error ? e.message : "")) { const won = await already(); if (won) return won; }
+      const p = postingErrorMessage(e);
+      if (p.status === 500) return serverError("chat-book/confirm", e, p.message);
+      return NextResponse.json({ error: p.message, code: p.code, duplicate: p.duplicate }, { status: p.status });
     }
+    const journal = { id: posted.id };
+    const entryNo = posted.entryNo;
+    const totalDr = posted.total, totalCr = posted.total;
+    const created = resolved.created;
 
-    // Get active FY
-    const { data: fy } = await supabase
-      .from("fw_fin_financial_years")
-      .select("id")
-      .eq("business_id", business_id)
-      .order("start_date", { ascending: false })
-      .limit(1)
-      .single();
-
-    // Generate entry_no
-    const { count } = await supabase
-      .from("fw_fin_journals")
-      .select("id", { count: "exact", head: true })
-      .eq("business_id", business_id)
-      .like("entry_no", "CHAT-%");
-    const entryNo = `CHAT-${String((count ?? 0) + 1).padStart(4, "0")}`;
-
-    const totalDr = parsed.lines.reduce((s: number, l: Line) => s + (l.debit ?? 0), 0);
-    const totalCr = parsed.lines.reduce((s: number, l: Line) => s + (l.credit ?? 0), 0);
-
-    // Insert journal header
-    const { data: journal, error: jErr } = await supabase
-      .from("fw_fin_journals")
-      .insert({
-        business_id,
-        financial_year_id: fy?.id ?? null,
-        entry_no: entryNo,
-        date: parsed.date,
-        narration: parsed.narration,
-        type: parsed.type ?? "journal",
-        status: "posted",
-        total_debit: totalDr,
-        total_credit: totalCr,
-        reference_no: parsed.reference ?? null,
-        source: "chat",
-        confirmed_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
-    if (jErr || !journal) return NextResponse.json({ error: jErr?.message ?? "Journal insert failed" }, { status: 500 });
-
-    // Insert lines
-    const lines = (parsed.lines as Line[])
-      .map(l => {
-        const acc = accMap.get(l.account.toLowerCase());
-        if (!acc) return null;
-        return { journal_id: journal.id, account_id: acc.id, description: l.account, dr_amount: l.debit ?? 0, cr_amount: l.credit ?? 0 };
-      })
-      .filter(Boolean);
-    if (lines.length) {
-      await supabase.from("fw_fin_journal_lines").insert(lines as object[]);
-    }
-
-    // Log to chat session for undo support
+    // Update session with posted entry reference
     if (session_id) {
-      await supabase.from("fw_fin_chat_sessions").update({
-        last_journal_id: journal.id,
-        last_journal_at: new Date().toISOString(),
-      }).eq("id", session_id);
+      const { data: sess } = await supabase.from("fw_fin_chat_sessions").select("messages").eq("id", session_id).single();
+      if (sess?.messages) {
+        const msgs = sess.messages as { role: string; content: string }[];
+        msgs.push({ role: "assistant", content: `✓ Posted: ${entryNo}` });
+        await supabase.from("fw_fin_chat_sessions").update({ messages: msgs.slice(-20), updated_at: new Date().toISOString() }).eq("id", session_id);
+      }
     }
 
-    return NextResponse.json({ journal_id: journal.id, entry_no: entryNo });
+    return NextResponse.json({
+      success: true,
+      journal_id: journal.id,
+      entry_no: entryNo,
+      lines: resolvedLines,
+      total_dr: totalDr,
+      total_cr: totalCr,
+      created_ledgers: created,
+    });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Server error" }, { status: 500 });
+    return serverError("chat-book/confirm", e, "We couldn't post this entry. Nothing was saved — please try again.");
   }
 }

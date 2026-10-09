@@ -1,37 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireBusiness, serverError } from "@/lib/apiAuth";
+import { reverseJournal, postingErrorMessage } from "@/lib/posting";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
+// Undo = a reversing entry dated today. The original stays in the books with a link to its reversal.
 export async function POST(req: NextRequest) {
   try {
-    const { journal_id, business_id, user_id } = await req.json();
-    if (!journal_id || !business_id || !user_id) {
-      return NextResponse.json({ error: "journal_id, business_id, user_id required" }, { status: 400 });
+    const { journal_id, business_id, reason } = await req.json();
+    const gate = await requireBusiness(req, business_id, { action: "reverse" });
+    if (gate instanceof NextResponse) return gate;
+    if (!journal_id) return NextResponse.json({ error: "journal_id required" }, { status: 400 });
+    try {
+      const r = await reverseJournal(supabase, business_id, gate.user.id, journal_id, reason || "Undone from FreBook");
+      return NextResponse.json({ undone: true, reversal_entry_no: r.entryNo, reversal_id: r.id });
+    } catch (e) {
+      const p = postingErrorMessage(e);
+      return NextResponse.json({ error: p.message }, { status: p.status });
     }
-
-    // Verify ownership + 5-minute undo window
-    const { data: journal } = await supabase
-      .from("fw_fin_journals")
-      .select("id, confirmed_at, business_id")
-      .eq("id", journal_id)
-      .eq("business_id", business_id)
-      .single();
-
-    if (!journal) return NextResponse.json({ error: "Entry not found" }, { status: 404 });
-
-    const confirmedAt = new Date(journal.confirmed_at ?? 0).getTime();
-    const fiveMinAgo = Date.now() - 5 * 60 * 1000;
-    if (confirmedAt < fiveMinAgo) {
-      return NextResponse.json({ error: "Undo window expired (5 minutes)" }, { status: 400 });
-    }
-
-    await supabase.from("fw_fin_journals").update({ status: "voided" }).eq("id", journal_id);
-    return NextResponse.json({ undone: true });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Server error" }, { status: 500 });
+    return serverError("chat-book/undo", e, "We couldn't undo this entry. Please try again.");
   }
 }

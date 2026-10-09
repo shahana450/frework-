@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireBusiness } from "@/lib/apiAuth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -37,7 +38,8 @@ export async function GET(req: NextRequest) {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
 
-  if (!bizId) return NextResponse.json({ error: "business_id required" }, { status: 400 });
+  const gate = await requireBusiness(req, bizId);
+  if (gate instanceof NextResponse) return gate;
 
   // Get business info
   const { data: biz } = await supabase.from("fw_fin_businesses").select("name,legal_name").eq("id", bizId).single();

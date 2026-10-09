@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
@@ -14,7 +14,7 @@ import Link from "next/link";
 
 const CITIES = ["All Cities","Mumbai","Delhi","Bangalore","Hyderabad","Pune","Chennai","Gurgaon","Noida","Kolkata","Ahmedabad","Jaipur","Kochi","Chandigarh","Indore"];
 const TYPES  = ["All Types","Hot Desk","Dedicated Desk","Private Cabin","Meeting Room","Virtual Office","Event Space","Training Room","Day Pass"];
-const BUDGETS = ["Any Budget","Under â‚¹500/day","â‚¹500â€“â‚¹1000/day","â‚¹1000â€“â‚¹2000/day","â‚¹2000+/day"];
+const BUDGETS = ["Any Budget","Under ₹500/day","₹500–₹1000/day","₹1000–₹2000/day","₹2000+/day"];
 
 const AMENITY_ICONS: Record<string, React.ElementType> = {
   "High-Speed Wi-Fi": Wifi, "Coffee & Tea": Coffee, "AC": AirVent,
@@ -83,10 +83,10 @@ export default function CoworkingPage() {
     if (type   !== "All Types"  && s.type !== type)  return false;
     if (budget !== "Any Budget") {
       const p = s.price;
-      if (budget === "Under â‚¹500/day"    && (s.per !== "day" || p >= 500))  return false;
-      if (budget === "â‚¹500â€“â‚¹1000/day"   && (s.per !== "day" || p < 500 || p > 1000)) return false;
-      if (budget === "â‚¹1000â€“â‚¹2000/day"  && (s.per !== "day" || p < 1000 || p > 2000)) return false;
-      if (budget === "â‚¹2000+/day"        && (s.per !== "day" || p < 2000)) return false;
+      if (budget === "Under ₹500/day"    && (s.per !== "day" || p >= 500))  return false;
+      if (budget === "₹500–₹1000/day"   && (s.per !== "day" || p < 500 || p > 1000)) return false;
+      if (budget === "₹1000–₹2000/day"  && (s.per !== "day" || p < 1000 || p > 2000)) return false;
+      if (budget === "₹2000+/day"        && (s.per !== "day" || p < 2000)) return false;
     }
     const q = query.toLowerCase();
     return !q || s.name.toLowerCase().includes(q) || s.city.toLowerCase().includes(q) || s.area.toLowerCase().includes(q) || s.type.toLowerCase().includes(q);
@@ -107,7 +107,7 @@ export default function CoworkingPage() {
             </span>
           </h1>
           <p className="text-blue-200 text-lg mb-8 max-w-xl">
-            Hot desks, private cabins, virtual offices, meeting rooms â€” across 14 cities. Day pass to annual plans available.
+            Hot desks, private cabins, virtual offices, meeting rooms — across 14 cities. Day pass to annual plans available.
           </p>
           <div className="flex gap-2 max-w-2xl">
             <div className="flex-1 flex items-center gap-3 bg-white rounded-xl px-4 h-12">
@@ -122,7 +122,7 @@ export default function CoworkingPage() {
             </button>
           </div>
           <div className="flex flex-wrap gap-6 mt-10">
-            {[[String(allSpaces.length)+"+","Listed Spaces"],["14","Cities"],["â‚¹250/day","Starting from"],["Verified","Every space"]].map(([v,l]) => (
+            {[[String(allSpaces.length)+"+","Listed Spaces"],["14","Cities"],["₹250/day","Starting from"],["Verified","Every space"]].map(([v,l]) => (
               <div key={l}><p className="text-xl font-black text-white">{v}</p><p className="text-blue-300 text-xs">{l}</p></div>
             ))}
           </div>
@@ -259,14 +259,14 @@ export default function CoworkingPage() {
                   <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
                     <div>
                       <p className="text-lg font-black text-slate-900">
-                        â‚¹{space.price.toLocaleString("en-IN")}
+                        ₹{space.price.toLocaleString("en-IN")}
                         <span className="text-xs font-normal text-slate-500">/{space.per}</span>
                       </p>
                       {space.per === "day" && (
-                        <p className="text-[11px] text-slate-400">â‚¹{space.monthlyPrice.toLocaleString("en-IN")}/mo</p>
+                        <p className="text-[11px] text-slate-400">₹{space.monthlyPrice.toLocaleString("en-IN")}/mo</p>
                       )}
                     </div>
-                    <a href={`https://wa.me/${space.phone.replace(/\D/g,"")}?text=${encodeURIComponent(`Hi FreWork, I'm interested in ${space.name} (${space.type}) at ${space.area}, ${space.city}. Starting price â‚¹${space.price}/${space.per}. Please share details.`)}`}
+                    <a href={`https://wa.me/${space.phone.replace(/\D/g,"")}?text=${encodeURIComponent(`Hi FreWork, I'm interested in ${space.name} (${space.type}) at ${space.area}, ${space.city}. Starting price ₹${space.price}/${space.per}. Please share details.`)}`}
                       target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 hover:scale-[1.02]"
                       style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
@@ -305,7 +305,7 @@ export default function CoworkingPage() {
           <Link href="/dashboard/workspace/submit"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white"
             style={{ background:"linear-gradient(135deg,#1246C8,#2563EB)" }}>
-            List Your Space â€” Free <ArrowRight className="w-4 h-4" />
+            List Your Space — Free <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </div>

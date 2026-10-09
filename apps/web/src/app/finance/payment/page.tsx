@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { saveEntry } from "@/lib/postEntry";
 import Link from "next/link";
 
 type Contact = { id: string; name: string; type: string };
@@ -72,41 +73,29 @@ export default function PaymentPage() {
   }, [paymentType, accounts]);
 
   async function handleSave(mode: "draft" | "post") {
-    if (!bizId || !fyId || !bankAccountId || !arApAccountId || !parseFloat(amount)) {
+    if (!bizId || !bankAccountId || !arApAccountId || !parseFloat(amount)) {
       setError("Fill all required fields"); return;
     }
     setSaving(true); setError(""); setSuccess("");
 
     const amt = parseFloat(amount);
-    const { count } = await supabase.from("fw_fin_journals").select("id", { count: "exact" }).eq("business_id", bizId).eq("type", paymentType);
-    const entryNo = `${paymentType === "receipt" ? "RCP" : "PMT"}-${String((count ?? 0) + 1).padStart(4, "0")}`;
     const contact = contacts.find(c => c.id === contactId);
 
-    // Receipt: Dr Bank, Cr Debtors
-    // Payment: Dr Creditors, Cr Bank
-    const jLines = paymentType === "receipt"
-      ? [
-          { account_id: bankAccountId, dr_amount: amt, cr_amount: 0, narration: `Receipt from ${contact?.name ?? "Customer"}` },
-          { account_id: arApAccountId, dr_amount: 0, cr_amount: amt, narration: narration || `Payment received` },
-        ]
-      : [
-          { account_id: arApAccountId, dr_amount: amt, cr_amount: 0, narration: narration || `Payment made` },
-          { account_id: bankAccountId, dr_amount: 0, cr_amount: amt, narration: `Payment to ${contact?.name ?? "Vendor"}` },
-        ];
-
-    const { data: journal, error: jErr } = await supabase.from("fw_fin_journals").insert({
-      business_id: bizId, fy_id: fyId, date: paymentDate, entry_no: entryNo,
-      type: paymentType,
-      narration: narration || `${paymentType === "receipt" ? "Receipt from" : "Payment to"} ${contact?.name ?? "Party"}`,
-      total_debit: amt, total_credit: amt,
-      status: mode === "post" ? "posted" : "draft",
-      reference_no: refNo || chequeNo || null,
-      contact_id: contactId || null,
-      ai_generated: false,
-    }).select("id").single();
-
-    if (jErr || !journal) { setError(jErr?.message ?? "Failed"); setSaving(false); return; }
-    await supabase.from("fw_fin_journal_lines").insert(jLines.map(l => ({ ...l, journal_id: journal.id })));
+    // Receipt: Dr Bank, Cr Debtors · Payment: Dr Creditors, Cr Bank
+    let entryNo = "";
+    try {
+      const r = await saveEntry({
+        business_id: bizId, mode: mode === "post" ? "post" : "draft", date: paymentDate, type: paymentType, source: "payment_entry",
+        narration: narration || `${paymentType === "receipt" ? "Receipt from" : "Payment to"} ${contact?.name ?? "Party"}`,
+        reference_no: refNo || chequeNo || null, party_name: contact?.name ?? null, contact_id: contactId || null,
+        lines: paymentType === "receipt"
+          ? [{ account_id: bankAccountId, dr: amt, cr: 0, narration: `Receipt from ${contact?.name ?? "Customer"}` },
+             { account_id: arApAccountId, dr: 0, cr: amt, narration: narration || "Payment received" }]
+          : [{ account_id: arApAccountId, dr: amt, cr: 0, narration: narration || "Payment made" },
+             { account_id: bankAccountId, dr: 0, cr: amt, narration: `Payment to ${contact?.name ?? "Vendor"}` }],
+      });
+      entryNo = r.entry_no;
+    } catch (e) { setError(e instanceof Error ? e.message : "Failed"); setSaving(false); return; }
 
     setSuccess(`${mode === "post" ? "Posted" : "Saved"}: ${entryNo} — ₹${parseFloat(amount).toLocaleString("en-IN")}`);
     setAmount(""); setNarration(""); setRefNo(""); setChequeNo(""); setContactId("");
@@ -116,40 +105,40 @@ export default function PaymentPage() {
     setRecent(rec ?? []);
   }
 
-  const inputStyle = { background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
-  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
+  const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
+  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Payment Entry</span>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Payment Entry</span>
       </nav>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "1.5rem", maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
         <div>
           <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Payment Entry</h1>
-          <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Record customer receipts or vendor payments</p>
+          <p style={{ margin: "0 0 1.5rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Record customer receipts or vendor payments</p>
 
           {/* Type Toggle */}
           <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.5rem" }}>
             {(["receipt", "payment"] as const).map(t => (
               <button key={t} onClick={() => setPaymentType(t)} style={{
                 padding: "9px 24px", borderRadius: 8, fontWeight: 700, fontSize: "0.88rem", cursor: "pointer", border: "none",
-                background: paymentType === t ? (t === "receipt" ? "#4ade80" : "#f87171") : "rgba(237,232,220,0.06)",
-                color: paymentType === t ? "#070C1A" : "rgba(237,232,220,0.5)",
+                background: paymentType === t ? (t === "receipt" ? "#0B7A55" : "#C2321F") : "rgba(20,26,58,0.08)",
+                color: paymentType === t ? "#F5F6FA" : "rgba(20,26,58,0.75)",
               }}>
                 {t === "receipt" ? "💰 Customer Receipt" : "💳 Vendor Payment"}
               </button>
             ))}
           </div>
 
-          {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
-          {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
+          {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#C2321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
+          {success && <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", color: "#0B7A55", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem" }}>
+          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div><label style={labelStyle}>Date</label><input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} style={inputStyle} /></div>
               <div>
@@ -215,25 +204,25 @@ export default function PaymentPage() {
 
             {/* Journal preview */}
             {parseFloat(amount) > 0 && (
-              <div style={{ background: "rgba(237,232,220,0.03)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8rem" }}>
-                <div style={{ fontWeight: 700, marginBottom: "0.5rem", color: "rgba(237,232,220,0.5)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Journal Preview</div>
+              <div style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8rem" }}>
+                <div style={{ fontWeight: 700, marginBottom: "0.5rem", color: "rgba(20,26,58,0.75)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Journal Preview</div>
                 {paymentType === "receipt" ? (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Bank / Cash</span><span style={{ color: "#f87171", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Debtors (AR)</span><span style={{ color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Bank / Cash</span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Debtors (AR)</span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
                   </>
                 ) : (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Creditors (AP)</span><span style={{ color: "#f87171", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Bank / Cash</span><span style={{ color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Creditors (AP)</span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Bank / Cash</span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
                   </>
                 )}
               </div>
             )}
 
             <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button onClick={() => handleSave("draft")} disabled={saving} style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
-              <button onClick={() => handleSave("post")} disabled={saving} style={{ background: paymentType === "receipt" ? "#4ade80" : "#f87171", border: "none", color: "#070C1A", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
+              <button onClick={() => handleSave("draft")} disabled={saving} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
+              <button onClick={() => handleSave("post")} disabled={saving} style={{ background: paymentType === "receipt" ? "#0B7A55" : "#C2321F", border: "none", color: "#F5F6FA", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
                 {saving ? "Saving…" : `Post ${paymentType === "receipt" ? "Receipt" : "Payment"}`}
               </button>
             </div>
@@ -242,22 +231,22 @@ export default function PaymentPage() {
 
         {/* Sidebar — Recent */}
         <div>
-          <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Payments</div>
+          <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Payments</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {recent.map(r => (
-              <div key={r.id} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
+              <div key={r.id} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.2rem" }}>
-                  <span style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "rgba(201,168,76,0.5)" }}>{r.entry_no}</span>
-                  <span style={{ padding: "1px 6px", borderRadius: 8, background: r.type === "receipt" ? "rgba(74,222,128,0.12)" : "rgba(248,113,113,0.12)", color: r.type === "receipt" ? "#4ade80" : "#f87171", fontSize: "0.65rem" }}>{r.type}</span>
+                  <span style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "rgba(20,26,58,0.5)" }}>{r.entry_no}</span>
+                  <span style={{ padding: "1px 6px", borderRadius: 8, background: r.type === "receipt" ? "rgba(11,122,85,0.12)" : "rgba(194,50,31,0.12)", color: r.type === "receipt" ? "#0B7A55" : "#C2321F", fontSize: "0.65rem" }}>{r.type}</span>
                 </div>
                 <div style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.25rem" }}>
-                  <span style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.3)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                  <span style={{ fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: r.type === "receipt" ? "#4ade80" : "#f87171" }}>₹{fmt(r.type === "receipt" ? r.total_credit : r.total_debit)}</span>
+                  <span style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.55)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                  <span style={{ fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: r.type === "receipt" ? "#0B7A55" : "#C2321F" }}>₹{fmt(r.type === "receipt" ? r.total_credit : r.total_debit)}</span>
                 </div>
               </div>
             ))}
-            {recent.length === 0 && <div style={{ color: "rgba(237,232,220,0.25)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No payments recorded yet</div>}
+            {recent.length === 0 && <div style={{ color: "rgba(20,26,58,0.35)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No payments recorded yet</div>}
           </div>
         </div>
       </div>

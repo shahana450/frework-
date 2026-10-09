@@ -17,10 +17,11 @@ const FALLBACK_HEADLINES = [
 ];
 
 const CAT_COLOR: Record<string, string> = {
-  "Income Tax": "#2563EB",
-  GST:          "#059669",
-  Compliance:   "#B8903A",
-  General:      "#6B7280",
+  // Light tints: the ticker sits on the navy band
+  "Income Tax": "#A9C8FF",
+  GST:          "#8FE3C0",
+  Compliance:   "#FFB08A",
+  General:      "#C8D2F2",
 };
 
 export function AnnouncementTicker() {
@@ -70,13 +71,13 @@ export function AnnouncementTicker() {
     <div
       className="fixed top-0 inset-x-0 z-[70] w-full select-none"
       style={{
-        background: "linear-gradient(135deg, #1A1208 0%, #2C1F0A 50%, #1A1208 100%)",
-        borderBottom: "1px solid rgba(184,144,58,0.3)",
+        background: "linear-gradient(135deg, #232A63 0%, #2C1F0A 50%, #232A63 100%)",
+        borderBottom: "1px solid rgba(240,102,43,0.3)",
       }}
     >
       {/* Gold shimmer top line */}
       <div className="absolute inset-x-0 top-0 h-[2px]"
-        style={{ background: "linear-gradient(90deg, transparent 0%, #B8903A 30%, #E8C97A 50%, #B8903A 70%, transparent 100%)" }} />
+        style={{ background: "linear-gradient(90deg, transparent 0%, #F0662B 30%, #FFB08A 50%, #F0662B 70%, transparent 100%)" }} />
 
       {/* ── MOBILE layout (two rows) ── */}
       <div className="sm:hidden">
@@ -122,20 +123,20 @@ export function AnnouncementTicker() {
               <button key={i}
                 onClick={() => { setCurrent(i); if (intervalRef.current) clearInterval(intervalRef.current); }}
                 className="rounded-full transition-all duration-300"
-                style={{ width: i === current ? 14 : 5, height: 5, background: i === current ? "#B8903A" : "rgba(184,144,58,0.3)" }} />
+                style={{ width: i === current ? 14 : 5, height: 5, background: i === current ? "#F0662B" : "rgba(240,102,43,0.3)" }} />
             ))}
           </div>
 
           <Link href="/pricing"
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black"
-            style={{ background: "rgba(59,130,246,0.2)", color: "#93C5FD", border: "1px solid rgba(59,130,246,0.3)" }}>
+            style={{ background: "rgba(240,102,43,0.2)", color: "#FFB08A", border: "1px solid rgba(240,102,43,0.3)" }}>
             <Sparkles size={10} /> Pricing
           </Link>
 
           {loggedIn ? (
             <Link href="/dashboard"
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-black"
-              style={{ background: "linear-gradient(135deg,#E8C97A,#B8903A)", color: "#1A1208", boxShadow: "0 2px 8px rgba(184,144,58,0.5)" }}>
+              style={{ background: "linear-gradient(135deg,#FFB08A,#F0662B)", color: "#232A63", boxShadow: "0 2px 8px rgba(240,102,43,0.5)" }}>
               <LayoutDashboard size={11} /> Dashboard
             </Link>
           ) : (
@@ -147,7 +148,7 @@ export function AnnouncementTicker() {
               </Link>
               <Link href="/register"
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-black"
-                style={{ background: "linear-gradient(135deg,#E8C97A,#B8903A)", color: "#1A1208", boxShadow: "0 2px 8px rgba(184,144,58,0.5)" }}>
+                style={{ background: "linear-gradient(135deg,#FFB08A,#F0662B)", color: "#232A63", boxShadow: "0 2px 8px rgba(240,102,43,0.5)" }}>
                 <UserPlus size={10} /> Free
               </Link>
             </>
@@ -165,10 +166,10 @@ export function AnnouncementTicker() {
             <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
             LIVE
           </span>
-          <Bell size={14} style={{ color: "#B8903A" }} />
+          <Bell size={14} style={{ color: "#F0662B" }} />
         </div>
 
-        <div className="w-px h-6 flex-shrink-0" style={{ background: "rgba(184,144,58,0.3)" }} />
+        <div className="w-px h-6 flex-shrink-0" style={{ background: "rgba(240,102,43,0.3)" }} />
 
         {/* Headline */}
         <div className="flex-1 overflow-hidden">
@@ -198,24 +199,24 @@ export function AnnouncementTicker() {
             <button key={i}
               onClick={() => { setCurrent(i); if (intervalRef.current) clearInterval(intervalRef.current); }}
               className="rounded-full transition-all duration-300"
-              style={{ width: i === current ? 16 : 6, height: 6, background: i === current ? "#B8903A" : "rgba(184,144,58,0.3)" }} />
+              style={{ width: i === current ? 16 : 6, height: 6, background: i === current ? "#F0662B" : "rgba(240,102,43,0.3)" }} />
           ))}
         </div>
 
-        <div className="w-px h-6 flex-shrink-0" style={{ background: "rgba(184,144,58,0.3)" }} />
+        <div className="w-px h-6 flex-shrink-0" style={{ background: "rgba(240,102,43,0.3)" }} />
 
         {/* Auth buttons */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <Link href="/pricing"
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12px] font-black tracking-wide transition-all hover:scale-[1.05]"
-            style={{ background: "linear-gradient(135deg,rgba(59,130,246,0.25),rgba(30,64,175,0.35))", color: "#93C5FD", border: "1px solid rgba(59,130,246,0.35)", boxShadow: "0 0 12px rgba(59,130,246,0.15)" }}>
+            style={{ background: "linear-gradient(135deg,rgba(240,102,43,0.25),rgba(35,42,99,0.35))", color: "#FFB08A", border: "1px solid rgba(240,102,43,0.35)", boxShadow: "0 0 12px rgba(240,102,43,0.15)" }}>
             <Sparkles size={11} /> Pricing
           </Link>
 
           {loggedIn ? (
             <Link href="/dashboard"
               className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all hover:scale-[1.04]"
-              style={{ background: "linear-gradient(135deg,#E8C97A,#B8903A)", color: "#1A1208", boxShadow: "0 2px 10px rgba(184,144,58,0.45)" }}>
+              style={{ background: "linear-gradient(135deg,#FFB08A,#F0662B)", color: "#232A63", boxShadow: "0 2px 10px rgba(240,102,43,0.45)" }}>
               <LayoutDashboard size={13} /> Dashboard
             </Link>
           ) : (
@@ -227,7 +228,7 @@ export function AnnouncementTicker() {
               </Link>
               <Link href="/register"
                 className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all"
-                style={{ background: "linear-gradient(135deg,#E8C97A,#B8903A)", color: "#1A1208", boxShadow: "0 2px 10px rgba(184,144,58,0.45)" }}>
+                style={{ background: "linear-gradient(135deg,#FFB08A,#F0662B)", color: "#232A63", boxShadow: "0 2px 10px rgba(240,102,43,0.45)" }}>
                 <UserPlus size={13} /> Sign Up
               </Link>
             </>

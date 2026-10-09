@@ -7,11 +7,12 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "The Operating System for Indian Businesses — Start, Run and Grow.",
     start_url: "/",
     display: "standalone",
-    background_color: "#FAFAF5",
-    theme_color: "#B8903A",
+    background_color: "#F2F3F6",
+    theme_color: "#232A63",
     icons: [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/frebook-icon/192", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/frebook-icon/512", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/frebook-icon/512m", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { requireBusiness } from "@/lib/apiAuth";
+
+export const maxDuration = 300;
+import { getAI } from "@/lib/ai";
 import { createClient } from "@supabase/supabase-js";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+const anthropic = getAI();
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 type BankRow = { id: string; description: string; debit: number; credit: number; date: string };
@@ -11,7 +14,9 @@ type Suggestion = { id: string; account: string; account_type: string; confidenc
 export async function POST(req: NextRequest) {
   try {
     const { rows, business_id } = await req.json() as { rows: BankRow[]; business_id: string };
-    if (!rows?.length || !business_id) {
+    const gate = await requireBusiness(req, business_id);
+    if (gate instanceof NextResponse) return gate;
+    if (!rows?.length) {
       return NextResponse.json({ error: "rows and business_id required" }, { status: 400 });
     }
 
@@ -41,14 +46,20 @@ Rules:
 - "EMI" or "LOAN" → Loan Repayment / Interest
 - "RENT" → Rent Expense
 - "UPI" → look at merchant name in description
-- Prefer accounts from the available list over generic ones
+- Use an account from the available list when it fits the nature of the transaction.
+- Otherwise propose a SPECIFIC, standard Indian ledger name — never a vague one like "Expenses", "Income", "Misc" or "Suspense". Examples:
+  electricity/KSEB/BESCOM → "Electricity Charges"; salary/wages → "Salary & Wages"; bank charges/SMS charges → "Bank Charges";
+  ATM/cash withdrawal → "Cash in Hand"; rent → "Rent"; fuel/petrol → "Fuel Expenses"; phone/Jio/Airtel recharge → "Telephone & Internet";
+  furniture/chairs/tables → "Furniture & Fixtures"; laptop/computer → "Computers"; GST payment → "GST Payable"; TDS → "TDS Payable";
+  interest credited → "Interest Received"; loan EMI → "Loan Account"; NEFT/IMPS from a named party → that party name as a debtor (money in) or creditor (money out).
+- account_type for the proposed ledger must be one of: expense, income, asset, liability, equity.
 
 Return ONLY a JSON array (no explanation):
 [{"id":"row_id","account":"Account Name","account_type":"expense|income|bank|cash|asset|liability","confidence":0.0-1.0,"narration":"Short narration for journal"}]`;
 
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 2048,
+      max_tokens: 8192,
       messages: [{ role: "user", content: prompt }],
     });
 

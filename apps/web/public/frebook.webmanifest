@@ -1,0 +1,23 @@
+{
+  "id": "/frebook",
+  "name": "FreBook — Chat in. Books out.",
+  "short_name": "FreBook",
+  "description": "Tell FreBook your transactions in plain language — it posts proper journal entries to your FreWork books.",
+  "start_url": "/finance/chat-book?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1E2457",
+  "theme_color": "#1E2457",
+  "categories": ["finance", "business", "productivity"],
+  "icons": [
+    { "src": "/frebook-icon/192?v=2", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/frebook-icon/512?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/frebook-icon/512m?v=2", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "New entry", "url": "/finance/chat-book?source=app" },
+    { "name": "Books", "url": "/finance/books" },
+    { "name": "Reports", "url": "/finance/reports" }
+  ]
+}

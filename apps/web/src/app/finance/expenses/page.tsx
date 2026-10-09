@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { saveEntry } from "@/lib/postEntry";
 import Link from "next/link";
 
 type Account = { id: string; code: string; name: string; type: string; sub_type: string | null };
@@ -79,63 +80,36 @@ export default function ExpensesPage() {
   const netPayable = baseAmount + gstAmt - tdsAmt;
 
   async function handleSave(mode: "draft" | "post") {
-    if (!bizId || !fyId || !expenseAccountId || !paymentAccountId || !baseAmount) {
+    if (!bizId || !expenseAccountId || !paymentAccountId || !baseAmount) {
       setError("Fill expense account, payment account, and amount"); return;
     }
     setSaving(true);
     setError("");
     setSuccess("");
 
-    const { count } = await supabase.from("fw_fin_journals").select("id", { count: "exact" }).eq("business_id", bizId).eq("type", "expense");
-    const entryNo = `EXP-${String((count ?? 0) + 1).padStart(4, "0")}`;
-
-    const jLines: { account_id: string; dr_amount: number; cr_amount: number; narration: string }[] = [];
-    jLines.push({ account_id: expenseAccountId, dr_amount: baseAmount, cr_amount: 0, narration: narration || "Expense" });
-
-    // GST Input credit (ITC)
-    if (gstAmt > 0 && gstType !== "none") {
-      const cgstInAcc = accounts.find(a => a.name.toLowerCase().includes("cgst input") || (a.name.toLowerCase().includes("cgst") && a.type === "asset"));
-      const sgstInAcc = accounts.find(a => a.name.toLowerCase().includes("sgst input") || (a.name.toLowerCase().includes("sgst") && a.type === "asset"));
-      const igstInAcc = accounts.find(a => a.name.toLowerCase().includes("igst input") || (a.name.toLowerCase().includes("igst") && a.type === "asset"));
-
-      if (gstType === "cgst_sgst") {
-        if (cgstInAcc) jLines.push({ account_id: cgstInAcc.id, dr_amount: gstAmt / 2, cr_amount: 0, narration: "CGST Input" });
-        if (sgstInAcc) jLines.push({ account_id: sgstInAcc.id, dr_amount: gstAmt / 2, cr_amount: 0, narration: "SGST Input" });
-      } else {
-        if (igstInAcc) jLines.push({ account_id: igstInAcc.id, dr_amount: gstAmt, cr_amount: 0, narration: "IGST Input" });
-      }
-    }
-
-    // TDS payable
-    if (tdsAmt > 0) {
-      const tdsAcc = accounts.find(a => a.name.toLowerCase().includes("tds payable") || a.name.toLowerCase().includes("tds"));
-      if (tdsAcc) jLines.push({ account_id: tdsAcc.id, dr_amount: 0, cr_amount: tdsAmt, narration: "TDS Deducted" });
-    }
-
-    // Payment account (Cr)
-    jLines.push({ account_id: paymentAccountId, dr_amount: 0, cr_amount: netPayable, narration: narration || "Expense Payment" });
-
-    const totalDr = jLines.reduce((s, l) => s + l.dr_amount, 0);
-    const totalCr = jLines.reduce((s, l) => s + l.cr_amount, 0);
-
-    const { data: journal, error: jErr } = await supabase.from("fw_fin_journals").insert({
-      business_id: bizId,
-      fy_id: fyId,
-      date: expDate,
-      entry_no: entryNo,
-      type: "expense",
-      narration: narration || "Expense",
-      total_debit: totalDr,
-      total_credit: totalCr,
-      status: mode === "post" ? "posted" : "draft",
-      reference_no: refNo || null,
-      contact_id: vendorId || null,
-      ai_generated: false,
-    }).select("id").single();
-
-    if (jErr || !journal) { setError(jErr?.message ?? "Failed to save"); setSaving(false); return; }
-    await supabase.from("fw_fin_journal_lines").insert(jLines.map(l => ({ ...l, journal_id: journal.id })));
-
+    // Dr Expense, Dr Input GST — Cr TDS Payable, Cr bank/cash (net)
+    const cgstInAcc = accounts.find(a => a.name.toLowerCase().includes("cgst input") || (a.name.toLowerCase().includes("cgst") && a.type === "asset"));
+    const sgstInAcc = accounts.find(a => a.name.toLowerCase().includes("sgst input") || (a.name.toLowerCase().includes("sgst") && a.type === "asset"));
+    const igstInAcc = accounts.find(a => a.name.toLowerCase().includes("igst input") || (a.name.toLowerCase().includes("igst") && a.type === "asset"));
+    const tdsAcc = accounts.find(a => a.name.toLowerCase().includes("tds payable") || a.name.toLowerCase().includes("tds"));
+    const split = gstAmt > 0 && gstType === "cgst_sgst";
+    const inter = gstAmt > 0 && gstType !== "none" && gstType !== "cgst_sgst";
+    let entryNo = "";
+    try {
+      const r = await saveEntry({
+        business_id: bizId, mode: mode === "post" ? "post" : "draft", date: expDate, type: "payment", source: "expense",
+        narration: narration || "Expense", reference_no: refNo || null, contact_id: vendorId || null,
+        lines: [
+          { account_id: expenseAccountId, dr: baseAmount, cr: 0, narration: narration || "Expense" },
+          { account_id: cgstInAcc?.id, account_name: cgstInAcc ? null : "Input CGST", dr: split ? gstAmt / 2 : 0, cr: 0, narration: "CGST Input" },
+          { account_id: sgstInAcc?.id, account_name: sgstInAcc ? null : "Input SGST", dr: split ? gstAmt / 2 : 0, cr: 0, narration: "SGST Input" },
+          { account_id: igstInAcc?.id, account_name: igstInAcc ? null : "Input IGST", dr: inter ? gstAmt : 0, cr: 0, narration: "IGST Input" },
+          { account_id: tdsAcc?.id, account_name: tdsAcc ? null : "TDS Payable", dr: 0, cr: tdsAmt, narration: "TDS Deducted" },
+          { account_id: paymentAccountId, dr: 0, cr: netPayable, narration: narration || "Expense Payment" },
+        ],
+      });
+      entryNo = r.entry_no;
+    } catch (e) { setError(e instanceof Error ? e.message : "Failed to save"); setSaving(false); return; }
     setSuccess(`${mode === "post" ? "Posted" : "Saved as draft"}: ${entryNo}`);
     // Reset form
     setAmount(""); setGstAmount(""); setTds(""); setNarration(""); setRefNo(""); setVendorId(""); setGstType("none");
@@ -146,40 +120,40 @@ export default function ExpensesPage() {
     setRecentExpenses(rec ?? []);
   }
 
-  const inputStyle = { background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
-  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
+  const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
+  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Record Expense</span>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Record Expense</span>
       </nav>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "1.5rem", maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
         {/* Main Form */}
         <div>
           <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Record Expense</h1>
-          <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Quick expense entry — journal is auto-created</p>
+          <p style={{ margin: "0 0 1.5rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Quick expense entry — journal is auto-created</p>
 
           {/* Presets */}
           <div style={{ marginBottom: "1.25rem" }}>
-            <div style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem" }}>Quick Presets</div>
+            <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem" }}>Quick Presets</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
               {EXPENSE_PRESETS.map(p => (
-                <button key={p.label} onClick={() => applyPreset(p)} style={{ background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.1)", color: "rgba(237,232,220,0.6)", padding: "4px 12px", borderRadius: 14, cursor: "pointer", fontSize: "0.78rem" }}>
+                <button key={p.label} onClick={() => applyPreset(p)} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "rgba(20,26,58,0.85)", padding: "4px 12px", borderRadius: 14, cursor: "pointer", fontSize: "0.78rem" }}>
                   {p.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
-          {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
+          {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#C2321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
+          {success && <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", color: "#0B7A55", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem" }}>
+          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div>
                 <label style={labelStyle}>Date</label>
@@ -248,19 +222,19 @@ export default function ExpensesPage() {
 
             {/* Summary */}
             {baseAmount > 0 && (
-              <div style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.15)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
+              <div style={{ background: "rgba(35,42,99,0.05)", border: "1px solid rgba(35,42,99,0.15)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
                 <div style={{ display: "flex", gap: "2rem", fontSize: "0.82rem" }}>
-                  <div><span style={{ color: "rgba(237,232,220,0.4)" }}>Base: </span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(baseAmount)}</span></div>
-                  {gstAmt > 0 && <div><span style={{ color: "rgba(237,232,220,0.4)" }}>GST ITC: </span><span style={{ color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>₹{fmt(gstAmt)}</span></div>}
-                  {tdsAmt > 0 && <div><span style={{ color: "rgba(237,232,220,0.4)" }}>TDS: </span><span style={{ color: "#f87171", fontVariantNumeric: "tabular-nums" }}>₹{fmt(tdsAmt)}</span></div>}
-                  <div style={{ marginLeft: "auto", fontWeight: 800 }}><span style={{ color: "rgba(237,232,220,0.4)" }}>Net Payable: </span><span style={{ color: "#C9A84C", fontSize: "1rem", fontVariantNumeric: "tabular-nums" }}>₹{fmt(netPayable)}</span></div>
+                  <div><span style={{ color: "rgba(20,26,58,0.65)" }}>Base: </span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(baseAmount)}</span></div>
+                  {gstAmt > 0 && <div><span style={{ color: "rgba(20,26,58,0.65)" }}>GST ITC: </span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>₹{fmt(gstAmt)}</span></div>}
+                  {tdsAmt > 0 && <div><span style={{ color: "rgba(20,26,58,0.65)" }}>TDS: </span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>₹{fmt(tdsAmt)}</span></div>}
+                  <div style={{ marginLeft: "auto", fontWeight: 800 }}><span style={{ color: "rgba(20,26,58,0.65)" }}>Net Payable: </span><span style={{ color: "#232A63", fontSize: "1rem", fontVariantNumeric: "tabular-nums" }}>₹{fmt(netPayable)}</span></div>
                 </div>
               </div>
             )}
 
             <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button onClick={() => handleSave("draft")} disabled={saving} style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
-              <button onClick={() => handleSave("post")} disabled={saving} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
+              <button onClick={() => handleSave("draft")} disabled={saving} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
+              <button onClick={() => handleSave("post")} disabled={saving} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
                 {saving ? "Saving…" : "Post Expense"}
               </button>
             </div>
@@ -269,22 +243,22 @@ export default function ExpensesPage() {
 
         {/* Sidebar — Recent Expenses */}
         <div>
-          <div style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Expenses</div>
+          <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Expenses</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {recentExpenses.map(e => (
-              <div key={e.id} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.06)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
+              <div key={e.id} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.2rem" }}>
-                  <span style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "rgba(201,168,76,0.5)" }}>{e.entry_no}</span>
-                  <span style={{ fontSize: "0.72rem", color: "rgba(237,232,220,0.3)" }}>{new Date(e.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                  <span style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "rgba(20,26,58,0.5)" }}>{e.entry_no}</span>
+                  <span style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.55)" }}>{new Date(e.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                 </div>
                 <div style={{ fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.narration}</div>
-                <div style={{ fontSize: "0.82rem", color: "#f87171", fontVariantNumeric: "tabular-nums", marginTop: "0.2rem" }}>₹{fmt(e.total_debit)}</div>
+                <div style={{ fontSize: "0.82rem", color: "#C2321F", fontVariantNumeric: "tabular-nums", marginTop: "0.2rem" }}>₹{fmt(e.total_debit)}</div>
               </div>
             ))}
             {recentExpenses.length === 0 && (
-              <div style={{ color: "rgba(237,232,220,0.25)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No expenses recorded yet</div>
+              <div style={{ color: "rgba(20,26,58,0.35)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No expenses recorded yet</div>
             )}
-            <Link href="/finance/journals?type=expense" style={{ color: "#C9A84C", fontSize: "0.78rem", textAlign: "center", padding: "0.5rem", textDecoration: "none" }}>View all expenses →</Link>
+            <Link href="/finance/journals?type=expense" style={{ color: "#232A63", fontSize: "0.78rem", textAlign: "center", padding: "0.5rem", textDecoration: "none" }}>View all expenses →</Link>
           </div>
         </div>
       </div>

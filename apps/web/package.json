@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "jest --passWithNoTests",
+    "test:accounting": "tsc -p tsconfig.test.json && node --test \".test-dist/tests/accounting/*.test.js\"",
     "test:e2e": "playwright test",
     "type-check": "tsc --noEmit"
   },

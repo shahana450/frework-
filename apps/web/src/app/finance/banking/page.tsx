@@ -65,20 +65,20 @@ export default function BankingLanding() {
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#05091A", color: "#DEE8F5", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; }
-        .bk-card { background: #0B1428; border: 1px solid #1B2E4A; border-radius: 14px; padding: 1.25rem 1.4rem; }
-        .bk-action { background: #0B1428; border: 1px solid #1B2E4A; border-radius: 14px; padding: 1.4rem; text-decoration: none; display: flex; flex-direction: column; gap: 0.5rem; transition: border-color 0.2s, transform 0.15s; }
-        .bk-action:hover { border-color: #2563EB; transform: translateY(-2px); }
-        .bg-dots { background-image: radial-gradient(circle, rgba(59,130,246,0.05) 1px, transparent 1px); background-size: 28px 28px; }
+        .bk-card { background: #FFFFFF; border: 1px solid #FFFFFF; border-radius: 14px; padding: 1.25rem 1.4rem; }
+        .bk-action { background: #FFFFFF; border: 1px solid #FFFFFF; border-radius: 14px; padding: 1.4rem; text-decoration: none; display: flex; flex-direction: column; gap: 0.5rem; transition: border-color 0.2s, transform 0.15s; }
+        .bk-action:hover { border-color: #232A63; transform: translateY(-2px); }
+        .bg-dots { background-image: radial-gradient(circle, rgba(31,94,255,0.05) 1px, transparent 1px); background-size: 28px 28px; }
       `}</style>
 
       {/* Header */}
-      <div style={{ background: "rgba(5,9,26,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid #1B2E4A", padding: "0 2rem", height: 52, display: "flex", alignItems: "center", gap: "0.75rem", position: "sticky", top: 0, zIndex: 10 }}>
-        <Link href="/finance" style={{ color: "#4A6FA5", textDecoration: "none", fontSize: "0.82rem" }}>Finance</Link>
-        <span style={{ color: "#2A4060" }}>›</span>
+      <div style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid #FFFFFF", padding: "0 2rem", height: 52, display: "flex", alignItems: "center", gap: "0.75rem", position: "sticky", top: 0, zIndex: 10 }}>
+        <Link href="/finance" style={{ color: "#5A6080", textDecoration: "none", fontSize: "0.82rem" }}>Finance</Link>
+        <span style={{ color: "#E1E4EE" }}>›</span>
         <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Banking</span>
       </div>
 
@@ -87,10 +87,10 @@ export default function BankingLanding() {
 
           {/* Page title */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "2rem" }}>
-            <div style={{ width: 40, height: 40, borderRadius: 11, background: "linear-gradient(135deg,#1E3A6B,#2563EB)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem" }}>🏦</div>
+            <div style={{ width: 40, height: 40, borderRadius: 11, background: "linear-gradient(135deg,#E6E8F4,#232A63)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem" }}>🏦</div>
             <div>
               <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 800, letterSpacing: "-0.02em" }}>Banking</h1>
-              <p style={{ margin: 0, color: "#4A6FA5", fontSize: "0.84rem" }}>Import bank statements, assign ledgers, and push to your books automatically.</p>
+              <p style={{ margin: 0, color: "#5A6080", fontSize: "0.84rem" }}>Import bank statements, assign ledgers, and push to your books automatically.</p>
             </div>
           </div>
 
@@ -98,31 +98,31 @@ export default function BankingLanding() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "2rem" }}>
             <Link href="/finance/banking/import" className="bk-action">
               <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(37,99,235,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>⬆</div>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#DEE8F5" }}>Import Statement</div>
-              <div style={{ fontSize: "0.76rem", color: "#4A6FA5", lineHeight: 1.5 }}>Upload PDF or Excel bank statement. AI parses it instantly.</div>
-              <div style={{ marginTop: "0.25rem", fontSize: "0.72rem", fontWeight: 700, color: "#60A5FA" }}>PDF · Excel · CSV →</div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#141A3A" }}>Import Statement</div>
+              <div style={{ fontSize: "0.76rem", color: "#5A6080", lineHeight: 1.5 }}>Upload PDF or Excel bank statement. AI parses it instantly.</div>
+              <div style={{ marginTop: "0.25rem", fontSize: "0.72rem", fontWeight: 700, color: "#1F5EFF" }}>PDF · Excel · CSV →</div>
             </Link>
 
             <Link href="/finance/banking/history" className="bk-action">
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(16,185,129,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>📑</div>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#DEE8F5" }}>Transaction History</div>
-              <div style={{ fontSize: "0.76rem", color: "#4A6FA5", lineHeight: 1.5 }}>View all bank transactions pushed to journals.</div>
-              <div style={{ marginTop: "0.25rem", fontSize: "0.72rem", fontWeight: 700, color: "#34D399" }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(11,122,85,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>📑</div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#141A3A" }}>Transaction History</div>
+              <div style={{ fontSize: "0.76rem", color: "#5A6080", lineHeight: 1.5 }}>View all bank transactions pushed to journals.</div>
+              <div style={{ marginTop: "0.25rem", fontSize: "0.72rem", fontWeight: 700, color: "#0B7A55" }}>
                 {recentCount !== null ? `${recentCount} bank entries` : "Loading…"} →
               </div>
             </Link>
 
             <Link href="/finance/journals" className="bk-action">
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(167,139,250,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>📋</div>
-              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#DEE8F5" }}>Journal Entries</div>
-              <div style={{ fontSize: "0.76rem", color: "#4A6FA5", lineHeight: 1.5 }}>All entries including those pushed from bank statements.</div>
-              <div style={{ marginTop: "0.25rem", fontSize: "0.72rem", fontWeight: 700, color: "#A78BFA" }}>View all journals →</div>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(91,75,196,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem" }}>📋</div>
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#141A3A" }}>Journal Entries</div>
+              <div style={{ fontSize: "0.76rem", color: "#5A6080", lineHeight: 1.5 }}>All entries including those pushed from bank statements.</div>
+              <div style={{ marginTop: "0.25rem", fontSize: "0.72rem", fontWeight: 700, color: "#5B4BC4" }}>View all journals →</div>
             </Link>
           </div>
 
           {/* How it works */}
           <div className="bk-card" style={{ marginBottom: "1.5rem" }}>
-            <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#4A6FA5", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "1rem" }}>How it works</div>
+            <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#5A6080", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "1rem" }}>How it works</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
               {[
                 { step: "1", icon: "📄", title: "Upload", desc: "PDF parsed by Claude AI or Excel/CSV parsed client-side" },
@@ -131,9 +131,9 @@ export default function BankingLanding() {
                 { step: "4", icon: "📈", title: "Books Updated", desc: "Flows into Ledger → Trial Balance → Financial Statements" },
               ].map(s => (
                 <div key={s.step} style={{ textAlign: "center" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(37,99,235,0.1)", border: "1px solid rgba(59,130,246,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem", margin: "0 auto 0.5rem" }}>{s.icon}</div>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(37,99,235,0.1)", border: "1px solid rgba(31,94,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem", margin: "0 auto 0.5rem" }}>{s.icon}</div>
                   <div style={{ fontWeight: 700, fontSize: "0.82rem", marginBottom: "0.2rem" }}>{s.title}</div>
-                  <div style={{ fontSize: "0.72rem", color: "#4A6FA5", lineHeight: 1.5 }}>{s.desc}</div>
+                  <div style={{ fontSize: "0.72rem", color: "#5A6080", lineHeight: 1.5 }}>{s.desc}</div>
                 </div>
               ))}
             </div>
@@ -142,21 +142,21 @@ export default function BankingLanding() {
           {/* Bank account stats */}
           {!loading && stats.length > 0 && (
             <div className="bk-card">
-              <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#4A6FA5", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "1rem" }}>Bank & Cash Accounts</div>
+              <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#5A6080", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "1rem" }}>Bank & Cash Accounts</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                 {stats.map(s => (
-                  <div key={s.name} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.7rem 0.9rem", background: "#080D1C", borderRadius: 9, border: "1px solid #111E33" }}>
+                  <div key={s.name} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.7rem 0.9rem", background: "#FFFFFF", borderRadius: 9, border: "1px solid #FFFFFF" }}>
                     <div style={{ fontSize: "1rem" }}>🏦</div>
                     <div style={{ flex: 1, fontWeight: 600, fontSize: "0.85rem" }}>{s.name}</div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "0.68rem", color: "#4A6FA5" }}>Total In</div>
-                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#34D399", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(s.totalIn)}</div>
+                      <div style={{ fontSize: "0.68rem", color: "#5A6080" }}>Total In</div>
+                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0B7A55", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(s.totalIn)}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "0.68rem", color: "#4A6FA5" }}>Total Out</div>
-                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#FCA5A5", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(s.totalOut)}</div>
+                      <div style={{ fontSize: "0.68rem", color: "#5A6080" }}>Total Out</div>
+                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#C2321F", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(s.totalOut)}</div>
                     </div>
-                    <Link href="/finance/banking/import" style={{ background: "#2563EB", color: "#fff", padding: "6px 14px", borderRadius: 7, fontWeight: 700, fontSize: "0.75rem", textDecoration: "none", flexShrink: 0 }}>
+                    <Link href="/finance/banking/import" style={{ background: "#232A63", color: "#fff", padding: "6px 14px", borderRadius: 7, fontWeight: 700, fontSize: "0.75rem", textDecoration: "none", flexShrink: 0 }}>
                       Import →
                     </Link>
                   </div>

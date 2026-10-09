@@ -27,8 +27,12 @@ const FEEDS = [
   },
 ];
 
+const decode = (s: string) => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&");
+
+// Feeds send HTML escaped (&lt;a href…) or in CDATA — unescape first, then drop the tags
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+  const unwrapped = html.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
+  return decode(decode(unwrapped).replace(/<[^>]*>/g, " ")).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function parseItems(xml: string, category: TaxNewsItem["category"]): TaxNewsItem[] {
@@ -41,8 +45,12 @@ function parseItems(xml: string, category: TaxNewsItem["category"]): TaxNewsItem
     const title = stripHtml(block.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? "");
     const url = block.match(/<link>([\s\S]*?)<\/link>/)?.[1]?.trim() ?? block.match(/<link\s+href="([^"]+)"/)?.[1] ?? "";
     const rawDesc = block.match(/<description>([\s\S]*?)<\/description>/)?.[1] ?? "";
-    const summary = stripHtml(rawDesc).slice(0, 200);
     const source = stripHtml(block.match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1] ?? "Google News");
+    // Google News descriptions only repeat the headline and source — show nothing rather than a duplicate
+    let summary = stripHtml(rawDesc);
+    const bare = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!summary || bare(summary).startsWith(bare(title).slice(0, 40)) || bare(summary) === bare(source)) summary = "";
+    summary = summary.slice(0, 200);
     const pubDate = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1]?.trim() ?? "";
 
     if (!title || title.length < 10) continue;

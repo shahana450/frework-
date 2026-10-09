@@ -1,0 +1,13 @@
+node_modules
+.next
+*.log
+.turbo
+tally-bridge-app
+tally-bridge-extension
+infrastructure
+tests
+docs
+apps/mobile
+apps/web/public/tally-bridge-setup.zip
+apps/web/public/tally-bridge-setup.exe
+apps/web/.test-dist

@@ -1,7 +1,16 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import LogoPicker from "@/components/LogoPicker";
+import { COUNTRIES } from "@/lib/tax";
+
+// Current Indian financial year start (April), e.g. "2026-04-01"
+function indianFyStart(d = new Date()) { const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `${y}-04-01`; }
+// The financial year that contains today, for a year starting in month `m` (1–12)
+function fyStartFor(m: number, d = new Date()) { const y = d.getMonth() + 1 >= m ? d.getFullYear() : d.getFullYear() - 1; return `${y}-${String(m).padStart(2, "0")}-01`; }
+function fyLabel(start: string) { const y = +start.slice(0, 4); return start.slice(5, 7) === "01" ? `FY ${y}` : `FY ${y}-${String(y + 1).slice(2)}`; }
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 import Link from "next/link";
 
@@ -49,11 +58,14 @@ export default function BusinessSetup() {
   const [form, setForm] = useState({
     name: "", legal_name: "", business_type: "proprietorship",
     gstin: "", pan: "", tan: "",
+    gst_username: "", gst_trade_name: "",
     address: "", city: "", state: "Kerala", pincode: "",
     email: "", phone: "",
     gst_registration_type: "regular",
     coa_preset: "services",
-    fy_start: "2024-04-01",
+    fy_start: indianFyStart(),
+    country: "IN",
+    logo_url: "",
   });
 
   useEffect(() => {
@@ -65,9 +77,17 @@ export default function BusinessSetup() {
   }, []);
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const isIN = form.country === "IN";
+  const country = COUNTRIES.find(c => c.code === form.country) ?? COUNTRIES[0];
+  const baseFy = isIN ? indianFyStart() : fyStartFor(+form.fy_start.slice(5, 7) || 1);
 
   async function handleSubmit() {
     if (!userId) return;
+    // Already have a business with this GSTIN or name? Ask before creating a second copy.
+    const { data: mine } = await supabase.from("fw_fin_businesses").select("name,gstin").eq("owner_id", userId);
+    const g = form.gstin.trim().toUpperCase();
+    const twin = (mine ?? []).find(b => (g && b.gstin?.toUpperCase() === g) || b.name?.trim().toLowerCase() === form.name.trim().toLowerCase());
+    if (twin && !window.confirm(`You already have "${twin.name}"${twin.gstin ? ` (GSTIN ${twin.gstin})` : ""} with the same ${g && twin.gstin?.toUpperCase() === g ? "GSTIN" : "name"}.\n\nPress OK only if this is a separate business. To change its details instead, use Settings → Business Details.`)) return;
     setSaving(true);
     setError("");
     try {
@@ -81,32 +101,36 @@ export default function BusinessSetup() {
           gstin: form.gstin || null,
           pan: form.pan || null,
           tan: form.tan || null,
+          gst_username: form.gst_username || null,
+          gst_trade_name: form.gst_trade_name || null,
           address: form.address,
           city: form.city,
           state: form.state,
           pincode: form.pincode,
           email: form.email,
           phone: form.phone,
-          gst_registration_type: form.gst_registration_type,
-          currency: "INR",
-          fiscal_year_start: "04-01",
+          gst_registration_type: isIN ? form.gst_registration_type : (form.gstin ? "regular" : "unregistered"),
+          currency: country.currency,
+          fiscal_year_start: form.fy_start.slice(5),
+          country: country.code, timezone: country.timezone, locale: country.locale, tax_regime: isIN ? "IN_GST" : "NONE",
           is_active: true,
         })
         .select("id")
         .single();
 
       if (bizErr) throw new Error(bizErr.message);
+      if (form.logo_url) await supabase.from("fw_fin_businesses").update({ logo_url: form.logo_url }).eq("id", biz.id);
 
       // Create current financial year
       const fyStart = new Date(form.fy_start);
       const fyEnd = new Date(fyStart);
       fyEnd.setFullYear(fyEnd.getFullYear() + 1);
       fyEnd.setDate(fyEnd.getDate() - 1);
-      const fyLabel = `${fyStart.getFullYear()}-${String(fyStart.getFullYear() + 1).slice(2)}`;
+      const fyName = fyLabel(form.fy_start).replace(/^FY /, "");
 
       await supabase.from("fw_fin_financial_years").insert({
         business_id: biz.id,
-        label: fyLabel,
+        label: fyName,
         start_date: form.fy_start,
         end_date: fyEnd.toISOString().split("T")[0],
         is_current: true,
@@ -223,11 +247,11 @@ export default function BusinessSetup() {
   }
 
   const inputStyle: React.CSSProperties = {
-    width: "100%", background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.15)",
-    color: "#EDE8DC", padding: "10px 14px", borderRadius: 8, fontSize: "0.9rem",
+    width: "100%", background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.21)",
+    color: "#141A3A", padding: "10px 14px", borderRadius: 8, fontSize: "0.9rem",
     outline: "none", boxSizing: "border-box",
   };
-  const labelStyle: React.CSSProperties = { display: "block", marginBottom: "0.4rem", fontSize: "0.78rem", color: "rgba(237,232,220,0.5)", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" };
+  const labelStyle: React.CSSProperties = { display: "block", marginBottom: "0.4rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.75)", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" };
   const fieldStyle: React.CSSProperties = { marginBottom: "1.25rem" };
 
   const steps: { num: Step; label: string }[] = [
@@ -236,18 +260,18 @@ export default function BusinessSetup() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 900, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#232A63", fontWeight: 900, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
           <span>🛩️</span> FrePilot
         </Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Set Up Your Business</span>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Set Up Your Business</span>
       </nav>
 
       <div style={{ maxWidth: 640, margin: "3rem auto", padding: "0 1.5rem" }}>
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ fontSize: "0.8rem", color: "rgba(237,232,220,0.4)", letterSpacing: "0.05em" }}>You Build, We Pilot — let's get your books ready</div>
+          <div style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.65)", letterSpacing: "0.05em" }}>You Build, We Pilot — let's get your books ready</div>
         </div>
         {/* Step indicator */}
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2.5rem" }}>
@@ -255,20 +279,35 @@ export default function BusinessSetup() {
             <div key={s.num} style={{ flex: 1, display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <div style={{
                 width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                background: step >= s.num ? "#C9A84C" : "rgba(237,232,220,0.1)",
-                color: step >= s.num ? "#070C1A" : "rgba(237,232,220,0.4)",
+                background: step >= s.num ? "#232A63" : "rgba(20,26,58,0.14)",
+                color: step >= s.num ? "#F5F6FA" : "rgba(20,26,58,0.65)",
                 fontSize: "0.75rem", fontWeight: 800, flexShrink: 0,
               }}>{s.num}</div>
-              <div style={{ fontSize: "0.72rem", color: step >= s.num ? "#C9A84C" : "rgba(237,232,220,0.4)", whiteSpace: "nowrap" }}>{s.label}</div>
-              {i < steps.length - 1 && <div style={{ flex: 1, height: 1, background: step > s.num ? "#C9A84C" : "rgba(237,232,220,0.1)" }} />}
+              <div style={{ fontSize: "0.72rem", color: step >= s.num ? "#232A63" : "rgba(20,26,58,0.65)", whiteSpace: "nowrap" }}>{s.label}</div>
+              {i < steps.length - 1 && <div style={{ flex: 1, height: 1, background: step > s.num ? "#232A63" : "rgba(20,26,58,0.14)" }} />}
             </div>
           ))}
         </div>
 
-        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 16, padding: "2rem" }}>
+        <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 16, padding: "2rem" }}>
           {step === 1 && (
             <>
               <h2 style={{ margin: "0 0 1.5rem", fontSize: "1.2rem", fontWeight: 700 }}>Business Information</h2>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Country *</label>
+                <select style={inputStyle} value={form.country} onChange={e => {
+                  const cc = e.target.value;
+                  // India keeps its April year and state list; other countries default to a January year and free-text region
+                  setForm(f => ({ ...f, country: cc, state: cc === "IN" ? "Kerala" : "", fy_start: cc === "IN" ? indianFyStart() : fyStartFor(1), gst_registration_type: cc === "IN" ? f.gst_registration_type : "regular" }));
+                }}>
+                  {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                </select>
+                {!isIN && <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", marginTop: 4 }}>Books will be kept in {COUNTRIES.find(c => c.code === form.country)?.currency}, with {COUNTRIES.find(c => c.code === form.country)?.name}&apos;s filing reminders. You can change this later in Region &amp; Currency.</div>}
+              </div>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Logo (optional)</label>
+                <LogoPicker value={form.logo_url || null} onChange={v => set("logo_url", v ?? "")} />
+              </div>
               <div style={fieldStyle}>
                 <label style={labelStyle}>Business / Trade Name *</label>
                 <input style={inputStyle} placeholder="e.g. Acme Traders" value={form.name} onChange={e => set("name", e.target.value)} />
@@ -290,7 +329,7 @@ export default function BusinessSetup() {
                 </div>
                 <div style={fieldStyle}>
                   <label style={labelStyle}>Phone</label>
-                  <input style={inputStyle} type="tel" placeholder="+91" value={form.phone} onChange={e => set("phone", e.target.value)} />
+                  <input style={inputStyle} type="tel" placeholder={({ IN: "+91", AE: "+971", SA: "+966", QA: "+974", OM: "+968", BH: "+973", KW: "+965", GB: "+44", US: "+1", SG: "+65" } as Record<string, string>)[form.country] ?? "+"} value={form.phone} onChange={e => set("phone", e.target.value)} />
                 </div>
               </div>
               <div style={fieldStyle}>
@@ -303,14 +342,16 @@ export default function BusinessSetup() {
                   <input style={inputStyle} value={form.city} onChange={e => set("city", e.target.value)} />
                 </div>
                 <div style={fieldStyle}>
-                  <label style={labelStyle}>State</label>
-                  <select style={inputStyle} value={form.state} onChange={e => set("state", e.target.value)}>
-                    {STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <label style={labelStyle}>{isIN ? "State" : "State / Emirate / Region"}</label>
+                  {isIN
+                    ? <select style={inputStyle} value={form.state} onChange={e => set("state", e.target.value)}>
+                        {STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    : <input style={inputStyle} placeholder={form.country === "AE" ? "e.g. Dubai" : form.country === "US" ? "e.g. California" : "Region"} value={form.state} onChange={e => set("state", e.target.value)} />}
                 </div>
                 <div style={fieldStyle}>
-                  <label style={labelStyle}>PIN Code</label>
-                  <input style={inputStyle} maxLength={6} value={form.pincode} onChange={e => set("pincode", e.target.value)} />
+                  <label style={labelStyle}>{isIN ? "PIN Code" : "Postal Code"}</label>
+                  <input style={inputStyle} maxLength={isIN ? 6 : 12} value={form.pincode} onChange={e => set("pincode", e.target.value)} />
                 </div>
               </div>
             </>
@@ -318,12 +359,20 @@ export default function BusinessSetup() {
 
           {step === 2 && (
             <>
-              <h2 style={{ margin: "0 0 1.5rem", fontSize: "1.2rem", fontWeight: 700 }}>Tax & GST Information</h2>
+              <h2 style={{ margin: "0 0 1.5rem", fontSize: "1.2rem", fontWeight: 700 }}>{isIN ? "Tax & GST Information" : "Tax Information"}</h2>
+              {!isIN && (
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>{({ AE: "TRN (VAT registration number)", SA: "VAT number", OM: "VAT number", BH: "VAT account number", GB: "VAT registration number", US: "EIN (employer ID)", SG: "GST registration / UEN", QA: "Tax card number (TIN)", KW: "Tax / civil ID number" } as Record<string, string>)[form.country] ?? "Tax registration number"} (optional)</label>
+                  <input style={inputStyle} value={form.gstin} onChange={e => set("gstin", e.target.value.trim())} placeholder="Leave blank if not registered" />
+                  <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", marginTop: 4 }}>Shown on your invoices. Filing reminders for VAT/GST appear when this is filled in.</div>
+                </div>
+              )}
+              {isIN && <>
               <div style={fieldStyle}>
                 <label style={labelStyle}>GST Registration Type</label>
                 {GST_TYPES.map(g => (
-                  <label key={g.value} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", marginBottom: "0.5rem", background: form.gst_registration_type === g.value ? "rgba(201,168,76,0.1)" : "rgba(255,255,255,0.02)", border: `1px solid ${form.gst_registration_type === g.value ? "rgba(201,168,76,0.3)" : "rgba(237,232,220,0.08)"}`, borderRadius: 8, cursor: "pointer" }}>
-                    <input type="radio" name="gst_type" value={g.value} checked={form.gst_registration_type === g.value} onChange={e => set("gst_registration_type", e.target.value)} style={{ accentColor: "#C9A84C" }} />
+                  <label key={g.value} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", marginBottom: "0.5rem", background: form.gst_registration_type === g.value ? "rgba(35,42,99,0.1)" : "#FFFFFF", border: `1px solid ${form.gst_registration_type === g.value ? "rgba(35,42,99,0.3)" : "rgba(20,26,58,0.11)"}`, borderRadius: 8, cursor: "pointer" }}>
+                    <input type="radio" name="gst_type" value={g.value} checked={form.gst_registration_type === g.value} onChange={e => set("gst_registration_type", e.target.value)} style={{ accentColor: "#232A63" }} />
                     <span style={{ fontSize: "0.88rem" }}>{g.label}</span>
                   </label>
                 ))}
@@ -344,12 +393,40 @@ export default function BusinessSetup() {
                   <input style={inputStyle} placeholder="ABCD12345E" maxLength={10} value={form.tan} onChange={e => set("tan", e.target.value.toUpperCase())} />
                 </div>
               </div>
+              <div style={{ marginTop: "0.5rem", marginBottom: "1.25rem", background: "rgba(35,42,99,0.04)", border: "1px solid rgba(35,42,99,0.15)", borderRadius: 10, padding: "1rem 1.1rem" }}>
+                <div style={{ fontSize: "0.8rem", color: "#232A63", fontWeight: 700, marginBottom: "0.6rem" }}>🌐 GST Portal Credentials (Optional)</div>
+                <div style={{ fontSize: "0.74rem", color: "rgba(20,26,58,0.70)", marginBottom: "0.75rem", lineHeight: 1.6 }}>
+                  Add your GST portal username to enable auto-fetch of GSTR-2A/2B data in GST Reconciliation. <strong style={{ color: "rgba(20,26,58,0.85)" }}>We never store your password.</strong> OTP is used at the time of download.
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <div>
+                    <label style={labelStyle}>GST Portal Username</label>
+                    <input style={inputStyle} placeholder="e.g. 22AAAAA0000A1Z5 or mobile" value={form.gst_username} onChange={e => set("gst_username", e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Trade Name (as in GST portal)</label>
+                    <input style={inputStyle} placeholder="Registered trade name" value={form.gst_trade_name} onChange={e => set("gst_trade_name", e.target.value)} />
+                  </div>
+                </div>
+              </div>
+              </>}
+              {!isIN && (
+                <div style={fieldStyle}>
+                  <label style={labelStyle}>Financial year starts in</label>
+                  <select style={inputStyle} value={+form.fy_start.slice(5, 7)} onChange={e => set("fy_start", fyStartFor(+e.target.value))}>
+                    {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                  </select>
+                </div>
+              )}
               <div style={fieldStyle}>
                 <label style={labelStyle}>Current Financial Year</label>
                 <select style={inputStyle} value={form.fy_start} onChange={e => set("fy_start", e.target.value)}>
-                  <option value="2023-04-01">FY 2023-24 (Apr 2023 – Mar 2024)</option>
-                  <option value="2024-04-01">FY 2024-25 (Apr 2024 – Mar 2025)</option>
-                  <option value="2025-04-01">FY 2025-26 (Apr 2025 – Mar 2026)</option>
+                  {[-2, -1, 0].map(k => {
+                    const cur = baseFy, y = +cur.slice(0, 4) + k, start = `${y}${cur.slice(4)}`;
+                    const end = new Date(Date.UTC(y + 1, +cur.slice(5, 7) - 1, 0)).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
+                    const from = new Date(Date.UTC(y, +cur.slice(5, 7) - 1, 1)).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
+                    return <option key={start} value={start}>{fyLabel(start)} ({from} – {end})</option>;
+                  })}
                 </select>
               </div>
             </>
@@ -358,23 +435,23 @@ export default function BusinessSetup() {
           {step === 3 && (
             <>
               <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.2rem", fontWeight: 700 }}>Chart of Accounts</h2>
-              <p style={{ color: "rgba(237,232,220,0.5)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>We'll pre-fill accounts for your industry. You can add more later.</p>
+              <p style={{ color: "rgba(20,26,58,0.75)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>We'll pre-fill accounts for your industry. You can add more later.</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                 {COA_PRESETS.map(p => (
                   <label key={p.value} style={{
-                    padding: "1rem", background: form.coa_preset === p.value ? "rgba(201,168,76,0.1)" : "rgba(255,255,255,0.02)",
-                    border: `1px solid ${form.coa_preset === p.value ? "rgba(201,168,76,0.35)" : "rgba(237,232,220,0.08)"}`,
+                    padding: "1rem", background: form.coa_preset === p.value ? "rgba(35,42,99,0.1)" : "#FFFFFF",
+                    border: `1px solid ${form.coa_preset === p.value ? "rgba(35,42,99,0.35)" : "rgba(20,26,58,0.11)"}`,
                     borderRadius: 10, cursor: "pointer",
                   }}>
                     <input type="radio" name="coa_preset" value={p.value} checked={form.coa_preset === p.value} onChange={e => set("coa_preset", e.target.value)} style={{ display: "none" }} />
-                    <div style={{ fontWeight: 600, fontSize: "0.88rem", color: form.coa_preset === p.value ? "#C9A84C" : "#EDE8DC", marginBottom: "0.3rem" }}>{p.label}</div>
-                    <div style={{ fontSize: "0.75rem", color: "rgba(237,232,220,0.4)" }}>{p.desc}</div>
+                    <div style={{ fontWeight: 600, fontSize: "0.88rem", color: form.coa_preset === p.value ? "#232A63" : "#141A3A", marginBottom: "0.3rem" }}>{p.label}</div>
+                    <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)" }}>{p.desc}</div>
                   </label>
                 ))}
               </div>
-              <div style={{ marginTop: "1.5rem", background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.15)", borderRadius: 8, padding: "1rem" }}>
-                <div style={{ fontSize: "0.8rem", color: "#C9A84C", fontWeight: 600, marginBottom: "0.3rem" }}>What's included</div>
-                <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.5)", lineHeight: 1.6 }}>
+              <div style={{ marginTop: "1.5rem", background: "rgba(35,42,99,0.05)", border: "1px solid rgba(35,42,99,0.15)", borderRadius: 8, padding: "1rem" }}>
+                <div style={{ fontSize: "0.8rem", color: "#232A63", fontWeight: 600, marginBottom: "0.3rem" }}>What's included</div>
+                <div style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.75)", lineHeight: 1.6 }}>
                   Assets (Cash, Bank, Debtors, GST ITC) · Liabilities (Creditors, GST Payable, TDS) · Capital · Income & Expenses with Indian accounting structure
                 </div>
               </div>
@@ -388,37 +465,41 @@ export default function BusinessSetup() {
                 { label: "Business Name", value: form.name || "—" },
                 { label: "Business Type", value: BIZ_TYPES.find(b => b.value === form.business_type)?.label ?? "—" },
                 { label: "Location", value: [form.city, form.state].filter(Boolean).join(", ") || "—" },
-                { label: "GST Type", value: GST_TYPES.find(g => g.value === form.gst_registration_type)?.label ?? "—" },
-                { label: "GSTIN", value: form.gstin || "Not provided" },
-                { label: "PAN", value: form.pan || "Not provided" },
-                { label: "Financial Year", value: form.fy_start.startsWith("2024") ? "FY 2024-25" : form.fy_start.startsWith("2025") ? "FY 2025-26" : "FY 2023-24" },
+                ...(isIN ? [
+                  { label: "GST Type", value: GST_TYPES.find(g => g.value === form.gst_registration_type)?.label ?? "—" },
+                  { label: "GSTIN", value: form.gstin || "Not provided" },
+                  { label: "PAN", value: form.pan || "Not provided" },
+                ] : [{ label: "Tax number", value: form.gstin || "Not registered" }, { label: "Currency", value: country.currency }]),
+                { label: "Country", value: country.name },
+                { label: "Financial Year", value: fyLabel(form.fy_start) },
                 { label: "Accounts Preset", value: COA_PRESETS.find(c => c.value === form.coa_preset)?.label ?? "—" },
+                ...(form.gst_username ? [{ label: "GST Portal Username", value: form.gst_username }] : []),
               ].map(row => (
-                <div key={row.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.6rem 0", borderBottom: "1px solid rgba(237,232,220,0.06)" }}>
-                  <span style={{ fontSize: "0.82rem", color: "rgba(237,232,220,0.5)" }}>{row.label}</span>
+                <div key={row.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.6rem 0", borderBottom: "1px solid rgba(20,26,58,0.08)" }}>
+                  <span style={{ fontSize: "0.82rem", color: "rgba(20,26,58,0.75)" }}>{row.label}</span>
                   <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{row.value}</span>
                 </div>
               ))}
               {error === "__SCHEMA_MISSING__" && (
-                <div style={{ marginTop: "1rem", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 10, padding: "1rem 1.25rem" }}>
-                  <div style={{ fontWeight: 700, color: "#f87171", marginBottom: "0.5rem" }}>⚠️ Database tables not set up yet</div>
-                  <div style={{ fontSize: "0.8rem", color: "rgba(237,232,220,0.6)", lineHeight: 1.6, marginBottom: "0.85rem" }}>
+                <div style={{ marginTop: "1rem", background: "rgba(194,50,31,0.08)", border: "1px solid rgba(194,50,31,0.25)", borderRadius: 10, padding: "1rem 1.25rem" }}>
+                  <div style={{ fontWeight: 700, color: "#C2321F", marginBottom: "0.5rem" }}>⚠️ Database tables not set up yet</div>
+                  <div style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.85)", lineHeight: 1.6, marginBottom: "0.85rem" }}>
                     The FreWork Finance tables don&apos;t exist in your Supabase project yet. You need to run the schema SQL once in your Supabase dashboard.
                   </div>
-                  <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.5)", marginBottom: "0.5rem", fontWeight: 600 }}>Steps:</div>
-                  <ol style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.78rem", color: "rgba(237,232,220,0.55)", lineHeight: 2 }}>
-                    <li>Open <strong style={{ color: "#C9A84C" }}>supabase.com</strong> → your project → <strong style={{ color: "#C9A84C" }}>SQL Editor</strong></li>
-                    <li>Click <strong style={{ color: "#C9A84C" }}>New Query</strong></li>
+                  <div style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.75)", marginBottom: "0.5rem", fontWeight: 600 }}>Steps:</div>
+                  <ol style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.80)", lineHeight: 2 }}>
+                    <li>Open <strong style={{ color: "#232A63" }}>supabase.com</strong> → your project → <strong style={{ color: "#232A63" }}>SQL Editor</strong></li>
+                    <li>Click <strong style={{ color: "#232A63" }}>New Query</strong></li>
                     <li>Download the schema SQL and paste it in:</li>
                   </ol>
-                  <a href="/api/finance/setup-schema" target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: "0.75rem", background: "#C9A84C", color: "#070C1A", padding: "7px 16px", borderRadius: 7, textDecoration: "none", fontWeight: 700, fontSize: "0.8rem" }}>
+                  <a href="/api/finance/setup-schema" target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: "0.75rem", background: "#232A63", color: "#F5F6FA", padding: "7px 16px", borderRadius: 7, textDecoration: "none", fontWeight: 700, fontSize: "0.8rem" }}>
                     ⬇ Download schema.sql
                   </a>
-                  <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "rgba(237,232,220,0.35)" }}>After running the SQL, click <strong>Create Business</strong> again.</div>
+                  <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "rgba(20,26,58,0.60)" }}>After running the SQL, click <strong>Create Business</strong> again.</div>
                 </div>
               )}
               {error && error !== "__SCHEMA_MISSING__" && (
-                <div style={{ marginTop: "1rem", color: "#f87171", fontSize: "0.83rem", background: "rgba(248,113,113,0.1)", padding: "0.75rem", borderRadius: 6 }}>{error}</div>
+                <div style={{ marginTop: "1rem", color: "#C2321F", fontSize: "0.83rem", background: "rgba(194,50,31,0.1)", padding: "0.75rem", borderRadius: 6 }}>{error}</div>
               )}
             </>
           )}
@@ -427,18 +508,18 @@ export default function BusinessSetup() {
         {/* Navigation */}
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1.5rem" }}>
           {step > 1 ? (
-            <button onClick={() => setStep(s => (s - 1) as Step)} style={{ background: "rgba(237,232,220,0.08)", border: "none", color: "#EDE8DC", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem" }}>
+            <button onClick={() => setStep(s => (s - 1) as Step)} style={{ background: "rgba(20,26,58,0.11)", border: "none", color: "#141A3A", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem" }}>
               ← Back
             </button>
           ) : (
-            <Link href="/finance" style={{ background: "rgba(237,232,220,0.05)", border: "none", color: "rgba(237,232,220,0.5)", padding: "10px 24px", borderRadius: 8, textDecoration: "none", fontSize: "0.9rem" }}>
+            <Link href="/finance" style={{ background: "rgba(20,26,58,0.08)", border: "none", color: "rgba(20,26,58,0.75)", padding: "10px 24px", borderRadius: 8, textDecoration: "none", fontSize: "0.9rem" }}>
               Cancel
             </Link>
           )}
           {step < 4 ? (
             <button
               onClick={() => { if (step === 1 && !form.name) { setError("Business name is required"); return; } setError(""); setStep(s => (s + 1) as Step); }}
-              style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem" }}
+              style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem" }}
             >
               Next →
             </button>
@@ -446,7 +527,7 @@ export default function BusinessSetup() {
             <button
               onClick={handleSubmit}
               disabled={saving}
-              style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px 28px", borderRadius: 8, cursor: saving ? "wait" : "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: saving ? 0.7 : 1 }}
+              style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "10px 28px", borderRadius: 8, cursor: saving ? "wait" : "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: saving ? 0.7 : 1 }}
             >
               {saving ? "Creating…" : "Create Business →"}
             </button>

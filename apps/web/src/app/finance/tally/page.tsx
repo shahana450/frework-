@@ -1,7 +1,10 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { connectTally, chooseTallyCompany, disconnectTally, useTally } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { readTallyLedgerGroups, importTallyVouchers, summaryText } from "@/lib/integrations/tallyClient";
+import { downloadApiFile } from "@/lib/apiAuthClient";
 import Link from "next/link";
 
 // ── Chrome extension bridge ──────────────────────────────────────────────────
@@ -74,12 +77,12 @@ function ledgerGroupForType(type: string): string {
   return map[type] ?? "Indirect Expenses";
 }
 
-function buildLedgerXML(accounts: { name: string; type: string }[]) {
+function buildLedgerXML(accounts: { name: string; type: string; group?: string }[]) {
   const entries = accounts.map(a => `
   <TALLYMESSAGE xmlns:UDF="TallyUDF">
    <LEDGER NAME="${a.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")}" ACTION="Create">
     <NAME>${a.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</NAME>
-    <PARENT>${ledgerGroupForType(a.type)}</PARENT>
+    <PARENT>${(a.group ?? ledgerGroupForType(a.type)).replace(/&/g,"&amp;")}</PARENT>
     <ISBILLWISEON>No</ISBILLWISEON>
     <ISCOSTCENTRESON>No</ISCOSTCENTRESON>
    </LEDGER>
@@ -349,52 +352,20 @@ export default function TallyPage() {
       setJournalCount(count ?? 0);
       if (jData?.length) { setJournals(jData); setPreviewOpen(true); }
 
-      // Auto-reconnect if Tally was previously connected
-      const storedCompany = localStorage.getItem("fw_tally_company") ?? "";
-      const storedPort = localStorage.getItem("fw_tally_port") ?? "7001";
-      if (storedCompany.length > 4) {
-        setTallyPort(storedPort);
-        // Silently test connection in background
-        try {
-          const res = await tallyFetch(`http://localhost:${storedPort}`, TALLY_CURCOMP_XML, 3000);
-          if (res.ok) {
-            const txt = await res.text();
-            const found = extractCompanyName(txt);
-            if (found) { localStorage.setItem("fw_tally_company", found); setCompanyName(found); }
-            setConnStatus("connected");
-            setConnMsg(`Connected — ${found || storedCompany}`);
-            // Signal to the import effect — runs once bizId is ready
-            setTriggerImport(t => t + 1);
-          }
-        } catch { /* bridge not running — stay idle, user will click Connect */ }
-      }
+      // Port comes from the shared connection; nothing is imported automatically just by opening this page
+      setTallyPort(localStorage.getItem("fw_tally_port") ?? "7001");
     });
   }, []);
 
-  // Keep-alive ping every 60s — pause during import to avoid freezing Tally
+  const shared = useTally();
   useEffect(() => {
-    if (connStatus !== "connected") return;
-    keepAliveFailsRef.current = 0;
-    const id = setInterval(async () => {
-      if (syncing === "importVouchers") return; // don't ping while importing
-      try {
-        const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ping</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ping" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-        const res = await tallyFetch(tallyUrl, xml, 4000);
-        if (res.ok) {
-          keepAliveFailsRef.current = 0;
-        } else {
-          keepAliveFailsRef.current += 1;
-        }
-      } catch {
-        keepAliveFailsRef.current += 1;
-      }
-      if (keepAliveFailsRef.current >= 3) {
-        setConnStatus("error");
-        setConnMsg("Tally stopped responding. Make sure Tally Prime is still open, then click Connect again.");
-      }
-    }, 60000);
-    return () => clearInterval(id);
-  }, [connStatus, tallyUrl, syncing]);
+    if (shared.status === "connected") {
+      setConnStatus("connected");
+      if (shared.company) setCompanyName(shared.company);
+      if (shared.companies.length) setAllCompanies(shared.companies);
+    } else if (shared.status === "error") { setConnStatus("error"); setConnMsg(shared.message); }
+    else if (shared.status === "idle") setConnStatus(s => (s === "connecting" ? s : "idle"));
+  }, [shared.status, shared.company, shared.companies, shared.message]);
 
   // Auto-import effect — fires when triggerImport increments AND bizId is ready
   useEffect(() => {
@@ -404,11 +375,10 @@ export default function TallyPage() {
   }, [triggerImport, bizId, connStatus]);
 
   function disconnect() {
+    disconnectTally();
     setConnStatus("idle");
-    setConnMsg("");
-    setCompanyName("");
+    setConnMsg("Disconnected — FreWork won't talk to Tally until you press Connect.");
     keepAliveFailsRef.current = 0;
-    try { localStorage.removeItem("fw_tally_company"); localStorage.removeItem("fw_tally_fy_id"); } catch { /* */ }
   }
 
   async function loadJournalPreview() {
@@ -535,7 +505,7 @@ export default function TallyPage() {
         })();
         allVouchers.push(...results);
         // Pause between months — lets Tally breathe, prevents UI freeze
-        if (i < months.length - 1) await new Promise(r => setTimeout(r, 1500));
+        if (i < months.length - 1) await new Promise(r => setTimeout(r, 200));
       }
 
       if (!allVouchers.length) {
@@ -543,90 +513,12 @@ export default function TallyPage() {
         setSyncing(null); return;
       }
 
-      // Load existing accounts + create missing ones
-      setSyncProgress("Preparing accounts…");
-      const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bizId);
-      const accountMap = new Map((accounts ?? []).map(a => [a.name.toLowerCase(), a]));
-      const missingNames = new Set<string>();
-      for (const v of allVouchers) for (const l of v.lines) {
-        if (!accountMap.has(l.ledgerName.toLowerCase())) missingNames.add(l.ledgerName);
-      }
-      if (missingNames.size > 0) {
-        const newAccounts = Array.from(missingNames).map((name, idx) => ({
-          business_id: bizId, code: `TI${String((accounts?.length ?? 0) + idx + 1).padStart(3,"0")}`,
-          name, type: tallyParentToType(name), description: "Imported from Tally", is_system: false, is_group: false,
-          sort_order: (accounts?.length ?? 0) + idx + 1,
-        }));
-        const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAccounts).select("id,name,type");
-        for (const a of (created ?? [])) accountMap.set(a.name.toLowerCase(), a);
-      }
-
-      // Get FY + existing entry_nos
-      const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,start_date").eq("business_id", bizId).order("start_date", { ascending: false });
-      // Find the FY that matches the import date range
-      const importFrom = from || `${new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1}-04-01`;
-      const importFromYear = parseInt(importFrom.slice(0, 4));
-      const fyTag = `FY${String(importFromYear).slice(2)}`; // e.g. "FY25" for 2025-26
-      const matchingFy = fys?.find(f => f.start_date?.startsWith(String(importFromYear)));
-      const fyIdToUse = matchingFy?.id ?? fys?.[0]?.id ?? null;
-      // Only check for duplicates within the same FY tag to avoid cross-year collisions
-      const fyPrefix = `TLY-${fyTag}-`;
-      const { data: existingTly } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).like("entry_no", `${fyPrefix}%`);
-      const existingEntryNos = new Set<string>((existingTly ?? []).map(j => j.entry_no));
-      let entrySeq = existingTly?.length
-        ? Math.max(0, ...existingTly.map(j => parseInt(j.entry_no.replace(/\D/g,"") || "0", 10))) + 1 : 1;
-
-      // Build all new journal rows (deduped) in memory
-      type JRow = { business_id: string; financial_year_id: string|null; entry_no: string; date: string; narration: string; type: string; status: string; total_debit: number; total_credit: number; reference_no: string|null };
-      type LRow = { account_id: string; narration: string; dr_amount: number; cr_amount: number };
-      const journalRows: JRow[] = [];
-      const pendingLines: LRow[][] = []; // lines[i] corresponds to journalRows[i]
-      let skipped = 0;
-
-      for (const v of allVouchers) {
-        const vNum = v.voucherNumber?.trim();
-        const tallyLabel = vNum ? `${v.voucherType} ${vNum}` : `${v.voucherType}-${entrySeq}`;
-        const entryNo = `${fyPrefix}${tallyLabel}`;
-        if (existingEntryNos.has(entryNo)) { skipped++; continue; }
-
-        const lines: LRow[] = v.lines.flatMap(l => {
-          const acc = accountMap.get(l.ledgerName.toLowerCase());
-          if (!acc) return [];
-          return [{ account_id: acc.id, narration: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }];
-        });
-        if (!lines.length) { skipped++; continue; }
-
-        const totalDr = v.lines.filter(l => l.isDeemed).reduce((s, l) => s + l.amount, 0);
-        const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s, l) => s + l.amount, 0);
-        journalRows.push({ business_id: bizId, financial_year_id: fyIdToUse, entry_no: entryNo, date: v.date, narration: v.narration || tallyLabel, type: tallyVoucherTypeToFP(v.voucherType), status: "posted", total_debit: totalDr || totalCr, total_credit: totalCr || totalDr, reference_no: vNum || null });
-        pendingLines.push(lines);
-        existingEntryNos.add(entryNo);
-        if (!vNum) entrySeq++;
-      }
-
-      // Batch insert journals (50 at a time) → get IDs back
-      setSyncProgress(`Saving ${journalRows.length} vouchers to database…`);
-      let imported = 0;
-      const BATCH = 50;
-      for (let i = 0; i < journalRows.length; i += BATCH) {
-        const slice = journalRows.slice(i, i + BATCH);
-        const { data: inserted } = await supabase.from("fw_fin_journals").insert(slice).select("id");
-        if (!inserted?.length) continue;
-        // Build all lines for this batch
-        const allLines: (LRow & { journal_id: string })[] = [];
-        for (let j = 0; j < inserted.length; j++) {
-          const jId = inserted[j].id;
-          for (const l of pendingLines[i + j]) allLines.push({ ...l, journal_id: jId });
-        }
-        // Bulk insert lines (up to 200 at a time)
-        for (let li = 0; li < allLines.length; li += 200) {
-          await supabase.from("fw_fin_journal_lines").insert(allLines.slice(li, li + 200));
-        }
-        imported += inserted.length;
-        setSyncProgress(`Saved ${imported}/${journalRows.length} vouchers…`);
-      }
-
-      setImportVoucherResult({ ok: imported > 0, msg: `Imported ${imported} voucher${imported !== 1 ? "s" : ""} from Tally${skipped > 0 ? ` (${skipped} skipped)` : ""}.` });
+      setSyncProgress("Reading ledger groups from Tally…");
+      const groups = await readTallyLedgerGroups(tallyUrl, companyName || null);
+      // Through FreWork's posting engine: validated, year-lock aware, audit-logged, never imported twice
+      const sum = await importTallyVouchers(bizId, allVouchers as never, { ledgerGroups: groups, company: companyName || null, onProgress: setSyncProgress });
+      const imported = sum.imported;
+      setImportVoucherResult({ ok: sum.failedCount === 0, msg: summaryText(sum) });
       setAutoSyncDone(true);
       try { localStorage.setItem("fw_tally_last_import", Date.now().toString()); } catch { /* */ }
       // Auto-redirect back if came from another page
@@ -669,49 +561,10 @@ export default function TallyPage() {
         setXmlUploadResult({ ok: false, msg: "No vouchers found in the file. Export from Tally: Gateway → Daybook → Alt+E → XML format." });
         setSyncing(null); setSyncProgress(null); return;
       }
-      setSyncProgress(`Parsed ${vouchers.length} vouchers. Loading accounts…`);
-      const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bizId);
-      const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,start_date,end_date").eq("business_id", bizId).order("start_date", { ascending: false });
-      // Derive FY tag from the first voucher's date (for entry_no uniqueness across years)
-      const firstDate = vouchers[0]?.date ?? new Date().toISOString().slice(0,10);
-      const xmlFyYear = parseInt(firstDate.slice(0, 4));
-      const xmlFyTag = `FY${String(new Date(firstDate).getMonth() >= 3 ? xmlFyYear : xmlFyYear - 1).slice(2)}`;
-      const xmlFyPrefix = `TLY-${xmlFyTag}-`;
-      const { data: existingJ } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId).like("entry_no", `${xmlFyPrefix}%`);
-      const existingNos = new Set((existingJ ?? []).map(j => j.entry_no));
-      const accountMap = new Map((accounts ?? []).map(a => [a.name.toLowerCase().trim(), { id: a.id, type: a.type as string }]));
-
-      // Auto-create missing accounts
-      const missing = new Set<string>();
-      for (const v of vouchers) for (const l of v.lines) if (!accountMap.has(l.ledgerName.toLowerCase().trim())) missing.add(l.ledgerName);
-      if (missing.size > 0) {
-        const newAccs = Array.from(missing).map((name, i) => ({ business_id: bizId, code: `TU${String((accounts?.length??0)+i+1).padStart(3,"0")}`, name, type: tallyParentToType(name), description: "From Tally XML", is_system: false, is_group: false, sort_order: (accounts?.length??0)+i+1 }));
-        const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAccs).select("id,name,type");
-        for (const a of created ?? []) accountMap.set(a.name.toLowerCase().trim(), { id: a.id, type: a.type as string });
-      }
-
-      let imported = 0, skipped = 0, seq = 1;
-      for (const v of vouchers) {
-        const vNum = v.voucherNumber?.trim();
-        const entryNo = `${xmlFyPrefix}${v.voucherType} ${vNum || seq}`;
-        if (existingNos.has(entryNo)) { skipped++; continue; }
-        const fpType = tallyVoucherTypeToFP(v.voucherType);
-        const activeFy = fys?.find(f => v.date >= f.start_date && v.date <= f.end_date) ?? fys?.[0];
-        const totalDr = v.lines.filter(l => l.isDeemed).reduce((s,l) => s+l.amount, 0);
-        const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s,l) => s+l.amount, 0);
-        const { data: jRow, error: jErr } = await supabase.from("fw_fin_journals").insert({
-          business_id: bizId, financial_year_id: activeFy?.id ?? null,
-          entry_no: entryNo, date: v.date, narration: v.narration || entryNo,
-          type: fpType, status: "posted", total_debit: totalDr||totalCr, total_credit: totalCr||totalDr,
-          reference_no: vNum || null,
-        }).select("id").single();
-        if (jErr || !jRow) { skipped++; continue; }
-        const lines = v.lines.map(l => { const acc = accountMap.get(l.ledgerName.toLowerCase().trim()); if (!acc) return null; return { journal_id: jRow.id, account_id: acc.id, narration: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }; }).filter(Boolean);
-        if (lines.length > 0) { await supabase.from("fw_fin_journal_lines").insert(lines as never[]); imported++; existingNos.add(entryNo); if (!vNum) seq++; }
-        else { await supabase.from("fw_fin_journals").delete().eq("id", jRow.id); skipped++; }
-        if (imported % 20 === 0) setSyncProgress(`Imported ${imported}/${vouchers.length}…`);
-      }
-      setXmlUploadResult({ ok: true, msg: `✓ Imported ${imported} voucher${imported!==1?"s":""}${skipped>0?` · ${skipped} skipped (already existed)`:""}` });
+      setSyncProgress(`Parsed ${vouchers.length} vouchers. Importing…`);
+      // Through FreWork's posting engine: validated, year-lock aware, audit-logged, never imported twice
+      const sum = await importTallyVouchers(bizId, vouchers as never, { company: companyName || null, onProgress: setSyncProgress });
+      setXmlUploadResult({ ok: sum.failedCount === 0, msg: summaryText(sum) });
       try { localStorage.setItem("fw_tally_last_import", Date.now().toString()); } catch { /* */ }
     } catch (e) { setXmlUploadResult({ ok: false, msg: e instanceof Error ? e.message : "Error reading file" }); }
     setSyncing(null); setSyncProgress(null);
@@ -731,7 +584,7 @@ export default function TallyPage() {
         setRawDebug(text.slice(0, 800));
         setConnStatus("connected");
         setConnMsg(found ? `Connected — ${found}` : "Connected to Tally");
-        localStorage.setItem("fw_tally_port", tallyPort);
+        localStorage.setItem("fw_tally_port", tallyPort); connectTally({ port: tallyPort });
 
         // Also fetch full company list so user can manually select the right one
         try {
@@ -928,7 +781,7 @@ export default function TallyPage() {
         if (apiData.all_ledger_names?.length && bStart === 0) {
           setAllLedgerNames(apiData.all_ledger_names);
           // Create all ledgers in Tally once (first batch only)
-          const ledgerXml = `<?xml version="1.0" encoding="utf-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>All Masters</REPORTNAME>${companyName ? `<STATICVARIABLES><SVCURRENTCOMPANY>${companyName.replace(/&/g,"&amp;")}</SVCURRENTCOMPANY></STATICVARIABLES>` : ""}</REQUESTDESC><REQUESTDATA>${(apiData.all_ledger_names as { name: string; type: string }[]).map(a => { const safeName = a.name.replace(/&/g,"&amp;").replace(/</g,"&lt;"); return `<TALLYMESSAGE><LEDGER NAME="${safeName}" ACTION="Create"><NAME>${safeName}</NAME><PARENT>${ledgerGroupForType(a.type)}</PARENT></LEDGER></TALLYMESSAGE>`; }).join("")}</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
+          const ledgerXml = `<?xml version="1.0" encoding="utf-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>All Masters</REPORTNAME>${companyName ? `<STATICVARIABLES><SVCURRENTCOMPANY>${companyName.replace(/&/g,"&amp;")}</SVCURRENTCOMPANY></STATICVARIABLES>` : ""}</REQUESTDESC><REQUESTDATA>${(apiData.all_ledger_names as { name: string; type: string; group?: string }[]).map(a => { const safeName = a.name.replace(/&/g,"&amp;").replace(/</g,"&lt;"); return `<TALLYMESSAGE><LEDGER NAME="${safeName}" ACTION="Create"><NAME>${safeName}</NAME><PARENT>${(a.group ?? ledgerGroupForType(a.type)).replace(/&/g,"&amp;")}</PARENT></LEDGER></TALLYMESSAGE>`; }).join("")}</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
           try { await tallyFetch(tallyUrl, ledgerXml, 15000); } catch { /* ignore */ }
         }
 
@@ -972,230 +825,223 @@ export default function TallyPage() {
     return `/api/finance/tally-export?${params}`;
   }
 
-  const statusColors: Record<ConnStatus, string> = { idle: "#4A6FA5", connecting: "#F59E0B", connected: "#10B981", error: "#EF4444" };
+  const statusColors: Record<ConnStatus, string> = { idle: "#5A6080", connecting: "#8A5A00", connected: "#0B7A55", error: "#C2321F" };
   const statusLabels: Record<ConnStatus, string> = { idle: "Not connected", connecting: "Connecting…", connected: "Connected", error: "Error" };
   const typeColor: Record<string, [string,string]> = {
-    sales: ["#10B981","rgba(16,185,129,0.12)"], purchase: ["#3B82F6","rgba(59,130,246,0.12)"],
-    expense: ["#F59E0B","rgba(245,158,11,0.12)"], payment: ["#A78BFA","rgba(167,139,250,0.12)"],
-    receipt: ["#34D399","rgba(52,211,153,0.12)"], journal: ["#7A93B4","rgba(122,147,180,0.1)"],
-    contra: ["#FB923C","rgba(251,146,60,0.12)"],
+    sales: ["#0B7A55","rgba(11,122,85,0.12)"], purchase: ["#0F2B25","rgba(31,94,255,0.12)"],
+    expense: ["#8A5A00","rgba(184,120,0,0.12)"], payment: ["#5B4BC4","rgba(91,75,196,0.12)"],
+    receipt: ["#0B7A55","rgba(11,122,85,0.12)"], journal: ["#5E6B66","rgba(122,147,180,0.1)"],
+    contra: ["#B4561E","rgba(180,86,30,0.12)"],
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0A0D14", color: "#E2E8F0", fontFamily: "Inter,system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         *{box-sizing:border-box}
         .tb-mono{font-family:'JetBrains Mono',monospace}
-        .tb-btn{border:none;border-radius:8px;font-family:Inter,system-ui,sans-serif;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;font-size:0.875rem}
-        .tb-btn:hover:not(:disabled){filter:brightness(1.1)}
-        .tb-btn:disabled{opacity:0.4;cursor:not-allowed}
-        .tb-btn-primary{background:#3B82F6;color:#fff}
-        .tb-btn-green{background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3)!important;color:#34D399}
-        .tb-btn-purple{background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3)!important;color:#A78BFA}
-        .tb-btn-red{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2)!important;color:#F87171}
-        .tb-btn-gold{background:#CA8A04;color:#fff}
-        .tb-link-btn{background:none;border:none;cursor:pointer;font-family:Inter,system-ui;padding:0}
-        .tb-card{background:#111827;border:1px solid #1F2937;border-radius:12px;padding:1.25rem}
-        .tb-section-label{font-size:0.65rem;font-weight:700;color:#4B5563;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem}
-        .tb-input{background:#0F172A;border:1px solid #1F2937;color:#E2E8F0;padding:8px 12px;border-radius:8px;font-size:0.875rem;outline:none;font-family:Inter,system-ui;transition:border-color 0.15s}
-        .tb-input:focus{border-color:#3B82F6}
-        .tb-row{border-top:1px solid #1F2937}
-        .tb-row:hover td{background:rgba(255,255,255,0.015)}
-        .tb-ok{border-left:2px solid #10B981}
-        .tb-fail{border-left:2px solid #EF4444}
+        .tb-serif{font-family:'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif}
+        .tb-btn{border:none;border-radius:11px;font-family:inherit;font-weight:700;cursor:pointer;transition:transform .15s, box-shadow .15s, background .15s;display:flex;align-items:center;justify-content:center;gap:8px;font-size:0.875rem;min-height:42px}
+        .tb-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 10px 20px -14px rgba(15,43,37,0.6)}
+        .tb-btn:disabled{opacity:0.45;cursor:not-allowed}
+        .tb-btn:focus-visible{outline:2px solid #C99A4E;outline-offset:2px}
+        .tb-btn-primary{background:#0F2B25;color:#fff}
+        .tb-btn-gold{background:#C99A4E;color:#0F2B25}
+        .tb-btn-soft{background:#FFFFFF;border:1px solid #D8CDB4!important;color:#10241F}
+        .tb-btn-green{background:#E3F6EE;border:1px solid rgba(11,122,85,0.3)!important;color:#0B7A55}
+        .tb-btn-purple{background:#F3E8D2;border:1px solid #E0CFA8!important;color:#6E4F17}
+        .tb-btn-red{background:#FDECEA;border:1px solid rgba(194,50,31,0.25)!important;color:#C2321F}
+        .tb-link-btn{background:none;border:none;cursor:pointer;font-family:inherit;padding:0}
+        .tb-card{background:#FFFFFF;border:1px solid #E6DFD0;border-radius:20px;padding:1.5rem}
+        .tb-section-label{font-size:0.72rem;font-weight:800;color:#8A6420;text-transform:uppercase;letter-spacing:0.14em;margin-bottom:0.75rem}
+        .tb-label{font-size:0.72rem;font-weight:700;color:#5E6B66;margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.06em}
+        .tb-input{background:#FFFFFF;border:1px solid #D8CDB4;color:#10241F;padding:10px 12px;border-radius:10px;font-size:0.92rem;outline:none;font-family:inherit;transition:border-color 0.15s, box-shadow .15s;min-height:42px}
+        .tb-input:focus{border-color:#C99A4E;box-shadow:0 0 0 3px rgba(201,154,78,0.2)}
+        .tb-row{border-top:1px solid #EFE8D9}
+        .tb-row:hover td{background:#FBF8F1}
+        .tb-ok{border-left:2px solid #0B7A55}
+        .tb-fail{border-left:2px solid #C2321F}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
         .tb-live{animation:pulse 2s ease-in-out infinite}
+        @media (prefers-reduced-motion: reduce){.tb-live{animation:none}.tb-btn:hover:not(:disabled){transform:none}}
         details summary{list-style:none;cursor:pointer}
         details summary::-webkit-details-marker{display:none}
-        input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5)}
-        select option{background:#111827}
+        select option{background:#FFFFFF;color:#10241F}
+        .tb-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+        .tb-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+        @media (max-width:760px){.tb-steps,.tb-two{grid-template-columns:minmax(0,1fr)}}
       `}</style>
 
-      {/* Nav */}
-      <nav style={{ background: "#0A0D14", borderBottom: "1px solid #1F2937", padding: "0 1.5rem", height: 52, display: "flex", alignItems: "center", gap: "0.5rem", position: "sticky", top: 0, zIndex: 10 }}>
-        <Link href="/finance" style={{ color: "#6B7280", fontSize: "0.875rem", textDecoration: "none", fontWeight: 500 }}>Finance</Link>
-        <span style={{ color: "#374151" }}>/</span>
-        <span style={{ color: "#E2E8F0", fontSize: "0.875rem", fontWeight: 600 }}>Tally Sync</span>
-        {connStatus === "connected" && (
-          <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 20, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 600, color: "#34D399" }}>
-            <span className="tb-live" style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D399", display: "block" }} />
-            {companyName || "Connected"}
-          </span>
-        )}
-      </nav>
-
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "2rem 1.5rem 4rem" }}>
-
-        {/* Header */}
-        <div style={{ marginBottom: "2rem" }}>
-          <h1 style={{ margin: "0 0 0.25rem", fontSize: "1.375rem", fontWeight: 700, letterSpacing: "-0.02em", color: "#F1F5F9" }}>Tally Sync</h1>
-          <p style={{ margin: 0, color: "#6B7280", fontSize: "0.875rem" }}>Import data from Tally Prime. Upload XML (easiest) or connect live if Tally is open on this PC.</p>
-        </div>
-
-        {/* ── METHOD 1: XML Upload ── */}
-        <div style={{ marginBottom: "1rem" }}>
-          <div className="tb-section-label">Recommended — No setup required</div>
-          <div className="tb-card" style={{ borderColor: "rgba(59,130,246,0.2)" }}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "#F1F5F9", marginBottom: "0.25rem" }}>Upload Tally XML</div>
-                <div style={{ color: "#6B7280", fontSize: "0.8125rem", lineHeight: 1.6 }}>
-                  Export from Tally → <span style={{ color: "#94A3B8" }}>Gateway → Display → Daybook → Alt+E → XML</span> → upload here.
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0, flexWrap: "wrap" }}>
-                <input ref={xmlFileRef} type="file" accept=".xml" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) importFromXmlFile(f); e.target.value = ""; }} />
-                <button onClick={() => xmlFileRef.current?.click()} disabled={!!syncing} className="tb-btn tb-btn-primary" style={{ padding: "9px 20px" }}>
-                  {syncing === "xmlUpload" ? (syncProgress ?? "Importing…") : "Upload XML"}
-                </button>
-              </div>
+      {/* Forest header with the live connection */}
+      <header style={{ background: "#0F2B25", color: "#F6F1E7", padding: "clamp(24px,4vw,44px) clamp(16px,4vw,40px)" }}>
+        <div style={{ maxWidth: 1040, margin: "0 auto", display: "flex", gap: 24, alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 560 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#C9D3CE" }}>
+              <Link href="/finance" style={{ color: "#C9D3CE", textDecoration: "none" }}>Finance</Link><span aria-hidden="true">/</span><span style={{ color: "#D9B56F", fontWeight: 700 }}>Tally</span>
             </div>
+            <h1 className="tb-serif" style={{ margin: 0, fontSize: "clamp(2rem,4.5vw,3rem)", fontWeight: 700, lineHeight: 1.05, color: "#FFFFFF" }}>Tally, <span style={{ fontStyle: "italic", fontWeight: 400, color: "#D9B56F" }}>in sync</span></h1>
+            <p style={{ margin: 0, fontSize: "1rem", lineHeight: 1.6, color: "#C9D3CE" }}>One place for everything Tally — connect once, then import Tally&apos;s books for analysis or push FreWork entries into Tally. Every page in FreWork uses this connection.</p>
+          </div>
+          <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(217,181,111,0.35)", borderRadius: 18, padding: "16px 18px", minWidth: 260, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#D9B56F" }}>
+              <span className={connStatus === "connected" ? "tb-live" : ""} aria-hidden="true" style={{ width: 9, height: 9, borderRadius: "50%", background: connStatus === "connected" ? "#7FE0B4" : connStatus === "error" ? "#F2867A" : connStatus === "connecting" ? "#D9B56F" : "#8FA39B" }} />
+              {statusLabels[connStatus]}
+            </div>
+            <div className="tb-serif" style={{ fontSize: "1.25rem", fontWeight: 700, color: "#FFFFFF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{connStatus === "connected" ? (companyName || "Tally") : "No company connected"}</div>
+            <div style={{ fontSize: 13, color: "#C9D3CE" }}>Port <span className="tb-mono" style={{ color: "#FFFFFF" }}>{tallyPort}</span>{journalCount != null ? <> · {journalCount} FreWork entries</> : null}</div>
+          </div>
+        </div>
+      </header>
+
+      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "2rem clamp(16px,4vw,40px) 4rem", display: "flex", flexDirection: "column", gap: "1.75rem" }}>
+
+        {/* Two ways in */}
+        <div className="tb-two">
+          <div className="tb-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="tb-section-label" style={{ margin: 0 }}>Easiest · no setup</div>
+            <div className="tb-serif" style={{ fontSize: "1.35rem", fontWeight: 700 }}>Upload a Tally XML file</div>
+            <div style={{ color: "#5E6B66", fontSize: "0.9rem", lineHeight: 1.6 }}>In Tally: <b style={{ color: "#10241F" }}>Gateway → Display → Day Book → Alt+E → XML</b>, then upload it here. Works from any computer.</div>
+            <input ref={xmlFileRef} type="file" accept=".xml" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) importFromXmlFile(f); e.target.value = ""; }} />
+            <button onClick={() => xmlFileRef.current?.click()} disabled={!!syncing} className="tb-btn tb-btn-gold" style={{ alignSelf: "flex-start", padding: "0 22px", marginTop: "auto" }}>
+              {syncing === "xmlUpload" ? (syncProgress ?? "Importing…") : "⬆ Upload XML"}
+            </button>
             {xmlUploadResult && (
-              <div style={{ marginTop: "0.875rem", padding: "0.625rem 0.875rem", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 500, color: xmlUploadResult.ok ? "#34D399" : "#FBBF24", background: xmlUploadResult.ok ? "rgba(16,185,129,0.08)" : "rgba(251,191,36,0.08)", border: `1px solid ${xmlUploadResult.ok ? "rgba(16,185,129,0.2)" : "rgba(251,191,36,0.2)"}` }}>
+              <div role="status" style={{ padding: "0.7rem 0.9rem", borderRadius: 10, fontSize: "0.85rem", fontWeight: 600, color: xmlUploadResult.ok ? "#0B7A55" : "#8A5A00", background: xmlUploadResult.ok ? "#E3F6EE" : "#FFF4DB" }}>
                 {xmlUploadResult.msg}
               </div>
             )}
           </div>
+          <div className="tb-card" style={{ display: "flex", flexDirection: "column", gap: 12, background: "#FBF8F1" }}>
+            <div className="tb-section-label" style={{ margin: 0 }}>Live · Tally open on this PC</div>
+            <div className="tb-serif" style={{ fontSize: "1.35rem", fontWeight: 700 }}>Connect to Tally directly</div>
+            <div style={{ color: "#5E6B66", fontSize: "0.9rem", lineHeight: 1.6 }}>Two-way: import ledgers and vouchers, push FreWork entries, and check what&apos;s already in Tally. Needs the small FreWork Tally Bridge.</div>
+            <a href="#connect" className="tb-btn tb-btn-primary" style={{ alignSelf: "flex-start", padding: "0 22px", textDecoration: "none", marginTop: "auto" }}>Set up live connection ↓</a>
+          </div>
         </div>
 
-        {/* ── METHOD 2: Live Connect ── */}
-        <div style={{ marginBottom: "1.5rem" }}>
-          <div className="tb-section-label">Live Connect — Tally must be open on this computer</div>
-          <div className="tb-card">
+        {/* Live connect */}
+        <div id="connect">
+          <div className="tb-section-label">Live connection</div>
+          <div className="tb-card" style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
-            {/* One-time setup hint */}
-            <details style={{ marginBottom: "1rem" }}>
-              <summary style={{ fontSize: "0.8rem", color: "#6B7280", cursor: "pointer", padding: "0.2rem 0", fontWeight: 500 }}>
-                ▶ First time? Enable Tally HTTP Server (one step)
-              </summary>
-              <div style={{ marginTop: "0.875rem", background: "#0A0D14", borderRadius: 8, padding: "1rem", fontSize: "0.82rem", color: "#9CA3AF", lineHeight: 2 }}>
-                <strong style={{ color: "#C9A84C" }}>In Tally Prime:</strong><br />
-                F1 (Help) → Settings → Connectivity → Enable Tally HTTP Server → Port: <strong>7001</strong> → Accept (Ctrl+A)<br />
-                <span style={{ color: "#6B7280", fontSize: "0.75rem" }}>Only needs to be done once. Tally must remain open while syncing.</span>
-              </div>
-            </details>
-
-            {/* Bridge download */}
-            <div style={{ marginBottom: "1.25rem", background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "0.875rem 1rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.6rem" }}>
-                <div style={{ fontSize: "1.4rem", flexShrink: 0 }}>🔗</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#86EFAC", marginBottom: 1 }}>Tally Bridge <span style={{ fontWeight: 400, color: "#6B7280", fontSize: "0.72rem" }}>Requires Node.js</span></div>
-                  <div style={{ fontSize: "0.73rem", color: "#6B7280", lineHeight: 1.4 }}>Tiny 2KB script — no SmartScreen, no install. Just double-click and keep open.</div>
+            {/* One-time setup */}
+            <div className="tb-steps">
+              {[
+                { n: "1", t: "Turn on Tally's server", d: <>In Tally Prime: <b>F1 → Settings → Connectivity</b> → enable the HTTP server on port <b className="tb-mono">7001</b>. Once only.</> },
+                { n: "2", t: "Run the Tally Bridge", d: <><a href="https://nodejs.org/en/download" target="_blank" rel="noreferrer" style={{ color: "#8A6420", fontWeight: 700 }}>Install Node.js</a> once, extract the zip, double-click <b>run-tally-bridge.bat</b> and keep it open.</>, a: <a href="/tally-bridge-node.zip" download="FreWork-Tally-Bridge.zip" className="tb-btn tb-btn-soft" style={{ padding: "0 14px", textDecoration: "none", alignSelf: "flex-start", minHeight: 36, fontSize: "0.8rem" }}>⬇ Download bridge</a> },
+                { n: "3", t: "Connect", d: <>With your company open in Tally, press <b>Connect to Tally</b> below. FreWork remembers it on every page.</> },
+              ].map(s => (
+                <div key={s.n} style={{ background: "#FBF8F1", border: "1px solid #EFE8D9", borderRadius: 16, padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <span aria-hidden="true" className="tb-serif" style={{ width: 34, height: 34, borderRadius: "50%", background: "#0F2B25", color: "#D9B56F", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{s.n}</span>
+                  <div style={{ fontWeight: 800, fontSize: "0.95rem" }}>{s.t}</div>
+                  <div style={{ fontSize: "0.84rem", color: "#5E6B66", lineHeight: 1.55 }}>{s.d}</div>
+                  {s.a}
                 </div>
-                <a href="/tally-bridge-node.zip" download="FreWork-Tally-Bridge.zip" style={{ flexShrink: 0, background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", color: "#86EFAC", borderRadius: 7, padding: "6px 14px", fontSize: "0.78rem", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>⬇ Download</a>
-              </div>
-              <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 7, padding: "0.5rem 0.75rem", fontSize: "0.73rem", color: "#9CA3AF", lineHeight: 1.9 }}>
-                1. <a href="https://nodejs.org/en/download" target="_blank" rel="noreferrer" style={{ color: "#86EFAC" }}>Install Node.js</a> (one-time, if not already installed)<br />
-                2. Extract the zip → double-click <strong style={{ color: "#D1FAE5" }}>run-tally-bridge.bat</strong><br />
-                3. Keep the window open → click Connect to Tally
-              </div>
+              ))}
             </div>
 
             {/* Connection row */}
-            <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap" }}>
-              <div>
-                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280", marginBottom: "0.3rem" }}>Port</div>
-                <input value={tallyPort} onChange={e => setTallyPort(e.target.value)} className="tb-input" style={{ width: 80 }} placeholder="7001" />
-              </div>
-              <button onClick={testConnection} disabled={connStatus === "connecting"} className="tb-btn tb-btn-primary" style={{ padding: "9px 24px", fontSize: "0.88rem" }}>
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap", paddingTop: "0.25rem" }}>
+              <label style={{ display: "flex", flexDirection: "column" }}>
+                <span className="tb-label">Port</span>
+                <input value={tallyPort} onChange={e => setTallyPort(e.target.value)} className="tb-input tb-mono" style={{ width: 96 }} placeholder="7001" inputMode="numeric" />
+              </label>
+              <button onClick={testConnection} disabled={connStatus === "connecting"} className="tb-btn tb-btn-primary" style={{ padding: "0 26px" }}>
                 {connStatus === "connecting" ? "Connecting…" : connStatus === "connected" ? "↺ Reconnect" : "Connect to Tally"}
               </button>
               {connStatus === "connected" && (
-                <button onClick={disconnect} className="tb-btn tb-btn-red" style={{ padding: "9px 16px" }}>Disconnect</button>
+                <button onClick={disconnect} className="tb-btn tb-btn-red" style={{ padding: "0 16px" }}>Disconnect</button>
               )}
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", fontWeight: 600, color: statusColors[connStatus] }}>
-                <span className={connStatus === "connected" ? "tb-live" : ""} style={{ width: 6, height: 6, borderRadius: "50%", background: statusColors[connStatus] }} />
-                {statusLabels[connStatus]}
-              </div>
+              {connStatus === "connected" && allCompanies.length > 1 && (
+                <label style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 220 }}>
+                  <span className="tb-label">Company</span>
+                  <select value={companyName} onChange={e => { setCompanyName(e.target.value); chooseTallyCompany(e.target.value); }} className="tb-input">
+                    {allCompanies.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </label>
+              )}
+              <span role="status" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem", fontWeight: 700, color: statusColors[connStatus], padding: "8px 12px", borderRadius: 999, background: connStatus === "connected" ? "#E3F6EE" : connStatus === "error" ? "#FDECEA" : "#EFE8D9" }}>
+                <span className={connStatus === "connected" ? "tb-live" : ""} aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: statusColors[connStatus] }} />
+                {connStatus === "connected" && companyName ? companyName : statusLabels[connStatus]}
+              </span>
             </div>
 
             {connStatus === "error" && connMsg && (
-              <div style={{ marginTop: "0.875rem", padding: "0.75rem 1rem", borderRadius: 8, fontSize: "0.82rem", color: "#FCA5A5", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.15)", lineHeight: 1.7 }}>
+              <div style={{ padding: "0.8rem 1rem", borderRadius: 12, fontSize: "0.86rem", color: "#C2321F", background: "#FDECEA", lineHeight: 1.6 }}>
                 ⚠ {connMsg}
               </div>
             )}
 
-            {connStatus === "connected" && allCompanies.length > 1 && (
-              <div style={{ marginTop: "0.875rem" }}>
-                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280", marginBottom: "0.3rem" }}>Select Company</div>
-                <select value={companyName} onChange={e => { setCompanyName(e.target.value); localStorage.setItem("fw_tally_company", e.target.value); }}
-                  className="tb-input" style={{ width: "100%" }}>
-                  {allCompanies.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-            )}
-
-            {/* Date range — only relevant when connected */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginTop: "1rem" }}>
-              <div>
-                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280", marginBottom: "0.3rem" }}>From Date</div>
-                <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="tb-input" style={{ width: "100%" }} />
-              </div>
-              <div>
-                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280", marginBottom: "0.3rem" }}>To Date</div>
-                <input type="date" value={to} onChange={e => setTo(e.target.value)} className="tb-input" style={{ width: "100%" }} />
-              </div>
+            {/* Period */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: "0.75rem" }}>
+              <label style={{ display: "flex", flexDirection: "column" }}>
+                <span className="tb-label">From date</span>
+                <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="tb-input" />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column" }}>
+                <span className="tb-label">To date</span>
+                <input type="date" value={to} onChange={e => setTo(e.target.value)} className="tb-input" />
+              </label>
             </div>
 
-            {/* Tally → FrePilot buttons */}
-            <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #1F2937" }}>
-              <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280", marginBottom: "0.625rem" }}>Tally → FrePilot</div>
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                <button onClick={importLedgers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-green" style={{ flex: 1, padding: "9px 0" }}>
-                  {syncing === "import" ? "Importing…" : "Import Ledgers"}
-                </button>
-                <button onClick={importVouchers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-purple" style={{ flex: 1, padding: "9px 0" }}>
-                  {syncing === "importVouchers" ? (syncProgress ?? "Syncing…") : "Import Vouchers"}
-                </button>
-                <button onClick={clearAndReimport} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-red" style={{ padding: "9px 14px" }} title="Delete all TLY imports and re-import fresh">
-                  Clear & Re-import
-                </button>
-              </div>
-              {importVoucherResult && (
-                <div style={{ marginTop: "0.75rem", padding: "0.625rem 0.875rem", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 500, color: importVoucherResult.ok ? "#34D399" : "#FBBF24", background: importVoucherResult.ok ? "rgba(16,185,129,0.08)" : "rgba(251,191,36,0.08)", border: `1px solid ${importVoucherResult.ok ? "rgba(16,185,129,0.2)" : "rgba(251,191,36,0.2)"}` }}>
-                  {importVoucherResult.msg}
-                  {importVoucherResult.ok && (
-                    <span style={{ marginLeft: "0.75rem" }}>
-                      <a href="/finance/audit" style={{ color: "#818CF8", textDecoration: "underline" }}>View Audit & Reports →</a>
-                    </span>
-                  )}
+            {/* Both directions */}
+            <div className="tb-two">
+              <div style={{ border: "1px solid #EFE8D9", borderRadius: 16, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span className="tb-serif" style={{ fontSize: "1.1rem", fontWeight: 700 }}>Tally → FreWork</span>
+                  <span style={{ fontSize: "0.78rem", color: "#5E6B66" }}>for analysis &amp; reports</span>
                 </div>
-              )}
-            </div>
-
-            {/* FrePilot → Tally buttons */}
-            <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #1F2937" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.625rem" }}>
-                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#6B7280" }}>FrePilot → Tally</div>
-                <button onClick={loadJournalPreview} className="tb-btn" style={{ background: "transparent", border: "1px solid #1F2937", color: "#6B7280", padding: "4px 12px", fontSize: "0.75rem" }}>
-                  {previewOpen ? "Refresh" : "Preview Journals"}
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <button onClick={importLedgers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-green" style={{ flex: 1, minWidth: 140 }}>
+                    {syncing === "import" ? "Importing…" : "Import ledgers"}
+                  </button>
+                  <button onClick={importVouchers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-purple" style={{ flex: 1, minWidth: 140 }}>
+                    {syncing === "importVouchers" ? (syncProgress ?? "Syncing…") : "Import vouchers"}
+                  </button>
+                </div>
+                <button onClick={clearAndReimport} disabled={connStatus !== "connected" || !!syncing} className="tb-link-btn" style={{ alignSelf: "flex-start", color: "#C2321F", fontSize: "0.8rem", fontWeight: 700 }} title="Delete all TLY imports and re-import fresh">
+                  Clear Tally imports &amp; re-import
                 </button>
+                <div style={{ fontSize: "0.76rem", color: "#5E6B66" }}>Entries FreWork pushed to Tally are skipped — they&apos;re already in your books.</div>
+                {importVoucherResult && (
+                  <div role="status" style={{ padding: "0.7rem 0.9rem", borderRadius: 10, fontSize: "0.85rem", fontWeight: 600, color: importVoucherResult.ok ? "#0B7A55" : "#8A5A00", background: importVoucherResult.ok ? "#E3F6EE" : "#FFF4DB" }}>
+                    {importVoucherResult.msg}
+                    {importVoucherResult.ok && <a href="/finance/audit" style={{ marginLeft: 10, color: "#0F2B25", fontWeight: 800 }}>View analysis →</a>}
+                  </div>
+                )}
               </div>
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                <button onClick={syncLedgers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn" style={{ flex: 1, padding: "9px 0", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.25)", color: "#60A5FA" }}>
-                  {syncing === "ledgers" ? "Pushing…" : "Push Ledgers to Tally"}
-                </button>
-                <button onClick={pushVouchers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn" style={{ flex: 1, padding: "9px 0", background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)", color: "#A78BFA" }}>
-                  {syncing === "vouchers" ? (syncProgress ?? "Pushing…") : `Push Vouchers (${journalCount ?? "—"})`}
-                </button>
+              <div style={{ border: "1px solid #EFE8D9", borderRadius: 16, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span className="tb-serif" style={{ fontSize: "1.1rem", fontWeight: 700 }}>FreWork → Tally</span>
+                  <button onClick={loadJournalPreview} className="tb-link-btn" style={{ marginLeft: "auto", color: "#8A6420", fontSize: "0.8rem", fontWeight: 700 }}>
+                    {previewOpen ? "Refresh preview" : "Preview entries"}
+                  </button>
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <button onClick={syncLedgers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-soft" style={{ flex: 1, minWidth: 140 }}>
+                    {syncing === "ledgers" ? "Pushing…" : "Push ledgers"}
+                  </button>
+                  <button onClick={pushVouchers} disabled={connStatus !== "connected" || !!syncing} className="tb-btn tb-btn-primary" style={{ flex: 1, minWidth: 140 }}>
+                    {syncing === "vouchers" ? (syncProgress ?? "Pushing…") : `Push entries (${journalCount ?? "—"})`}
+                  </button>
+                </div>
+                <Link href="/finance/books" style={{ fontSize: "0.8rem", color: "#0F2B25", fontWeight: 700 }}>Choose entries one by one in Books →</Link>
               </div>
             </div>
 
             {rawDebug && (
               <details style={{ marginTop: "0.875rem" }}>
-                <summary style={{ fontSize: "0.75rem", color: "#4B5563", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <summary style={{ fontSize: "0.75rem", color: "#5E6B66", display: "flex", alignItems: "center", gap: "0.35rem" }}>
                   <span style={{ fontSize: "0.6rem" }}>▶</span> Raw response
                 </summary>
-                <pre className="tb-mono" style={{ marginTop: "0.5rem", fontSize: "0.65rem", color: "#4B5563", background: "#0F172A", padding: "0.75rem", borderRadius: 8, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", maxHeight: 160, overflowY: "auto", border: "1px solid #1F2937" }}>
+                <pre className="tb-mono" style={{ marginTop: "0.5rem", fontSize: "0.65rem", color: "#5E6B66", background: "#FFFFFF", padding: "0.75rem", borderRadius: 8, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", maxHeight: 160, overflowY: "auto", border: "1px solid #E6DFD0" }}>
                   {rawDebug}
                 </pre>
               </details>
             )}
 
             {syncResult && (
-              <div style={{ marginTop: "1rem", padding: "0.625rem 0.875rem", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 500, color: syncResult.ok ? "#34D399" : "#FBBF24", background: syncResult.ok ? "rgba(16,185,129,0.08)" : "rgba(251,191,36,0.08)", border: `1px solid ${syncResult.ok ? "rgba(16,185,129,0.2)" : "rgba(251,191,36,0.2)"}` }}>
+              <div style={{ marginTop: "1rem", padding: "0.625rem 0.875rem", borderRadius: 8, fontSize: "0.8125rem", fontWeight: 500, color: syncResult.ok ? "#0B7A55" : "#8A5A00", background: syncResult.ok ? "rgba(11,122,85,0.08)" : "rgba(184,120,0,0.08)", border: `1px solid ${syncResult.ok ? "rgba(11,122,85,0.2)" : "rgba(184,120,0,0.2)"}` }}>
                 {syncResult.msg}
               </div>
             )}
@@ -1206,41 +1052,41 @@ export default function TallyPage() {
         {previewOpen && (
           <div className="tb-card" style={{ marginBottom: "1.5rem", padding: 0, overflow: "hidden" }}>
             {previewLoading ? (
-              <div style={{ padding: "2rem", textAlign: "center", color: "#4B5563", fontSize: "0.875rem" }}>Loading…</div>
+              <div style={{ padding: "2rem", textAlign: "center", color: "#5E6B66", fontSize: "0.875rem" }}>Loading…</div>
             ) : journals.length === 0 ? (
-              <div style={{ padding: "2rem", textAlign: "center", color: "#4B5563", fontSize: "0.875rem" }}>No posted journals in this date range.</div>
+              <div style={{ padding: "2rem", textAlign: "center", color: "#5E6B66", fontSize: "0.875rem" }}>No posted journals in this date range.</div>
             ) : (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
                   <thead>
-                    <tr style={{ background: "#0F172A" }}>
+                    <tr style={{ background: "#FFFFFF" }}>
                       {["Entry", "Date", "Type", "Narration", "DR (₹)", "CR (₹)"].map(h => (
-                        <th key={h} style={{ textAlign: "left", color: "#4B5563", fontWeight: 600, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.07em", padding: "0.625rem 0.875rem", whiteSpace: "nowrap", borderBottom: "1px solid #1F2937" }}>{h}</th>
+                        <th key={h} style={{ textAlign: "left", color: "#5E6B66", fontWeight: 600, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.07em", padding: "0.625rem 0.875rem", whiteSpace: "nowrap", borderBottom: "1px solid #E6DFD0" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {journals.map((j, i) => {
-                      const [tc, tbg] = typeColor[j.type] ?? ["#6B7280","rgba(107,114,128,0.1)"];
+                      const [tc, tbg] = typeColor[j.type] ?? ["#5E6B66","rgba(107,114,128,0.1)"];
                       return (
                         <tr key={j.id} className="tb-row" style={{ borderTop: i === 0 ? "none" : undefined }}>
-                          <td className="tb-mono" style={{ color: "#4B5563", whiteSpace: "nowrap", fontSize: "0.72rem", padding: "0.5rem 0.875rem" }}>{j.entry_no}</td>
-                          <td style={{ whiteSpace: "nowrap", color: "#6B7280", padding: "0.5rem 0.875rem" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
+                          <td className="tb-mono" style={{ color: "#5E6B66", whiteSpace: "nowrap", fontSize: "0.72rem", padding: "0.5rem 0.875rem" }}>{j.entry_no}</td>
+                          <td style={{ whiteSpace: "nowrap", color: "#5E6B66", padding: "0.5rem 0.875rem" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
                           <td style={{ padding: "0.5rem 0.875rem" }}>
                             <span style={{ fontSize: "0.65rem", fontWeight: 600, color: tc, background: tbg, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap" }}>{j.type}</span>
                           </td>
-                          <td style={{ color: "#94A3B8", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>{j.narration}</td>
-                          <td className="tb-mono" style={{ textAlign: "right", color: "#10B981", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>₹{Number(j.total_debit).toLocaleString("en-IN")}</td>
-                          <td className="tb-mono" style={{ textAlign: "right", color: "#60A5FA", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>₹{Number(j.total_credit).toLocaleString("en-IN")}</td>
+                          <td style={{ color: "#5E6B66", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>{j.narration}</td>
+                          <td className="tb-mono" style={{ textAlign: "right", color: "#0B7A55", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>₹{Number(j.total_debit).toLocaleString("en-IN")}</td>
+                          <td className="tb-mono" style={{ textAlign: "right", color: "#0F2B25", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>₹{Number(j.total_credit).toLocaleString("en-IN")}</td>
                         </tr>
                       );
                     })}
                   </tbody>
                   <tfoot>
-                    <tr style={{ borderTop: "1px solid #1F2937", background: "rgba(255,255,255,0.02)" }}>
-                      <td colSpan={4} style={{ fontWeight: 600, fontSize: "0.72rem", color: "#4B5563", padding: "0.5rem 0.875rem" }}>{journals.length} journal{journals.length !== 1 ? "s" : ""} ready to push</td>
-                      <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#10B981", padding: "0.5rem 0.875rem" }}>₹{journals.reduce((s, j) => s + Number(j.total_debit), 0).toLocaleString("en-IN")}</td>
-                      <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#60A5FA", padding: "0.5rem 0.875rem" }}>₹{journals.reduce((s, j) => s + Number(j.total_credit), 0).toLocaleString("en-IN")}</td>
+                    <tr style={{ borderTop: "1px solid #E6DFD0", background: "#FFFFFF" }}>
+                      <td colSpan={4} style={{ fontWeight: 600, fontSize: "0.72rem", color: "#5E6B66", padding: "0.5rem 0.875rem" }}>{journals.length} journal{journals.length !== 1 ? "s" : ""} ready to push</td>
+                      <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#0B7A55", padding: "0.5rem 0.875rem" }}>₹{journals.reduce((s, j) => s + Number(j.total_debit), 0).toLocaleString("en-IN")}</td>
+                      <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#0F2B25", padding: "0.5rem 0.875rem" }}>₹{journals.reduce((s, j) => s + Number(j.total_credit), 0).toLocaleString("en-IN")}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -1252,10 +1098,10 @@ export default function TallyPage() {
         {/* Push results */}
         {pushResults.length > 0 && (
           <div className="tb-card" style={{ marginBottom: "1.5rem", padding: 0, overflow: "hidden" }}>
-            <div style={{ padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", borderBottom: "1px solid #1F2937" }}>
-              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.08em" }}>Push Results</span>
-              <span style={{ fontSize: "0.75rem", color: "#34D399", fontWeight: 600 }}>✓ {pushResults.filter(r => r.ok).length} ok</span>
-              {pushResults.filter(r => !r.ok).length > 0 && <span style={{ fontSize: "0.75rem", color: "#F87171", fontWeight: 600 }}>✗ {pushResults.filter(r => !r.ok).length} failed</span>}
+            <div style={{ padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", borderBottom: "1px solid #E6DFD0" }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#5E6B66", textTransform: "uppercase", letterSpacing: "0.08em" }}>Push Results</span>
+              <span style={{ fontSize: "0.75rem", color: "#0B7A55", fontWeight: 600 }}>✓ {pushResults.filter(r => r.ok).length} ok</span>
+              {pushResults.filter(r => !r.ok).length > 0 && <span style={{ fontSize: "0.75rem", color: "#C2321F", fontWeight: 600 }}>✗ {pushResults.filter(r => !r.ok).length} failed</span>}
               {pushResults.some(r => !r.ok) && (
                 <button onClick={createMissingLedgers} disabled={creatingLedgers || connStatus !== "connected"} className="tb-btn tb-btn-gold" style={{ marginLeft: "auto", padding: "5px 14px", fontSize: "0.75rem" }}>
                   {creatingLedgers ? "Creating…" : "Create Missing Ledgers"}
@@ -1263,7 +1109,7 @@ export default function TallyPage() {
               )}
             </div>
             {createLedgerResult && (
-              <div style={{ padding: "0.5rem 1rem", fontSize: "0.78rem", color: createLedgerResult.startsWith("✓") ? "#34D399" : "#FBBF24", borderBottom: "1px solid #1F2937" }}>
+              <div style={{ padding: "0.5rem 1rem", fontSize: "0.78rem", color: createLedgerResult.startsWith("✓") ? "#0B7A55" : "#8A5A00", borderBottom: "1px solid #E6DFD0" }}>
                 {createLedgerResult}
               </div>
             )}
@@ -1271,18 +1117,18 @@ export default function TallyPage() {
               <tbody>
                 {pushResults.map((r, i) => (
                   <React.Fragment key={r.id}>
-                    <tr className="tb-row" style={{ borderLeft: `2px solid ${r.ok ? "#10B981" : "#EF4444"}`, borderTop: i === 0 ? "none" : undefined }}>
+                    <tr className="tb-row" style={{ borderLeft: `2px solid ${r.ok ? "#0B7A55" : "#C2321F"}`, borderTop: i === 0 ? "none" : undefined }}>
                       <td style={{ width: 32, textAlign: "center", padding: "0.5rem" }}>
-                        <span style={{ fontSize: "0.75rem", color: r.ok ? "#34D399" : "#F87171" }}>{r.ok ? "✓" : "✗"}</span>
+                        <span style={{ fontSize: "0.75rem", color: r.ok ? "#0B7A55" : "#C2321F" }}>{r.ok ? "✓" : "✗"}</span>
                       </td>
-                      <td className="tb-mono" style={{ color: "#4B5563", fontSize: "0.72rem", whiteSpace: "nowrap", padding: "0.5rem 0" }}>{r.entry_no}</td>
-                      <td style={{ color: "#6B7280", whiteSpace: "nowrap", padding: "0.5rem 0.75rem", fontSize: "0.78rem" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
-                      <td style={{ color: r.ok ? "#94A3B8" : "#FBBF24", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240, padding: "0.5rem 0", fontSize: "0.8rem" }}>
+                      <td className="tb-mono" style={{ color: "#5E6B66", fontSize: "0.72rem", whiteSpace: "nowrap", padding: "0.5rem 0" }}>{r.entry_no}</td>
+                      <td style={{ color: "#5E6B66", whiteSpace: "nowrap", padding: "0.5rem 0.75rem", fontSize: "0.78rem" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
+                      <td style={{ color: r.ok ? "#5E6B66" : "#8A5A00", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240, padding: "0.5rem 0", fontSize: "0.8rem" }}>
                         {r.ok ? r.narration : (r.error || "Tally rejected — check ledger names")}
                       </td>
                       {!r.ok && (
                         <td style={{ whiteSpace: "nowrap", padding: "0.5rem 1rem" }}>
-                          <a href={`/finance/journals/${r.id}/edit`} style={{ fontSize: "0.72rem", color: "#60A5FA", marginRight: 10, textDecoration: "none", fontWeight: 600 }}>Edit</a>
+                          <a href={`/finance/journals/${r.id}/edit`} style={{ fontSize: "0.72rem", color: "#0F2B25", marginRight: 10, textDecoration: "none", fontWeight: 600 }}>Edit</a>
                           <button className="tb-link-btn" onClick={async () => {
                             if (!confirm(`Delete journal ${r.entry_no}? This cannot be undone.`)) return;
                             await supabase.from("fw_fin_journal_lines").delete().eq("journal_id", r.id);
@@ -1290,7 +1136,7 @@ export default function TallyPage() {
                             setPushResults(prev => prev.filter(x => x.id !== r.id));
                             setJournals(prev => prev.filter(x => x.id !== r.id));
                             setJournalCount(prev => (prev ?? 1) - 1);
-                          }} style={{ fontSize: "0.72rem", color: "#F87171", fontWeight: 600 }}>Delete</button>
+                          }} style={{ fontSize: "0.72rem", color: "#C2321F", fontWeight: 600 }}>Delete</button>
                         </td>
                       )}
                       {r.ok && <td />}
@@ -1299,11 +1145,11 @@ export default function TallyPage() {
                       <tr style={{ borderTop: "none" }}>
                         <td colSpan={5} style={{ padding: "0 1rem 0.625rem 2.5rem" }}>
                           <details style={{ fontSize: "0.72rem" }}>
-                            <summary style={{ color: "#4B5563", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                            <summary style={{ color: "#5E6B66", marginBottom: "0.25rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
                               <span>▶</span> Debug details
                             </summary>
-                            {r.xml && <pre className="tb-mono" style={{ marginTop: "0.4rem", fontSize: "0.65rem", background: "#0F172A", padding: "0.6rem 0.75rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#93C5FD", maxHeight: 140, overflowY: "auto", border: "1px solid #1F2937" }}>{r.xml}</pre>}
-                            {r.tallyResponse && <pre className="tb-mono" style={{ marginTop: "0.4rem", fontSize: "0.65rem", background: "#0F172A", padding: "0.6rem 0.75rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#FCA5A5", maxHeight: 140, overflowY: "auto", border: "1px solid #1F2937" }}>{r.tallyResponse}</pre>}
+                            {r.xml && <pre className="tb-mono" style={{ marginTop: "0.4rem", fontSize: "0.65rem", background: "#FFFFFF", padding: "0.6rem 0.75rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#0F2B25", maxHeight: 140, overflowY: "auto", border: "1px solid #E6DFD0" }}>{r.xml}</pre>}
+                            {r.tallyResponse && <pre className="tb-mono" style={{ marginTop: "0.4rem", fontSize: "0.65rem", background: "#FFFFFF", padding: "0.6rem 0.75rem", borderRadius: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#C2321F", maxHeight: 140, overflowY: "auto", border: "1px solid #E6DFD0" }}>{r.tallyResponse}</pre>}
                           </details>
                         </td>
                       </tr>
@@ -1320,14 +1166,14 @@ export default function TallyPage() {
           <div className="tb-card" style={{ marginBottom: "1.5rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
               <div>
-                <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#F1F5F9", marginBottom: "0.2rem" }}>Export FrePilot → Tally XML</div>
-                <div style={{ color: "#6B7280", fontSize: "0.8rem" }}>Download XML and import via Gateway of Tally → Import → Vouchers.</div>
+                <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#10241F", marginBottom: "0.2rem" }}>Export FrePilot → Tally XML</div>
+                <div style={{ color: "#5E6B66", fontSize: "0.8rem" }}>Download XML and import via Gateway of Tally → Import → Vouchers.</div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
                 <select value={fyId ?? ""} onChange={e => setFyId(e.target.value)} className="tb-input" style={{ fontSize: "0.8125rem" }}>
                   {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
                 </select>
-                <a href={buildExportUrl()} download className="tb-btn" style={{ background: "transparent", border: "1px solid #1F2937", color: "#94A3B8", padding: "8px 16px", textDecoration: "none", fontSize: "0.8125rem" }}>
+                <a href="#" onClick={e => { e.preventDefault(); downloadApiFile(buildExportUrl(), "FreWork-Tally-Export.xml").catch(err => alert(err.message)); }} className="tb-btn" style={{ background: "transparent", border: "1px solid #E6DFD0", color: "#5E6B66", padding: "8px 16px", textDecoration: "none", fontSize: "0.8125rem" }}>
                   Download XML
                 </a>
               </div>

@@ -87,22 +87,22 @@ export default function TDSTrackerPage() {
   }
 
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
-  const inputStyle = { background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
-  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
+  const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
+  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
 
   const today = new Date();
   const currentMonth = today.toLocaleString("en-IN", { month: "long" });
   const nextDue = DUE_DATES.find(d => d.month === currentMonth);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>TDS Tracker</span>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>TDS Tracker</span>
         <div style={{ flex: 1 }} />
         {nextDue && (
-          <div style={{ fontSize: "0.78rem", background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.25)", color: "#C9A84C", padding: "4px 12px", borderRadius: 8 }}>
+          <div style={{ fontSize: "0.78rem", background: "rgba(35,42,99,0.1)", border: "1px solid rgba(35,42,99,0.25)", color: "#232A63", padding: "4px 12px", borderRadius: 8 }}>
             📅 Next TDS due: {nextDue.date}
           </div>
         )}
@@ -110,19 +110,19 @@ export default function TDSTrackerPage() {
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "2rem" }}>
         <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>TDS Tracker</h1>
-        <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Tax Deducted at Source — rates, calculator, deduction history</p>
+        <p style={{ margin: "0 0 1.5rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Tax Deducted at Source — rates, calculator, deduction history</p>
 
         {/* KPI */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
           {[
-            { label: "Total TDS Deducted", value: `₹${fmt(totalTdsDeducted)}`, color: "#C9A84C", icon: "🔖" },
-            { label: "TDS Entries Found", value: tdsJournals.length, color: "#60a5fa", icon: "📋" },
-            { label: "Next Deposit Due", value: nextDue?.date ?? "—", color: "#f87171", icon: "📅" },
+            { label: "Total TDS Deducted", value: `₹${fmt(totalTdsDeducted)}`, color: "#232A63", icon: "🔖" },
+            { label: "TDS Entries Found", value: tdsJournals.length, color: "#1F5EFF", icon: "📋" },
+            { label: "Next Deposit Due", value: nextDue?.date ?? "—", color: "#C2321F", icon: "📅" },
           ].map(k => (
-            <div key={k.label} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 10, padding: "1rem" }}>
+            <div key={k.label} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 10, padding: "1rem" }}>
               <div style={{ fontSize: "1.2rem", marginBottom: "0.35rem" }}>{k.icon}</div>
               <div style={{ fontSize: "1.3rem", fontWeight: 800, color: k.color }}>{k.value}</div>
-              <div style={{ fontSize: "0.7rem", color: "rgba(237,232,220,0.35)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.2rem" }}>{k.label}</div>
+              <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.60)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.2rem" }}>{k.label}</div>
             </div>
           ))}
         </div>
@@ -132,8 +132,8 @@ export default function TDSTrackerPage() {
           {(["tracker", "rates", "due-dates"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{
               padding: "6px 16px", borderRadius: 8, fontSize: "0.82rem", cursor: "pointer", border: "none", fontWeight: activeTab === tab ? 700 : 400,
-              background: activeTab === tab ? "rgba(201,168,76,0.15)" : "rgba(237,232,220,0.05)",
-              color: activeTab === tab ? "#C9A84C" : "rgba(237,232,220,0.5)",
+              background: activeTab === tab ? "rgba(35,42,99,0.15)" : "rgba(20,26,58,0.08)",
+              color: activeTab === tab ? "#232A63" : "rgba(20,26,58,0.75)",
             }}>
               {tab === "tracker" ? "TDS History" : tab === "rates" ? "Rates & Calculator" : "Due Dates"}
             </button>
@@ -143,37 +143,37 @@ export default function TDSTrackerPage() {
         {/* TDS History */}
         {activeTab === "tracker" && (
           tdsJournals.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "4rem", color: "rgba(237,232,220,0.3)" }}>
+            <div style={{ textAlign: "center", padding: "4rem", color: "rgba(20,26,58,0.55)" }}>
               <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>🔖</div>
               <div>No TDS entries found. Record expenses with TDS deduction in the Expense or Purchase Bill pages.</div>
-              <Link href="/finance/expenses" style={{ display: "inline-block", marginTop: "1.5rem", color: "#C9A84C", textDecoration: "none", fontSize: "0.85rem" }}>→ Record Expense with TDS</Link>
+              <Link href="/finance/expenses" style={{ display: "inline-block", marginTop: "1.5rem", color: "#232A63", textDecoration: "none", fontSize: "0.85rem" }}>→ Record Expense with TDS</Link>
             </div>
           ) : (
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <tr style={{ background: "#FFFFFF" }}>
                     {["Date", "Entry No", "Narration", "TDS Amount"].map(h => (
-                      <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h === "TDS Amount" ? "right" : "left", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
+                      <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h === "TDS Amount" ? "right" : "left", fontSize: "0.65rem", color: "rgba(20,26,58,0.60)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {tdsJournals.map((j, i) => (
-                    <tr key={i} style={{ borderTop: "1px solid rgba(237,232,220,0.04)" }}>
-                      <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", color: "rgba(237,232,220,0.5)", whiteSpace: "nowrap" }}>
+                    <tr key={i} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
+                      <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", color: "rgba(20,26,58,0.75)", whiteSpace: "nowrap" }}>
                         {new Date(j.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
                       </td>
-                      <td style={{ padding: "0.65rem 1rem", fontSize: "0.75rem", fontFamily: "monospace", color: "rgba(201,168,76,0.6)" }}>{j.entry_no}</td>
+                      <td style={{ padding: "0.65rem 1rem", fontSize: "0.75rem", fontFamily: "monospace", color: "rgba(20,26,58,0.6)" }}>{j.entry_no}</td>
                       <td style={{ padding: "0.65rem 1rem", fontSize: "0.82rem", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
-                      <td style={{ padding: "0.65rem 1rem", textAlign: "right", fontWeight: 700, color: "#C9A84C", fontVariantNumeric: "tabular-nums" }}>₹{fmt(j.total_debit)}</td>
+                      <td style={{ padding: "0.65rem 1rem", textAlign: "right", fontWeight: 700, color: "#232A63", fontVariantNumeric: "tabular-nums" }}>₹{fmt(j.total_debit)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr style={{ borderTop: "2px solid rgba(201,168,76,0.3)", background: "rgba(201,168,76,0.05)" }}>
+                  <tr style={{ borderTop: "2px solid rgba(35,42,99,0.3)", background: "rgba(35,42,99,0.05)" }}>
                     <td colSpan={3} style={{ padding: "0.7rem 1rem", fontWeight: 800 }}>Total TDS</td>
-                    <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 900, color: "#C9A84C", fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalTdsDeducted)}</td>
+                    <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 900, color: "#232A63", fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalTdsDeducted)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -184,28 +184,28 @@ export default function TDSTrackerPage() {
         {/* Rates & Calculator */}
         {activeTab === "rates" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, overflow: "hidden" }}>
-              <div style={{ padding: "0.85rem 1rem", borderBottom: "1px solid rgba(237,232,220,0.06)", fontWeight: 700, fontSize: "0.85rem" }}>TDS Sections & Rates</div>
+            <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, overflow: "hidden" }}>
+              <div style={{ padding: "0.85rem 1rem", borderBottom: "1px solid rgba(20,26,58,0.08)", fontWeight: 700, fontSize: "0.85rem" }}>TDS Sections & Rates</div>
               <div style={{ maxHeight: 450, overflowY: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ background: "rgba(255,255,255,0.02)", position: "sticky", top: 0 }}>
+                    <tr style={{ background: "#FFFFFF", position: "sticky", top: 0 }}>
                       {["Section", "Nature", "Threshold", "Rate"].map(h => (
-                        <th key={h} style={{ padding: "0.5rem 0.85rem", textAlign: h === "Rate" || h === "Threshold" ? "right" : "left", fontSize: "0.62rem", color: "rgba(237,232,220,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
+                        <th key={h} style={{ padding: "0.5rem 0.85rem", textAlign: h === "Rate" || h === "Threshold" ? "right" : "left", fontSize: "0.62rem", color: "rgba(20,26,58,0.60)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {TDS_SECTIONS.map(s => (
-                      <tr key={s.section} style={{ borderTop: "1px solid rgba(237,232,220,0.04)", cursor: "pointer" }} onClick={() => { setCalcSection(s.section); }}>
+                      <tr key={s.section} style={{ borderTop: "1px solid rgba(20,26,58,0.08)", cursor: "pointer" }} onClick={() => { setCalcSection(s.section); }}>
                         <td style={{ padding: "0.55rem 0.85rem" }}>
-                          <span style={{ fontWeight: 700, fontSize: "0.8rem", color: "#C9A84C" }}>{s.section}</span>
+                          <span style={{ fontWeight: 700, fontSize: "0.8rem", color: "#232A63" }}>{s.section}</span>
                         </td>
-                        <td style={{ padding: "0.55rem 0.85rem", fontSize: "0.75rem", color: "rgba(237,232,220,0.6)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.description}</td>
-                        <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontSize: "0.75rem", color: "rgba(237,232,220,0.4)", fontVariantNumeric: "tabular-nums" }}>
+                        <td style={{ padding: "0.55rem 0.85rem", fontSize: "0.75rem", color: "rgba(20,26,58,0.85)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.description}</td>
+                        <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", fontVariantNumeric: "tabular-nums" }}>
                           ₹{(s.threshold).toLocaleString("en-IN")}
                         </td>
-                        <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontSize: "0.8rem", fontWeight: 700, color: "#4ade80" }}>
+                        <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontSize: "0.8rem", fontWeight: 700, color: "#0B7A55" }}>
                           {s.rate_individual === s.rate_company ? `${s.rate_individual}%` : `${s.rate_individual}%/${s.rate_company}%`}
                         </td>
                       </tr>
@@ -216,7 +216,7 @@ export default function TDSTrackerPage() {
             </div>
 
             {/* Calculator */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.07)", borderRadius: 12, padding: "1.25rem" }}>
+            <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem" }}>
               <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "1.25rem" }}>TDS Calculator</div>
               <div style={{ marginBottom: "0.85rem" }}>
                 <label style={labelStyle}>TDS Section</label>
@@ -232,31 +232,31 @@ export default function TDSTrackerPage() {
                 <label style={labelStyle}>Party Type</label>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   {(["individual", "company"] as const).map(t => (
-                    <button key={t} onClick={() => setCalcPartyType(t)} style={{ flex: 1, padding: "7px", borderRadius: 6, border: "none", cursor: "pointer", fontWeight: calcPartyType === t ? 700 : 400, background: calcPartyType === t ? "rgba(201,168,76,0.15)" : "rgba(237,232,220,0.04)", color: calcPartyType === t ? "#C9A84C" : "rgba(237,232,220,0.5)", fontSize: "0.82rem" }}>
+                    <button key={t} onClick={() => setCalcPartyType(t)} style={{ flex: 1, padding: "7px", borderRadius: 6, border: "none", cursor: "pointer", fontWeight: calcPartyType === t ? 700 : 400, background: calcPartyType === t ? "rgba(35,42,99,0.15)" : "rgba(20,26,58,0.08)", color: calcPartyType === t ? "#232A63" : "rgba(20,26,58,0.75)", fontSize: "0.82rem" }}>
                       {t === "individual" ? "Individual / HUF" : "Company / Firm"}
                     </button>
                   ))}
                 </div>
               </div>
-              <button onClick={calculate} style={{ width: "100%", background: "#C9A84C", border: "none", color: "#070C1A", padding: "10px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", marginBottom: "1rem" }}>
+              <button onClick={calculate} style={{ width: "100%", background: "#232A63", border: "none", color: "#F5F6FA", padding: "10px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", marginBottom: "1rem" }}>
                 Calculate TDS
               </button>
               {calcResult && (
-                <div style={{ background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 8, padding: "1rem" }}>
+                <div style={{ background: "rgba(35,42,99,0.08)", border: "1px solid rgba(35,42,99,0.2)", borderRadius: 8, padding: "1rem" }}>
                   {[
                     { label: "Gross Amount", value: parseFloat(calcAmount) },
-                    { label: `TDS @ ${calcResult.rate}%`, value: calcResult.tds, color: "#f87171" },
-                    { label: "Net Amount to Pay", value: calcResult.net, color: "#4ade80" },
+                    { label: `TDS @ ${calcResult.rate}%`, value: calcResult.tds, color: "#C2321F" },
+                    { label: "Net Amount to Pay", value: calcResult.net, color: "#0B7A55" },
                   ].map(r => (
                     <div key={r.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                      <span style={{ fontSize: "0.82rem", color: "rgba(237,232,220,0.5)" }}>{r.label}</span>
-                      <span style={{ fontWeight: 700, color: r.color ?? "#EDE8DC", fontVariantNumeric: "tabular-nums" }}>₹{fmt(r.value)}</span>
+                      <span style={{ fontSize: "0.82rem", color: "rgba(20,26,58,0.75)" }}>{r.label}</span>
+                      <span style={{ fontWeight: 700, color: r.color ?? "#141A3A", fontVariantNumeric: "tabular-nums" }}>₹{fmt(r.value)}</span>
                     </div>
                   ))}
                 </div>
               )}
               {!calcResult && (
-                <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.25)", lineHeight: 1.6 }}>
+                <div style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.35)", lineHeight: 1.6 }}>
                   Click "Calculate TDS" to see the deduction breakdown. Rates shown are basic rates — surcharge and cess may apply for high-income deductees.
                 </div>
               )}
@@ -270,18 +270,18 @@ export default function TDSTrackerPage() {
             {DUE_DATES.map(d => {
               const isCurrentMonth = d.month === currentMonth;
               return (
-                <div key={d.month} style={{ background: isCurrentMonth ? "rgba(201,168,76,0.1)" : "rgba(255,255,255,0.02)", border: `1px solid ${isCurrentMonth ? "rgba(201,168,76,0.3)" : "rgba(237,232,220,0.07)"}`, borderRadius: 10, padding: "0.85rem 1rem" }}>
+                <div key={d.month} style={{ background: isCurrentMonth ? "rgba(35,42,99,0.1)" : "#FFFFFF", border: `1px solid ${isCurrentMonth ? "rgba(35,42,99,0.3)" : "rgba(20,26,58,0.10)"}`, borderRadius: 10, padding: "0.85rem 1rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontWeight: 700, fontSize: "0.88rem", color: isCurrentMonth ? "#C9A84C" : "#EDE8DC" }}>{d.month}</span>
-                    {isCurrentMonth && <span style={{ fontSize: "0.65rem", background: "#C9A84C", color: "#070C1A", padding: "2px 6px", borderRadius: 6, fontWeight: 800 }}>CURRENT</span>}
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem", color: isCurrentMonth ? "#232A63" : "#141A3A" }}>{d.month}</span>
+                    {isCurrentMonth && <span style={{ fontSize: "0.65rem", background: "#232A63", color: "#F5F6FA", padding: "2px 6px", borderRadius: 6, fontWeight: 800 }}>CURRENT</span>}
                   </div>
-                  <div style={{ fontSize: "1rem", fontWeight: 800, marginTop: "0.25rem", color: isCurrentMonth ? "#C9A84C" : "rgba(237,232,220,0.7)" }}>Due: {d.date}</div>
-                  <div style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.3)", marginTop: "0.2rem" }}>Deposit TDS for {d.month} payments</div>
+                  <div style={{ fontSize: "1rem", fontWeight: 800, marginTop: "0.25rem", color: isCurrentMonth ? "#232A63" : "rgba(20,26,58,0.95)" }}>Due: {d.date}</div>
+                  <div style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.55)", marginTop: "0.2rem" }}>Deposit TDS for {d.month} payments</div>
                 </div>
               );
             })}
-            <div style={{ gridColumn: "1/-1", background: "rgba(96,165,250,0.05)", border: "1px solid rgba(96,165,250,0.15)", borderRadius: 10, padding: "0.85rem 1rem", fontSize: "0.8rem", color: "rgba(237,232,220,0.5)", lineHeight: 1.6 }}>
-              <strong style={{ color: "#60a5fa" }}>Note:</strong> Government deductees: TDS due by April 7 for March. For company deductors, due date for TDS on salary is April 30. File TDS returns (Form 24Q/26Q) quarterly. Late deposit attracts 1.5% interest per month under Section 201(1A).
+            <div style={{ gridColumn: "1/-1", background: "rgba(31,94,255,0.05)", border: "1px solid rgba(31,94,255,0.15)", borderRadius: 10, padding: "0.85rem 1rem", fontSize: "0.8rem", color: "rgba(20,26,58,0.75)", lineHeight: 1.6 }}>
+              <strong style={{ color: "#1F5EFF" }}>Note:</strong> Government deductees: TDS due by April 7 for March. For company deductors, due date for TDS on salary is April 30. File TDS returns (Form 24Q/26Q) quarterly. Late deposit attracts 1.5% interest per month under Section 201(1A).
             </div>
           </div>
         )}

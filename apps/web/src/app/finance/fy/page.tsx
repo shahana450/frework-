@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
-type FY = { id: string; label: string; start_date: string; end_date: string; is_current: boolean; is_closed: boolean };
+type FY = { id: string; label: string; start_date: string; end_date: string; is_current: boolean; is_closed: boolean; is_locked?: boolean; locked_at?: string | null };
 
 export default function FinancialYearPage() {
   const router = useRouter();
@@ -77,47 +77,54 @@ export default function FinancialYearPage() {
     setSaving(false);
   }
 
-  async function closeFY(fyId: string) {
+  // Lock = no new postings in this year from any path (app, AI, imports). Unlocking needs a reason.
+  async function setLock(fy: FY, locked: boolean) {
     if (!bizId) return;
-    if (!confirm("Close this financial year? It will become read-only. Journals posted in this period cannot be edited.")) return;
-    setSaving(true); setError("");
-    await supabase.from("fw_fin_financial_years").update({ is_closed: true, is_current: false }).eq("id", fyId);
-    setSuccess("Financial year closed");
-    load(bizId);
+    let reason: string | null = null;
+    if (locked) {
+      if (!confirm(`Lock ${fy.label}? No entries can be posted into it until it's unlocked. Corrections then need an entry in an open year.`)) return;
+    } else {
+      reason = window.prompt(`Why are you unlocking ${fy.label}? This is recorded in the audit log.`)?.trim() ?? null;
+      if (!reason) return;
+    }
+    setSaving(true); setError(""); setSuccess("");
+    const res = await fetch("/api/finance/periods", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, fy_id: fy.id, locked, reason }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) setError(d.error ?? "Couldn't change the lock.");
+    else { setSuccess(locked ? `${fy.label} locked` : `${fy.label} unlocked`); load(bizId); }
     setSaving(false);
   }
-
-  const inputStyle = { background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "7px 10px", borderRadius: 6, fontSize: "0.85rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
-  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
+  const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.85rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
+  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Financial Years</span>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Financial Years</span>
         <div style={{ flex: 1 }} />
-        <button onClick={() => setShowNew(s => !s)} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "7px 16px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.82rem" }}>
+        <button onClick={() => setShowNew(s => !s)} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "7px 16px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.82rem" }}>
           + New Financial Year
         </button>
       </nav>
 
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "2rem" }}>
         <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Financial Year Management</h1>
-        <p style={{ margin: "0 0 1.5rem", color: "rgba(237,232,220,0.4)", fontSize: "0.82rem" }}>Manage your accounting periods, switch active year, or close a completed year</p>
+        <p style={{ margin: "0 0 1.5rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Manage your accounting periods, switch active year, or close a completed year</p>
 
-        {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "#f87171", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
-        {success && <div style={{ background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.25)", color: "#4ade80", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
+        {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#C2321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
+        {success && <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", color: "#0B7A55", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
         {/* New FY form */}
         {showNew && (
-          <div style={{ background: "rgba(201,168,76,0.06)", border: "1px solid rgba(201,168,76,0.2)", borderRadius: 12, padding: "1.25rem", marginBottom: "1.5rem" }}>
+          <div style={{ background: "rgba(35,42,99,0.06)", border: "1px solid rgba(35,42,99,0.2)", borderRadius: 12, padding: "1.25rem", marginBottom: "1.5rem" }}>
             <div style={{ fontWeight: 700, marginBottom: "1rem" }}>Create New Financial Year</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div>
                 <label style={labelStyle}>Start Date</label>
                 <input type="date" value={newStart} onChange={e => setNewStart(e.target.value)} style={inputStyle} />
-                <div style={{ fontSize: "0.68rem", color: "rgba(237,232,220,0.3)", marginTop: "0.25rem" }}>Usually April 1 for Indian FY</div>
+                <div style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.55)", marginTop: "0.25rem" }}>Usually April 1 for Indian FY</div>
               </div>
               <div>
                 <label style={labelStyle}>Label</label>
@@ -125,10 +132,10 @@ export default function FinancialYearPage() {
               </div>
             </div>
             <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button onClick={createFY} disabled={saving} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "8px 20px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>
+              <button onClick={createFY} disabled={saving} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "8px 20px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>
                 {saving ? "Creating…" : "Create"}
               </button>
-              <button onClick={() => setShowNew(false)} style={{ background: "rgba(237,232,220,0.05)", border: "1px solid rgba(237,232,220,0.1)", color: "rgba(237,232,220,0.5)", padding: "8px 16px", borderRadius: 7, cursor: "pointer", fontSize: "0.85rem" }}>
+              <button onClick={() => setShowNew(false)} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "rgba(20,26,58,0.75)", padding: "8px 16px", borderRadius: 7, cursor: "pointer", fontSize: "0.85rem" }}>
                 Cancel
               </button>
             </div>
@@ -138,36 +145,40 @@ export default function FinancialYearPage() {
         {/* FY list */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {years.length === 0 && (
-            <div style={{ textAlign: "center", padding: "3rem", color: "rgba(237,232,220,0.3)" }}>No financial years found. Create one above.</div>
+            <div style={{ textAlign: "center", padding: "3rem", color: "rgba(20,26,58,0.55)" }}>No financial years found. Create one above.</div>
           )}
           {years.map(fy => (
             <div key={fy.id} style={{
-              background: "rgba(255,255,255,0.02)",
-              border: `1px solid ${fy.is_current ? "rgba(201,168,76,0.35)" : "rgba(237,232,220,0.07)"}`,
+              background: "#FFFFFF",
+              border: `1px solid ${fy.is_current ? "rgba(35,42,99,0.35)" : "rgba(20,26,58,0.10)"}`,
               borderRadius: 12, padding: "1rem 1.25rem",
               display: "flex", alignItems: "center", gap: "1rem",
             }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.3rem" }}>
-                  <span style={{ fontWeight: 800, fontSize: "0.95rem", color: fy.is_current ? "#C9A84C" : "#EDE8DC" }}>{fy.label}</span>
-                  {fy.is_current && <span style={{ fontSize: "0.65rem", background: "rgba(201,168,76,0.2)", color: "#C9A84C", padding: "2px 8px", borderRadius: 8, fontWeight: 700 }}>ACTIVE</span>}
-                  {fy.is_closed && <span style={{ fontSize: "0.65rem", background: "rgba(237,232,220,0.06)", color: "rgba(237,232,220,0.35)", padding: "2px 8px", borderRadius: 8 }}>CLOSED</span>}
+                  <span style={{ fontWeight: 800, fontSize: "0.95rem", color: fy.is_current ? "#232A63" : "#141A3A" }}>{fy.label}</span>
+                  {fy.is_current && <span style={{ fontSize: "0.65rem", background: "rgba(35,42,99,0.2)", color: "#232A63", padding: "2px 8px", borderRadius: 8, fontWeight: 700 }}>ACTIVE</span>}
+                  {(fy.is_locked || fy.is_closed) && <span title={fy.locked_at ? `Locked ${new Date(fy.locked_at).toLocaleString("en-IN")}` : undefined} style={{ fontSize: "0.65rem", background: fy.is_locked ? "rgba(194,50,31,0.1)" : "rgba(20,26,58,0.08)", color: fy.is_locked ? "#C2321F" : "rgba(20,26,58,0.60)", padding: "2px 8px", borderRadius: 8, fontWeight: 700 }}>{fy.is_locked ? "🔒 LOCKED" : "CLOSED (not locked)"}</span>}
                 </div>
-                <div style={{ fontSize: "0.78rem", color: "rgba(237,232,220,0.4)" }}>
+                <div style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>
                   {new Date(fy.start_date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
                   {" — "}
                   {new Date(fy.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
                 </div>
               </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
-                {!fy.is_current && !fy.is_closed && (
-                  <button onClick={() => setAsCurrent(fy.id)} disabled={saving} style={{ background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.25)", color: "#C9A84C", padding: "6px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600 }}>
+                {!fy.is_current && !fy.is_locked && (
+                  <button onClick={() => setAsCurrent(fy.id)} disabled={saving} style={{ background: "rgba(35,42,99,0.1)", border: "1px solid rgba(35,42,99,0.25)", color: "#232A63", padding: "6px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem", fontWeight: 600 }}>
                     Set Active
                   </button>
                 )}
-                {!fy.is_closed && (
-                  <button onClick={() => closeFY(fy.id)} disabled={saving} style={{ background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.2)", color: "#f87171", padding: "6px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem" }}>
-                    Close Year
+                {fy.is_locked ? (
+                  <button onClick={() => setLock(fy, false)} disabled={saving} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.21)", color: "rgba(20,26,58,0.85)", padding: "6px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem" }}>
+                    Unlock…
+                  </button>
+                ) : (
+                  <button onClick={() => setLock(fy, true)} disabled={saving} style={{ background: "rgba(194,50,31,0.07)", border: "1px solid rgba(194,50,31,0.2)", color: "#C2321F", padding: "6px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem" }}>
+                    🔒 Lock year
                   </button>
                 )}
               </div>
@@ -175,8 +186,8 @@ export default function FinancialYearPage() {
           ))}
         </div>
 
-        <div style={{ marginTop: "2rem", background: "rgba(96,165,250,0.05)", border: "1px solid rgba(96,165,250,0.12)", borderRadius: 10, padding: "1rem 1.25rem", fontSize: "0.8rem", color: "rgba(237,232,220,0.45)", lineHeight: 1.65 }}>
-          <strong style={{ color: "#60a5fa" }}>Note:</strong> Indian FY runs from April 1 to March 31. Closing a year marks it read-only — all journals in that period are locked. You can have multiple open years, but only one can be active at a time.
+        <div style={{ marginTop: "2rem", background: "rgba(31,94,255,0.05)", border: "1px solid rgba(31,94,255,0.12)", borderRadius: 10, padding: "1rem 1.25rem", fontSize: "0.8rem", color: "rgba(20,26,58,0.70)", lineHeight: 1.65 }}>
+          <strong style={{ color: "#1F5EFF" }}>Note:</strong> Indian FY runs from April 1 to March 31. Locking a year blocks every new posting into it — from forms, FreBook, uploads and imports — and is recorded in the audit log. Only the owner or an admin can lock or unlock. You can have multiple open years, but only one can be active at a time.
         </div>
       </div>
     </div>

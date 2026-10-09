@@ -2,6 +2,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { saveEntry } from "@/lib/postEntry";
 import Link from "next/link";
 
 type Account = { id: string; code: string; name: string; type: string };
@@ -19,7 +20,7 @@ const VOUCHER_TYPES = [
   { value: "credit_note", label: "Credit Note" },
 ];
 
-const inp: React.CSSProperties = { background: "rgba(237,232,220,0.04)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "8px 10px", borderRadius: 6, fontSize: "0.84rem", outline: "none", width: "100%", boxSizing: "border-box" };
+const inp: React.CSSProperties = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "8px 10px", borderRadius: 6, fontSize: "0.84rem", outline: "none", width: "100%", boxSizing: "border-box" };
 
 export default function EditJournalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -30,6 +31,7 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
   const [type, setType] = useState("journal");
   const [narration, setNarration] = useState("");
   const [refNo, setRefNo] = useState("");
+  const [status, setStatus] = useState("draft");
   const [entryNo, setEntryNo] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
@@ -58,6 +60,7 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
         setNarration(jRes.data.narration ?? "");
         setRefNo(jRes.data.reference_no ?? "");
         setEntryNo(jRes.data.entry_no ?? "");
+        setStatus(jRes.data.status ?? "draft");
       }
       setLines((linesRes.data ?? []).map((l: Record<string, unknown>) => ({
         id: l.id as string,
@@ -97,6 +100,27 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
     if (lines.some(l => !l.account_id)) { setError("All lines must have an account selected"); return; }
     setSaving(true); setError("");
 
+    if (status === "posted") {
+      // Posted entries are never rewritten: reverse the original, then post the corrected entry
+      const reason = window.prompt(`Why are you correcting ${entryNo}? (kept in the audit trail)`)?.trim();
+      if (!reason) { setSaving(false); return; }
+      try {
+        // One server step: post the corrected entry, then reverse the original — never half-done
+        const res = await fetch("/api/finance/journals/correct", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ business_id: bizId, journal_id: id, reason, date, type, narration, reference_no: refNo || entryNo,
+            lines: lines.filter(l => (parseFloat(l.dr) || 0) > 0 || (parseFloat(l.cr) || 0) > 0).map(l => ({ account_id: l.account_id, dr: parseFloat(l.dr) || 0, cr: parseFloat(l.cr) || 0, narration: l.narration || narration })) }),
+        });
+        const rd = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(rd.error ?? "Correction failed. Nothing was changed.");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Correction failed"); setSaving(false); return;
+      }
+      setSaving(false);
+      router.push("/finance/journals");
+      return;
+    }
+
     await supabase.from("fw_fin_journals").update({
       date, type, narration, reference_no: refNo || null,
       total_debit: totalDr, total_credit: totalCr,
@@ -118,7 +142,7 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
     router.push("/finance/tally");
   }
 
-  if (loading) return <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading…</div>;
+  if (loading) return <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading…</div>;
 
   const filteredAccounts = (i: number) => {
     const q = (search[i] ?? "").toLowerCase();
@@ -126,11 +150,11 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070C1A", color: "#EDE8DC", fontFamily: "system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance/tally" style={{ color: "#C9A84C", fontWeight: 700, textDecoration: "none" }}>← Tally Bridge</Link>
-        <span style={{ color: "rgba(237,232,220,0.3)" }}>›</span>
-        <span style={{ color: "rgba(237,232,220,0.6)", fontSize: "0.85rem" }}>Edit Journal {entryNo}</span>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance/tally" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>← Tally Bridge</Link>
+        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Edit Journal {entryNo}</span>
       </nav>
 
       <div style={{ maxWidth: 860, margin: "0 auto", padding: "2rem" }}>
@@ -139,38 +163,38 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
         {/* Header fields */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
           <div>
-            <label style={{ display: "block", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>Date *</label>
+            <label style={{ display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>Date *</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp} />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>Voucher Type</label>
+            <label style={{ display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>Voucher Type</label>
             <select value={type} onChange={e => setType(e.target.value)} style={{ ...inp, cursor: "pointer" }}>
               {VOUCHER_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
           <div>
-            <label style={{ display: "block", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>Reference No</label>
+            <label style={{ display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>Reference No</label>
             <input value={refNo} onChange={e => setRefNo(e.target.value)} placeholder="Invoice / Bill no." style={inp} />
           </div>
         </div>
         <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", fontSize: "0.68rem", color: "rgba(237,232,220,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>Narration</label>
+          <label style={{ display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>Narration</label>
           <input value={narration} onChange={e => setNarration(e.target.value)} placeholder="Description of transaction" style={inp} />
         </div>
 
         {/* Lines */}
-        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(237,232,220,0.08)", borderRadius: 10, overflow: "hidden", marginBottom: "1rem" }}>
+        <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 10, overflow: "hidden", marginBottom: "1rem" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
             <thead>
-              <tr style={{ background: "rgba(255,255,255,0.03)" }}>
+              <tr style={{ background: "#FFFFFF" }}>
                 {["Account / Ledger", "DR (₹)", "CR (₹)", "Narration", ""].map(h => (
-                  <th key={h} style={{ padding: "0.6rem 0.75rem", textAlign: "left", fontSize: "0.65rem", color: "rgba(237,232,220,0.35)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
+                  <th key={h} style={{ padding: "0.6rem 0.75rem", textAlign: "left", fontSize: "0.65rem", color: "rgba(20,26,58,0.60)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {lines.map((line, i) => (
-                <tr key={i} style={{ borderTop: "1px solid rgba(237,232,220,0.05)" }}>
+                <tr key={i} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
                   <td style={{ padding: "0.4rem 0.6rem", position: "relative", minWidth: 220 }}>
                     <input
                       value={showDropdown === i ? (search[i] ?? "") : line.account_name}
@@ -180,41 +204,41 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
                       style={{ ...inp, fontSize: "0.8rem" }}
                     />
                     {showDropdown === i && (
-                      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#0d1526", border: "1px solid rgba(237,232,220,0.15)", borderRadius: 6, zIndex: 50, maxHeight: 200, overflowY: "auto" }}>
+                      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.21)", borderRadius: 6, zIndex: 50, maxHeight: 200, overflowY: "auto" }}>
                         {filteredAccounts(i).slice(0, 30).map(acc => (
-                          <div key={acc.id} onMouseDown={() => selectAccount(i, acc)} style={{ padding: "0.45rem 0.75rem", cursor: "pointer", fontSize: "0.8rem", color: "#EDE8DC" }}
-                            onMouseEnter={e => (e.currentTarget.style.background = "rgba(201,168,76,0.1)")}
+                          <div key={acc.id} onMouseDown={() => selectAccount(i, acc)} style={{ padding: "0.45rem 0.75rem", cursor: "pointer", fontSize: "0.8rem", color: "#141A3A" }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "rgba(35,42,99,0.1)")}
                             onMouseLeave={e => (e.currentTarget.style.background = "")}>
-                            <span style={{ color: "rgba(237,232,220,0.4)", fontSize: "0.72rem", marginRight: 8 }}>{acc.code}</span>{acc.name}
+                            <span style={{ color: "rgba(20,26,58,0.65)", fontSize: "0.72rem", marginRight: 8 }}>{acc.code}</span>{acc.name}
                           </div>
                         ))}
-                        {filteredAccounts(i).length === 0 && <div style={{ padding: "0.5rem 0.75rem", color: "rgba(237,232,220,0.3)", fontSize: "0.78rem" }}>No accounts found</div>}
+                        {filteredAccounts(i).length === 0 && <div style={{ padding: "0.5rem 0.75rem", color: "rgba(20,26,58,0.55)", fontSize: "0.78rem" }}>No accounts found</div>}
                       </div>
                     )}
                   </td>
                   <td style={{ padding: "0.4rem 0.5rem", width: 110 }}>
-                    <input type="number" value={line.dr} onChange={e => updateLine(i, "dr", e.target.value)} placeholder="0.00" style={{ ...inp, fontSize: "0.8rem", color: "#4ade80" }} />
+                    <input type="number" value={line.dr} onChange={e => updateLine(i, "dr", e.target.value)} placeholder="0.00" style={{ ...inp, fontSize: "0.8rem", color: "#0B7A55" }} />
                   </td>
                   <td style={{ padding: "0.4rem 0.5rem", width: 110 }}>
-                    <input type="number" value={line.cr} onChange={e => updateLine(i, "cr", e.target.value)} placeholder="0.00" style={{ ...inp, fontSize: "0.8rem", color: "#60a5fa" }} />
+                    <input type="number" value={line.cr} onChange={e => updateLine(i, "cr", e.target.value)} placeholder="0.00" style={{ ...inp, fontSize: "0.8rem", color: "#1F5EFF" }} />
                   </td>
                   <td style={{ padding: "0.4rem 0.5rem" }}>
                     <input value={line.narration} onChange={e => updateLine(i, "narration", e.target.value)} placeholder="Line narration" style={{ ...inp, fontSize: "0.78rem" }} />
                   </td>
                   <td style={{ padding: "0.4rem 0.5rem", textAlign: "center" }}>
-                    <button onClick={() => removeLine(i)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: "1rem" }}>✕</button>
+                    <button onClick={() => removeLine(i)} style={{ background: "none", border: "none", color: "#C2321F", cursor: "pointer", fontSize: "1rem" }}>✕</button>
                   </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr style={{ borderTop: "1px solid rgba(237,232,220,0.1)", background: "rgba(255,255,255,0.02)" }}>
-                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 700, fontSize: "0.75rem", color: "rgba(237,232,220,0.4)" }}>
-                  <button onClick={addLine} style={{ background: "none", border: "1px solid rgba(237,232,220,0.2)", color: "#EDE8DC", padding: "3px 12px", borderRadius: 5, cursor: "pointer", fontSize: "0.75rem" }}>+ Add Line</button>
+              <tr style={{ borderTop: "1px solid rgba(20,26,58,0.14)", background: "#FFFFFF" }}>
+                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 700, fontSize: "0.75rem", color: "rgba(20,26,58,0.65)" }}>
+                  <button onClick={addLine} style={{ background: "none", border: "1px solid rgba(20,26,58,0.28)", color: "#141A3A", padding: "3px 12px", borderRadius: 5, cursor: "pointer", fontSize: "0.75rem" }}>+ Add Line</button>
                 </td>
-                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 800, color: "#4ade80", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>₹{totalDr.toFixed(2)}</td>
-                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 800, color: "#60a5fa", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>₹{totalCr.toFixed(2)}</td>
-                <td colSpan={2} style={{ padding: "0.5rem 0.75rem", fontSize: "0.75rem", color: balanced ? "#4ade80" : "#f87171", fontWeight: 700 }}>
+                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 800, color: "#0B7A55", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>₹{totalDr.toFixed(2)}</td>
+                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 800, color: "#1F5EFF", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>₹{totalCr.toFixed(2)}</td>
+                <td colSpan={2} style={{ padding: "0.5rem 0.75rem", fontSize: "0.75rem", color: balanced ? "#0B7A55" : "#C2321F", fontWeight: 700 }}>
                   {balanced ? "✓ Balanced" : `⚠ Difference: ₹${Math.abs(totalDr - totalCr).toFixed(2)}`}
                 </td>
               </tr>
@@ -222,11 +246,11 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
           </table>
         </div>
 
-        {error && <div style={{ color: "#f87171", fontSize: "0.82rem", marginBottom: "1rem", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 7, padding: "0.6rem 1rem" }}>{error}</div>}
+        {error && <div style={{ color: "#C2321F", fontSize: "0.82rem", marginBottom: "1rem", background: "rgba(194,50,31,0.08)", border: "1px solid rgba(194,50,31,0.2)", borderRadius: 7, padding: "0.6rem 1rem" }}>{error}</div>}
 
         <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-          <Link href="/finance/tally" style={{ background: "rgba(237,232,220,0.06)", border: "1px solid rgba(237,232,220,0.12)", color: "#EDE8DC", padding: "9px 20px", borderRadius: 8, textDecoration: "none", fontSize: "0.88rem" }}>Cancel</Link>
-          <button onClick={save} disabled={saving || !balanced} style={{ background: "#C9A84C", border: "none", color: "#070C1A", padding: "9px 24px", borderRadius: 8, fontWeight: 800, fontSize: "0.88rem", cursor: saving || !balanced ? "not-allowed" : "pointer", opacity: saving || !balanced ? 0.6 : 1 }}>
+          <Link href="/finance/tally" style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "9px 20px", borderRadius: 8, textDecoration: "none", fontSize: "0.88rem" }}>Cancel</Link>
+          <button onClick={save} disabled={saving || !balanced} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "9px 24px", borderRadius: 8, fontWeight: 800, fontSize: "0.88rem", cursor: saving || !balanced ? "not-allowed" : "pointer", opacity: saving || !balanced ? 0.6 : 1 }}>
             {saving ? "Saving…" : "Save & Return to Tally"}
           </button>
         </div>

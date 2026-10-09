@@ -1,9 +1,12 @@
-﻿"use client";
+"use client";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTally } from "@/lib/tallyConnection";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { tallyFetch, parseTallyVouchers, tallyVoucherTypeToFP, tallyParentToType, monthsInRange, VOUCHER_FETCH_XML } from "@/lib/tallyUtils";
+import { readTallyLedgerGroups, importTallyVouchers, summaryText } from "@/lib/integrations/tallyClient";
+import { buildTrialBalance, buildPL, buildBS, loadBookLines, GROUP_LABEL, statementAmount, type TBRow, type BookLine, type Account as BookAccount } from "@/lib/books";
 
 type Journal = {
   id: string; entry_no: string; date: string; narration: string;
@@ -36,12 +39,12 @@ type Flag = {
 };
 
 const CAT_META: Record<FlagCategory, { label: string; icon: string; color: string; bg: string; border: string }> = {
-  critical:      { label: "Critical",       icon: "🔴", color: "#F87171", bg: "rgba(248,113,113,0.07)", border: "rgba(248,113,113,0.25)" },
-  compliance:    { label: "Compliance",     icon: "⚖️",  color: "#FB923C", bg: "rgba(251,146,60,0.07)",  border: "rgba(251,146,60,0.25)"  },
-  documentation: { label: "Documentation", icon: "📋", color: "#FBBF24", bg: "rgba(251,191,36,0.07)",  border: "rgba(251,191,36,0.25)"  },
-  timing:        { label: "Timing",         icon: "🕐", color: "#A78BFA", bg: "rgba(167,139,250,0.07)", border: "rgba(167,139,250,0.25)" },
-  pattern:       { label: "Pattern",        icon: "🔁", color: "#60A5FA", bg: "rgba(96,165,250,0.07)",  border: "rgba(96,165,250,0.25)"  },
-  review:        { label: "Review",         icon: "🔍", color: "#34D399", bg: "rgba(52,211,153,0.07)",  border: "rgba(52,211,153,0.25)"  },
+  critical:      { label: "Critical",       icon: "🔴", color: "#C2321F", bg: "rgba(194,50,31,0.07)", border: "rgba(194,50,31,0.25)" },
+  compliance:    { label: "Compliance",     icon: "⚖️",  color: "#B4561E", bg: "rgba(180,86,30,0.07)",  border: "rgba(180,86,30,0.25)"  },
+  documentation: { label: "Documentation", icon: "📋", color: "#8A5A00", bg: "rgba(184,120,0,0.07)",  border: "rgba(184,120,0,0.25)"  },
+  timing:        { label: "Timing",         icon: "🕐", color: "#5B4BC4", bg: "rgba(91,75,196,0.07)", border: "rgba(91,75,196,0.25)" },
+  pattern:       { label: "Pattern",        icon: "🔁", color: "#1F5EFF", bg: "rgba(31,94,255,0.07)",  border: "rgba(31,94,255,0.25)"  },
+  review:        { label: "Review",         icon: "🔍", color: "#0B7A55", bg: "rgba(11,122,85,0.07)",  border: "rgba(11,122,85,0.25)"  },
 };
 
 const fmt = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -315,52 +318,8 @@ function buildFlags(journals: Journal[], lines: JournalLine[], accounts: Account
 }
 
 type TrialRow = { name: string; type: string; dr: number; cr: number; balance: number };
-
-function buildTrialBalance(accounts: Account[], lines: JournalLine[], journalIds: Set<string>): TrialRow[] {
-  const map = new Map<string, TrialRow>();
-  for (const a of accounts) map.set(a.id, { name: a.name, type: a.type, dr: 0, cr: 0, balance: 0 });
-  for (const l of lines) {
-    if (!journalIds.has(l.journal_id)) continue;
-    const row = map.get(l.account_id);
-    if (!row) continue;
-    row.dr += l.dr_amount || 0;
-    row.cr += l.cr_amount || 0;
-  }
-  return Array.from(map.values()).map(r => ({ ...r, balance: r.dr - r.cr })).filter(r => r.dr > 0 || r.cr > 0).sort((a,b) => a.name.localeCompare(b.name));
-}
-
-type PLSummary = { revenue: number; cogs: number; grossProfit: number; expenses: number; netProfit: number };
-
-function buildPL(tb: TrialRow[]): PLSummary {
-  // Income: credit-heavy accounts (sales, income, receipts)
-  const revenue  = tb.filter(r => ["income","sales","receipt"].includes(r.type))
-                     .reduce((s,r) => s + Math.max(0, r.cr - r.dr), 0);
-  // COGS: purchase accounts + direct expenses (above Gross Profit line in Tally)
-  const cogs     = tb.filter(r => ["cost_of_goods","purchase","direct_expense"].includes(r.type))
-                     .reduce((s,r) => s + Math.abs(r.dr - r.cr), 0);
-  // Indirect expenses (below Gross Profit line)
-  const expenses = tb.filter(r => r.type === "expense")
-                     .reduce((s,r) => s + Math.abs(r.dr - r.cr), 0);
-  return { revenue, cogs, grossProfit: revenue - cogs, expenses, netProfit: revenue - cogs - expenses };
-}
-
-type BSSummary = {
-  assets: TrialRow[]; fixedAssets: TrialRow[];
-  liabilities: TrialRow[]; loans: TrialRow[]; taxes: TrialRow[];
-  equity: TrialRow[];
-  totalAssets: number; totalLiabEq: number;
-};
-function buildBS(tb: TrialRow[], netProfit: number): BSSummary {
-  const assets      = tb.filter(r => ["asset","bank","cash"].includes(r.type)).map(r => ({ ...r, balance: r.dr - r.cr }));
-  const fixedAssets = tb.filter(r => r.type === "fixed_asset").map(r => ({ ...r, balance: r.dr - r.cr }));
-  const liabilities = tb.filter(r => r.type === "liability").map(r => ({ ...r, balance: r.cr - r.dr }));
-  const loans       = tb.filter(r => r.type === "loan").map(r => ({ ...r, balance: r.cr - r.dr }));
-  const taxes       = tb.filter(r => r.type === "tax").map(r => ({ ...r, balance: r.cr - r.dr }));
-  const equity      = tb.filter(r => r.type === "equity").map(r => ({ ...r, balance: r.cr - r.dr }));
-  const totalAssets = [...assets, ...fixedAssets].reduce((s,r) => s + r.balance, 0);
-  const totalLiabEq = [...liabilities, ...loans, ...taxes, ...equity].reduce((s,r) => s + r.balance, 0) + netProfit;
-  return { assets, fixedAssets, liabilities, loans, taxes, equity, totalAssets, totalLiabEq };
-}
+type StmtRow = { name: string; balance: number };
+const stmtRows = (rows: TBRow[]): StmtRow[] => rows.map(r => ({ name: r.name, balance: statementAmount(r) }));
 
 type ModalJournal = Journal & { modalLines?: { account: string; accountType: string; dr: number; cr: number; narration: string }[] };
 
@@ -375,6 +334,8 @@ export default function AuditPage() {
   const [journals, setJournals] = useState<Journal[]>([]);
   const [lines, setLines] = useState<JournalLine[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [bookLines, setBookLines] = useState<BookLine[]>([]);
+  const [bookAccounts, setBookAccounts] = useState<BookAccount[]>([]);
   const [tab, setTab] = useState<"overview" | "flags" | "trial_balance" | "pl" | "balance_sheet" | "ledger">("overview");
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [fyId, setFyId] = useState<string | null>(null);
@@ -388,38 +349,14 @@ export default function AuditPage() {
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
   const [showReviewed, setShowReviewed] = useState(false);
   const [tbSearch, setTbSearch] = useState("");
-  const [tallyCompany, setTallyCompany] = useState("");
-  const [tallyConnected, setTallyConnected] = useState<boolean | null>(null); // null = checking
+  // The app-wide Tally connection
+  const tally = useTally();
+  const tallyCompany = tally.company;
+  const tallyConnected: boolean | null = tally.status === "connected" ? true : tally.status === "error" || (tally.status === "idle" && !tally.company) ? false : null;
   const [lastSync, setLastSync] = useState<string>("");
-
-  // Read Tally status from localStorage + ping bridge
   useEffect(() => {
-    const company = localStorage.getItem("fw_tally_company") ?? "";
-    const port = localStorage.getItem("fw_tally_port") ?? "7001";
     const lastImport = localStorage.getItem("fw_tally_last_import");
-    if (company) setTallyCompany(company);
-    if (lastImport) {
-      const d = new Date(parseInt(lastImport));
-      setLastSync(d.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }));
-    }
-    // Send a real Tally XML request — only Tally itself produces <RESPONSE> in the body
-    const tallyXml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Co</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Co" ISMODIFY="No"><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-    async function checkTally() {
-      const tryFetch = (url: string, headers: Record<string,string>) =>
-        fetch(url, { method: "POST", headers, body: tallyXml, signal: AbortSignal.timeout(3000) });
-      try {
-        // Try direct (works if bridge app running on 7002 proxying to Tally on port)
-        const r = await tryFetch("http://localhost:7002", { "Content-Type": "text/xml", "X-Tally-Port": port }).catch(() => null)
-          ?? await tryFetch(`http://localhost:${port}`, { "Content-Type": "text/xml" }).catch(() => null);
-        if (!r || !r.ok) { setTallyConnected(false); return; }
-        const text = await r.text();
-        // Real Tally response contains ENVELOPE or COMPANY tags; bridge-only 200 does not
-        setTallyConnected(/<ENVELOPE|<COMPANY|<COLLECTION/i.test(text));
-      } catch {
-        setTallyConnected(false);
-      }
-    }
-    checkTally();
+    if (lastImport) setLastSync(new Date(parseInt(lastImport)).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }));
   }, []);
 
   useEffect(() => {
@@ -458,7 +395,12 @@ export default function AuditPage() {
       }));
       if (!matchingFy) fyList.unshift({ id: `fy_cur_${yr}`, label: curFyLabel, start: curFyStart, end: curFyEnd });
       setFys(fyList);
-      const cur = fyList[0];
+      // Open the year the business marked as current (same default as Reports and Books)
+      // Open the year containing today; fall back to the one marked current
+      const todayIso = now.toISOString().slice(0, 10);
+      const markedCurrent = fysData?.find(f => f.is_current);
+      const cur = fyList.find(f => f.start <= todayIso && f.end >= todayIso)
+        ?? (markedCurrent && fyList.find(f => f.id === markedCurrent.id)) ?? fyList[0];
       setFyId(cur.id);
       await loadDataByRange(saved, cur.start, cur.end);
     });
@@ -472,31 +414,35 @@ export default function AuditPage() {
     const timer = setTimeout(() => setLoading(false), 12000);
     try {
       // Phase 1: load journals + accounts → show overview immediately
-      let jq = supabase.from("fw_fin_journals")
-        .select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id,reference_no")
-        .eq("business_id", bid).in("status", ["posted", "draft"]).order("date");
-      jq = jq.gte("date", start).lte("date", end);
-      const [jRes, aRes] = await Promise.all([jq, supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bid)]);
-      let journalData: Journal[] = jRes.data ?? [];
-      // If no data in selected range, fall back to ALL journals for this business
-      if (!journalData.length) {
-        const { data: allJ } = await supabase.from("fw_fin_journals")
-          .select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id,reference_no")
-          .eq("business_id", bid).order("date");
-        journalData = allJ ?? [];
-      }
+      const loadJournals = async () => {
+        const out: Journal[] = [];
+        for (let from = 0; ; from += 1000) {
+          const { data } = await supabase.from("fw_fin_journals")
+            .select("id,entry_no,date,narration,type,status,total_debit,total_credit,financial_year_id,reference_no")
+            .eq("business_id", bid).in("status", ["posted", "draft"]).gte("date", start).lte("date", end).order("date").range(from, from + 999);
+          out.push(...(data ?? []));
+          if (!data || data.length < 1000) break;
+        }
+        return out;
+      };
+      const [journalData, aRes] = await Promise.all([loadJournals(), supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bid)]);
+      setBookLines([]);
       setJournals(journalData);
+      // Ledger balances for TB / P&L / BS: every posted line up to the year end (brought-forward included)
+      loadBookLines(supabase, bid, end).then(r => { setBookLines(r.lines); setBookAccounts(r.accounts); });
       setAccounts(aRes.data ?? []);
       clearTimeout(timer);
       setLoading(false); // show overview now
       // Phase 2: load journal lines in background for detail tabs
       const jIds = journalData.map(j => j.id);
-      if (!jIds.length) return;
       const allLines: JournalLine[] = [];
-      for (let i = 0; i < jIds.length; i += 200) {
-        const { data: batch } = await supabase.from("fw_fin_journal_lines")
-          .select("id,journal_id,account_id,narration,dr_amount,cr_amount").in("journal_id", jIds.slice(i, i + 200));
-        allLines.push(...(batch ?? []));
+      for (let i = 0; i < jIds.length; i += 150) {
+        for (let from = 0; ; from += 1000) {
+          const { data: batch } = await supabase.from("fw_fin_journal_lines")
+            .select("id,journal_id,account_id,narration,dr_amount,cr_amount").in("journal_id", jIds.slice(i, i + 150)).range(from, from + 999);
+          allLines.push(...(batch ?? []));
+          if (!batch || batch.length < 1000) break;
+        }
       }
       setLines(allLines);
     } catch {
@@ -527,52 +473,12 @@ export default function AuditPage() {
         if (i < months.length - 1) await new Promise(r => setTimeout(r, 1000));
       }
       if (!allVouchers.length) { setImportMsg("No vouchers found in Tally for this FY. Check that the correct company is open."); setImporting(false); return; }
-      setImportMsg("Preparing accounts…");
-      const { data: accs } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bid);
-      const accountMap = new Map((accs ?? []).map(a => [a.name.toLowerCase(), a]));
-      const missing = new Set<string>();
-      for (const v of allVouchers) for (const l of v.lines) if (!accountMap.has(l.ledgerName.toLowerCase())) missing.add(l.ledgerName);
-      if (missing.size) {
-        const newAccs = Array.from(missing).map((name, idx) => ({ business_id: bid, code: `TI${String((accs?.length ?? 0) + idx + 1).padStart(3,"0")}`, name, type: tallyParentToType(name), description: "Imported from Tally", is_system: false, is_group: false, sort_order: (accs?.length ?? 0) + idx + 1 }));
-        const { data: created } = await supabase.from("fw_fin_chart_of_accounts").insert(newAccs).select("id,name,type");
-        for (const a of (created ?? [])) accountMap.set(a.name.toLowerCase(), a);
-      }
-      const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id,start_date").eq("business_id", bid).order("start_date", { ascending: false });
-      const fyTag = `FY${String(fyStartYear).slice(2)}`; // e.g. FY26 for FY2026-27
-      const fyPrefix = `TLY-${fyTag}-`;
-      const matchFy = fysData?.find(f => f.start_date?.startsWith(String(fyStartYear)));
-      const fyIdToUse = matchFy?.id ?? fysData?.[0]?.id ?? null;
-      const { data: existing } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bid).like("entry_no", `${fyPrefix}%`);
-      const existingNos = new Set<string>((existing ?? []).map(j => j.entry_no));
-      let seq = existing?.length ? Math.max(0, ...existing.map(j => parseInt(j.entry_no.replace(/\D/g,"") || "0", 10))) + 1 : 1;
-      type JRow = { business_id: string; financial_year_id: string|null; entry_no: string; date: string; narration: string; type: string; status: string; total_debit: number; total_credit: number; reference_no: string|null };
-      type LRow = { account_id: string; narration: string; dr_amount: number; cr_amount: number };
-      const jRows: JRow[] = []; const lRows: LRow[][] = []; let skipped = 0;
-      for (const v of allVouchers) {
-        const vNum = v.voucherNumber?.trim();
-        const entryNo = `${fyPrefix}${vNum ? `${v.voucherType} ${vNum}` : `${v.voucherType}-${seq}`}`;
-        if (existingNos.has(entryNo)) { skipped++; continue; }
-        const lines: LRow[] = v.lines.flatMap(l => { const acc = accountMap.get(l.ledgerName.toLowerCase()); if (!acc) return []; return [{ account_id: acc.id, narration: l.ledgerName, dr_amount: l.isDeemed ? l.amount : 0, cr_amount: l.isDeemed ? 0 : l.amount }]; });
-        if (!lines.length) { skipped++; continue; }
-        const totalDr = v.lines.filter(l => l.isDeemed).reduce((s,l) => s+l.amount,0);
-        const totalCr = v.lines.filter(l => !l.isDeemed).reduce((s,l) => s+l.amount,0);
-        jRows.push({ business_id: bid, financial_year_id: fyIdToUse, entry_no: entryNo, date: v.date, narration: v.narration || entryNo, type: tallyVoucherTypeToFP(v.voucherType), status: "posted", total_debit: totalDr||totalCr, total_credit: totalCr||totalDr, reference_no: vNum||null });
-        lRows.push(lines); existingNos.add(entryNo); if (!vNum) seq++;
-      }
-      setImportMsg(`Saving ${jRows.length} vouchers…`);
-      let imported = 0;
-      for (let i = 0; i < jRows.length; i += 50) {
-        const { data: ins } = await supabase.from("fw_fin_journals").insert(jRows.slice(i,i+50)).select("id");
-        if (!ins?.length) continue;
-        const allL: (LRow & {journal_id:string})[] = [];
-        for (let j=0;j<ins.length;j++) for (const l of lRows[i+j]) allL.push({...l, journal_id: ins[j].id});
-        for (let li=0;li<allL.length;li+=200) await supabase.from("fw_fin_journal_lines").insert(allL.slice(li,li+200));
-        imported += ins.length;
-        setImportMsg(`Saved ${imported}/${jRows.length} vouchers…`);
-      }
+      // Through FreWork's posting engine: validated, year-lock aware, audit-logged, never imported twice
+      const groups = await readTallyLedgerGroups(tallyUrl, localStorage.getItem("fw_tally_company"));
+      const sum = await importTallyVouchers(bid, allVouchers, { ledgerGroups: groups, company: localStorage.getItem("fw_tally_company"), onProgress: setImportMsg });
       try { localStorage.setItem("fw_tally_last_import", Date.now().toString()); } catch { /* */ }
-      setImportMsg(`✓ Imported ${imported} voucher${imported!==1?"s":""}${skipped>0?` · ${skipped} skipped`:""}`);
-      if (imported > 0) setImportDone(true);
+      setImportMsg(summaryText(sum));
+      if (sum.imported > 0) setImportDone(true);
       // Reload audit data
       await loadDataByRange(bid, fyFrom, fyTo);
       const d = new Date(); setLastSync(d.toLocaleString("en-IN", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }));
@@ -631,9 +537,18 @@ export default function AuditPage() {
 
   const journalIds = new Set(journals.map(j => j.id));
   const flags = buildFlags(journals, lines, accounts);
-  const tb = buildTrialBalance(accounts, lines, journalIds);
-  const pl = buildPL(tb);
-  const bs = buildBS(tb, pl.netProfit);
+  // TB, P&L and BS come from the shared engine so they match the ledger and the Reports page
+  const fyRange = fys.find(f => f.id === fyId);
+  const engineTb = fyRange ? buildTrialBalance(bookAccounts, bookLines, fyRange.start, fyRange.end) : [];
+  const pl = buildPL(engineTb);
+  const engineBs = buildBS(engineTb, pl.netProfit);
+  const tb: TrialRow[] = engineTb.map(r => ({ name: r.name, type: GROUP_LABEL[r.group], dr: r.dr, cr: r.cr, balance: r.balance }));
+  const bs = {
+    assets: stmtRows(engineBs.currentAssets), fixedAssets: stmtRows(engineBs.fixedAssets),
+    equity: stmtRows(engineBs.capital), loans: stmtRows(engineBs.loans),
+    liabilities: stmtRows(engineBs.currentLiabilities), taxes: stmtRows(engineBs.duties),
+    totalAssets: engineBs.totalAssets, totalLiabEq: engineBs.totalLiabEq,
+  };
 
   // Filter flags
   const visibleFlags = flags.filter(f => {
@@ -664,45 +579,45 @@ export default function AuditPage() {
     { key: "ledger",         label: "Ledger" },
   ];
 
-  const inp: React.CSSProperties = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#E8EDF5", padding: "5px 10px", borderRadius: 7, fontSize: "0.8rem", fontFamily: "inherit", outline: "none", cursor: "pointer" };
+  const inp: React.CSSProperties = { background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.15)", color: "#141A3A", padding: "5px 10px", borderRadius: 7, fontSize: "0.8rem", fontFamily: "inherit", outline: "none", cursor: "pointer" };
   const ledgerLines = selectedAccount ? lines.filter(l => l.account_id === selectedAccount && journalIds.has(l.journal_id)) : [];
   const ledgerJournals = new Map(journals.map(j => [j.id, j]));
-  const filteredTb = tb.filter(r => !tbSearch || r.name.toLowerCase().includes(tbSearch.toLowerCase()) || r.type.includes(tbSearch.toLowerCase()));
+  const filteredTb = tb.filter(r => !tbSearch || r.name.toLowerCase().includes(tbSearch.toLowerCase()) || r.type.toLowerCase().includes(tbSearch.toLowerCase()));
 
   return (
-    <div style={{ minHeight: "100vh", background: "#050914", color: "#E8EDF5", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; }
-        .au-card { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 1.25rem 1.4rem; }
-        .au-tab { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 0.82rem; font-weight: 600; padding: 8px 14px; border-radius: 8px; transition: all 0.15s; color: rgba(232,237,245,0.4); white-space: nowrap; }
-        .au-tab:hover { color: rgba(232,237,245,0.7); background: rgba(255,255,255,0.04); }
-        .au-tab-active { color: #E8EDF5; background: rgba(255,255,255,0.08); }
-        .au-tr:hover td { background: rgba(255,255,255,0.02); }
+        .au-card { background: #FFFFFF; border: 1px solid rgba(20,26,58,0.11); border-radius: 14px; padding: 1.25rem 1.4rem; }
+        .au-tab { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 0.82rem; font-weight: 600; padding: 8px 14px; border-radius: 8px; transition: all 0.15s; color: rgba(20,26,58,0.65); white-space: nowrap; }
+        .au-tab:hover { color: rgba(20,26,58,0.95); background: #FFFFFF; }
+        .au-tab-active { color: #141A3A; background: #FFFFFF; }
+        .au-tr:hover td { background: #FFFFFF; }
         td, th { padding: 0.45rem 0.85rem; }
         .au-mono { font-family: 'IBM Plex Mono', monospace; }
-        select option { background: #0B1221; }
+        select option { background: #FFFFFF; }
         .au-flag { border-radius: 11px; padding: 0.9rem 1.05rem; transition: opacity 0.15s; }
         .au-flag-reviewed { opacity: 0.4; }
-        .au-catbtn { background: none; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.75rem; font-weight: 600; padding: 5px 11px; transition: all 0.15s; color: rgba(232,237,245,0.45); display: flex; align-items: center; gap: 5px; }
-        .au-catbtn:hover { border-color: rgba(255,255,255,0.18); color: rgba(232,237,245,0.8); }
-        .au-catbtn-active { color: #E8EDF5 !important; }
+        .au-catbtn { background: none; border: 1px solid rgba(20,26,58,0.12); border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.75rem; font-weight: 600; padding: 5px 11px; transition: all 0.15s; color: rgba(20,26,58,0.70); display: flex; align-items: center; gap: 5px; }
+        .au-catbtn:hover { border-color: rgba(20,26,58,0.20); color: rgba(20,26,58,1.00); }
+        .au-catbtn-active { color: #141A3A !important; }
         .au-act { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 6px; border: none; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.15s; }
         .au-act:hover { opacity: 0.8; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #C9CEDF; border-radius: 4px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slide { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
       `}</style>
 
       {/* Nav */}
-      <nav style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.75rem", height: 52, position: "sticky", top: 0, background: "rgba(5,9,20,0.95)", backdropFilter: "blur(16px)", zIndex: 30 }}>
-        <Link href="/finance" style={{ color: "#60A5FA", fontWeight: 700, textDecoration: "none", fontSize: "0.88rem" }}>← Finance</Link>
-        <span style={{ color: "rgba(255,255,255,0.15)" }}>›</span>
+      <nav style={{ borderBottom: "1px solid rgba(20,26,58,0.10)", padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.75rem", height: 52, position: "sticky", top: 0, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(16px)", zIndex: 30 }}>
+        <Link href="/finance" style={{ color: "#1F5EFF", fontWeight: 700, textDecoration: "none", fontSize: "0.88rem" }}>← Finance</Link>
+        <span style={{ color: "rgba(20,26,58,0.35)" }}>›</span>
         <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Audit & Reports</span>
         {criticalCount > 0 && (
-          <span style={{ fontSize: "0.65rem", fontWeight: 800, background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.3)", color: "#F87171", padding: "2px 9px", borderRadius: 20 }}>
+          <span style={{ fontSize: "0.65rem", fontWeight: 800, background: "rgba(194,50,31,0.15)", border: "1px solid rgba(194,50,31,0.3)", color: "#C2321F", padding: "2px 9px", borderRadius: 20 }}>
             {criticalCount} critical
           </span>
         )}
@@ -710,10 +625,10 @@ export default function AuditPage() {
         <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} style={inp}>
           {fys.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
         </select>
-        <Link href="/finance/audit/gst-recon" style={{ fontSize: "0.78rem", color: "#A78BFA", background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.2)", padding: "5px 12px", borderRadius: 7, textDecoration: "none", fontWeight: 600 }}>
+        <Link href="/finance/audit/gst-recon" style={{ fontSize: "0.78rem", color: "#5B4BC4", background: "rgba(91,75,196,0.08)", border: "1px solid rgba(91,75,196,0.2)", padding: "5px 12px", borderRadius: 7, textDecoration: "none", fontWeight: 600 }}>
           🏷 GST Recon
         </Link>
-        <Link href="/finance/tally" style={{ fontSize: "0.78rem", color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", padding: "5px 12px", borderRadius: 7, textDecoration: "none", fontWeight: 600 }}>
+        <Link href="/finance/tally" style={{ fontSize: "0.78rem", color: "#0B7A55", background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.2)", padding: "5px 12px", borderRadius: 7, textDecoration: "none", fontWeight: 600 }}>
           ⬇ Sync Tally
         </Link>
       </nav>
@@ -730,88 +645,88 @@ export default function AuditPage() {
         {/* Tally sync status bar */}
         <div style={{ display: "flex", gap: "0.625rem", flexWrap: "wrap", marginBottom: "1.25rem", alignItems: "center" }}>
           {/* Connection */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: tallyConnected ? "rgba(52,211,153,0.07)" : tallyConnected === false ? "rgba(107,114,128,0.07)" : "rgba(107,114,128,0.05)", border: `1px solid ${tallyConnected ? "rgba(52,211,153,0.2)" : "rgba(107,114,128,0.15)"}`, borderRadius: 8, padding: "5px 10px" }}>
-            <span style={{ fontSize: "0.5rem", color: tallyConnected ? "#34D399" : tallyConnected === false ? "#6B7280" : "#6B7280" }}>●</span>
-            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: tallyConnected ? "#34D399" : "#6B7280" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: tallyConnected ? "rgba(11,122,85,0.07)" : tallyConnected === false ? "rgba(107,114,128,0.07)" : "rgba(107,114,128,0.05)", border: `1px solid ${tallyConnected ? "rgba(11,122,85,0.2)" : "rgba(107,114,128,0.15)"}`, borderRadius: 8, padding: "5px 10px" }}>
+            <span style={{ fontSize: "0.5rem", color: tallyConnected ? "#0B7A55" : tallyConnected === false ? "#6B7280" : "#6B7280" }}>●</span>
+            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: tallyConnected ? "#0B7A55" : "#6B7280" }}>
               {tallyConnected === null ? "Checking Tally…" : tallyConnected ? "Tally Connected" : "Tally Not Connected"}
             </span>
-            {tallyCompany && <span style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.6)", borderLeft: "1px solid rgba(255,255,255,0.1)", paddingLeft: 8 }}>{tallyCompany}</span>}
+            {tallyCompany && <span style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.85)", borderLeft: "1px solid rgba(20,26,58,0.15)", paddingLeft: 8 }}>{tallyCompany}</span>}
           </div>
           {/* Vouchers */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(96,165,250,0.06)", border: "1px solid rgba(96,165,250,0.15)", borderRadius: 8, padding: "5px 10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(31,94,255,0.06)", border: "1px solid rgba(31,94,255,0.15)", borderRadius: 8, padding: "5px 10px" }}>
             <span style={{ fontSize: "0.72rem" }}>🧾</span>
-            <span style={{ fontSize: "0.75rem", color: journals.length > 0 ? "#60A5FA" : "#6B7280", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.75rem", color: journals.length > 0 ? "#1F5EFF" : "#6B7280", fontWeight: 600 }}>
               {journals.length > 0 ? `${journals.length} Vouchers` : "No Vouchers"}
             </span>
-            <span style={{ fontSize: "0.68rem", color: journals.length > 0 ? "rgba(96,165,250,0.7)" : "#4B5563" }}>
+            <span style={{ fontSize: "0.68rem", color: journals.length > 0 ? "rgba(31,94,255,0.7)" : "#4B5563" }}>
               {journals.length > 0 ? "imported" : "not imported"}
             </span>
           </div>
           {/* Ledgers / Accounts */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 8, padding: "5px 10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(91,75,196,0.06)", border: "1px solid rgba(91,75,196,0.15)", borderRadius: 8, padding: "5px 10px" }}>
             <span style={{ fontSize: "0.72rem" }}>📒</span>
-            <span style={{ fontSize: "0.75rem", color: accounts.length > 0 ? "#A78BFA" : "#6B7280", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.75rem", color: accounts.length > 0 ? "#5B4BC4" : "#6B7280", fontWeight: 600 }}>
               {accounts.length > 0 ? `${accounts.length} Ledgers` : "No Ledgers"}
             </span>
-            <span style={{ fontSize: "0.68rem", color: accounts.length > 0 ? "rgba(167,139,250,0.7)" : "#4B5563" }}>
+            <span style={{ fontSize: "0.68rem", color: accounts.length > 0 ? "rgba(91,75,196,0.7)" : "#4B5563" }}>
               {accounts.length > 0 ? "synced" : "not synced"}
             </span>
           </div>
           {/* Last sync */}
           {lastSync && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.12)", borderRadius: 8, padding: "5px 10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(184,120,0,0.05)", border: "1px solid rgba(184,120,0,0.12)", borderRadius: 8, padding: "5px 10px" }}>
               <span style={{ fontSize: "0.72rem" }}>🕐</span>
-              <span style={{ fontSize: "0.72rem", color: "rgba(251,191,36,0.7)" }}>Last sync: {lastSync}</span>
+              <span style={{ fontSize: "0.72rem", color: "rgba(184,120,0,0.7)" }}>Last sync: {lastSync}</span>
             </div>
           )}
           {/* Action / progress */}
           {importing ? (
-            <div style={{ marginLeft: "auto", fontSize: "0.73rem", color: "#60A5FA", display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ display: "inline-block", width: 10, height: 10, border: "2px solid #60A5FA", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+            <div style={{ marginLeft: "auto", fontSize: "0.73rem", color: "#1F5EFF", display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ display: "inline-block", width: 10, height: 10, border: "2px solid #1F5EFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
               {importMsg}
             </div>
           ) : importDone ? (
-            <div style={{ marginLeft: "auto", fontSize: "0.73rem", color: "#34D399", fontWeight: 600 }}>{importMsg}</div>
+            <div style={{ marginLeft: "auto", fontSize: "0.73rem", color: "#0B7A55", fontWeight: 600 }}>{importMsg}</div>
           ) : importMsg.startsWith("Error:") ? (
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: "0.72rem", color: "#F87171" }}>{importMsg}</span>
-              <button onClick={() => { setImportMsg(""); quickImport(); }} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#F87171", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: "inherit" }}>
+              <span style={{ fontSize: "0.72rem", color: "#C2321F" }}>{importMsg}</span>
+              <button onClick={() => { setImportMsg(""); quickImport(); }} style={{ fontSize: "0.72rem", fontWeight: 700, color: "#C2321F", background: "rgba(194,50,31,0.08)", border: "1px solid rgba(194,50,31,0.2)", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: "inherit" }}>
                 Retry
               </button>
             </div>
           ) : journals.length === 0 ? (
-            <button onClick={quickImport} disabled={importing} style={{ marginLeft: "auto", fontSize: "0.75rem", fontWeight: 700, color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", padding: "5px 14px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit" }}>
+            <button onClick={quickImport} disabled={importing} style={{ marginLeft: "auto", fontSize: "0.75rem", fontWeight: 700, color: "#0B7A55", background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.2)", padding: "5px 14px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit" }}>
               ⬇ Sync Now
             </button>
           ) : null}
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(232,237,245,0.3)", fontSize: "0.88rem" }}>
+          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(20,26,58,0.55)", fontSize: "0.88rem" }}>
             <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>⏳</div>Loading data…
           </div>
         ) : journals.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>{importing ? "⏳" : "📥"}</div>
-            <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "#E8EDF5", marginBottom: "0.4rem" }}>
+            <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "#141A3A", marginBottom: "0.4rem" }}>
               {importing ? "Importing from Tally…" : "No vouchers imported yet"}
             </div>
-            <div style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.84rem", marginBottom: importing ? "0.5rem" : "1.75rem" }}>
+            <div style={{ color: "rgba(20,26,58,0.65)", fontSize: "0.84rem", marginBottom: importing ? "0.5rem" : "1.75rem" }}>
               {importing ? importMsg : "Import your Tally data once — all reports fill in automatically."}
             </div>
             {importing && (
               <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
-                <div style={{ width: 180, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 4, overflow: "hidden" }}>
-                  <div style={{ height: "100%", background: "#3B82F6", width: "60%", borderRadius: 4, animation: "slide 1.2s ease-in-out infinite" }} />
+                <div style={{ width: 180, height: 4, background: "#FFFFFF", borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ height: "100%", background: "#1F5EFF", width: "60%", borderRadius: 4, animation: "slide 1.2s ease-in-out infinite" }} />
                 </div>
               </div>
             )}
             {!importing && (
               <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-                <button onClick={quickImport} style={{ background: "#2563EB", color: "#fff", border: "none", padding: "12px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", fontFamily: "inherit" }}>
+                <button onClick={quickImport} style={{ background: "#232A63", color: "#fff", border: "none", padding: "12px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", fontFamily: "inherit" }}>
                   ⬇ Import from Tally
                 </button>
-                <Link href="/finance/tally" style={{ background: "transparent", color: "#6B7280", border: "1px solid #374151", padding: "12px 20px", borderRadius: 9, textDecoration: "none", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center" }}>
+                <Link href="/finance/tally" style={{ background: "transparent", color: "#6B7280", border: "1px solid #5A6080", padding: "12px 20px", borderRadius: 9, textDecoration: "none", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center" }}>
                   Tally Sync page →
                 </Link>
               </div>
@@ -827,13 +742,13 @@ export default function AuditPage() {
                   {/* KPI row */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.75rem", marginBottom: "1.25rem" }}>
                     {[
-                      { label: "Revenue",      value: fmt(pl.revenue),   color: "#34D399" },
-                      { label: "Net Profit",   value: (pl.netProfit < 0 ? "−" : "") + fmt(pl.netProfit), color: pl.netProfit >= 0 ? "#34D399" : "#F87171" },
-                      { label: "Total Entries",value: String(journals.length), color: "#60A5FA" },
-                      { label: "Open Findings",value: String(unreviewedCount), color: unreviewedCount > 0 ? (criticalCount > 0 ? "#F87171" : "#FBBF24") : "#34D399" },
+                      { label: "Revenue",      value: fmt(pl.revenue),   color: "#0B7A55" },
+                      { label: "Net Profit",   value: (pl.netProfit < 0 ? "−" : "") + fmt(pl.netProfit), color: pl.netProfit >= 0 ? "#0B7A55" : "#C2321F" },
+                      { label: "Total Entries",value: String(journals.length), color: "#1F5EFF" },
+                      { label: "Open Findings",value: String(unreviewedCount), color: unreviewedCount > 0 ? (criticalCount > 0 ? "#C2321F" : "#8A5A00") : "#0B7A55" },
                     ].map(k => (
                       <div key={k.label} className="au-card">
-                        <div style={{ fontSize: "0.57rem", color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.7rem" }}>{k.label}</div>
+                        <div style={{ fontSize: "0.57rem", color: "rgba(20,26,58,0.55)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.7rem" }}>{k.label}</div>
                         <div style={{ fontSize: "1.35rem", fontWeight: 900, color: k.color, fontFamily: "'IBM Plex Mono',monospace", lineHeight: 1 }}>{k.value}</div>
                       </div>
                     ))}
@@ -846,14 +761,15 @@ export default function AuditPage() {
                       <button onClick={() => setTab("pl")} style={{ ...inp, padding: "3px 10px", fontSize: "0.72rem" }}>Full P&L →</button>
                     </div>
                     {[
-                      { label: "Sales / Revenue",      val: pl.revenue,     color: "#34D399" },
-                      { label: "Purchase / Direct Exp",val: -pl.cogs,       color: "#F87171" },
-                      { label: "Gross Profit",          val: pl.grossProfit, color: "#60A5FA", bold: true },
-                      { label: "Indirect Expenses",    val: -pl.expenses,   color: "#F87171" },
-                      { label: pl.netProfit >= 0 ? "Net Profit" : "Net Loss", val: pl.netProfit, color: pl.netProfit >= 0 ? "#34D399" : "#F87171", bold: true },
+                      { label: "Sales / Revenue",      val: pl.revenue,     color: "#0B7A55" },
+                      { label: "Purchase / Direct Exp",val: -pl.cogs,       color: "#C2321F" },
+                      { label: "Gross Profit",          val: pl.grossProfit, color: "#1F5EFF", bold: true },
+                      ...(pl.otherIncome ? [{ label: "Indirect Income", val: pl.otherIncome, color: "#0B7A55" }] : []),
+                      { label: "Indirect Expenses",    val: -pl.expenses,   color: "#C2321F" },
+                      { label: pl.netProfit >= 0 ? "Net Profit" : "Net Loss", val: pl.netProfit, color: pl.netProfit >= 0 ? "#0B7A55" : "#C2321F", bold: true },
                     ].map(r => (
-                      <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.38rem 0", borderTop: "1px solid rgba(255,255,255,0.05)", fontWeight: r.bold ? 700 : 400, fontSize: r.bold ? "0.88rem" : "0.83rem" }}>
-                        <span style={{ color: "rgba(232,237,245,0.6)" }}>{r.label}</span>
+                      <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.38rem 0", borderTop: "1px solid rgba(20,26,58,0.10)", fontWeight: r.bold ? 700 : 400, fontSize: r.bold ? "0.88rem" : "0.83rem" }}>
+                        <span style={{ color: "rgba(20,26,58,0.85)" }}>{r.label}</span>
                         <span className="au-mono" style={{ color: r.color }}>{r.val < 0 ? "−" : ""}{fmt(r.val)}</span>
                       </div>
                     ))}
@@ -864,17 +780,17 @@ export default function AuditPage() {
                     <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "1rem" }}>Recent Transactions</div>
                     <div style={{ overflowX: "auto" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
-                        <thead><tr style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                        <thead><tr style={{ color: "rgba(20,26,58,0.55)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                           <th style={{ textAlign: "left" }}>Entry</th><th style={{ textAlign: "left" }}>Date</th><th style={{ textAlign: "left" }}>Type</th><th style={{ textAlign: "left" }}>Narration</th><th style={{ textAlign: "right" }}>Amount</th>
                         </tr></thead>
                         <tbody>
                           {journals.slice(-10).reverse().map(j => (
-                            <tr key={j.id} className="au-tr" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                              <td className="au-mono" style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.7rem" }}>{j.entry_no}</td>
-                              <td style={{ color: "rgba(232,237,245,0.5)", whiteSpace: "nowrap" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</td>
-                              <td><span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#60A5FA", background: "rgba(96,165,250,0.1)", padding: "2px 7px", borderRadius: 20 }}>{j.type}</span></td>
-                              <td style={{ color: "rgba(232,237,245,0.6)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
-                              <td className="au-mono" style={{ textAlign: "right", color: "#34D399" }}>{fmt(Math.max(j.total_debit, j.total_credit))}</td>
+                            <tr key={j.id} className="au-tr" style={{ borderTop: "1px solid rgba(20,26,58,0.10)" }}>
+                              <td className="au-mono" style={{ color: "rgba(20,26,58,0.65)", fontSize: "0.7rem" }}>{j.entry_no}</td>
+                              <td style={{ color: "rgba(20,26,58,0.75)", whiteSpace: "nowrap" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</td>
+                              <td><span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#1F5EFF", background: "rgba(31,94,255,0.1)", padding: "2px 7px", borderRadius: 20 }}>{j.type}</span></td>
+                              <td style={{ color: "rgba(20,26,58,0.85)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
+                              <td className="au-mono" style={{ textAlign: "right", color: "#0B7A55" }}>{fmt(Math.max(j.total_debit, j.total_credit))}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -888,20 +804,20 @@ export default function AuditPage() {
                   <div className="au-card" style={{ marginBottom: "1rem" }}>
                     <div style={{ fontWeight: 800, fontSize: "0.88rem", marginBottom: "1rem" }}>
                       Findings Summary
-                      {unreviewedCount > 0 && <span style={{ float: "right", fontSize: "0.72rem", color: "#F87171", fontWeight: 700 }}>{unreviewedCount} open</span>}
+                      {unreviewedCount > 0 && <span style={{ float: "right", fontSize: "0.72rem", color: "#C2321F", fontWeight: 700 }}>{unreviewedCount} open</span>}
                     </div>
                     {(Object.keys(CAT_META) as FlagCategory[]).map(cat => {
                       const c = CAT_META[cat]; const cnt = catCounts[cat];
                       if (!cnt.total) return null;
                       return (
-                        <div key={cat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.45rem 0", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                        <div key={cat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.45rem 0", borderTop: "1px solid rgba(20,26,58,0.10)" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                             <span style={{ fontSize: "0.85rem" }}>{c.icon}</span>
-                            <span style={{ fontSize: "0.8rem", color: "rgba(232,237,245,0.7)" }}>{c.label}</span>
+                            <span style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.95)" }}>{c.label}</span>
                           </div>
                           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                             {cnt.unreviewed > 0 && <span style={{ fontSize: "0.68rem", fontWeight: 800, color: c.color, background: c.bg, border: `1px solid ${c.border}`, padding: "1px 8px", borderRadius: 20 }}>{cnt.unreviewed}</span>}
-                            {cnt.unreviewed < cnt.total && <span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.25)" }}>+{cnt.total - cnt.unreviewed} done</span>}
+                            {cnt.unreviewed < cnt.total && <span style={{ fontSize: "0.62rem", color: "rgba(20,26,58,0.35)" }}>+{cnt.total - cnt.unreviewed} done</span>}
                           </div>
                         </div>
                       );
@@ -913,10 +829,10 @@ export default function AuditPage() {
 
                   {/* Compliance alerts */}
                   {complianceCount > 0 && (
-                    <div style={{ background: "rgba(251,146,60,0.07)", border: "1px solid rgba(251,146,60,0.25)", borderRadius: 11, padding: "0.85rem 1rem", marginBottom: "1rem" }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#FB923C", marginBottom: "0.4rem" }}>⚖️ {complianceCount} Compliance Issue{complianceCount !== 1 ? "s" : ""}</div>
-                      <div style={{ fontSize: "0.72rem", color: "rgba(251,146,60,0.7)", lineHeight: 1.6 }}>Cash transactions, TDS thresholds, and GST compliance items need immediate attention.</div>
-                      <button onClick={() => { setFilterCat("compliance"); setTab("flags"); }} style={{ marginTop: "0.6rem", background: "rgba(251,146,60,0.15)", border: "1px solid rgba(251,146,60,0.3)", color: "#FB923C", padding: "4px 12px", borderRadius: 6, fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                    <div style={{ background: "rgba(180,86,30,0.07)", border: "1px solid rgba(180,86,30,0.25)", borderRadius: 11, padding: "0.85rem 1rem", marginBottom: "1rem" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#B4561E", marginBottom: "0.4rem" }}>⚖️ {complianceCount} Compliance Issue{complianceCount !== 1 ? "s" : ""}</div>
+                      <div style={{ fontSize: "0.72rem", color: "rgba(180,86,30,0.7)", lineHeight: 1.6 }}>Cash transactions, TDS thresholds, and GST compliance items need immediate attention.</div>
+                      <button onClick={() => { setFilterCat("compliance"); setTab("flags"); }} style={{ marginTop: "0.6rem", background: "rgba(180,86,30,0.15)", border: "1px solid rgba(180,86,30,0.3)", color: "#B4561E", padding: "4px 12px", borderRadius: 6, fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                         Review Compliance →
                       </button>
                     </div>
@@ -926,11 +842,11 @@ export default function AuditPage() {
                   <div className="au-card">
                     <div style={{ fontWeight: 700, fontSize: "0.82rem", marginBottom: "0.75rem" }}>Balance Sheet Check</div>
                     {Math.abs(bs.totalAssets - bs.totalLiabEq) < 1 ? (
-                      <div style={{ fontSize: "0.8rem", color: "#34D399" }}>✓ Balanced — Assets = Liab + Equity</div>
+                      <div style={{ fontSize: "0.8rem", color: "#0B7A55" }}>✓ Balanced — Assets = Liab + Equity</div>
                     ) : (
-                      <div style={{ fontSize: "0.78rem", color: "#FBBF24", lineHeight: 1.6 }}>
+                      <div style={{ fontSize: "0.78rem", color: "#8A5A00", lineHeight: 1.6 }}>
                         ⚠ Difference: {fmt(Math.abs(bs.totalAssets - bs.totalLiabEq))}<br />
-                        <span style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.7rem" }}>Some entries may have missing or unclassified accounts.</span>
+                        <span style={{ color: "rgba(20,26,58,0.65)", fontSize: "0.7rem" }}>Some entries may have missing or unclassified accounts.</span>
                       </div>
                     )}
                   </div>
@@ -944,10 +860,10 @@ export default function AuditPage() {
 
                 {/* Left: category filter sidebar */}
                 <div className="au-card" style={{ position: "sticky", top: 68 }}>
-                  <div style={{ fontWeight: 800, fontSize: "0.82rem", marginBottom: "1rem", color: "rgba(232,237,245,0.6)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Categories</div>
+                  <div style={{ fontWeight: 800, fontSize: "0.82rem", marginBottom: "1rem", color: "rgba(20,26,58,0.85)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Categories</div>
                   {/* All */}
                   <button onClick={() => setFilterCat("all")} className={`au-catbtn${filterCat === "all" ? " au-catbtn-active" : ""}`}
-                    style={{ width: "100%", marginBottom: 4, ...(filterCat === "all" ? { background: "rgba(255,255,255,0.07)", borderColor: "rgba(255,255,255,0.2)" } : {}) }}>
+                    style={{ width: "100%", marginBottom: 4, ...(filterCat === "all" ? { background: "#FFFFFF", borderColor: "rgba(20,26,58,0.20)" } : {}) }}>
                     <span>🗂</span><span>All ({flags.filter(f => !reviewed.has(f.id+f.reason) || showReviewed).length})</span>
                   </button>
                   {(Object.keys(CAT_META) as FlagCategory[]).map(cat => {
@@ -959,29 +875,29 @@ export default function AuditPage() {
                         style={{ width: "100%", marginBottom: 4, justifyContent: "space-between",
                           ...(isActive ? { background: c.bg, borderColor: c.border, color: c.color } : {}) }}>
                         <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span>{c.icon}</span><span>{c.label}</span></span>
-                        {cnt.unreviewed > 0 && <span style={{ fontSize: "0.65rem", fontWeight: 800, color: isActive ? c.color : "rgba(232,237,245,0.5)", background: isActive ? c.bg : "rgba(255,255,255,0.06)", padding: "1px 7px", borderRadius: 20, border: isActive ? `1px solid ${c.border}` : "1px solid transparent" }}>{cnt.unreviewed}</span>}
+                        {cnt.unreviewed > 0 && <span style={{ fontSize: "0.65rem", fontWeight: 800, color: isActive ? c.color : "rgba(20,26,58,0.75)", background: isActive ? c.bg : "#FFFFFF", padding: "1px 7px", borderRadius: 20, border: isActive ? `1px solid ${c.border}` : "1px solid transparent" }}>{cnt.unreviewed}</span>}
                       </button>
                     );
                   })}
 
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: "0.85rem", paddingTop: "0.85rem" }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "rgba(232,237,245,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Severity</div>
+                  <div style={{ borderTop: "1px solid rgba(20,26,58,0.10)", marginTop: "0.85rem", paddingTop: "0.85rem" }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Severity</div>
                     {(["all","high","medium","low"] as const).map(s => (
                       <button key={s} onClick={() => setFilterSev(s)} className={`au-catbtn${filterSev === s ? " au-catbtn-active" : ""}`}
-                        style={{ width: "100%", marginBottom: 3, ...(filterSev === s && s !== "all" ? { color: s === "high" ? "#F87171" : s === "medium" ? "#FBBF24" : "#60A5FA", background: s === "high" ? "rgba(248,113,113,0.07)" : s === "medium" ? "rgba(251,191,36,0.07)" : "rgba(96,165,250,0.07)", borderColor: s === "high" ? "rgba(248,113,113,0.25)" : s === "medium" ? "rgba(251,191,36,0.25)" : "rgba(96,165,250,0.25)" } : filterSev === s ? { background: "rgba(255,255,255,0.07)", color: "#E8EDF5" } : {}) }}>
+                        style={{ width: "100%", marginBottom: 3, ...(filterSev === s && s !== "all" ? { color: s === "high" ? "#C2321F" : s === "medium" ? "#8A5A00" : "#1F5EFF", background: s === "high" ? "rgba(194,50,31,0.07)" : s === "medium" ? "rgba(184,120,0,0.07)" : "rgba(31,94,255,0.07)", borderColor: s === "high" ? "rgba(194,50,31,0.25)" : s === "medium" ? "rgba(184,120,0,0.25)" : "rgba(31,94,255,0.25)" } : filterSev === s ? { background: "#FFFFFF", color: "#141A3A" } : {}) }}>
                         {s === "all" ? "All severities" : `${s === "high" ? "🔴" : s === "medium" ? "🟡" : "🔵"} ${s.charAt(0).toUpperCase() + s.slice(1)}`}
                       </button>
                     ))}
                   </div>
 
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: "0.85rem", paddingTop: "0.85rem" }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: "0.78rem", color: "rgba(232,237,245,0.5)", cursor: "pointer" }}>
-                      <input type="checkbox" checked={showReviewed} onChange={e => setShowReviewed(e.target.checked)} style={{ accentColor: "#34D399" }} />
+                  <div style={{ borderTop: "1px solid rgba(20,26,58,0.10)", marginTop: "0.85rem", paddingTop: "0.85rem" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: "0.78rem", color: "rgba(20,26,58,0.75)", cursor: "pointer" }}>
+                      <input type="checkbox" checked={showReviewed} onChange={e => setShowReviewed(e.target.checked)} style={{ accentColor: "#0B7A55" }} />
                       Show reviewed
                     </label>
                     {reviewed.size > 0 && (
                       <button onClick={() => { setReviewed(new Set()); localStorage.removeItem("fw_audit_reviewed"); }}
-                        style={{ marginTop: "0.5rem", fontSize: "0.7rem", color: "#F87171", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+                        style={{ marginTop: "0.5rem", fontSize: "0.7rem", color: "#C2321F", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
                         Clear all reviews ({reviewed.size})
                       </button>
                     )}
@@ -991,13 +907,13 @@ export default function AuditPage() {
                 {/* Right: flag cards */}
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
-                    <div style={{ fontSize: "0.82rem", color: "rgba(232,237,245,0.4)" }}>
+                    <div style={{ fontSize: "0.82rem", color: "rgba(20,26,58,0.65)" }}>
                       {visibleFlags.length} finding{visibleFlags.length !== 1 ? "s" : ""}
                       {filterCat !== "all" && <span style={{ color: CAT_META[filterCat].color }}> · {CAT_META[filterCat].label}</span>}
                     </div>
                     {visibleFlags.length > 0 && (
                       <button onClick={() => visibleFlags.forEach(f => markReviewed(f.id + f.reason))}
-                        style={{ fontSize: "0.72rem", color: "#34D399", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.2)", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}>
+                        style={{ fontSize: "0.72rem", color: "#0B7A55", background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.2)", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}>
                         ✓ Mark all reviewed
                       </button>
                     )}
@@ -1006,7 +922,7 @@ export default function AuditPage() {
                   {visibleFlags.length === 0 ? (
                     <div className="au-card" style={{ textAlign: "center", padding: "3.5rem" }}>
                       <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>✅</div>
-                      <div style={{ color: "rgba(232,237,245,0.5)", fontSize: "0.88rem" }}>
+                      <div style={{ color: "rgba(20,26,58,0.75)", fontSize: "0.88rem" }}>
                         {flags.length === 0 ? "No findings — all entries look clean." : "All findings reviewed for this filter."}
                       </div>
                     </div>
@@ -1024,23 +940,23 @@ export default function AuditPage() {
                                 {/* Category + severity badge */}
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.3rem" }}>
                                   <span style={{ fontSize: "0.65rem", fontWeight: 800, color: c.color, textTransform: "uppercase", letterSpacing: "0.08em", background: c.bg, border: `1px solid ${c.border}`, padding: "1px 8px", borderRadius: 20 }}>{c.icon} {c.label}</span>
-                                  <span style={{ fontSize: "0.62rem", fontWeight: 700, color: f.severity === "high" ? "#F87171" : f.severity === "medium" ? "#FBBF24" : "#60A5FA", textTransform: "uppercase" }}>{f.severity}</span>
+                                  <span style={{ fontSize: "0.62rem", fontWeight: 700, color: f.severity === "high" ? "#C2321F" : f.severity === "medium" ? "#8A5A00" : "#1F5EFF", textTransform: "uppercase" }}>{f.severity}</span>
                                 </div>
                                 {/* Reason */}
-                                <div style={{ fontWeight: 700, fontSize: "0.84rem", color: "#E8EDF5", marginBottom: f.detail ? "0.2rem" : 0 }}>{f.reason}</div>
+                                <div style={{ fontWeight: 700, fontSize: "0.84rem", color: "#141A3A", marginBottom: f.detail ? "0.2rem" : 0 }}>{f.reason}</div>
                                 {/* Detail */}
-                                {f.detail && <div style={{ fontSize: "0.73rem", color: "rgba(232,237,245,0.45)", lineHeight: 1.55 }}>{f.detail}</div>}
+                                {f.detail && <div style={{ fontSize: "0.73rem", color: "rgba(20,26,58,0.70)", lineHeight: 1.55 }}>{f.detail}</div>}
                                 {/* Meta row */}
-                                <div style={{ marginTop: "0.45rem", display: "flex", gap: "0.85rem", fontSize: "0.72rem", color: "rgba(232,237,245,0.35)", flexWrap: "wrap" }}>
+                                <div style={{ marginTop: "0.45rem", display: "flex", gap: "0.85rem", fontSize: "0.72rem", color: "rgba(20,26,58,0.60)", flexWrap: "wrap" }}>
                                   <span className="au-mono">{f.entry_no}</span>
                                   <span>{new Date(f.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
-                                  <span style={{ background: "rgba(96,165,250,0.1)", color: "#60A5FA", padding: "0px 6px", borderRadius: 20, fontWeight: 700 }}>{f.type}</span>
+                                  <span style={{ background: "rgba(31,94,255,0.1)", color: "#1F5EFF", padding: "0px 6px", borderRadius: 20, fontWeight: 700 }}>{f.type}</span>
                                   <span style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.narration}</span>
                                 </div>
                               </div>
                               {/* Amount + actions */}
                               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
-                                <div className="au-mono" style={{ fontWeight: 800, color: "#E8EDF5", fontSize: "0.9rem" }}>{fmt(f.amount)}</div>
+                                <div className="au-mono" style={{ fontWeight: 800, color: "#141A3A", fontSize: "0.9rem" }}>{fmt(f.amount)}</div>
                                 <div style={{ display: "flex", gap: 5 }}>
                                   {f.actionHref && (
                                     <button onClick={() => openEntryModal(f.id)} className="au-act" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.color }}>
@@ -1048,7 +964,7 @@ export default function AuditPage() {
                                     </button>
                                   )}
                                   <button onClick={() => markReviewed(key)} className="au-act"
-                                    style={{ background: isRev ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.05)", border: isRev ? "1px solid rgba(52,211,153,0.3)" : "1px solid rgba(255,255,255,0.1)", color: isRev ? "#34D399" : "rgba(232,237,245,0.4)" }}>
+                                    style={{ background: isRev ? "rgba(11,122,85,0.12)" : "#FFFFFF", border: isRev ? "1px solid rgba(11,122,85,0.3)" : "1px solid #FFFFFF", color: isRev ? "#0B7A55" : "rgba(20,26,58,0.65)" }}>
                                     {isRev ? "✓ Reviewed" : "Mark Reviewed"}
                                   </button>
                                 </div>
@@ -1074,7 +990,7 @@ export default function AuditPage() {
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                     <thead>
-                      <tr style={{ background: "rgba(255,255,255,0.03)", color: "rgba(232,237,245,0.35)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                      <tr style={{ background: "#FFFFFF", color: "rgba(20,26,58,0.60)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                         <th style={{ textAlign: "left" }}>Account</th>
                         <th style={{ textAlign: "left" }}>Type</th>
                         <th style={{ textAlign: "right" }}>Debit (₹)</th>
@@ -1084,27 +1000,27 @@ export default function AuditPage() {
                     </thead>
                     <tbody>
                       {filteredTb.map(r => (
-                        <tr key={r.name} className="au-tr" style={{ borderTop: "1px solid rgba(255,255,255,0.04)", cursor: "pointer" }}
+                        <tr key={r.name} className="au-tr" style={{ borderTop: "1px solid rgba(20,26,58,0.10)", cursor: "pointer" }}
                           onClick={() => { setSelectedAccount(accounts.find(a => a.name === r.name)?.id ?? null); setTab("ledger"); }}>
-                          <td style={{ color: "#60A5FA", fontWeight: 500 }}>{r.name}</td>
-                          <td><span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.35)", background: "rgba(255,255,255,0.04)", padding: "1px 7px", borderRadius: 20 }}>{r.type}</span></td>
-                          <td className="au-mono" style={{ textAlign: "right", color: r.dr > 0 ? "#E8EDF5" : "rgba(232,237,245,0.2)" }}>{r.dr > 0 ? fmt(r.dr) : "—"}</td>
-                          <td className="au-mono" style={{ textAlign: "right", color: r.cr > 0 ? "#E8EDF5" : "rgba(232,237,245,0.2)" }}>{r.cr > 0 ? fmt(r.cr) : "—"}</td>
-                          <td className="au-mono" style={{ textAlign: "right", color: r.balance >= 0 ? "#34D399" : "#F87171", fontWeight: 600 }}>{r.balance < 0 ? "−" : ""}{fmt(r.balance)}</td>
+                          <td style={{ color: "#1F5EFF", fontWeight: 500 }}>{r.name}</td>
+                          <td><span style={{ fontSize: "0.62rem", color: "rgba(20,26,58,0.60)", background: "#FFFFFF", padding: "1px 7px", borderRadius: 20 }}>{r.type}</span></td>
+                          <td className="au-mono" style={{ textAlign: "right", color: r.dr > 0 ? "#141A3A" : "rgba(20,26,58,0.28)" }}>{r.dr > 0 ? fmt(r.dr) : "—"}</td>
+                          <td className="au-mono" style={{ textAlign: "right", color: r.cr > 0 ? "#141A3A" : "rgba(20,26,58,0.28)" }}>{r.cr > 0 ? fmt(r.cr) : "—"}</td>
+                          <td className="au-mono" style={{ textAlign: "right", color: r.balance >= 0 ? "#0B7A55" : "#C2321F", fontWeight: 600 }}>{r.balance < 0 ? "−" : ""}{fmt(r.balance)}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr style={{ borderTop: "2px solid rgba(255,255,255,0.1)", fontWeight: 800 }}>
-                        <td colSpan={2} style={{ color: "rgba(232,237,245,0.5)", fontSize: "0.78rem" }}>TOTAL</td>
-                        <td className="au-mono" style={{ textAlign: "right", color: "#34D399" }}>{fmt(filteredTb.reduce((s,r) => s+r.dr,0))}</td>
-                        <td className="au-mono" style={{ textAlign: "right", color: "#60A5FA" }}>{fmt(filteredTb.reduce((s,r) => s+r.cr,0))}</td>
+                      <tr style={{ borderTop: "2px solid rgba(20,26,58,0.15)", fontWeight: 800 }}>
+                        <td colSpan={2} style={{ color: "rgba(20,26,58,0.75)", fontSize: "0.78rem" }}>TOTAL</td>
+                        <td className="au-mono" style={{ textAlign: "right", color: "#0B7A55" }}>{fmt(filteredTb.reduce((s,r) => s+r.dr,0))}</td>
+                        <td className="au-mono" style={{ textAlign: "right", color: "#1F5EFF" }}>{fmt(filteredTb.reduce((s,r) => s+r.cr,0))}</td>
                         <td />
                       </tr>
                     </tfoot>
                   </table>
                 </div>
-                <div style={{ marginTop: "0.75rem", fontSize: "0.7rem", color: "rgba(232,237,245,0.2)" }}>
+                <div style={{ marginTop: "0.75rem", fontSize: "0.7rem", color: "rgba(20,26,58,0.28)" }}>
                   {tb.length} accounts · Click any row to drill into ledger transactions
                 </div>
               </div>
@@ -1115,32 +1031,33 @@ export default function AuditPage() {
               <div className="au-card">
                 <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "1.25rem" }}>Profit & Loss Statement</div>
                 {[
-                  { title: "SALES / INCOME", rows: tb.filter(r => ["income","sales","receipt"].includes(r.type)), sign: -1 as const, color: "#34D399" },
-                  { title: "PURCHASE ACCOUNTS / DIRECT EXPENSES (COGS)", rows: tb.filter(r => ["cost_of_goods","purchase","direct_expense"].includes(r.type)), sign: 1 as const, color: "#F87171" },
-                  { title: "INDIRECT EXPENSES", rows: tb.filter(r => r.type === "expense"), sign: 1 as const, color: "#FB923C" },
+                  { title: "SALES / DIRECT INCOME", rows: stmtRows(pl.sales), color: "#0B7A55" },
+                  { title: "PURCHASES / DIRECT EXPENSES (COGS)", rows: stmtRows(pl.purchases), color: "#C2321F" },
+                  { title: "INDIRECT INCOME", rows: stmtRows(pl.indirectIncome), color: "#0B7A55" },
+                  { title: "INDIRECT EXPENSES", rows: stmtRows(pl.indirectExpenses), color: "#B4561E" },
                 ].map(sec => sec.rows.length === 0 ? null : (
                   <div key={sec.title} style={{ marginBottom: "1.5rem" }}>
                     <div style={{ fontSize: "0.6rem", fontWeight: 700, color: sec.color, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "0.5rem", padding: "0.35rem 0", borderBottom: `1px solid ${sec.color}22` }}>{sec.title}</div>
                     {sec.rows.map(r => (
-                      <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.38rem 0", fontSize: "0.84rem" }}>
-                        <span style={{ color: "rgba(232,237,245,0.65)" }}>{r.name}</span>
-                        <span className="au-mono">{fmtDec(sec.sign === -1 ? r.cr - r.dr : r.dr - r.cr)}</span>
+                      <div key={r.name} onClick={() => { const id = accounts.find(a => a.name === r.name)?.id; if (id) { setSelectedAccount(id); setTab("ledger"); } }} style={{ display: "flex", justifyContent: "space-between", padding: "0.38rem 0", fontSize: "0.84rem", cursor: "pointer" }}>
+                        <span style={{ color: "rgba(20,26,58,0.90)" }}>{r.name}</span>
+                        <span className="au-mono" style={{ color: r.balance < 0 ? "#C2321F" : undefined }}>{r.balance < 0 ? "−" : ""}{fmtDec(r.balance)}</span>
                       </div>
                     ))}
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderTop: "1px solid rgba(255,255,255,0.08)", fontWeight: 700, fontSize: "0.85rem" }}>
-                      <span style={{ color: "rgba(232,237,245,0.4)" }}>Total</span>
-                      <span className="au-mono" style={{ color: sec.color }}>{fmtDec(sec.rows.reduce((s,r) => s + (sec.sign === -1 ? r.cr - r.dr : r.dr - r.cr), 0))}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderTop: "1px solid rgba(20,26,58,0.12)", fontWeight: 700, fontSize: "0.85rem" }}>
+                      <span style={{ color: "rgba(20,26,58,0.65)" }}>Total</span>
+                      <span className="au-mono" style={{ color: sec.color }}>{fmtDec(sec.rows.reduce((s, r) => s + r.balance, 0))}</span>
                     </div>
                   </div>
                 ))}
-                <div style={{ borderTop: "2px solid rgba(255,255,255,0.12)", paddingTop: "1rem" }}>
+                <div style={{ borderTop: "2px solid rgba(20,26,58,0.18)", paddingTop: "1rem" }}>
                   {[
                     { label: "Gross Profit",                               val: pl.grossProfit },
                     { label: pl.netProfit >= 0 ? "Net Profit" : "Net Loss", val: pl.netProfit },
                   ].map(r => (
                     <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", fontWeight: 800, fontSize: "0.92rem" }}>
                       <span>{r.label}</span>
-                      <span className="au-mono" style={{ color: r.val >= 0 ? "#34D399" : "#F87171" }}>{r.val < 0 ? "−" : ""}{fmtDec(r.val)}</span>
+                      <span className="au-mono" style={{ color: r.val >= 0 ? "#0B7A55" : "#C2321F" }}>{r.val < 0 ? "−" : ""}{fmtDec(r.val)}</span>
                     </div>
                   ))}
                 </div>
@@ -1157,18 +1074,18 @@ export default function AuditPage() {
                     { title: "Fixed Assets",   rows: bs.fixedAssets },
                   ].map(sec => sec.rows.length === 0 ? null : (
                     <div key={sec.title} style={{ marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(232,237,245,0.3)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
+                      <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(20,26,58,0.55)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
                       {sec.rows.map(r => (
                         <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.35rem 0", fontSize: "0.83rem" }}>
-                          <span style={{ color: "rgba(232,237,245,0.6)" }}>{r.name}</span>
-                          <span className="au-mono" style={{ color: r.balance < 0 ? "#F87171" : undefined }}>{r.balance < 0 ? "−" : ""}{fmtDec(r.balance)}</span>
+                          <span style={{ color: "rgba(20,26,58,0.85)" }}>{r.name}</span>
+                          <span className="au-mono" style={{ color: r.balance < 0 ? "#C2321F" : undefined }}>{r.balance < 0 ? "−" : ""}{fmtDec(r.balance)}</span>
                         </div>
                       ))}
                     </div>
                   ))}
-                  <div style={{ borderTop: "2px solid rgba(255,255,255,0.1)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
+                  <div style={{ borderTop: "2px solid rgba(20,26,58,0.15)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
                     <span>Total Assets</span>
-                    <span className="au-mono" style={{ color: "#34D399" }}>{fmtDec(bs.totalAssets)}</span>
+                    <span className="au-mono" style={{ color: "#0B7A55" }}>{fmtDec(bs.totalAssets)}</span>
                   </div>
                 </div>
                 <div className="au-card">
@@ -1180,10 +1097,10 @@ export default function AuditPage() {
                     { title: "Tax Liabilities",     rows: bs.taxes },
                   ].map(sec => sec.rows.length === 0 ? null : (
                     <div key={sec.title} style={{ marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(232,237,245,0.3)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
+                      <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(20,26,58,0.55)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
                       {sec.rows.map(r => (
                         <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.35rem 0", fontSize: "0.83rem" }}>
-                          <span style={{ color: "rgba(232,237,245,0.6)" }}>{r.name}</span>
+                          <span style={{ color: "rgba(20,26,58,0.85)" }}>{r.name}</span>
                           <span className="au-mono">{fmtDec(r.balance)}</span>
                         </div>
                       ))}
@@ -1191,16 +1108,16 @@ export default function AuditPage() {
                   ))}
                   {pl.netProfit !== 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "0.35rem 0", fontSize: "0.83rem" }}>
-                      <span style={{ color: "rgba(232,237,245,0.6)" }}>Retained Earnings (Net P/L)</span>
-                      <span className="au-mono" style={{ color: pl.netProfit >= 0 ? "#34D399" : "#F87171" }}>{pl.netProfit < 0 ? "−" : ""}{fmtDec(pl.netProfit)}</span>
+                      <span style={{ color: "rgba(20,26,58,0.85)" }}>{pl.netProfit >= 0 ? "Profit" : "Loss"} for the year (from P&amp;L)</span>
+                      <span className="au-mono" style={{ color: pl.netProfit >= 0 ? "#0B7A55" : "#C2321F" }}>{pl.netProfit < 0 ? "−" : ""}{fmtDec(pl.netProfit)}</span>
                     </div>
                   )}
-                  <div style={{ borderTop: "2px solid rgba(255,255,255,0.1)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
+                  <div style={{ borderTop: "2px solid rgba(20,26,58,0.15)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
                     <span>Total Liab. + Equity</span>
-                    <span className="au-mono" style={{ color: "#60A5FA" }}>{fmtDec(bs.totalLiabEq)}</span>
+                    <span className="au-mono" style={{ color: "#1F5EFF" }}>{fmtDec(bs.totalLiabEq)}</span>
                   </div>
                   {Math.abs(bs.totalAssets - bs.totalLiabEq) > 1 && (
-                    <div style={{ marginTop: "0.75rem", fontSize: "0.72rem", color: "#FBBF24", background: "rgba(251,191,36,0.08)", padding: "0.5rem 0.75rem", borderRadius: 7, lineHeight: 1.6 }}>
+                    <div style={{ marginTop: "0.75rem", fontSize: "0.72rem", color: "#8A5A00", background: "rgba(184,120,0,0.08)", padding: "0.5rem 0.75rem", borderRadius: 7, lineHeight: 1.6 }}>
                       ⚠ Doesn&apos;t balance by {fmt(Math.abs(bs.totalAssets - bs.totalLiabEq))} — some accounts may be unclassified
                     </div>
                   )}
@@ -1220,10 +1137,10 @@ export default function AuditPage() {
                 {selectedAccount && (
                   <div className="au-card">
                     <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.25rem" }}>{accounts.find(a => a.id === selectedAccount)?.name}</div>
-                    <div style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.3)", marginBottom: "1rem" }}>{ledgerLines.length} transaction{ledgerLines.length !== 1 ? "s" : ""}</div>
+                    <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.55)", marginBottom: "1rem" }}>{ledgerLines.length} transaction{ledgerLines.length !== 1 ? "s" : ""}</div>
                     <div style={{ overflowX: "auto" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
-                        <thead><tr style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(255,255,255,0.03)" }}>
+                        <thead><tr style={{ color: "rgba(20,26,58,0.55)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", background: "#FFFFFF" }}>
                           <th style={{ textAlign: "left" }}>Entry</th>
                           <th style={{ textAlign: "left" }}>Date</th>
                           <th style={{ textAlign: "left" }}>Narration</th>
@@ -1234,21 +1151,21 @@ export default function AuditPage() {
                           {ledgerLines.map(l => {
                             const j = ledgerJournals.get(l.journal_id);
                             return (
-                              <tr key={l.id} className="au-tr" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                                <td className="au-mono" style={{ color: "rgba(232,237,245,0.4)", fontSize: "0.7rem" }}>{j?.entry_no}</td>
-                                <td style={{ color: "rgba(232,237,245,0.5)", whiteSpace: "nowrap" }}>{j ? new Date(j.date).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"2-digit" }) : ""}</td>
-                                <td style={{ color: "rgba(232,237,245,0.6)", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j?.narration || l.narration}</td>
-                                <td className="au-mono" style={{ textAlign: "right", color: l.dr_amount > 0 ? "#34D399" : "rgba(232,237,245,0.2)" }}>{l.dr_amount > 0 ? fmtDec(l.dr_amount) : "—"}</td>
-                                <td className="au-mono" style={{ textAlign: "right", color: l.cr_amount > 0 ? "#60A5FA" : "rgba(232,237,245,0.2)" }}>{l.cr_amount > 0 ? fmtDec(l.cr_amount) : "—"}</td>
+                              <tr key={l.id} className="au-tr" style={{ borderTop: "1px solid rgba(20,26,58,0.10)" }}>
+                                <td className="au-mono" style={{ color: "rgba(20,26,58,0.65)", fontSize: "0.7rem" }}>{j?.entry_no}</td>
+                                <td style={{ color: "rgba(20,26,58,0.75)", whiteSpace: "nowrap" }}>{j ? new Date(j.date).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"2-digit" }) : ""}</td>
+                                <td style={{ color: "rgba(20,26,58,0.85)", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j?.narration || l.narration}</td>
+                                <td className="au-mono" style={{ textAlign: "right", color: l.dr_amount > 0 ? "#0B7A55" : "rgba(20,26,58,0.28)" }}>{l.dr_amount > 0 ? fmtDec(l.dr_amount) : "—"}</td>
+                                <td className="au-mono" style={{ textAlign: "right", color: l.cr_amount > 0 ? "#1F5EFF" : "rgba(20,26,58,0.28)" }}>{l.cr_amount > 0 ? fmtDec(l.cr_amount) : "—"}</td>
                               </tr>
                             );
                           })}
                         </tbody>
                         <tfoot>
-                          <tr style={{ borderTop: "2px solid rgba(255,255,255,0.08)", fontWeight: 700 }}>
-                            <td colSpan={3} style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.75rem" }}>CLOSING BALANCE</td>
-                            <td className="au-mono" style={{ textAlign: "right", color: "#34D399" }}>{fmtDec(ledgerLines.reduce((s,l) => s+l.dr_amount,0))}</td>
-                            <td className="au-mono" style={{ textAlign: "right", color: "#60A5FA" }}>{fmtDec(ledgerLines.reduce((s,l) => s+l.cr_amount,0))}</td>
+                          <tr style={{ borderTop: "2px solid rgba(20,26,58,0.12)", fontWeight: 700 }}>
+                            <td colSpan={3} style={{ color: "rgba(20,26,58,0.55)", fontSize: "0.75rem" }}>CLOSING BALANCE</td>
+                            <td className="au-mono" style={{ textAlign: "right", color: "#0B7A55" }}>{fmtDec(ledgerLines.reduce((s,l) => s+l.dr_amount,0))}</td>
+                            <td className="au-mono" style={{ textAlign: "right", color: "#1F5EFF" }}>{fmtDec(ledgerLines.reduce((s,l) => s+l.cr_amount,0))}</td>
                           </tr>
                         </tfoot>
                       </table>
@@ -1263,35 +1180,35 @@ export default function AuditPage() {
 
       {/* ── Entry Detail Modal ───────────────────────────────────────────── */}
       {modalJournal && (
-        <div onClick={() => setModalJournal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#0B1221", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, width: "100%", maxWidth: 560, maxHeight: "85vh", overflow: "auto", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}>
+        <div onClick={() => setModalJournal(null)} style={{ position: "fixed", inset: 0, background: "rgba(20,26,58,0.33)", backdropFilter: "blur(4px)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.15)", borderRadius: 16, width: "100%", maxWidth: 560, maxHeight: "85vh", overflow: "auto", boxShadow: "0 24px 80px rgba(20,26,58,0.30)" }}>
 
             {/* Header */}
-            <div style={{ padding: "1.1rem 1.25rem 0.9rem", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ padding: "1.1rem 1.25rem 0.9rem", borderBottom: "1px solid rgba(20,26,58,0.11)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'IBM Plex Mono',monospace", color: "#C9A84C", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 }}>{modalJournal.entry_no}</div>
-                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#E8EDF5", lineHeight: 1.4 }}>{modalJournal.narration || "—"}</div>
+                <div style={{ fontFamily: "'IBM Plex Mono',monospace", color: "#232A63", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 }}>{modalJournal.entry_no}</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#141A3A", lineHeight: 1.4 }}>{modalJournal.narration || "—"}</div>
               </div>
-              <button onClick={() => setModalJournal(null)} style={{ background: "rgba(255,255,255,0.07)", border: "none", color: "rgba(232,237,245,0.5)", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: "1.1rem", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              <button onClick={() => setModalJournal(null)} style={{ background: "#FFFFFF", border: "none", color: "rgba(20,26,58,0.75)", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: "1.1rem", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
             </div>
 
             {/* Meta */}
-            <div style={{ padding: "0.7rem 1.25rem", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center" }}>
-              <span style={{ fontSize: "0.78rem", color: "rgba(232,237,245,0.5)" }}>{new Date(modalJournal.date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</span>
-              {(() => { const c = { sales:"#34D399",receipt:"#34D399",income:"#34D399",payment:"#F87171",purchase:"#F87171",expense:"#F87171",journal:"#60A5FA",contra:"#A78BFA",debit_note:"#FBBF24",credit_note:"#FBBF24" } as Record<string,string>; const col = c[modalJournal.type] ?? "#E8EDF5"; return <span style={{ fontSize: "0.72rem", fontWeight: 700, color: col, background: col+"15", padding: "2px 10px", borderRadius: 20 }}>{modalJournal.type}</span>; })()}
-              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: modalJournal.status==="posted"?"#4ade80":"#f59e0b", background: modalJournal.status==="posted"?"rgba(74,222,128,0.1)":"rgba(245,158,11,0.1)", padding: "2px 10px", borderRadius: 20 }}>{modalJournal.status}</span>
-              {modalJournal.reference_no && <span style={{ fontSize: "0.72rem", color: "rgba(232,237,245,0.4)" }}>Ref: {modalJournal.reference_no}</span>}
+            <div style={{ padding: "0.7rem 1.25rem", borderBottom: "1px solid rgba(20,26,58,0.10)", display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center" }}>
+              <span style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.75)" }}>{new Date(modalJournal.date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</span>
+              {(() => { const c = { sales:"#0B7A55",receipt:"#0B7A55",income:"#0B7A55",payment:"#C2321F",purchase:"#C2321F",expense:"#C2321F",journal:"#1F5EFF",contra:"#5B4BC4",debit_note:"#8A5A00",credit_note:"#8A5A00" } as Record<string,string>; const col = c[modalJournal.type] ?? "#141A3A"; return <span style={{ fontSize: "0.72rem", fontWeight: 700, color: col, background: col+"15", padding: "2px 10px", borderRadius: 20 }}>{modalJournal.type}</span>; })()}
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: modalJournal.status==="posted"?"#0B7A55":"#8A5A00", background: modalJournal.status==="posted"?"rgba(11,122,85,0.1)":"rgba(184,120,0,0.1)", padding: "2px 10px", borderRadius: 20 }}>{modalJournal.status}</span>
+              {modalJournal.reference_no && <span style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)" }}>Ref: {modalJournal.reference_no}</span>}
             </div>
 
             {/* Totals */}
-            <div style={{ padding: "0.8rem 1.25rem", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: "2rem" }}>
+            <div style={{ padding: "0.8rem 1.25rem", borderBottom: "1px solid rgba(20,26,58,0.10)", display: "flex", gap: "2rem" }}>
               {[
-                { label: "Total Debit", val: modalJournal.total_debit, color: "#F87171" },
-                { label: "Total Credit", val: modalJournal.total_credit, color: "#34D399" },
-                { label: "Difference", val: Math.abs(modalJournal.total_debit - modalJournal.total_credit), color: Math.abs(modalJournal.total_debit - modalJournal.total_credit) < 1 ? "#34D399" : "#F87171" },
+                { label: "Total Debit", val: modalJournal.total_debit, color: "#C2321F" },
+                { label: "Total Credit", val: modalJournal.total_credit, color: "#0B7A55" },
+                { label: "Difference", val: Math.abs(modalJournal.total_debit - modalJournal.total_credit), color: Math.abs(modalJournal.total_debit - modalJournal.total_credit) < 1 ? "#0B7A55" : "#C2321F" },
               ].map(t => (
                 <div key={t.label}>
-                  <div style={{ fontSize: "0.58rem", color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{t.label}</div>
+                  <div style={{ fontSize: "0.58rem", color: "rgba(20,26,58,0.55)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{t.label}</div>
                   <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.05rem", fontWeight: 700, color: t.color }}>{fmt(t.val)}</div>
                 </div>
               ))}
@@ -1299,48 +1216,48 @@ export default function AuditPage() {
 
             {/* Lines */}
             <div style={{ padding: "0.8rem 1.25rem 1.1rem" }}>
-              <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "rgba(232,237,245,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.6rem" }}>Double-Entry Lines</div>
+              <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "rgba(20,26,58,0.55)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.6rem" }}>Double-Entry Lines</div>
               {modalLoading ? (
-                <div style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.82rem", padding: "1rem 0", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ display: "inline-block", width: 12, height: 12, border: "2px solid #60A5FA", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                <div style={{ color: "rgba(20,26,58,0.55)", fontSize: "0.82rem", padding: "1rem 0", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ display: "inline-block", width: 12, height: 12, border: "2px solid #1F5EFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
                   Loading lines…
                 </div>
               ) : !modalJournal.modalLines?.length ? (
-                <div style={{ color: "rgba(232,237,245,0.3)", fontSize: "0.82rem" }}>No line items found.</div>
+                <div style={{ color: "rgba(20,26,58,0.55)", fontSize: "0.82rem" }}>No line items found.</div>
               ) : (
                 <div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.3rem 0", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: "0.25rem" }}>
-                    <span style={{ fontSize: "0.62rem", color: "rgba(232,237,245,0.3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Account</span>
-                    <span style={{ fontSize: "0.62rem", color: "#F87171", fontWeight: 700, textTransform: "uppercase", textAlign: "right" }}>Debit</span>
-                    <span style={{ fontSize: "0.62rem", color: "#34D399", fontWeight: 700, textTransform: "uppercase", textAlign: "right" }}>Credit</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.3rem 0", borderBottom: "1px solid rgba(20,26,58,0.11)", marginBottom: "0.25rem" }}>
+                    <span style={{ fontSize: "0.62rem", color: "rgba(20,26,58,0.55)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Account</span>
+                    <span style={{ fontSize: "0.62rem", color: "#C2321F", fontWeight: 700, textTransform: "uppercase", textAlign: "right" }}>Debit</span>
+                    <span style={{ fontSize: "0.62rem", color: "#0B7A55", fontWeight: 700, textTransform: "uppercase", textAlign: "right" }}>Credit</span>
                   </div>
                   {modalJournal.modalLines.map((l, i) => (
-                    <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.42rem 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.42rem 0", borderBottom: "1px solid rgba(20,26,58,0.10)" }}>
                       <div>
-                        <div style={{ fontSize: "0.84rem", color: "#E8EDF5", fontWeight: 500 }}>{l.account}</div>
-                        {l.accountType && <div style={{ fontSize: "0.65rem", color: "rgba(232,237,245,0.3)", marginTop: 1 }}>{l.accountType}</div>}
+                        <div style={{ fontSize: "0.84rem", color: "#141A3A", fontWeight: 500 }}>{l.account}</div>
+                        {l.accountType && <div style={{ fontSize: "0.65rem", color: "rgba(20,26,58,0.55)", marginTop: 1 }}>{l.accountType}</div>}
                       </div>
-                      <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.dr > 0 ? "#F87171" : "rgba(232,237,245,0.2)", fontWeight: l.dr > 0 ? 600 : 400 }}>
+                      <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.dr > 0 ? "#C2321F" : "rgba(20,26,58,0.28)", fontWeight: l.dr > 0 ? 600 : 400 }}>
                         {l.dr > 0 ? l.dr.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
                       </div>
-                      <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.cr > 0 ? "#34D399" : "rgba(232,237,245,0.2)", fontWeight: l.cr > 0 ? 600 : 400 }}>
+                      <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.cr > 0 ? "#0B7A55" : "rgba(20,26,58,0.28)", fontWeight: l.cr > 0 ? 600 : 400 }}>
                         {l.cr > 0 ? l.cr.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
                       </div>
                     </div>
                   ))}
                   {/* Totals footer */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.55rem 0 0", borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: "0.2rem" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(232,237,245,0.45)" }}>Total</span>
-                    <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#F87171" }}>{modalJournal.modalLines.reduce((s,l) => s+l.dr, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-                    <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#34D399" }}>{modalJournal.modalLines.reduce((s,l) => s+l.cr, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.55rem 0 0", borderTop: "1px solid rgba(20,26,58,0.15)", marginTop: "0.2rem" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(20,26,58,0.70)" }}>Total</span>
+                    <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#C2321F" }}>{modalJournal.modalLines.reduce((s,l) => s+l.dr, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                    <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#0B7A55" }}>{modalJournal.modalLines.reduce((s,l) => s+l.cr, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Footer */}
-            <div style={{ padding: "0.75rem 1.25rem 1rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-              <button onClick={() => setModalJournal(null)} style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(232,237,245,0.5)", padding: "9px", borderRadius: 8, fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>Close</button>
+            <div style={{ padding: "0.75rem 1.25rem 1rem", borderTop: "1px solid rgba(20,26,58,0.10)" }}>
+              <button onClick={() => setModalJournal(null)} style={{ width: "100%", background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.15)", color: "rgba(20,26,58,0.75)", padding: "9px", borderRadius: 8, fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>Close</button>
             </div>
           </div>
         </div>

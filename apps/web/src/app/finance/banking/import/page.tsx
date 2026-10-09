@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { parseStatementGrid } from "@/lib/bankExcel";
 
 /* ─── Types ─────────────────────────────────────────────── */
 type TxRow = {
@@ -28,9 +29,9 @@ function fmtDate(d: string) {
 }
 
 const ACC_TYPE_COLOR: Record<string, string> = {
-  bank: "#3B82F6", cash: "#10B981", income: "#34D399", expense: "#F59E0B",
-  asset: "#60A5FA", liability: "#A78BFA", equity: "#FB923C", receivable: "#34D399",
-  payable: "#F87171",
+  bank: "#1F5EFF", cash: "#0B7A55", income: "#0B7A55", expense: "#8A5A00",
+  asset: "#1F5EFF", liability: "#5B4BC4", equity: "#B4561E", receivable: "#0B7A55",
+  payable: "#C2321F",
 };
 
 /* ─── Main Component ─────────────────────────────────────── */
@@ -88,14 +89,15 @@ export default function BankingPage() {
 
       const { data: accounts } = await supabase
         .from("fw_fin_chart_of_accounts")
-        .select("id,name,type,code")
+        .select("id,name,type,sub_type,code")
         .eq("business_id", saved)
         .eq("is_group", false)
         .order("name");
 
       const all = (accounts ?? []) as CoaAccount[];
       setCoa(all);
-      const banks = all.filter(a => ["bank", "cash"].includes(a.type));
+      // Bank and cash ledgers are stored as assets with a bank/cash sub-type (older ones may carry the type itself)
+      const banks = all.filter(a => ["bank", "cash"].includes(a.type) || ["bank", "cash"].includes((a as { sub_type?: string | null }).sub_type ?? ""));
       setBankAccounts(banks);
       if (banks.length) setBankAccountId(banks[0].id);
     });
@@ -105,42 +107,20 @@ export default function BankingPage() {
   async function parseExcel(file: File) {
     const XLSX = await import("xlsx");
     const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array", cellDates: true });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const raw: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }) as unknown[][];
-
-    // Try to detect header row
-    const headerRow = raw.findIndex(r =>
-      r.some(c => /date/i.test(String(c))) && r.some(c => /desc|narr|part|detail/i.test(String(c)))
-    );
-    if (headerRow === -1) {
-      // Blind parse: assume col0=date, col1=desc, col2=debit, col3=credit, col4=balance
-      return raw.slice(1).filter(r => r[0]).map(r => ({
-        id: uid(), date: parseDate(r[0]), description: String(r[1] ?? ""),
-        debit: toNum(r[2]), credit: toNum(r[3]), balance: toNum(r[4]),
-        ledger_id: null, ledger_name: null, pushed: false,
-      }));
+    const lower = file.name.toLowerCase();
+    // CSV is read as text so day-first dates aren't guessed as US dates
+    const wb = lower.endsWith(".csv") ? XLSX.read(await file.text(), { type: "string", raw: true }) : XLSX.read(buf, { type: "array", cellDates: true });
+    // Any sheet may hold the statement (some banks put a cover sheet first)
+    let best: ReturnType<typeof parseStatementGrid> | null = null;
+    for (const name of wb.SheetNames.slice(0, 5)) {
+      const grid = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "", raw: true }) as unknown[][];
+      const r = parseStatementGrid(grid);
+      if (!best || r.rows.length > best.rows.length) best = r;
     }
-
-    const headers = raw[headerRow].map(h => String(h).toLowerCase());
-    const col = (keywords: RegExp) => headers.findIndex(h => keywords.test(h));
-    const dateCol = col(/date/);
-    const descCol = col(/desc|narr|part|detail|particular/);
-    const drCol = col(/debit|dr|withdraw|paid/);
-    const crCol = col(/credit|cr|deposit|receiv/);
-    const balCol = col(/balance|bal/);
-
-    return raw.slice(headerRow + 1)
-      .filter(r => r[dateCol])
-      .map(r => ({
-        id: uid(),
-        date: parseDate(r[dateCol]),
-        description: String(r[descCol] ?? "").trim(),
-        debit: toNum(r[drCol] ?? 0),
-        credit: toNum(r[crCol] ?? 0),
-        balance: toNum(r[balCol] ?? 0),
-        ledger_id: null, ledger_name: null, pushed: false,
-      }));
+    if (!best?.rows.length) {
+      throw new Error(`${best?.note ?? "No transactions found."} Make sure the sheet has columns like Date, Narration/Description, Debit/Withdrawal and Credit/Deposit (or Amount with Dr/Cr). If it's a scanned or unusual layout, upload the PDF instead — the AI reads those.`);
+    }
+    return best.rows.map(r => ({ id: uid(), ...r, ledger_id: null, ledger_name: null, pushed: false }));
   }
 
   function parseDate(v: unknown): string {
@@ -301,7 +281,8 @@ export default function BankingPage() {
 
   /* ── Push to journals ── */
   async function pushToJournals() {
-    if (!bizId || !bankAccountId) return;
+    if (!bizId) return;
+    if (!bankAccountId) { alert("Choose the bank account this statement belongs to (top of the page). If it isn't listed, add it in Chart of Accounts under Bank Accounts."); return; }
     const toPush = rows.filter(r => r.ledger_id && !r.pushed);
     if (!toPush.length) return;
     setPushing(true);
@@ -321,8 +302,11 @@ export default function BankingPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setPushResult({ created: json.created });
-      const pushedIds = new Set(toPush.map(r => r.id));
+      // Only rows the server actually posted are marked; the rest stay so they can be fixed and posted again
+      const fails = new Map(((json.failures ?? []) as { id: string; error: string }[]).map(f => [f.id, f.error]));
+      const pushedIds = new Set(toPush.map(r => r.id).filter(id => !fails.has(id)));
       setRows(r => r.map(x => pushedIds.has(x.id) ? { ...x, pushed: true } : x));
+      if (fails.size) alert(`${json.created} posted, ${fails.size} not posted:\n\n` + [...new Set(fails.values())].slice(0, 5).map(e => "• " + e).join("\n"));
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : String(e));
     } finally {
@@ -343,48 +327,48 @@ export default function BankingPage() {
 
   /* ─────────────────── JSX ─────────────────────────────── */
   const inp: React.CSSProperties = {
-    background: "rgba(255,255,255,0.04)", border: "1px solid #1B2E4A", color: "#DEE8F5",
+    background: "#FFFFFF", border: "1px solid #FFFFFF", color: "#141A3A",
     padding: "7px 10px", borderRadius: 7, fontSize: "0.82rem", outline: "none",
     fontFamily: "'DM Sans',system-ui,sans-serif",
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#05091A", color: "#DEE8F5", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; }
         .bs-drop { transition: border-color 0.2s, background 0.2s; }
-        .bs-drop:hover { border-color: #3B82F6 !important; background: rgba(59,130,246,0.04) !important; }
-        .bs-row:hover td { background: rgba(255,255,255,0.015); }
+        .bs-drop:hover { border-color: #1F5EFF !important; background: rgba(31,94,255,0.04) !important; }
+        .bs-row:hover td { background: #FFFFFF; }
         .bs-row.pushed td { opacity: 0.45; }
-        .bs-sel { accent-color: #3B82F6; width: 14px; height: 14px; cursor: pointer; }
+        .bs-sel { accent-color: #1F5EFF; width: 14px; height: 14px; cursor: pointer; }
         .bs-chip { font-size: 0.6rem; font-weight: 700; padding: 2px 7px; border-radius: 12px; white-space: nowrap; }
-        .bs-badge-dr { background: rgba(239,68,68,0.12); color: #FCA5A5; }
-        .bs-badge-cr { background: rgba(16,185,129,0.12); color: #34D399; }
+        .bs-badge-dr { background: rgba(194,50,31,0.12); color: #C2321F; }
+        .bs-badge-cr { background: rgba(11,122,85,0.12); color: #0B7A55; }
         .bs-btn { border: none; border-radius: 8px; font-family: inherit; font-weight: 700; cursor: pointer; transition: opacity 0.15s, transform 0.1s; display: inline-flex; align-items: center; gap: 0.4rem; }
         .bs-btn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
         .bs-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-        .bs-filter-btn { background: rgba(255,255,255,0.04); border: 1px solid #1B2E4A; color: #6E88A8; border-radius: 7px; padding: 5px 12px; font-size: 0.76rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
-        .bs-filter-btn.active { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.4); color: #60A5FA; }
-        .ledger-sel { background: rgba(255,255,255,0.03); border: 1px solid #1B2E4A; color: #DEE8F5; padding: 4px 6px; border-radius: 6px; font-size: 0.72rem; outline: none; width: 100%; cursor: pointer; max-width: 200px; }
-        .ledger-sel:focus { border-color: #3B82F6; }
-        select option { background: #0B1428; }
+        .bs-filter-btn { background: #FFFFFF; border: 1px solid #FFFFFF; color: #6E88A8; border-radius: 7px; padding: 5px 12px; font-size: 0.76rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+        .bs-filter-btn.active { background: rgba(31,94,255,0.12); border-color: rgba(31,94,255,0.4); color: #1F5EFF; }
+        .ledger-sel { background: #FFFFFF; border: 1px solid #FFFFFF; color: #141A3A; padding: 4px 6px; border-radius: 6px; font-size: 0.72rem; outline: none; width: 100%; cursor: pointer; max-width: 200px; }
+        .ledger-sel:focus { border-color: #1F5EFF; }
+        select option { background: #FFFFFF; }
         input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
-        ::-webkit-scrollbar { width: 5px; height: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #1B2E4A; border-radius: 3px; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #FFFFFF; border-radius: 3px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spin { animation: spin 0.8s linear infinite; }
       `}</style>
 
       {/* ── Top bar ── */}
-      <div style={{ background: "rgba(5,9,26,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid #1B2E4A", padding: "0 1.5rem", height: 52, display: "flex", alignItems: "center", gap: "0.75rem", position: "sticky", top: 0, zIndex: 20 }}>
-        <Link href="/finance" style={{ color: "#4A6FA5", textDecoration: "none", fontSize: "0.82rem" }}>Finance</Link>
-        <span style={{ color: "#2A4060" }}>›</span>
-        <Link href="/finance/banking" style={{ color: "#4A6FA5", textDecoration: "none", fontSize: "0.82rem" }}>Banking</Link>
-        <span style={{ color: "#2A4060" }}>›</span>
+      <div style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid #FFFFFF", padding: "0 1.5rem", height: 52, display: "flex", alignItems: "center", gap: "0.75rem", position: "sticky", top: 0, zIndex: 20 }}>
+        <Link href="/finance" style={{ color: "#5A6080", textDecoration: "none", fontSize: "0.82rem" }}>Finance</Link>
+        <span style={{ color: "#E1E4EE" }}>›</span>
+        <Link href="/finance/banking" style={{ color: "#5A6080", textDecoration: "none", fontSize: "0.82rem" }}>Banking</Link>
+        <span style={{ color: "#E1E4EE" }}>›</span>
         <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Import Statement</span>
         {rows.length > 0 && (
           <>
-            <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#4A6FA5" }}>
+            <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#5A6080" }}>
               {rows.length} transactions · {assignedCount} assigned · {rows.filter(r => r.pushed).length} pushed
             </span>
             <button onClick={() => { setRows([]); setSelected(new Set()); setPushResult(null); setParseError(""); }}
@@ -402,23 +386,23 @@ export default function BankingPage() {
           <div>
             <div style={{ marginBottom: "1.5rem" }}>
               <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800, letterSpacing: "-0.02em" }}>Bank Statement Import</h1>
-              <p style={{ margin: 0, color: "#4A6FA5", fontSize: "0.88rem" }}>Upload your bank statement (PDF or Excel). Assign ledger accounts and push directly to Journal Entries → Ledger → Trial Balance → Financial Statements.</p>
+              <p style={{ margin: 0, color: "#5A6080", fontSize: "0.88rem" }}>Upload your bank statement (PDF or Excel). Assign ledger accounts and push directly to Journal Entries → Ledger → Trial Balance → Financial Statements.</p>
             </div>
 
             <div
               className="bs-drop"
               onDrop={onDrop} onDragOver={e => e.preventDefault()}
               onClick={() => fileRef.current?.click()}
-              style={{ border: "2px dashed #1B2E4A", borderRadius: 16, padding: "3rem 2rem", textAlign: "center", cursor: "pointer", background: "#0B1428" }}
+              style={{ border: "2px dashed #FFFFFF", borderRadius: 16, padding: "3rem 2rem", textAlign: "center", cursor: "pointer", background: "#FFFFFF" }}
             >
               {parsing ? (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", padding: "1rem 0" }}>
                   {/* Progress bar */}
-                  <div style={{ width: "100%", maxWidth: 420, background: "#0D1827", borderRadius: 99, height: 8, overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 99, background: "linear-gradient(90deg,#2563EB,#60A5FA)", width: `${parseProgress}%`, transition: "width 0.6s ease" }} />
+                  <div style={{ width: "100%", maxWidth: 420, background: "#FFFFFF", borderRadius: 99, height: 8, overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 99, background: "linear-gradient(90deg,#232A63,#1F5EFF)", width: `${parseProgress}%`, transition: "width 0.6s ease" }} />
                   </div>
                   {/* Step label */}
-                  <div style={{ color: "#60A5FA", fontWeight: 600, fontSize: "0.9rem" }}>{parseStep || "Processing…"}</div>
+                  <div style={{ color: "#1F5EFF", fontWeight: 600, fontSize: "0.9rem" }}>{parseStep || "Processing…"}</div>
                   {/* Sub-steps */}
                   <div style={{ display: "flex", gap: "2rem", marginTop: "0.25rem" }}>
                     {[["📂","Read file"], ["🤖","AI parse"], ["📊","Extract rows"]].map(([icon, label], i) => {
@@ -427,19 +411,19 @@ export default function BankingPage() {
                       return (
                         <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem", opacity: done || active ? 1 : 0.3 }}>
                           <div style={{ fontSize: "1.4rem" }}>{done ? "✅" : active ? icon : icon}</div>
-                          <div style={{ fontSize: "0.68rem", color: done ? "#34D399" : active ? "#60A5FA" : "#2A4060", fontWeight: 600 }}>{label}</div>
+                          <div style={{ fontSize: "0.68rem", color: done ? "#0B7A55" : active ? "#1F5EFF" : "#E1E4EE", fontWeight: 600 }}>{label}</div>
                         </div>
                       );
                     })}
                   </div>
-                  <div style={{ fontSize: "0.74rem", color: "#2A4060" }}>PDF parsing takes ~20–30 sec via AI · Excel is instant</div>
+                  <div style={{ fontSize: "0.74rem", color: "#E1E4EE" }}>PDF parsing takes ~20–30 sec via AI · Excel is instant</div>
                 </div>
               ) : (
                 <>
                   <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📄</div>
                   <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: "0.3rem" }}>Drop bank statement here</div>
-                  <div style={{ color: "#4A6FA5", fontSize: "0.84rem", marginBottom: "1rem" }}>PDF (parsed by AI) · Excel .xlsx / .xls · CSV</div>
-                  <div style={{ display: "inline-block", background: "#2563EB", color: "#fff", padding: "10px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.88rem" }}>
+                  <div style={{ color: "#5A6080", fontSize: "0.84rem", marginBottom: "1rem" }}>PDF (parsed by AI) · Excel .xlsx / .xls · CSV</div>
+                  <div style={{ display: "inline-block", background: "#232A63", color: "#fff", padding: "10px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.88rem" }}>
                     Browse File
                   </div>
                 </>
@@ -448,16 +432,16 @@ export default function BankingPage() {
             <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={onFileInput} style={{ display: "none" }} />
 
             {parseError && (
-              <div style={{ marginTop: "1rem", background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 10, padding: "1rem 1.1rem" }}>
-                <div style={{ color: "#FCA5A5", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.5rem" }}>⚠ {parseError}</div>
+              <div style={{ marginTop: "1rem", background: "rgba(194,50,31,0.07)", border: "1px solid rgba(194,50,31,0.25)", borderRadius: 10, padding: "1rem 1.1rem" }}>
+                <div style={{ color: "#C2321F", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.5rem" }}>⚠ {parseError}</div>
                 <div style={{ color: "#7A93B4", fontSize: "0.78rem", lineHeight: 1.6 }}>
-                  <strong style={{ color: "#DEE8F5" }}>Tip:</strong> Most Indian banks (SBI, HDFC, ICICI, Axis, Kotak) let you download statements as <strong style={{ color: "#60A5FA" }}>Excel (.xlsx)</strong> from NetBanking → Account Statement → Download. Excel always works reliably.
+                  <strong style={{ color: "#141A3A" }}>Tip:</strong> Most Indian banks (SBI, HDFC, ICICI, Axis, Kotak) let you download statements as <strong style={{ color: "#1F5EFF" }}>Excel (.xlsx)</strong> from NetBanking → Account Statement → Download. Excel always works reliably.
                 </div>
                 <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.6rem" }}>
-                  <button onClick={() => fileRef.current?.click()} style={{ background: "#2563EB", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>
+                  <button onClick={() => fileRef.current?.click()} style={{ background: "#232A63", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>
                     Try Another File
                   </button>
-                  <button onClick={() => setParseError("")} style={{ background: "none", border: "1px solid #1B2E4A", color: "#6E88A8", borderRadius: 7, padding: "7px 14px", fontWeight: 600, fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>
+                  <button onClick={() => setParseError("")} style={{ background: "none", border: "1px solid #FFFFFF", color: "#6E88A8", borderRadius: 7, padding: "7px 14px", fontWeight: 600, fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>
                     Dismiss
                   </button>
                 </div>
@@ -474,13 +458,13 @@ export default function BankingPage() {
             <div style={{ flex: 1, minWidth: 0 }}>
 
               {/* Filters row */}
-              <div style={{ background: "#0B1428", border: "1px solid #1B2E4A", borderRadius: 12, padding: "0.8rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 12, padding: "0.8rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
                 {/* Search */}
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search description…" style={{ ...inp, flex: "1 1 180px", minWidth: 140 }} />
 
                 {/* Date range */}
                 <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} style={{ ...inp, width: 130 }} title="From date" />
-                <span style={{ color: "#2A4060", fontSize: "0.75rem" }}>–</span>
+                <span style={{ color: "#E1E4EE", fontSize: "0.75rem" }}>–</span>
                 <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} style={{ ...inp, width: 130 }} title="To date" />
 
                 {/* Type filter */}
@@ -497,42 +481,42 @@ export default function BankingPage() {
                   </button>
                 ))}
 
-                <span style={{ marginLeft: "auto", fontSize: "0.74rem", color: "#4A6FA5" }}>{filtered.length} shown</span>
+                <span style={{ marginLeft: "auto", fontSize: "0.74rem", color: "#5A6080" }}>{filtered.length} shown</span>
               </div>
 
               {/* Bulk assign bar — visible when rows are selected */}
               {selected.size > 0 && (
-                <div style={{ background: "rgba(37,99,235,0.08)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: 10, padding: "0.65rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#60A5FA" }}>{selected.size} selected</span>
+                <div style={{ background: "rgba(37,99,235,0.08)", border: "1px solid rgba(31,94,255,0.25)", borderRadius: 10, padding: "0.65rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#1F5EFF" }}>{selected.size} selected</span>
                   <input value={bulkSearch} onChange={e => setBulkSearch(e.target.value)} placeholder="Search ledger…" style={{ ...inp, width: 160, padding: "5px 8px", fontSize: "0.78rem" }} />
                   <select value={bulkLedgerId} onChange={e => setBulkLedgerId(e.target.value)} style={{ ...inp, minWidth: 200, padding: "5px 8px", fontSize: "0.78rem", cursor: "pointer" }}>
                     <option value="">— select ledger to assign —</option>
                     {bulkCoa.map(a => <option key={a.id} value={a.id}>{a.name} ({a.type})</option>)}
                   </select>
-                  <button onClick={applyBulkAssign} disabled={!bulkLedgerId} className="bs-btn" style={{ background: "#2563EB", color: "#fff", padding: "6px 16px", fontSize: "0.8rem" }}>
+                  <button onClick={applyBulkAssign} disabled={!bulkLedgerId} className="bs-btn" style={{ background: "#232A63", color: "#fff", padding: "6px 16px", fontSize: "0.8rem" }}>
                     Assign to All
                   </button>
-                  <button onClick={() => setSelected(new Set())} style={{ background: "none", border: "none", color: "#4A6FA5", cursor: "pointer", fontSize: "0.78rem", fontFamily: "inherit" }}>
+                  <button onClick={() => setSelected(new Set())} style={{ background: "none", border: "none", color: "#5A6080", cursor: "pointer", fontSize: "0.78rem", fontFamily: "inherit" }}>
                     Deselect
                   </button>
                 </div>
               )}
 
               {/* Table */}
-              <div style={{ background: "#0B1428", border: "1px solid #1B2E4A", borderRadius: 12, overflow: "hidden" }}>
+              <div style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 12, overflow: "hidden" }}>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
                     <thead>
-                      <tr style={{ background: "#080D1C", borderBottom: "1px solid #111E33" }}>
+                      <tr style={{ background: "#FFFFFF", borderBottom: "1px solid #FFFFFF" }}>
                         <th style={{ padding: "0.6rem 0.75rem", width: 36, textAlign: "center" }}>
                           <input type="checkbox" className="bs-sel" checked={allFilteredSelected} onChange={toggleAll} />
                         </th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Date</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Description</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Debit (Dr)</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Credit (Cr)</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Balance</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#2A4060", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ledger Account</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Date</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Description</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Debit (Dr)</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Credit (Cr)</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Balance</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ledger Account</th>
                         <th style={{ padding: "0.6rem 0.75rem", width: 32 }}></th>
                       </tr>
                     </thead>
@@ -541,7 +525,7 @@ export default function BankingPage() {
                         <React.Fragment key={row.id}>
                           <tr
                             className={`bs-row${row.pushed ? " pushed" : ""}`}
-                            style={{ borderTop: i === 0 ? "none" : "1px solid #0D1827", background: selected.has(row.id) ? "rgba(37,99,235,0.06)" : "transparent" }}
+                            style={{ borderTop: i === 0 ? "none" : "1px solid #FFFFFF", background: selected.has(row.id) ? "rgba(37,99,235,0.06)" : "transparent" }}
                           >
                             <td style={{ padding: "0.5rem 0.75rem", textAlign: "center" }}>
                               <input type="checkbox" className="bs-sel" checked={selected.has(row.id)} onChange={() => toggleRow(row.id)} />
@@ -549,31 +533,31 @@ export default function BankingPage() {
                             <td style={{ padding: "0.5rem 0.75rem", whiteSpace: "nowrap", color: "#6E88A8", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem" }}>
                               {fmtDate(row.date)}
                             </td>
-                            <td style={{ padding: "0.5rem 0.75rem", color: "#DEE8F5", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.description}>
-                              {row.description || <span style={{ color: "#2A4060" }}>—</span>}
+                            <td style={{ padding: "0.5rem 0.75rem", color: "#141A3A", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.description}>
+                              {row.description || <span style={{ color: "#E1E4EE" }}>—</span>}
                             </td>
-                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.debit ? "#FCA5A5" : "#2A4060", fontWeight: row.debit ? 600 : 400 }}>
+                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.debit ? "#C2321F" : "#E1E4EE", fontWeight: row.debit ? 600 : 400 }}>
                               {row.debit ? `₹${fmt(row.debit)}` : ""}
                             </td>
-                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.credit ? "#34D399" : "#2A4060", fontWeight: row.credit ? 600 : 400 }}>
+                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.credit ? "#0B7A55" : "#E1E4EE", fontWeight: row.credit ? 600 : 400 }}>
                               {row.credit ? `₹${fmt(row.credit)}` : ""}
                             </td>
-                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: "#4A6FA5", fontSize: "0.7rem" }}>
+                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: "#5A6080", fontSize: "0.7rem" }}>
                               {row.balance ? `₹${fmt(row.balance)}` : ""}
                             </td>
                             <td style={{ padding: "0.5rem 0.75rem" }}>
                               {row.pushed ? (
-                                <span className="bs-chip" style={{ background: "rgba(16,185,129,0.12)", color: "#34D399" }}>✓ Pushed</span>
+                                <span className="bs-chip" style={{ background: "rgba(11,122,85,0.12)", color: "#0B7A55" }}>✓ Pushed</span>
                               ) : addLedgerRow === row.id ? (
                                 <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
                                   <input value={newLedgerName} onChange={e => setNewLedgerName(e.target.value)} placeholder="Ledger name" style={{ ...inp, padding: "4px 8px", fontSize: "0.72rem", width: 140 }} />
                                   <select value={newLedgerType} onChange={e => setNewLedgerType(e.target.value)} style={{ ...inp, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}>
                                     {["expense","income","asset","liability","bank","cash","receivable","payable"].map(t => <option key={t} value={t}>{t}</option>)}
                                   </select>
-                                  <button onClick={() => addLedger(row.id)} disabled={addingLedger || !newLedgerName.trim()} className="bs-btn" style={{ background: "#10B981", color: "#fff", padding: "4px 10px", fontSize: "0.72rem", borderRadius: 6 }}>
+                                  <button onClick={() => addLedger(row.id)} disabled={addingLedger || !newLedgerName.trim()} className="bs-btn" style={{ background: "#0B7A55", color: "#fff", padding: "4px 10px", fontSize: "0.72rem", borderRadius: 6 }}>
                                     {addingLedger ? "…" : "Add"}
                                   </button>
-                                  <button onClick={() => setAddLedgerRow(null)} style={{ background: "none", border: "none", color: "#4A6FA5", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
+                                  <button onClick={() => setAddLedgerRow(null)} style={{ background: "none", border: "none", color: "#5A6080", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
                                 </div>
                               ) : (
                                 <select
@@ -583,7 +567,7 @@ export default function BankingPage() {
                                     assignLedger(row.id, e.target.value);
                                   }}
                                   className="ledger-sel"
-                                  style={{ borderColor: row.ledger_id ? "rgba(16,185,129,0.3)" : "#1B2E4A", color: row.ledger_id ? "#34D399" : "#4A6FA5" }}
+                                  style={{ borderColor: row.ledger_id ? "rgba(11,122,85,0.3)" : "#FFFFFF", color: row.ledger_id ? "#0B7A55" : "#5A6080" }}
                                 >
                                   <option value="">— select ledger —</option>
                                   <option value="__add__">＋ Add new ledger…</option>
@@ -606,14 +590,14 @@ export default function BankingPage() {
                     </tbody>
                     {/* Footer totals */}
                     <tfoot>
-                      <tr style={{ borderTop: "1px solid #1B2E4A", background: "#080D1C" }}>
-                        <td colSpan={3} style={{ padding: "0.55rem 0.75rem", fontSize: "0.72rem", fontWeight: 700, color: "#4A6FA5" }}>
+                      <tr style={{ borderTop: "1px solid #FFFFFF", background: "#FFFFFF" }}>
+                        <td colSpan={3} style={{ padding: "0.55rem 0.75rem", fontSize: "0.72rem", fontWeight: 700, color: "#5A6080" }}>
                           Total ({rows.length} transactions)
                         </td>
-                        <td style={{ padding: "0.55rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, color: "#FCA5A5", fontSize: "0.78rem" }}>
+                        <td style={{ padding: "0.55rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, color: "#C2321F", fontSize: "0.78rem" }}>
                           ₹{fmt(totalDebit)}
                         </td>
-                        <td style={{ padding: "0.55rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, color: "#34D399", fontSize: "0.78rem" }}>
+                        <td style={{ padding: "0.55rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, color: "#0B7A55", fontSize: "0.78rem" }}>
                           ₹{fmt(totalCredit)}
                         </td>
                         <td colSpan={3} />
@@ -624,7 +608,7 @@ export default function BankingPage() {
               </div>
 
               {filtered.length === 0 && (
-                <div style={{ padding: "2rem", textAlign: "center", color: "#2A4060", fontSize: "0.84rem" }}>
+                <div style={{ padding: "2rem", textAlign: "center", color: "#E1E4EE", fontSize: "0.84rem" }}>
                   No transactions match the current filters.
                 </div>
               )}
@@ -634,38 +618,38 @@ export default function BankingPage() {
             <div style={{ width: 260, flexShrink: 0, position: "sticky", top: 68 }}>
 
               {/* Bank account selector */}
-              <div style={{ background: "#0B1428", border: "1px solid #1B2E4A", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
-                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#4A6FA5", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Bank / Cash Account</div>
+              <div style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
+                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#5A6080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Bank / Cash Account</div>
                 <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} style={{ ...inp, width: "100%", cursor: "pointer", fontSize: "0.8rem" }}>
                   <option value="">— select account —</option>
                   {bankAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
-                <div style={{ fontSize: "0.66rem", color: "#2A4060", marginTop: "0.4rem" }}>All transactions in this statement belong to this account</div>
+                <div style={{ fontSize: "0.66rem", color: "#E1E4EE", marginTop: "0.4rem" }}>All transactions in this statement belong to this account</div>
               </div>
 
               {/* Summary */}
-              <div style={{ background: "#0B1428", border: "1px solid #1B2E4A", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
-                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#4A6FA5", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>Summary</div>
+              <div style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
+                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#5A6080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>Summary</div>
                 {[
-                  ["Total Transactions", rows.length, "#DEE8F5"],
-                  ["Assigned", assignedCount, "#34D399"],
-                  ["Unassigned", rows.length - assignedCount - rows.filter(r => r.pushed).length, "#F59E0B"],
-                  ["Already Pushed", rows.filter(r => r.pushed).length, "#60A5FA"],
-                  ["Ready to Push", unpushedAssigned, "#A78BFA"],
+                  ["Total Transactions", rows.length, "#141A3A"],
+                  ["Assigned", assignedCount, "#0B7A55"],
+                  ["Unassigned", rows.length - assignedCount - rows.filter(r => r.pushed).length, "#8A5A00"],
+                  ["Already Pushed", rows.filter(r => r.pushed).length, "#1F5EFF"],
+                  ["Ready to Push", unpushedAssigned, "#5B4BC4"],
                 ].map(([label, val, color]) => (
                   <div key={String(label)} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
-                    <span style={{ fontSize: "0.76rem", color: "#4A6FA5" }}>{label}</span>
+                    <span style={{ fontSize: "0.76rem", color: "#5A6080" }}>{label}</span>
                     <span style={{ fontSize: "0.78rem", fontWeight: 700, color: String(color) }}>{val}</span>
                   </div>
                 ))}
-                <div style={{ height: 1, background: "#111E33", margin: "0.6rem 0" }} />
+                <div style={{ height: 1, background: "#FFFFFF", margin: "0.6rem 0" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.3rem" }}>
-                  <span style={{ fontSize: "0.76rem", color: "#4A6FA5" }}>Total Payments</span>
-                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#FCA5A5", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(totalDebit)}</span>
+                  <span style={{ fontSize: "0.76rem", color: "#5A6080" }}>Total Payments</span>
+                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#C2321F", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(totalDebit)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.76rem", color: "#4A6FA5" }}>Total Receipts</span>
-                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#34D399", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(totalCredit)}</span>
+                  <span style={{ fontSize: "0.76rem", color: "#5A6080" }}>Total Receipts</span>
+                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#0B7A55", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(totalCredit)}</span>
                 </div>
               </div>
 
@@ -674,32 +658,32 @@ export default function BankingPage() {
                 onClick={pushToJournals}
                 disabled={pushing || unpushedAssigned === 0 || !bankAccountId}
                 className="bs-btn"
-                style={{ width: "100%", padding: "14px 0", fontSize: "0.92rem", fontWeight: 800, background: unpushedAssigned > 0 && bankAccountId ? "#2563EB" : "#111E33", color: unpushedAssigned > 0 && bankAccountId ? "#fff" : "#2A4060", borderRadius: 10, justifyContent: "center", marginBottom: "0.5rem" }}
+                style={{ width: "100%", padding: "14px 0", fontSize: "0.92rem", fontWeight: 800, background: unpushedAssigned > 0 && bankAccountId ? "#232A63" : "#FFFFFF", color: unpushedAssigned > 0 && bankAccountId ? "#fff" : "#E1E4EE", borderRadius: 10, justifyContent: "center", marginBottom: "0.5rem" }}
               >
                 {pushing ? (
-                  <><span className="spin" style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block" }} /> Pushing…</>
+                  <><span className="spin" style={{ width: 16, height: 16, border: "2px solid rgba(20,26,58,0.20)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block" }} /> Pushing…</>
                 ) : (
                   `🚀 Push ${unpushedAssigned} to Journals`
                 )}
               </button>
 
               {!bankAccountId && (
-                <div style={{ fontSize: "0.72rem", color: "#F59E0B", textAlign: "center", marginBottom: "0.5rem" }}>Select a bank account above first</div>
+                <div style={{ fontSize: "0.72rem", color: "#8A5A00", textAlign: "center", marginBottom: "0.5rem" }}>Select a bank account above first</div>
               )}
 
               {pushResult && (
-                <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 10, padding: "0.85rem 1rem", textAlign: "center" }}>
+                <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", borderRadius: 10, padding: "0.85rem 1rem", textAlign: "center" }}>
                   <div style={{ fontSize: "1.4rem", marginBottom: "0.25rem" }}>✅</div>
-                  <div style={{ fontWeight: 700, color: "#34D399", fontSize: "0.88rem", marginBottom: "0.2rem" }}>{pushResult.created} entries created</div>
-                  <div style={{ fontSize: "0.72rem", color: "#4A6FA5", marginBottom: "0.75rem" }}>Journals → Ledger → TB → FS updated</div>
+                  <div style={{ fontWeight: 700, color: "#0B7A55", fontSize: "0.88rem", marginBottom: "0.2rem" }}>{pushResult.created} entries created</div>
+                  <div style={{ fontSize: "0.72rem", color: "#5A6080", marginBottom: "0.75rem" }}>Journals → Ledger → TB → FS updated</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                    <Link href="/finance/journals" style={{ display: "block", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.25)", color: "#60A5FA", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
+                    <Link href="/finance/journals" style={{ display: "block", background: "rgba(31,94,255,0.1)", border: "1px solid rgba(31,94,255,0.25)", color: "#1F5EFF", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
                       📋 View Journals →
                     </Link>
-                    <Link href="/finance/ledger" style={{ display: "block", background: "rgba(255,255,255,0.03)", border: "1px solid #1B2E4A", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
+                    <Link href="/finance/ledger" style={{ display: "block", background: "#FFFFFF", border: "1px solid #FFFFFF", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
                       📒 Ledger →
                     </Link>
-                    <Link href="/finance/reports" style={{ display: "block", background: "rgba(255,255,255,0.03)", border: "1px solid #1B2E4A", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
+                    <Link href="/finance/reports" style={{ display: "block", background: "#FFFFFF", border: "1px solid #FFFFFF", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
                       📈 Financial Statements →
                     </Link>
                   </div>
@@ -708,7 +692,7 @@ export default function BankingPage() {
 
               {/* Upload another */}
               <div style={{ marginTop: "0.75rem", textAlign: "center" }}>
-                <button onClick={() => fileRef.current?.click()} style={{ background: "none", border: "1px dashed #1B2E4A", color: "#4A6FA5", padding: "7px 16px", borderRadius: 8, cursor: "pointer", fontSize: "0.76rem", fontFamily: "inherit", fontWeight: 600, width: "100%" }}>
+                <button onClick={() => fileRef.current?.click()} style={{ background: "none", border: "1px dashed #FFFFFF", color: "#5A6080", padding: "7px 16px", borderRadius: 8, cursor: "pointer", fontSize: "0.76rem", fontFamily: "inherit", fontWeight: 600, width: "100%" }}>
                   ⬆ Upload Another Statement
                 </button>
                 <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={onFileInput} style={{ display: "none" }} />
