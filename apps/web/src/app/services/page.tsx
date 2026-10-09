@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "GST Registration, IT Filing & CA Services Online | FreWork India",
     description:
-      "Expert online CA services — GST registration, income tax filing, company registration, audit, accounting. Trusted by 500+ Indian businesses.",
+      "Expert online CA services — GST registration, income tax filing, company registration, audit, accounting.",
     url: "https://frework.online/services",
   },
 };

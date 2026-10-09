@@ -12,7 +12,7 @@ const PLANS = {
   professional: {
     name: "Professional", icon: Rocket, price: 999, yearly: 649,
     color: "border-[#C9A84C]/40", iconCls: "bg-[#C9A84C]/15 text-[#E8C97A]",
-    features: ["Unlimited Applications","Unlimited Projects","Verified Badge","Analytics Dashboard","Priority Search","GST Registration","Monthly GST Filing","24/7 Chat Support"],
+    features: ["Unlimited Applications","Unlimited Projects","Verified Badge","Analytics Dashboard","Priority Search","GST Registration","Monthly GST Filing","Chat support"],
   },
   growth: {
     name: "Growth", icon: Users, price: 2999, yearly: 1949,
@@ -27,7 +27,7 @@ const PLANS = {
   enterprise: {
     name: "Enterprise", icon: Crown, price: 9999, yearly: 6499,
     color: "border-emerald-500/25", iconCls: "bg-emerald-500/12 text-emerald-400",
-    features: ["Everything in Business","Unlimited Members","SSO / SAML","Unlimited API","White-label Solution","SLA 99.9%","On-premise Option"],
+    features: ["Everything in Business","Unlimited Members","SSO / SAML","Unlimited API","White-label Solution","On-premise Option"],
   },
 };
 

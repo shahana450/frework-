@@ -4,6 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { AnnouncementTicker } from "@/components/landing/announcement-ticker";
+
+// B7: named testimonials stay hidden until the owner confirms the people are real clients who consented
+const SHOW_TESTIMONIALS = false;
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, FileText, IndianRupee, Users, TrendingUp, MapPin, Rocket, LayoutDashboard,
@@ -75,13 +78,13 @@ const MODULES = [
   {
     id: "finance", label: "FINANCE", tagline: "Manage Money", emoji: "💰",
     desc: "Invoicing, payroll, bookkeeping – keep your finances clean and audit-ready.",
-    icon: IndianRupee, color: "#C2410C", href: "/pricing", badge: "Coming Soon",
+    icon: IndianRupee, color: "#C2410C", href: "/pricing", badge: "Live",
     items: ["Invoicing", "Payroll", "Bookkeeping", "Reports"],
     detail: {
       heading: "Your finance team, built in",
       why: "Most SMEs lose money due to poor bookkeeping and late invoicing. FreWork gives you professional-grade finance tools without hiring a full-time accountant.",
       steps: ["Connect your bank account", "Auto-categorize transactions", "Generate GST-ready invoices", "Get monthly P&L reports"],
-      pricing: "Coming soon – ₹999/mo",
+      pricing: "From ₹999/mo",
       time: "Real-time updates",
       features: [
         { icon: FileText, text: "GST-compliant invoicing in seconds" },
@@ -156,11 +159,11 @@ const MODULES = [
     detail: {
       heading: "Get funded, grow faster",
       why: "India has a growing startup ecosystem but most founders don't know how to access it. FreWork connects vetted startups directly with active investors.",
-      steps: ["Create your startup profile", "Get visibility to 200+ investors", "Participate in pitch events", "Close your round with legal support"],
+      steps: ["Create your startup profile", "Get visibility to investors", "Participate in pitch events", "Close your round with legal support"],
       pricing: "Free to list",
       time: "Investor match in 7 days",
       features: [
-        { icon: Rocket, text: "Startup profile visible to 200+ investors" },
+        { icon: Rocket, text: "Startup profile visible to investors" },
         { icon: Presentation, text: "Monthly pitch events & demo days" },
         { icon: UserCheck, text: "1-on-1 mentorship from founders" },
         { icon: FileText, text: "Term sheet & legal support included" },
@@ -420,7 +423,7 @@ export function BusinessOSHomepage() {
                         <span style={{ fontSize:"1rem" }}>🛩️</span>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold leading-none mb-0.5" style={{ color:"#FFD9C7" }}>FrePilot — AI Accountant</p>
+                        <p className="text-sm font-semibold leading-none mb-0.5" style={{ color:"#FFD9C7" }}>FreBook — AI Accountant</p>
                         <p className="text-[11px]" style={{ color:"#C8D2F2" }}>You Build, We Pilot · ₹2,999/month</p>
                       </div>
                     </div>
@@ -465,7 +468,7 @@ export function BusinessOSHomepage() {
                     <div className="flex gap-2.5">
                       <span className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all group-hover:opacity-90"
                         style={{ background:"linear-gradient(135deg,#232A63,#232A63)", color:"#fff", boxShadow:"0 4px 16px rgba(255,255,255,0.35)" }}>
-                        {loggedIn ? "Open FrePilot" : "Get Started"} <ArrowRight className="w-4 h-4" />
+                        {loggedIn ? "Open FreBook" : "Get Started"} <ArrowRight className="w-4 h-4" />
                       </span>
                       {!loggedIn && (
                         <span className="px-4 py-3 rounded-xl text-xs font-medium border flex items-center gap-1.5"
@@ -496,7 +499,7 @@ export function BusinessOSHomepage() {
                     Your Ideal Workspace — 8 Indian Cities
                   </h3>
                   <div className="flex flex-wrap gap-x-4 gap-y-1">
-                    {["Hot Desks from ₹350/day","Private Cabins","Meeting Rooms","200+ Verified Spaces"].map(s => (
+                    {["Hot Desks from ₹350/day","Private Cabins","Meeting Rooms","Verified Spaces"].map(s => (
                       <span key={s} className="text-xs flex items-center gap-1.5" style={{ color:"#4A5070" }}>
                         <span className="w-1 h-1 rounded-full" style={{ background:"#C2410C", display:"inline-block", opacity:0.7 }} />{s}
                       </span>
@@ -522,7 +525,7 @@ export function BusinessOSHomepage() {
           {/* Stats strip */}
           <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35 }}
             className="flex items-center justify-center gap-8 flex-wrap mb-6">
-            {[["500+","Businesses Served"],["200+","Verified Spaces"],["8","Indian Cities"],["₹499","Starting Price"]].map(([n,l]) => (
+            {[["₹499","Starting Price"],["3–5 days","GSTIN turnaround"],["FreBook","Chat bookkeeping"],["Tally","Two-way sync"]].map(([n,l]) => (
               <div key={l} className="text-center">
                 <p className="text-xl font-black leading-none" style={{ color:"#232A63" }}>{n}</p>
                 <p className="text-[10px] font-semibold mt-1" style={{ color:"#4A5070" }}>{l}</p>
@@ -535,7 +538,7 @@ export function BusinessOSHomepage() {
             className="text-center">
             <div className="inline-flex items-center gap-2 text-xs font-semibold" style={{ color:"#4A5070" }}>
               <span className="w-1 h-1 rounded-full bg-[#F0662B]" />
-              Trusted by 500+ Indian businesses
+              Built for Indian businesses
               <span className="w-1 h-1 rounded-full bg-[#F0662B]" />
               Free WhatsApp consultation
               <span className="w-1 h-1 rounded-full bg-[#F0662B]" />
@@ -564,8 +567,8 @@ export function BusinessOSHomepage() {
               { icon: Building2, title: "Start", sub: "Register & Set Up", stat: "7 days", items: ["Company Registration", "GST Number", "MSME Certificate"], href: "/services/business-registration", color: "#232A63" },
               { icon: FileText, title: "Comply", sub: "Tax & Compliance", stat: "from ₹499", items: ["GST Filing", "ITR Filing", "ROC / MCA"], href: "/services/compliance", color: "#C2410C" },
               { icon: Users, title: "Hire", sub: "Talent & Experts", stat: "24 hr match", items: ["Professionals", "Developers", "Designers"], href: "/freelancers", color: "#C2410C" },
-              { icon: MapPin, title: "Work", sub: "Coworking Spaces", stat: "200+ spaces", items: ["Hot Desks", "Private Cabins", "8 Cities"], href: "/coworking", color: "#C2410C" },
-              { icon: TrendingUp, title: "Grow", sub: "Funding & Scale", stat: "500+ clients", items: ["Pitch Decks", "DPR / Business Plan", "Investor Connect"], href: "/services/dpr", color: "#232A63" },
+              { icon: MapPin, title: "Work", sub: "Coworking Spaces", stat: "Verified spaces", items: ["Hot Desks", "Private Cabins", "8 Cities"], href: "/coworking", color: "#C2410C" },
+              { icon: TrendingUp, title: "Grow", sub: "Funding & Scale", stat: "Investor-ready", items: ["Pitch Decks", "DPR / Business Plan", "Investor Connect"], href: "/services/dpr", color: "#232A63" },
             ].map((p, idx) => {
               const Icon = p.icon;
               return (
@@ -657,7 +660,7 @@ export function BusinessOSHomepage() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-0 mb-8 rounded-lg overflow-hidden border" style={{ borderColor: "rgba(20,26,58,0.09)" }}>{[{n:"200+",l:"Spaces"},{n:"8",l:"Cities"},{n:"₹350",l:"From /day"}].map((s,idx) => (<div key={s.l} className="flex-1 text-center py-3 px-2" style={{ borderRight: idx<2 ? "1px solid rgba(20,26,58,0.08)" : "none" }}><p className="text-base font-bold" style={{ color: "#232A63" }}>{s.n}</p><p className="text-[10px]" style={{ color: L.textMuted }}>{s.l}</p></div>))}</div>
+              <div className="flex items-center gap-0 mb-8 rounded-lg overflow-hidden border" style={{ borderColor: "rgba(20,26,58,0.09)" }}>{[{n:"₹350",l:"From /day"},{n:"Verified",l:"Spaces"}].map((s,idx) => (<div key={s.l} className="flex-1 text-center py-3 px-2" style={{ borderRight: idx<2 ? "1px solid rgba(20,26,58,0.08)" : "none" }}><p className="text-base font-bold" style={{ color: "#232A63" }}>{s.n}</p><p className="text-[10px]" style={{ color: L.textMuted }}>{s.l}</p></div>))}</div>
 
               <div className="flex gap-3 flex-wrap">
                 <Link href="/coworking"
@@ -1046,8 +1049,8 @@ export function BusinessOSHomepage() {
         </div>
       </section>
 
-      {/* --- TESTIMONIALS --- */}
-      <section className="py-20 px-4" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>
+      {/* --- TESTIMONIALS --- hidden (B7) until the owner confirms Rahul Sharma, Priya Menon and Anil Gupta are real, consenting clients */}
+      {SHOW_TESTIMONIALS && <section className="py-20 px-4" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
           <div className="text-center mb-10">
             <p className="text-[10px] font-black tracking-[0.35em] uppercase mb-3" style={{ color: L.blue }}>What our clients say</p>
@@ -1080,7 +1083,7 @@ export function BusinessOSHomepage() {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* --- QUICK SERVICES --- */}
       <section className="py-20 px-4" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
@@ -1195,8 +1198,8 @@ export function BusinessOSHomepage() {
                 style={{ background: "linear-gradient(135deg,rgba(35,42,99,0.15),rgba(35,42,99,0.06))", border: "1px solid rgba(35,42,99,0.3)" }}>
                 🛩️
               </div>
-              <p className="text-[9px] font-black tracking-[0.3em] uppercase mb-2" style={{ color: "#232A63" }}>FrePilot by FreWork</p>
-              <h3 className="font-black text-xl mb-1" style={{ color: "#EDE8DC", letterSpacing: "-0.02em" }}>Sign in to access FrePilot</h3>
+              <p className="text-[9px] font-black tracking-[0.3em] uppercase mb-2" style={{ color: "#232A63" }}>FreBook by FreWork</p>
+              <h3 className="font-black text-xl mb-1" style={{ color: "#EDE8DC", letterSpacing: "-0.02em" }}>Sign in to access FreBook</h3>
               <p className="text-xs mb-6" style={{ color: "#4A5070" }}>Your AI accountant — GST, books, TDS and more.</p>
               <button
                 onClick={handleGoogleSignIn}

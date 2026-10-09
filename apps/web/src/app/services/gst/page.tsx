@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "GST Registration & Filing Online India — Starting ₹499 | FreWork",
   description:
-    "Online GST registration and GST return filing (GSTR-1, GSTR-3B, GSTR-9) by expert CAs across India. Get your GSTIN in 3–5 days. Monthly GST filing from ₹999. Trusted by 500+ businesses.",
+    "Online GST registration and GST return filing (GSTR-1, GSTR-3B, GSTR-9) by expert CAs across India. Get your GSTIN in 3–5 days. Monthly GST filing from ₹999.",
   keywords: [
     "GST registration online India",
     "GST registration",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "GST Registration & Filing Online India | FreWork",
-    description: "Expert CA-assisted GST registration in 3–5 days. Monthly GSTR-1, GSTR-3B filing from ₹999. 500+ businesses trust FreWork.",
+    description: "Expert CA-assisted GST registration in 3–5 days. Monthly GSTR-1, GSTR-3B filing from ₹999.",
     url: "https://frework.online/services/gst",
   },
   alternates: { canonical: "https://frework.online/services/gst" },

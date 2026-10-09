@@ -131,7 +131,7 @@ export default function ContactClient() {
                 <p className="text-sm font-bold" style={{ color: "#E8C97A" }}>Our expert team</p>
                 <div className="flex items-center gap-1">
                   {[1,2,3,4,5].map(s => <Star key={s} size={10} fill="#B8903A" style={{ color: "#B8903A" }} />)}
-                  <span className="text-[11px] ml-1" style={{ color: "rgba(255,255,255,0.45)" }}>4.9 · 500+ clients</span>
+                  <span className="text-[11px] ml-1" style={{ color: "rgba(255,255,255,0.45)" }}>Real people, quick replies</span>
                 </div>
               </div>
             </div>
@@ -141,7 +141,7 @@ export default function ContactClient() {
               {[
                 { icon: Shield, label: "expert-qualified",  sub: "Verified experts",      color: "#7C3AED" },
                 { icon: Zap,    label: "2-Hour Response",  sub: "Guaranteed callback",   color: "#059669" },
-                { icon: Star,   label: "4.9/5 Rating",     sub: "500+ happy clients",    color: "#B8903A" },
+                { icon: Star,   label: "Real people",      sub: "Replies from our team",    color: "#B8903A" },
               ].map(({ icon: Icon, label, sub, color }) => (
                 <motion.div key={label}
                   whileHover={{ scale: 1.04, y: -2 }}

@@ -214,7 +214,7 @@ export function ServicesPage() {
             <div className="flex flex-wrap justify-center gap-8">
               {[
                 { value: "20+", label: "Services" },
-                { value: "500+", label: "Clients Served" },
+                { value: "3–5 days", label: "GSTIN turnaround" },
                 { value: "professional", label: "Qualified Experts" },
                 { value: "2 hrs", label: "Response Time" },
               ].map(({ value, label }) => (

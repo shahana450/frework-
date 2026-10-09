@@ -117,7 +117,7 @@ export default function RegisterPage() {
             <span className="text-xl font-bold tracking-[-0.025em]" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif" }}>FreWork</span>
           </div>
           <h2 className="text-4xl font-bold mb-4 leading-tight" style={{ fontFamily: "var(--font-cormorant), serif" }}>
-            Join 500+<br />growing businesses
+            Join growing<br />businesses
           </h2>
           <p className="text-white/45 text-sm mb-10 leading-relaxed">Expert Professional Services, coworking spaces, and freelancers — all in one place.</p>
           <div className="space-y-3">

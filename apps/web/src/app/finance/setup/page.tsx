@@ -263,7 +263,7 @@ export default function BusinessSetup() {
     <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#232A63", fontWeight: 900, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
-          <span>🛩️</span> FrePilot
+          <span>📚</span> FreBook
         </Link>
         <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
         <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Set Up Your Business</span>

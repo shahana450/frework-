@@ -35,10 +35,10 @@ export default function InvestorsPage() {
             <TrendingUp className="w-8 h-8 text-blue-500" />
             <h1 className="text-4xl font-bold">Investor Portal</h1>
           </div>
-          <p className="text-muted-foreground text-lg mb-8">Connect with 500+ active VCs, angels, and family offices investing in Indian startups</p>
+          <p className="text-muted-foreground text-lg mb-8">Connect with VCs, angels and family offices investing in Indian startups</p>
 
           <div className="grid grid-cols-4 gap-6 max-w-2xl mb-8">
-            {[["500+", "Active Investors"], ["$10B+", "Capital Deployed"], ["2,000+", "Startups Funded"], ["48h", "Avg Response Time"]].map(([v, l]) => (
+            {[["VCs", "and angels"], ["Family", "offices"], ["Pitch", "events"], ["Direct", "introductions"]].map(([v, l]) => (
               <div key={l} className="text-center">
                 <p className="text-2xl font-bold text-blue-500">{v}</p>
                 <p className="text-xs text-muted-foreground">{l}</p>

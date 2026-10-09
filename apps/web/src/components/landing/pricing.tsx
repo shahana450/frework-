@@ -91,7 +91,7 @@ const plans = [
       "SSO / SAML",
       "On-premise deployment",
       "Dedicated infrastructure",
-      "24/7 premium support",
+      "Priority support",
       "Custom SLA",
     ],
     cta: "Start Enterprise Trial",

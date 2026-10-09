@@ -54,7 +54,7 @@ const PLANS: Plan[] = [
         ],
       },
       {
-        heading: "FrePilot Accounting Software",
+        heading: "FreBook Accounting Software",
         icon: BookOpen,
         items: [
           { text: "GST invoicing & purchase bills" },
@@ -65,7 +65,7 @@ const PLANS: Plan[] = [
         ],
       },
     ],
-    notIncluded: ["AI FrePilot chat", "ROC / MCA filing", "TDS filing", "Audit", "Team seats"],
+    notIncluded: ["FreBook AI chat", "ROC / MCA filing", "TDS filing", "Audit", "Team seats"],
     cta: "Get Started",
   },
   {
@@ -97,11 +97,11 @@ const PLANS: Plan[] = [
         ],
       },
       {
-        heading: "FrePilot Accounting + AI",
+        heading: "FreBook Accounting + AI",
         icon: BookOpen,
         items: [
           { text: "Everything in Starter" },
-          { text: "AI FrePilot — ask anything about your books" },
+          { text: "FreBook AI — ask anything about your books" },
           { text: "GST Returns auto-prep (GSTR-1, 3B)" },
           { text: "TDS tracker (section-wise)" },
           { text: "Tally XML export" },
@@ -138,7 +138,7 @@ const PLANS: Plan[] = [
         ],
       },
       {
-        heading: "FrePilot Accounting + AI",
+        heading: "FreBook Accounting + AI",
         icon: BookOpen,
         items: [
           { text: "Everything in Professional" },
@@ -158,7 +158,7 @@ const PLANS: Plan[] = [
     icon: Building2,
     price: { monthly: 5999, yearly: 3899 },
     tagline: "For established firms",
-    desc: "Internal audit, statutory audit, dedicated CA manager, and full team accounting access.",
+    desc: "Dedicated account manager and full team accounting access. Audits are quoted separately.",
     color: {
       border: "border-violet-500/25",
       iconBg: "bg-violet-500/12", iconText: "text-violet-400",
@@ -172,15 +172,13 @@ const PLANS: Plan[] = [
         icon: FileText,
         items: [
           { text: "Everything in Growth" },
-          { text: "Internal audit (quarterly)" },
-          { text: "Statutory / annual audit" },
-          { text: "Tax audit (Form 3CA / 3CB)" },
+          { text: "Statutory, tax and internal audits — by an independent Chartered Accountant, quoted separately" },
           { text: "DPR & CMA data preparation" },
           { text: "Dedicated Account Manager (CA)" },
         ],
       },
       {
-        heading: "FrePilot Accounting + AI",
+        heading: "FreBook Accounting + AI",
         icon: BookOpen,
         items: [
           { text: "Everything in Growth" },
@@ -199,7 +197,7 @@ const PLANS: Plan[] = [
     icon: Crown,
     price: { monthly: 6999, yearly: 4549 },
     tagline: "For large businesses & CA firms",
-    desc: "Virtual CFO, transfer pricing, M&A advisory, unlimited team, and white-label FrePilot.",
+    desc: "Virtual CFO, transfer pricing, M&A advisory, unlimited team, and white-label FreBook.",
     color: {
       border: "border-emerald-500/25",
       iconBg: "bg-emerald-500/12", iconText: "text-emerald-400",
@@ -220,14 +218,13 @@ const PLANS: Plan[] = [
         ],
       },
       {
-        heading: "FrePilot Accounting + AI",
+        heading: "FreBook Accounting + AI",
         icon: BookOpen,
         items: [
           { text: "Everything in Business" },
           { text: "Unlimited team seats" },
-          { text: "White-label FrePilot (your brand)" },
+          { text: "White-label FreBook (your brand)" },
           { text: "Custom domain & subdomain" },
-          { text: "99.9% uptime SLA" },
           { text: "Dedicated onboarding & training" },
         ],
       },
@@ -239,7 +236,7 @@ const PLANS: Plan[] = [
 
 const FAQS = [
   { q: "What is included in CA Compliance services?", a: "Every plan includes CA-assisted filings — GST, ITR, TDS, ROC and more depending on your plan tier. These are performed by qualified Chartered Accountants, not automated tools." },
-  { q: "What is FrePilot Accounting Software?", a: "FrePilot is our AI-powered accounting platform: invoicing, journal entries, bank reconciliation, GST returns prep, TDS tracker, reports, and an AI chat assistant for your books. Higher plans include team access, Tally export, and more." },
+  { q: "What is FreBook Accounting Software?", a: "FreBook is our AI-powered accounting platform: invoicing, journal entries, bank reconciliation, GST returns prep, TDS tracker, reports, and an AI chat assistant for your books. Higher plans include team access, Tally export, and more." },
   { q: "Is there a free trial?", a: "Yes — Professional, Growth, and Business plans include a 14-day free trial with no credit card required. You won't be charged until the trial ends." },
   { q: "Can I switch plans anytime?", a: "Yes — upgrade or downgrade anytime. Upgrades are prorated; downgrades take effect at the next billing cycle." },
   { q: "What payment methods do you accept?", a: "UPI, all major credit/debit cards (Visa, Mastercard, RuPay), Net Banking, EMI, and bank transfer for annual plans — via Razorpay." },
@@ -248,10 +245,10 @@ const FAQS = [
 ];
 
 const TRUST = [
-  { icon: ShieldCheck, label: "SOC 2 compliant infrastructure" },
+  { icon: ShieldCheck, label: "Encrypted connections (HTTPS)" },
   { icon: BadgeCheck, label: "Verified professional experts" },
   { icon: Clock, label: "14-day free trial, no card" },
-  { icon: Headphones, label: "24/7 dedicated support" },
+  { icon: Headphones, label: "Support on WhatsApp and email" },
 ];
 
 export default function PricingPage() {
@@ -295,7 +292,7 @@ export default function PricingPage() {
             style={{ fontFamily: "var(--font-cormorant), serif" }}>
             CA Compliance +<br />
             <span style={{ background: "linear-gradient(135deg,#F0D78A,#C9A84C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              FrePilot Accounting
+              FreBook Accounting
             </span>
           </h1>
           <p className="text-white/45 text-lg mb-10 leading-relaxed">
@@ -473,7 +470,7 @@ export default function PricingPage() {
           style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.06),rgba(201,168,76,0.02))" }}>
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/6">
             {[
-              { val: "5%", label: "Platform transaction fee", sub: "Lowest in India" },
+              { val: "5%", label: "Platform transaction fee", sub: "On marketplace bookings" },
               { val: "14 days", label: "Free trial on paid plans", sub: "No credit card" },
               { val: "< 4 hrs", label: "Avg. support response", sub: "For paid plans" },
               { val: "Zero", label: "Lock-in or exit fees", sub: "Cancel anytime" },

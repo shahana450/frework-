@@ -34,7 +34,7 @@ const faqs = [
   },
   {
     q: "What's the platform fee?",
-    a: "FreWork charges a 5% platform fee on transactions, which is among the lowest in the industry. The fee covers payment processing, escrow, dispute resolution, and platform maintenance. Enterprise plans have custom fee structures.",
+    a: "FreWork charges a 5% platform fee on marketplace transactions. The fee covers payment processing, escrow, dispute resolution, and platform maintenance. Enterprise plans have custom fee structures.",
   },
   {
     q: "Can agencies use FreWork?",

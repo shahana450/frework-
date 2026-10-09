@@ -74,8 +74,8 @@ const orgJsonLd = {
 
 const STATS = [
   { n: "8+", l: "Cities" },
-  { n: "200+", l: "Verified Spaces" },
-  { n: "500+", l: "Businesses Served" },
+  
+  
   { n: "₹499", l: "Services From" },
 ];
 
@@ -171,7 +171,7 @@ export default function AboutPage() {
           {/* CTA */}
           <div className="text-center p-10 rounded-3xl border-2 border-blue-200 bg-blue-50">
             <h2 className="text-2xl font-black mb-3" style={{ color: "#0F2044" }}>Start with FreWork today</h2>
-            <p className="text-gray-600 mb-6">Join 500+ businesses who use FreWork to handle their compliance, accounting and workspace needs.</p>
+            <p className="text-gray-600 mb-6">Join the businesses that use FreWork for compliance, accounting and workspace needs.</p>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/register"
                 className="px-8 py-3 rounded-2xl font-bold text-white transition-all hover:opacity-90"

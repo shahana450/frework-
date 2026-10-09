@@ -1,0 +1,302 @@
+[
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7); 5% fee wording needs owner confirmation (B8)",
+    "before": "{ text: \"99.9% uptime SLA\" },",
+    "after": "(removed)"
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7); 5% fee wording needs owner confirmation (B8)",
+    "before": "{ icon: ShieldCheck, label: \"SOC 2 compliant infrastructure\" },",
+    "after": "{ icon: ShieldCheck, label: \"Encrypted connections (HTTPS)\" },"
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7); 5% fee wording needs owner confirmation (B8)",
+    "before": "{ icon: Headphones, label: \"24/7 dedicated support\" },",
+    "after": "{ icon: Headphones, label: \"Support on WhatsApp and email\" },"
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7); 5% fee wording needs owner confirmation (B8)",
+    "before": "{ val: \"5%\", label: \"Platform transaction fee\", sub: \"Lowest in India\" },",
+    "after": "{ val: \"5%\", label: \"Platform transaction fee\", sub: \"On marketplace bookings\" },"
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "One product name for the accounting app: FreBook (B8)",
+    "before": "heading: \"FrePilot Accounting Software\",",
+    "after": "heading: \"FreBook Accounting Software\","
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "One product name for the accounting app: FreBook (B8)",
+    "before": "heading: \"FrePilot Accounting + AI\",",
+    "after": "heading: \"FreBook Accounting + AI\","
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "One product name for the accounting app: FreBook (B8)",
+    "before": "\"AI FrePilot chat\"",
+    "after": "\"FreBook AI chat\""
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "One product name for the accounting app: FreBook (B8)",
+    "before": "{ text: \"AI FrePilot — ask anything about your books\" },",
+    "after": "{ text: \"FreBook AI — ask anything about your books\" },"
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "One product name for the accounting app: FreBook (B8)",
+    "before": "{ text: \"White-label FrePilot (your brand)\" },",
+    "after": "{ text: \"White-label FreBook (your brand)\" },"
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "One product name for the accounting app: FreBook (B8)",
+    "before": "and white-label FrePilot.",
+    "after": "and white-label FreBook."
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "One product name for the accounting app: FreBook (B8)",
+    "before": "{ q: \"What is FrePilot Accounting Software?\", a: \"FrePilot is our AI-powered accounting platform:",
+    "after": "{ q: \"What is FreBook Accounting Software?\", a: \"FreBook is our AI-powered accounting platform:"
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "One product name for the accounting app: FreBook (B8)",
+    "before": "FrePilot Accounting",
+    "after": "FreBook Accounting"
+  },
+  {
+    "file": "apps/web/src/app/subscribe/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "\"24/7 Chat Support\"",
+    "after": "\"Chat support\""
+  },
+  {
+    "file": "apps/web/src/app/subscribe/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "\"SLA 99.9%\",",
+    "after": "(removed)"
+  },
+  {
+    "file": "apps/web/src/components/landing/pricing.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "\"24/7 premium support\",",
+    "after": "\"Priority support\","
+  },
+  {
+    "file": "apps/web/src/components/landing/faq.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7); fee scope needs owner confirmation (B8)",
+    "before": "FreWork charges a 5% platform fee on transactions, which is among the lowest in the industry.",
+    "after": "FreWork charges a 5% platform fee on marketplace transactions."
+  },
+  {
+    "file": "apps/web/src/app/about/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "{ n: \"200+\", l: \"Verified Spaces\" },",
+    "after": "(removed)"
+  },
+  {
+    "file": "apps/web/src/app/about/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "{ n: \"500+\", l: \"Businesses Served\" },",
+    "after": "(removed)"
+  },
+  {
+    "file": "apps/web/src/app/about/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "Join 500+ businesses who use FreWork to handle their compliance, accounting and workspace needs.",
+    "after": "Join the businesses that use FreWork for compliance, accounting and workspace needs."
+  },
+  {
+    "file": "apps/web/src/app/contact/contact-client.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "4.9 · 500+ clients",
+    "after": "Real people, quick replies"
+  },
+  {
+    "file": "apps/web/src/app/contact/contact-client.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "{ icon: Star,   label: \"4.9/5 Rating\",     sub: \"500+ happy clients\",",
+    "after": "{ icon: Star,   label: \"Real people\",      sub: \"Replies from our team\","
+  },
+  {
+    "file": "apps/web/src/app/investors/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "Connect with 500+ active VCs, angels, and family offices investing in Indian startups",
+    "after": "Connect with VCs, angels and family offices investing in Indian startups"
+  },
+  {
+    "file": "apps/web/src/app/investors/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "{[[\"500+\", \"Active Investors\"], [\"$10B+\", \"Capital Deployed\"], [\"2,000+\", \"Startups Funded\"], [\"48h\", \"Avg Response Time\"]].map(([v, l]) => (",
+    "after": "{[[\"VCs\", \"and angels\"], [\"Family\", \"offices\"], [\"Pitch\", \"events\"], [\"Direct\", \"introductions\"]].map(([v, l]) => ("
+  },
+  {
+    "file": "apps/web/src/app/login/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "[\"500+\", \"Businesses served\"]",
+    "after": "[\"GST\", \"Registration & filing\"]"
+  },
+  {
+    "file": "apps/web/src/app/register/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "Join 500+<br />growing businesses",
+    "after": "Join growing<br />businesses"
+  },
+  {
+    "file": "apps/web/src/app/services/gst/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "Trusted by 500+ businesses.",
+    "after": "(removed)"
+  },
+  {
+    "file": "apps/web/src/app/services/gst/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "500+ businesses trust FreWork.",
+    "after": "(removed)"
+  },
+  {
+    "file": "apps/web/src/app/services/page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "Trusted by 500+ Indian businesses.",
+    "after": "(removed)"
+  },
+  {
+    "file": "apps/web/src/app/opengraph-image.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "[\"⭐ 4.9/5 Rating\", \"✅ 500+ Businesses\", \"🏛️ expert-qualified\", \"🇮🇳 Pan India Service\"]",
+    "after": "[\"📚 FreBook accounting\", \"🧾 GST & ITR\", \"🏛️ expert-qualified\", \"🇮🇳 Pan India Service\"]"
+  },
+  {
+    "file": "apps/web/src/components/landing/homepage-hero.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "{ num: \"500+\", label: \"Businesses Served\", sub: \"across India\",",
+    "after": "{ num: \"₹499\", label: \"Starting price\", sub: \"GST registration\","
+  },
+  {
+    "file": "apps/web/src/components/landing/services-page.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "{ value: \"500+\", label: \"Clients Served\" },",
+    "after": "{ value: \"3–5 days\", label: \"GSTIN turnaround\" },"
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "\"Get visibility to 200+ investors\"",
+    "after": "\"Get visibility to investors\""
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "{ icon: Rocket, text: \"Startup profile visible to 200+ investors\" },",
+    "after": "{ icon: Rocket, text: \"Startup profile visible to investors\" },"
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "\"200+ Verified Spaces\"].map(",
+    "after": "\"Verified Spaces\"].map("
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "{[[\"500+\",\"Businesses Served\"],[\"200+\",\"Verified Spaces\"],[\"8\",\"Indian Cities\"],[\"₹499\",\"Starting Price\"]].map(",
+    "after": "{[[\"₹499\",\"Starting Price\"],[\"3–5 days\",\"GSTIN turnaround\"],[\"FreBook\",\"Chat bookkeeping\"],[\"Tally\",\"Two-way sync\"]].map("
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "Trusted by 500+ Indian businesses",
+    "after": "Built for Indian businesses"
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "stat: \"200+ spaces\",",
+    "after": "stat: \"Verified spaces\","
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "stat: \"500+ clients\",",
+    "after": "stat: \"Investor-ready\","
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Unverified claim — removed until evidence is provided (B7)",
+    "before": "{[{n:\"200+\",l:\"Spaces\"},{n:\"8\",l:\"Cities\"},{n:\"₹350\",l:\"From /day\"}].map(",
+    "after": "{[{n:\"₹350\",l:\"From /day\"},{n:\"Verified\",l:\"Spaces\"}].map("
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Named testimonials hidden until confirmed real and consented (B7)",
+    "before": "{/* --- TESTIMONIALS --- */}\n      <section className=\"py-20 px-4\" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>",
+    "after": "{/* --- TESTIMONIALS --- hidden (B7) until the owner confirms Rahul Sharma, Priya Menon and Anil Gupta are real, consenting clients */}\n      {SHOW_TESTIMONIALS && <section className=\"py-20 px-4\" style={{ background: L.bgAlt, borderTop: `1px solid ${L.borderLight}` }}>"
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Named testimonials hidden until confirmed real and consented (B7)",
+    "before": "</div>\n        </div>\n      </section>\n\n      {/* --- QUICK SERVICES --- */}",
+    "after": "</div>\n        </div>\n      </section>}\n\n      {/* --- QUICK SERVICES --- */}"
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Status label + one product name (B8)",
+    "before": "badge: \"Coming Soon\",",
+    "after": "badge: \"Live\","
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Status label + one product name (B8)",
+    "before": "pricing: \"Coming soon – ₹999/mo\",",
+    "after": "pricing: \"From ₹999/mo\","
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Status label + one product name (B8)",
+    "before": "FrePilot — AI Accountant",
+    "after": "FreBook — AI Accountant"
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Status label + one product name (B8)",
+    "before": "{loggedIn ? \"Open FrePilot\" : \"Get Started\"}",
+    "after": "{loggedIn ? \"Open FreBook\" : \"Get Started\"}"
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Status label + one product name (B8)",
+    "before": "FrePilot by FreWork",
+    "after": "FreBook by FreWork"
+  },
+  {
+    "file": "apps/web/src/components/landing/business-os-homepage.tsx",
+    "reason": "Status label + one product name (B8)",
+    "before": "Sign in to access FrePilot",
+    "after": "Sign in to access FreBook"
+  },
+  {
+    "file": "apps/web/src/app/finance/setup/page.tsx",
+    "reason": "One product name (B8)",
+    "before": "<span>🛩️</span> FrePilot",
+    "after": "<span>📚</span> FreBook"
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "Services reserved to Chartered Accountants removed from software tiers; quoted separately (B8)",
+    "before": "desc: \"Internal audit, statutory audit, dedicated CA manager, and full team accounting access.\",",
+    "after": "desc: \"Dedicated account manager and full team accounting access. Audits are quoted separately.\","
+  },
+  {
+    "file": "apps/web/src/app/pricing/page.tsx",
+    "reason": "Services reserved to Chartered Accountants removed from software tiers; quoted separately (B8)",
+    "before": "{ text: \"Internal audit (quarterly)\" },\n          { text: \"Statutory / annual audit\" },\n          { text: \"Tax audit (Form 3CA / 3CB)\" },",
+    "after": "{ text: \"Statutory, tax and internal audits — by an independent Chartered Accountant, quoted separately\" },"
+  }
+]
