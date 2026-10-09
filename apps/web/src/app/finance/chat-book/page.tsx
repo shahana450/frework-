@@ -155,6 +155,7 @@ async function parseTemplate(file: File): Promise<string[] | null> {
 }
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
+const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 export default function FreBookPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
@@ -730,37 +731,71 @@ export default function FreBookPage() {
             </div>
           )}
           {/* Messages */}
-          <div ref={chatRef} style={{ flex: 1, overflowY: "auto", padding: "1rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+          <div ref={chatRef} className="fb-thread" style={{ flex: 1, overflowY: "auto", background: "#F6F1E7" }}>
+            <div style={{ maxWidth: 880, margin: "0 auto", padding: "1.5rem clamp(12px, 3vw, 28px) 2rem", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
             {messages.map(msg => (
-              <div key={msg.id}>
+              <div key={msg.id} className="fb-msg">
+                {/* Welcome — a compact intro with tappable examples */}
+                {msg.role === "system" && msg.id === "welcome" && (
+                  <div style={{ background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: 20, overflow: "hidden", boxShadow: "0 18px 40px -30px rgba(15,43,37,0.5)" }}>
+                    <div style={{ background: "#0F2B25", color: "#FFFFFF", padding: "18px 22px", display: "flex", alignItems: "center", gap: 14 }}>
+                      <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: "50%", background: "#D9B56F", color: "#0F2B25", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SERIF, fontWeight: 700, fontSize: "1.2rem", flexShrink: 0 }}>F</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontFamily: SERIF, fontSize: "1.25rem", fontWeight: 700 }}>Your bookkeeper for <span style={{ color: "#D9B56F" }}>{bizName}</span></div>
+                        <div style={{ fontSize: "0.85rem", color: "#C9D3CE" }}>Say what happened — I&apos;ll draft the entry and wait for your OK.</div>
+                      </div>
+                    </div>
+                    <div className="fb-welcome" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 0 }}>
+                      {([["Record", "M4 20h4L19 9l-4-4L4 16zM14 6l4 4", ["Paid office rent ₹25,000 from the bank", "Sold goods to ABC Ltd for ₹1,18,000 incl. 18% GST on credit", "Received ₹50,000 from Rahul against INV-101"]],
+                         ["Ask your books", "M12 3a9 9 0 100 18 9 9 0 000-18zM9.5 9a2.5 2.5 0 015 .5c0 1.5-2.5 2-2.5 3.5M12 17h.01", ["How much am I owed?", "Expenses above ₹10,000 this month", "GST collected last month"]]] as const).map(([title, d, items], gi) => (
+                        <div key={title} style={{ padding: "16px 20px 18px", borderLeft: gi ? "1px solid #EFE8D9" : "none", display: "flex", flexDirection: "column", gap: 10 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8A6420" }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>{title}
+                          </div>
+                          {items.map(t => (
+                            <button key={t} onClick={() => { setInput(t); inputRef.current?.focus(); }} className="fb-ex" style={{ textAlign: "left", background: "#FBF8F1", border: "1px solid #EFE8D9", borderRadius: 12, padding: "9px 12px", fontSize: "0.86rem", color: "#10241F", cursor: "pointer", fontFamily: "inherit", lineHeight: 1.4 }}>{t}</button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* User bubble */}
                 {msg.role === "user" && (
                   <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <div style={{ maxWidth: "65%", background: "rgba(35,42,99,0.12)", border: `1px solid rgba(35,42,99,0.2)`, borderRadius: "14px 14px 4px 14px", padding: "10px 14px", fontSize: "0.88rem", lineHeight: 1.6 }}>
+                    <div style={{ maxWidth: "min(78%, 560px)", background: "#0F2B25", color: "#FFFFFF", borderRadius: "18px 18px 6px 18px", padding: "11px 16px", fontSize: "0.95rem", lineHeight: 1.55, boxShadow: "0 10px 24px -18px rgba(15,43,37,0.7)", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
                       {msg.text}
                     </div>
                   </div>
                 )}
 
-                {/* System message */}
-                {msg.role === "system" && (
+                {/* Other system notes — a quiet centred pill */}
+                {msg.role === "system" && msg.id !== "welcome" && (
                   <div style={{ display: "flex", justifyContent: "center" }}>
-                    <div style={{ maxWidth: "80%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 16px", fontSize: "0.83rem", color: MUTED, lineHeight: 1.7, whiteSpace: "pre-wrap" }}
-                      dangerouslySetInnerHTML={{ __html: (msg.text ?? "").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/•/g, "•") }} />
+                    <div style={{ maxWidth: "90%", background: "#EFE8D9", borderRadius: 999, padding: "7px 16px", fontSize: "0.82rem", color: "#2E3B36", lineHeight: 1.5, whiteSpace: "pre-wrap", textAlign: "center" }}
+                      dangerouslySetInnerHTML={{ __html: (msg.text ?? "").replace(/</g, "&lt;").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
                   </div>
                 )}
 
                 {/* Answer from the books */}
-                {msg.role === "ai" && msg.answer && <AnswerCard answer={msg.answer} />}
+                {msg.role === "ai" && msg.answer && (
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <span aria-hidden="true" className="fb-av" style={{ width: 32, height: 32, borderRadius: "50%", background: "#0F2B25", color: "#D9B56F", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SERIF, fontWeight: 700, flexShrink: 0 }}>F</span>
+                    <div style={{ flex: 1, minWidth: 0 }}><AnswerCard answer={msg.answer} /></div>
+                  </div>
+                )}
 
                 {/* AI response */}
                 {msg.role === "ai" && !msg.answer && (
-                  <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                    <div style={{ maxWidth: "82%", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <span aria-hidden="true" className="fb-av" style={{ width: 32, height: 32, borderRadius: "50%", background: "#0F2B25", color: "#D9B56F", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SERIF, fontWeight: 700, flexShrink: 0 }}>F</span>
+                    <div style={{ flex: 1, minWidth: 0, maxWidth: 720, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                       {/* Clarification question */}
                       {msg.transaction?.status === "needs_clarification" && (
-                        <div style={{ background: "rgba(31,94,255,0.07)", border: `1px solid rgba(31,94,255,0.2)`, borderRadius: 12, padding: "12px 16px", fontSize: "0.88rem", color: BLUE, lineHeight: 1.6 }}>
-                          🤔 {msg.text ?? msg.transaction.needs_clarification[0]}
+                        <div style={{ alignSelf: "flex-start", background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: "6px 18px 18px 18px", padding: "12px 16px", boxShadow: "0 10px 24px -20px rgba(15,43,37,0.6)" }}>
+                          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#8A6420", marginBottom: 4 }}>One quick question</div>
+                          <div style={{ fontSize: "0.98rem", color: "#10241F", lineHeight: 1.55 }}>{msg.text ?? msg.transaction.needs_clarification[0]}</div>
                         </div>
                       )}
 
@@ -816,62 +851,70 @@ export default function FreBookPage() {
             ))}
 
             {loading && (
-              <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "12px 18px", display: "flex", gap: 6, alignItems: "center" }}>
-                  {[0, 1, 2].map(i => <span key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: GOLD, display: "inline-block", animation: `bounce 0.9s ease-in-out ${i * 0.15}s infinite` }} />)}
-                  <span style={{ fontSize: "0.78rem", color: MUTED, marginLeft: 4 }}>Analysing transaction…</span>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <span aria-hidden="true" className="fb-av" style={{ width: 32, height: 32, borderRadius: "50%", background: "#0F2B25", color: "#D9B56F", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SERIF, fontWeight: 700, flexShrink: 0 }}>F</span>
+                <div style={{ background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: "6px 18px 18px 18px", padding: "12px 16px", display: "flex", gap: 6, alignItems: "center" }}>
+                  {[0, 1, 2].map(i => <span key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "#C99A4E", display: "inline-block", animation: `bounce 0.9s ease-in-out ${i * 0.15}s infinite` }} />)}
+                  <span style={{ fontSize: "0.82rem", color: "#5E6B66", marginLeft: 6 }}>Drafting the entry…</span>
                 </div>
               </div>
             )}
+            </div>
           </div>
 
-          {/* Input area */}
-          <div style={{ borderTop: `1px solid ${BORDER}`, padding: "0.75rem 1.25rem", background: "rgba(255,255,255,0.95)", flexShrink: 0 }}>
+          {/* Composer */}
+          <div className="fb-composer" style={{ background: "linear-gradient(180deg, rgba(246,241,231,0) 0%, #F6F1E7 28%)", padding: "0.5rem clamp(12px, 3vw, 28px) calc(0.9rem + env(safe-area-inset-bottom))", flexShrink: 0 }}>
+            <div style={{ maxWidth: 880, margin: "0 auto", display: "flex", flexDirection: "column", gap: 8 }}>
             {rowQueue.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "rgba(31,94,255,0.08)", border: "1px solid rgba(31,94,255,0.25)", borderRadius: 10, padding: "0.5rem 0.9rem", marginBottom: "0.6rem", fontSize: "0.78rem", color: BLUE }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: 12, padding: "0.55rem 0.9rem", fontSize: "0.8rem", color: "#10241F" }}>
                 <span style={{ fontWeight: 700 }}>Excel import: {batchTotal - rowQueue.length} of {batchTotal} sent</span>
-                {messages[messages.length - 1]?.transaction?.status === "needs_clarification" && <span style={{ color: AMBER }}>Paused — answer the question below to continue</span>}
-                <button onClick={() => setRowQueue([])} style={{ marginLeft: "auto", background: "none", border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 7, padding: "3px 10px", fontSize: "0.72rem", cursor: "pointer", fontFamily: "inherit" }}>Stop</button>
+                {messages[messages.length - 1]?.transaction?.status === "needs_clarification" && <span style={{ color: AMBER }}>Paused — answer the question to continue</span>}
+                <button onClick={() => setRowQueue([])} style={{ marginLeft: "auto", background: "none", border: "1px solid #E6DFD0", color: "#5E6B66", borderRadius: 8, padding: "3px 10px", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit" }}>Stop</button>
               </div>
             )}
-            {/* Quick action chips */}
-            <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
-              <button onClick={downloadTemplate} style={{ fontSize: "0.68rem", padding: "3px 10px", borderRadius: 20, border: "1px solid rgba(11,122,85,0.35)", background: "rgba(11,122,85,0.08)", color: GREEN, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", fontWeight: 600 }}>
-                ⬇ Excel template
+            {/* Suggestions */}
+            <div className="fb-chips" style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }}>
+              <button onClick={downloadTemplate} className="fb-chip" style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #0F2B25", background: "#0F2B25", color: "#FFFFFF", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg> Excel template
               </button>
-              <button onClick={() => fileRef.current?.click()} style={{ fontSize: "0.68rem", padding: "3px 10px", borderRadius: 20, border: "1px solid rgba(35,42,99,0.35)", background: "rgba(35,42,99,0.08)", color: GOLD, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", fontWeight: 600 }}>
-                📎 Upload Excel / PDF / Word / photo
-              </button>
-              {["Paid rent ₹25,000 by bank", "Received cash ₹10,000 from customer", "How much am I owed?", "Biggest expenses this year", "Profit this month vs last month"].map(chip => (
-                <button key={chip} onClick={() => { setInput(chip); inputRef.current?.focus(); }} style={{ fontSize: "0.68rem", padding: "3px 10px", borderRadius: 20, border: `1px solid ${BORDER}`, background: "#FFFFFF", color: MUTED, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+              {["Paid rent ₹25,000 by bank", "Received ₹10,000 cash from customer", "How much am I owed?", "Biggest expenses this year", "Profit this month vs last"].map(chip => (
+                <button key={chip} onClick={() => { setInput(chip); inputRef.current?.focus(); }} className="fb-chip" style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #E0D6C1", background: "#FFFFFF", color: "#2E3B36", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
                   {chip}
                 </button>
               ))}
             </div>
 
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
+            <div className="fb-box" style={{ background: "#FFFFFF", border: "1px solid #D9CDB2", borderRadius: 22, boxShadow: "0 22px 50px -32px rgba(15,43,37,0.55)", padding: "6px 8px 8px 16px" }}>
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder="Type a transaction… e.g. 'Paid office rent ₹25,000 from the bank'"
+                aria-label="Describe a transaction or ask a question"
+                placeholder={messages[messages.length - 1]?.transaction?.status === "needs_clarification" ? "Type your answer…" : "Tell FreBook what happened — e.g. Paid office rent ₹25,000 from the bank"}
                 rows={2}
-                style={{ flex: 1, background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "10px 14px", borderRadius: 12, fontSize: "0.9rem", fontFamily: "inherit", outline: "none", resize: "none", lineHeight: 1.5 }}
+                style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: "none", color: "#10241F", padding: "10px 2px 6px", fontSize: "1rem", fontFamily: "inherit", outline: "none", resize: "none", lineHeight: 1.5 }}
               />
-              {/* Attachment */}
               <input ref={fileRef} type="file" accept="image/*,.pdf,.doc,.docx,.xlsx,.xls,.csv,.txt" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
-              <button onClick={() => fileRef.current?.click()} title="Attach bill, invoice, Excel, Word or photo" style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, color: MUTED, width: 40, height: 40, borderRadius: 10, cursor: "pointer", fontSize: "1.1rem", flexShrink: 0 }}>📎</button>
-              <button onClick={() => cameraRef.current?.click()} title="Snap a bill with your camera" aria-label="Snap a bill" style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, color: MUTED, width: 40, height: 40, borderRadius: 10, cursor: "pointer", fontSize: "1rem", flexShrink: 0 }}>📷</button>
-              {/* Voice */}
-              <button onClick={toggleVoice} title="Voice input" style={{ background: listening ? "rgba(194,50,31,0.15)" : "#FFFFFF", border: `1px solid ${listening ? "rgba(194,50,31,0.4)" : BORDER}`, color: listening ? RED : MUTED, width: 40, height: 40, borderRadius: 10, cursor: "pointer", fontSize: "1.1rem", flexShrink: 0 }}>
-                {listening ? "⏹" : "🎙"}
-              </button>
-              {/* Send */}
-              <button onClick={() => sendMessage(input)} disabled={loading || !input.trim()} style={{ background: GOLD, border: "none", color: "#F5F6FA", width: 40, height: 40, borderRadius: 10, cursor: loading ? "wait" : "pointer", fontSize: "1.15rem", flexShrink: 0, opacity: loading || !input.trim() ? 0.5 : 1 }}>→</button>
+              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                {[
+                  { t: "Attach bill, invoice, statement, Excel, Word or photo", d: "M21 11.5l-8.6 8.6a5 5 0 01-7.1-7.1l8.6-8.6a3.5 3.5 0 015 5l-8.6 8.6a2 2 0 01-2.8-2.8l7.9-7.9", run: () => fileRef.current?.click() },
+                  { t: "Snap a bill with your camera", d: "M4 8h3l2-3h6l2 3h3v11H4zM12 10a3.5 3.5 0 100 7 3.5 3.5 0 000-7", run: () => cameraRef.current?.click() },
+                  { t: listening ? "Stop voice input" : "Voice input", d: listening ? "M7 7h10v10H7z" : "M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3zM5 11a7 7 0 0014 0M12 18v3", run: toggleVoice },
+                ].map(b => (
+                  <button key={b.t} onClick={b.run} title={b.t} aria-label={b.t} className="fb-ico" style={{ width: 40, height: 40, borderRadius: 12, border: "none", background: listening && b.t.startsWith("Stop") ? "#FDECEA" : "transparent", color: listening && b.t.startsWith("Stop") ? "#C2321F" : "#4D5B56", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={b.d} /></svg>
+                  </button>
+                ))}
+                <span className="fb-hint" style={{ flex: 1, textAlign: "right", fontSize: "0.74rem", color: "#7A847F", paddingRight: 10 }}>Enter ↵ to send · nothing posts until you confirm</span>
+                <span className="fb-hint-sp" style={{ flex: 1 }} />
+                <button onClick={() => sendMessage(input)} disabled={loading || !input.trim()} aria-label="Send" style={{ display: "flex", alignItems: "center", gap: 10, background: "#0F2B25", border: "none", color: "#FFFFFF", padding: "0 6px 0 18px", height: 44, borderRadius: 999, cursor: loading ? "wait" : input.trim() ? "pointer" : "default", fontWeight: 800, fontSize: "0.9rem", fontFamily: "inherit", opacity: loading || !input.trim() ? 0.55 : 1, flexShrink: 0 }}>
+                  Send <span aria-hidden="true" style={{ width: 32, height: 32, borderRadius: "50%", background: "#D9B56F", color: "#0F2B25", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6" /></svg></span>
+                </button>
+              </div>
             </div>
-            {voiceBar && <div style={{ marginTop: "0.5rem" }}>{voiceBar}</div>}
-            <div style={{ fontSize: "0.66rem", color: MUTED, marginTop: "0.4rem" }}>Enter to send · Shift+Enter for newline · All AI entries require confirmation before posting</div>
+            {voiceBar && <div>{voiceBar}</div>}
+            </div>
           </div>
         </div>
         )}
@@ -922,6 +965,15 @@ export default function FreBookPage() {
         @media (max-width: 640px) { .fb-tiles6 { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } .fb-ask { grid-template-columns: minmax(0,1fr) !important; } }
         .fb-spin { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: fbSpin .7s linear infinite; vertical-align: -2px; margin-right: 6px; } @keyframes fbSpin { to { transform: rotate(360deg); } }
         .fb-mic-dot { animation: fbPulse 1.2s ease-in-out infinite; } @keyframes fbPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
+        .fb-ex, .fb-chip, .fb-ico { transition: background .15s, border-color .15s, color .15s; }
+        .fb-ex:hover, .fb-ex:focus-visible { background: #FFFFFF !important; border-color: #C99A4E !important; outline: none; }
+        .fb-chip:hover, .fb-chip:focus-visible { border-color: #C99A4E !important; outline: none; }
+        .fb-ico:hover, .fb-ico:focus-visible { background: #F3EDE1 !important; color: #0F2B25 !important; outline: none; }
+        .fb-box:focus-within { border-color: #C99A4E !important; box-shadow: 0 0 0 3px rgba(217,181,111,0.25), 0 22px 50px -32px rgba(15,43,37,0.55) !important; }
+        .fb-msg { animation: fbIn .25s ease-out both; } @keyframes fbIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        .fb-chips::-webkit-scrollbar { display: none; } .fb-hint-sp { display: none; }
+        @media (max-width: 640px) { .fb-welcome { grid-template-columns: minmax(0,1fr) !important; } .fb-welcome > div { border-left: none !important; border-top: 1px solid #EFE8D9; } .fb-hint { display: none; } .fb-hint-sp { display: block; } .fb-av { width: 26px !important; height: 26px !important; font-size: 0.8rem; } }
+        @media (prefers-reduced-motion: reduce) { .fb-msg { animation: none; } }
         .fb-toplink:hover, .fb-toplink:focus-visible { background: rgba(217,181,111,0.14); color: #FFFFFF !important; outline: none; }
         @media (max-width: 760px) {
           .fb-tag, .fb-more, .fb-toplink { display: none !important; }
