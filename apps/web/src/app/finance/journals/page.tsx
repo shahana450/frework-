@@ -70,6 +70,10 @@ export default function JournalsPage() {
   const [incomeIds, setIncomeIds] = useState<Set<string>>(new Set());
   const [bizId, setBizId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "draft" | "posted" | "ai">("all");
+  const [loadErr, setLoadErr] = useState("");
+  const [query, setQuery] = useState("");
+  const [shown, setShown] = useState(100);          // rows drawn; thousands at once froze the page
+  const checkedIncome = useRef<Set<string>>(new Set());
 
   // Detail drawer state
   const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
@@ -99,40 +103,18 @@ export default function JournalsPage() {
       setBizId(saved);
       loadPushStatus(saved).then(setPushed);
       supabase.from("fw_fin_businesses").select("name").eq("id", saved).single().then(({ data: b }) => { if (b) setBizName(b.name); });
-      // The database returns at most 1000 rows per request — page through all of them
-      const rows: Journal[] = [];
-      for (let from = 0; from < 100000; from += 1000) {
-        const { data } = await supabase.from("fw_fin_journals")
-          .select("id,entry_no,date,narration,type,status,total_debit,total_credit,reference_no,ai_generated,created_at,reversed_by,reversal_of")
-          .eq("business_id", saved)
-          .order("date", { ascending: false }).order("entry_no", { ascending: false })
-          .range(from, from + 999);
-        rows.push(...((data ?? []) as Journal[]));
-        if (!data || data.length < 1000) break;
-      }
+      // One server read (access checked once) — the browser query was slow on big books
+      const r = await fetch(`/api/finance/books?business_id=${saved}&lines=0`).catch(() => null);
+      const d = r ? await r.json().catch(() => ({})) : {};
+      if (!r || !r.ok) setLoadErr(d.error ?? "We couldn't load your entries right now.");
+      const rows = (d.journals ?? []) as Journal[];
       setJournals(rows);
       setLoading(false);
 
-      // Which posted entries record income? Those get an "Invoice" button.
-      const posted = rows.filter(j => j.status === "posted").map(j => j.id);
-      const income = new Set<string>();
-      for (let i = 0; i < posted.length; i += 200) {
-        const { data: ls } = await supabase.from("fw_fin_journal_lines")
-          .select("journal_id,dr_amount,cr_amount,fw_fin_chart_of_accounts(name,type,sub_type)").in("journal_id", posted.slice(i, i + 200));
-        const byJ = new Map<string, { dr: number; cr: number; account: string; accountType: string | null; subType: string | null }[]>();
-        for (const l of (ls ?? []) as unknown as { journal_id: string; dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { name: string; type: string; sub_type: string | null } | null }[]) {
-          const a = byJ.get(l.journal_id) ?? [];
-          a.push({ dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0, account: l.fw_fin_chart_of_accounts?.name ?? "", accountType: l.fw_fin_chart_of_accounts?.type ?? null, subType: l.fw_fin_chart_of_accounts?.sub_type ?? null });
-          byJ.set(l.journal_id, a);
-        }
-        for (const [jid, lines] of byJ) if (isIncomeEntry(lines)) income.add(jid);
-      }
-      setIncomeIds(income);
-
       // Auto-open drawer if ?id= is set
       if (idParam) {
-        const match = rows.find(j => j.id === idParam);
-        if (match) openDrawer(match);
+        const at = rows.findIndex(j => j.id === idParam);
+        if (at >= 0) { if (at >= 100) setShown(at + 20); openDrawer(rows[at]); }
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -169,9 +151,36 @@ export default function JournalsPage() {
 
   const typeFilter = typeParam ? typeParam.split(",").map(t => t.trim()).filter(Boolean) : [];
   const afterTypeFilter = typeFilter.length > 0 ? journals.filter(j => typeFilter.includes(j.type)) : journals;
-  const filtered = filter === "all" ? afterTypeFilter
+  const byStatus = filter === "all" ? afterTypeFilter
     : filter === "ai" ? afterTypeFilter.filter(j => j.ai_generated)
     : afterTypeFilter.filter(j => j.status === filter);
+  const q = query.trim().toLowerCase();
+  const filtered = q ? byStatus.filter(j => j.entry_no?.toLowerCase().includes(q) || j.narration?.toLowerCase().includes(q) || String(j.total_debit).includes(q)) : byStatus;
+  const visible = filtered.slice(0, shown);
+
+  // Which rows on screen record income? Those get an "Invoice" button. Checked only for what's drawn.
+  const visibleKey = visible.map(j => j.id).join(",");
+  useEffect(() => {
+    const todo = visible.filter(j => j.status === "posted" && !checkedIncome.current.has(j.id)).map(j => j.id);
+    if (!todo.length) return;
+    todo.forEach(id => checkedIncome.current.add(id));
+    (async () => {
+      for (let i = 0; i < todo.length; i += 100) {
+        const { data: ls } = await supabase.from("fw_fin_journal_lines")
+          .select("journal_id,dr_amount,cr_amount,fw_fin_chart_of_accounts(name,type,sub_type)").in("journal_id", todo.slice(i, i + 100));
+        const byJ = new Map<string, { dr: number; cr: number; account: string; accountType: string | null; subType: string | null }[]>();
+        for (const l of (ls ?? []) as unknown as { journal_id: string; dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { name: string; type: string; sub_type: string | null } | null }[]) {
+          const a = byJ.get(l.journal_id) ?? [];
+          a.push({ dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0, account: l.fw_fin_chart_of_accounts?.name ?? "", accountType: l.fw_fin_chart_of_accounts?.type ?? null, subType: l.fw_fin_chart_of_accounts?.sub_type ?? null });
+          byJ.set(l.journal_id, a);
+        }
+        const found = [...byJ].filter(([, lines]) => isIncomeEntry(lines)).map(([id]) => id);
+        if (found.length) setIncomeIds(prev => new Set([...prev, ...found]));
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleKey]);
+
   const pageTitle = typeFilter.length === 1 ? (TYPE_TITLES[typeFilter[0]] ?? "Journal Entries") : "Journal Entries";
   const totalDebit = filtered.reduce((a, j) => a + (j.total_debit || 0), 0);
 
@@ -221,7 +230,7 @@ export default function JournalsPage() {
         </Link>
       </nav>
 
-      <div style={{ maxWidth: selectedJournal ? 1300 : 1100, margin: "0 auto", padding: "2rem", display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
+      <div style={{ maxWidth: selectedJournal ? 1480 : 1320, margin: "0 auto", padding: "2rem", display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
 
         {/* Main list */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -242,6 +251,8 @@ export default function JournalsPage() {
             </div>
           </div>
 
+          <input value={query} onChange={ev => { setQuery(ev.target.value); setShown(100); }} placeholder="Search entry no, narration or amount…" aria-label="Search entries"
+            style={{ width: "100%", height: 40, borderRadius: 10, border: "1px solid rgba(20,26,58,0.14)", padding: "0 14px", fontSize: "0.88rem", fontFamily: "inherit", marginBottom: "0.75rem", background: "#FFFFFF" }} />
           <div style={{ marginBottom: "1rem", display: "flex", flexDirection: "column", gap: 8 }}>
             <TallyBar preferName={bizName} returnTo="/finance/journals">
               {tally.status === "connected" && (
@@ -264,6 +275,8 @@ export default function JournalsPage() {
           <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 12, overflow: "hidden" }}>
             {loading ? (
               <div style={{ padding: "4rem", textAlign: "center", color: "rgba(20,26,58,0.55)" }}>Loading…</div>
+            ) : loadErr ? (
+              <div style={{ padding: "3rem", textAlign: "center", color: "#C2321F" }}>{loadErr} <button onClick={() => window.location.reload()} style={{ marginLeft: 8, background: "#232A63", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer" }}>Try again</button></div>
             ) : filtered.length === 0 ? (
               <div style={{ padding: "4rem", textAlign: "center" }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📒</div>
@@ -285,7 +298,7 @@ export default function JournalsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map(j => {
+                    {visible.map(j => {
                       const isHighlighted = j.id === idParam;
                       const isSelected = selectedJournal?.id === j.id;
                       return (
@@ -341,6 +354,13 @@ export default function JournalsPage() {
                     })}
                   </tbody>
                 </table>
+                {filtered.length > visible.length && (
+                  <div style={{ padding: "0.9rem", textAlign: "center", borderTop: "1px solid rgba(20,26,58,0.08)" }}>
+                    <button onClick={() => setShown(n => n + 200)} style={{ background: "#232A63", color: "#FFFFFF", border: "none", borderRadius: 8, padding: "8px 18px", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>
+                      Show 200 more ({(filtered.length - visible.length).toLocaleString("en-IN")} left)
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
