@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import LogoPicker from "@/components/LogoPicker";
+import DataControls from "@/components/DataControls";
 
 const STATES = ["Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"];
 const TYPES = [["proprietorship", "Proprietorship"], ["partnership", "Partnership"], ["llp", "LLP"], ["private_limited", "Private Limited"], ["public_limited", "Public Limited"], ["opc", "One Person Company"], ["huf", "HUF"], ["trust", "Trust / Society"]];
@@ -18,6 +19,7 @@ export default function BusinessDetailsPage() {
   const [p, setP] = useState<P | null>(null);
   const [orig, setOrig] = useState<P | null>(null);
   const [canEdit, setCanEdit] = useState(false);
+  const [role, setRole] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -31,7 +33,7 @@ export default function BusinessDetailsPage() {
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setMsg({ ok: false, text: d.error ?? "Couldn't load your business details." }); return; }
       const prof = Object.fromEntries(Object.entries(d.profile).map(([k, v]) => [k, (v as string) ?? ""])) as P;
-      setP(prof); setOrig(prof); setCanEdit(!!d.can_edit);
+      setP(prof); setOrig(prof); setCanEdit(!!d.can_edit); setRole(d.role ?? "");
     });
   }, [router]);
 
@@ -125,6 +127,8 @@ export default function BusinessDetailsPage() {
               </label>
               {field("pincode", "PIN code", { mono: true, ph: "673001" })}
             </>)}
+
+            {role && <DataControls businessId={bizId} businessName={orig?.name ?? ""} role={role} />}
 
             <div style={{ position: "sticky", bottom: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: C.surface, border: `1px solid ${C.strong}`, borderRadius: 16, padding: "12px 14px", boxShadow: "0 18px 40px -20px rgba(20,26,58,0.35)" }}>
               {msg && <span role="status" style={{ flex: 1, minWidth: 200, fontSize: 14, fontWeight: 600, color: msg.ok ? C.pos : C.neg }}>{msg.text}</span>}

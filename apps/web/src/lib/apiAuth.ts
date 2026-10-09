@@ -42,8 +42,10 @@ export async function requireBusiness(req: NextRequest, businessId: string | nul
 
 /** The user's role in a business (owner, FreWork admin or team member), or null. Also used where there's no web request, e.g. WhatsApp. */
 export async function roleOf(user: { id: string; email?: string | null }, businessId: string): Promise<Role | null> {
-  const { data: biz } = await admin.from("fw_fin_businesses").select("owner_id").eq("id", businessId).maybeSingle();
+  // select(*) so this works before and after the deleted_at column exists (2026-10-20_t5_business_delete.sql)
+  const { data: biz } = await admin.from("fw_fin_businesses").select("*").eq("id", businessId).maybeSingle();
   if (!biz) return null;
+  if ((biz as { deleted_at?: string | null }).deleted_at) return null;   // deleted: nobody reaches it until restored or purged
   if (biz.owner_id === user.id) return "owner";
   if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) return "admin";
   if (!user.email) return null;

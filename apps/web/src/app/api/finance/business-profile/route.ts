@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   if (error || !data) return serverError("business-profile", error, "We couldn't load your business details.");
   const profile: Profile = {};
   for (const f of FIELDS) profile[f] = (data as Record<string, unknown>)[f] as string ?? "";
-  return NextResponse.json({ profile, can_edit: gate.role === "owner" || gate.role === "admin" });
+  return NextResponse.json({ profile, can_edit: gate.role === "owner" || gate.role === "admin", role: gate.role });
 }
 
 export async function POST(req: NextRequest) {
