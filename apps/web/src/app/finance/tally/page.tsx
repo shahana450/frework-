@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { findTallyPort } from "@/lib/tallyUtils";
 import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -570,14 +571,20 @@ export default function TallyPage() {
     try {
       // Use $$CurrentCompany TDL Report — always returns the active company
       const xml = TALLY_CURCOMP_XML;
-      const res = await tallyFetch(tallyUrl, xml, 5000);
+      let res = await tallyFetch(tallyUrl, xml, 5000);
+      let port = tallyPort;
+      if (res.status === 502) {
+        // The bridge is running but Tally isn't on this port — look for it on the usual ones
+        const alt = await findTallyPort(xml, tallyPort);
+        if (alt) { res = alt.res; port = alt.port; setTallyPort(alt.port); }
+      }
       if (res.ok) {
         const text = await res.text();
         const found = extractCompanyName(text);
         setRawDebug(text.slice(0, 800));
         setConnStatus("connected");
         setConnMsg(found ? `Connected — ${found}` : "Connected to Tally");
-        localStorage.setItem("fw_tally_port", tallyPort); connectTally({ port: tallyPort });
+        localStorage.setItem("fw_tally_port", port); connectTally({ port });
 
         // Also fetch full company list so user can manually select the right one
         try {
@@ -654,7 +661,9 @@ export default function TallyPage() {
         // Signal to the import effect — bizId is guaranteed set by this point
         setTriggerImport(t => t + 1);
       } else {
-        setConnStatus("error"); setConnMsg(`Tally responded with HTTP ${res.status}`);
+        setConnStatus("error"); setConnMsg(res.status === 502
+          ? `The bridge is running, but Tally isn't answering on port ${tallyPort} (also tried 9000 and 7001). In Tally: F1 → Settings → Connectivity → set "TallyPrime acts as" to Both, note the port, enter it here, and make sure a company is open.`
+          : `Tally responded with HTTP ${res.status}`);
       }
     } catch (e: unknown) {
       setConnStatus("error");

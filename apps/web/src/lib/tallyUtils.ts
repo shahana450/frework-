@@ -56,6 +56,15 @@ export function tallyFetch(url: string, body: string, timeoutMs = 15000): Promis
     });
 }
 
+/** The bridge answers 502 when Tally isn't on the port asked for. Tries the ports Tally is usually set to. */
+export async function findTallyPort(body: string, tried: string): Promise<{ port: string; res: Response } | null> {
+  for (const port of ["9000", "7001", "9999", "9001"]) {
+    if (port === tried) continue;
+    try { const res = await tallyFetch(`http://localhost:${port}`, body, 4000); if (res.ok) return { port, res }; } catch { /* next */ }
+  }
+  return null;
+}
+
 export type TallyVoucher = {
   date: string;
   voucherType: string;
