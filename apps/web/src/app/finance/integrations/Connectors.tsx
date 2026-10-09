@@ -72,7 +72,7 @@ export function ConnectPanel({ provider, data, call, reload }: { provider: strin
           {provider === "bank_feed" ? (<>
             {data.bank_feed_demo && <div style={{ width: "100%", fontSize: 12.5, color: C.warn, background: C.warnSoft, padding: "6px 10px", borderRadius: 8 }}>Demo mode — sample bank lines, not from your bank. Real feeds start once FreWork&apos;s Account Aggregator partner is live.</div>}
             <input placeholder="Mobile linked to the bank (10 digits)" inputMode="numeric" value={f.mobile ?? ""} onChange={e => setF({ ...f, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })} style={{ ...inp, fontFamily: MONO }} autoComplete="tel" />
-            <input placeholder="Bank ledger in FreWork (e.g. HDFC Bank)" value={f.bank_ledger ?? ""} onChange={e => setF({ ...f, bank_ledger: e.target.value })} style={inp} />
+            <input placeholder="Your bank ledger in FreWork" value={f.bank_ledger ?? ""} onChange={e => setF({ ...f, bank_ledger: e.target.value })} style={inp} />
           </>) : provider === "razorpay" ? (<>
             <input placeholder="Key ID (rzp_live_…)" value={f.key_id ?? ""} onChange={e => setF({ ...f, key_id: e.target.value })} style={{ ...inp, fontFamily: MONO }} autoComplete="off" />
             <input placeholder="Key Secret" type="password" value={f.key_secret ?? ""} onChange={e => setF({ ...f, key_secret: e.target.value })} style={inp} autoComplete="new-password" />

@@ -238,7 +238,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
           <div style={{ flex: 1 }} />
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem" }}>
             <span style={{ color: MUTED }}>Bank ledger</span>
-            <input list="sm-banks" value={bankLedger} onChange={e => setBankLedger(e.target.value)} placeholder="e.g. HDFC Bank" style={{ ...inputStyle, width: 190, borderColor: bankLedger ? BORDER : AMBER }} />
+            <input list="sm-banks" value={bankLedger} onChange={e => setBankLedger(e.target.value)} placeholder="Your bank ledger" style={{ ...inputStyle, width: 190, borderColor: bankLedger ? BORDER : AMBER }} />
             <datalist id="sm-banks">{accounts.filter(a => a.sub_type === "bank" || /bank/i.test(a.name)).map(a => <option key={a.id} value={a.name} />)}</datalist>
           </label>
           <button onClick={onClose} disabled={posting} style={{ background: "#FFFFFF", border: "none", color: MUTED, width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: "1.1rem" }}>×</button>

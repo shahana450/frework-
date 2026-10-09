@@ -102,7 +102,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
             <label htmlFor="cmd" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Describe a transaction or ask a question</label>
             <textarea id="cmd" rows={3} value={text} onChange={e => setText(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); go(text); } }}
-              placeholder={mode === "record" ? "Paid office rent ₹25,000 from HDFC Bank for October" : "Who owes me for more than 60 days?"}
+              placeholder={mode === "record" ? "Paid office rent ₹25,000 from the bank for October" : "Who owes me for more than 60 days?"}
               style={{ display: "block", width: "100%", boxSizing: "border-box", resize: "none", border: "none", outline: "none", background: "transparent", padding: "12px 12px 4px", fontSize: 17, lineHeight: 1.5, color: C.ink }} />
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px 6px" }}>
               <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill" style={{ width: 40, height: 40, borderRadius: 11, background: C.tile, display: "flex", alignItems: "center", justifyContent: "center", color: C.muted }}>

@@ -17,6 +17,7 @@ const anthropic = getAI();
 
 import type { Attachment } from "@/lib/attachments";
 import { fileToShelf, fyOfDate } from "@/lib/shelf";
+import { validateDraft, looksLikeInjection, INJECTION_REPLY } from "@/lib/frebook/validateDraft";
 
 // ── POST ───────────────────────────────────────────────────────────────────────
 export async function handleChatBook(req: NextRequest, deps: { readAttachment?: (f: File) => Promise<Attachment> } = {}) {
@@ -55,6 +56,7 @@ export async function handleChatBook(req: NextRequest, deps: { readAttachment?: 
     if (gate instanceof NextResponse) return gate;
     user_id = gate.user.id;
     if (!message) message = "Book this transaction from the attached document.";
+    if (looksLikeInjection(message)) return NextResponse.json({ error: INJECTION_REPLY, code: "INSTRUCTION_REFUSED" }, { status: 422 });
 
     // Every document given to FreBook is also kept on the Shelf (Bills & Invoices rack) — saved after the reply is sent
     if (uploaded) {
@@ -102,7 +104,7 @@ export async function handleChatBook(req: NextRequest, deps: { readAttachment?: 
       `Today: ${today}.`,
       `Business: ${biz.name || "unknown"}, Country: ${biz.country}, State: ${biz.state ?? "not set"}, Tax ID: ${biz.gstin ?? "not set"}, Base currency: ${biz.baseCurrency}.`,
       `Financial Year: ${fy?.label ?? "unknown"} (${fy?.start_date} to ${fy?.end_date})${fy?.is_locked ? " — PERIOD LOCKED" : ""}.`,
-      `Available Accounts: ${accountList || "Cash in Hand, HDFC Bank, Sales, Purchases, Debtors Control, Creditors Control, Capital Account"}.`,
+      `Available Accounts: ${accountList || "none yet — do not name any bank, party or ledger the user didn't say; leave it for the user to choose"}.`,
       attachment ? `\nAttached file: ${attachment.name}.${attachment.text ? `\nFile contents:\n${attachment.text}` : " (see attached document)"}` : "",
     ].filter(Boolean).join(" ");
 
@@ -166,7 +168,7 @@ Never invent facts; leave out what is not shown.`,
 
     const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return NextResponse.json({ error: "I couldn't understand that. Try describing it as e.g. \"Paid ₹25,000 rent from HDFC Bank\"." }, { status: 422 });
+    if (!jsonMatch) return NextResponse.json({ error: "I couldn't understand that. Try describing it as e.g. \"Paid ₹25,000 rent from my bank account\"." }, { status: 422 });
 
     let ai: AiIntent;
     try { ai = JSON.parse(jsonMatch[0]); } catch { return NextResponse.json({ error: "I couldn't understand that. Please rephrase." }, { status: 422 }); }
@@ -187,6 +189,16 @@ Never invent facts; leave out what is not shown.`,
       return NextResponse.json({ answer: { ...answer, tool }, session_id: sessionId });
     }
     const parsed = await interpretWith(supabase, ai, accounts ?? [], business_id, today, biz);
+    // The AI proposes; the validation layer decides (entity resolution, no silent ledgers, narration fidelity, GST, amounts)
+    const verdict = validateDraft({
+      message, history: history.filter(h => h.role === "user").map(h => h.content),
+      draft: { lines: parsed.lines, narrative: parsed.narrative, party_name: parsed.party_name },
+      ledgers: (accounts ?? []) as { name: string; type?: string; sub_type?: string | null }[],
+      business: { gstin: biz.gstin, country: biz.country }, draftsInMessage: 1,
+    });
+    parsed.lines = parsed.lines.map((l, i) => ({ ...l, account: verdict.lines[i]?.account ?? l.account, is_new_account: verdict.lines[i]?.is_new_account ?? l.is_new_account }));
+    parsed.narrative = verdict.narration;
+    for (const b of verdict.blocked) parsed.warnings.unshift(`⛔ ${b}`);
 
     // Period lock check
     if (parsed.status === "complete" && fy?.is_locked) {
@@ -207,7 +219,7 @@ Never invent facts; leave out what is not shown.`,
       }
     }
 
-    if (bulk) return NextResponse.json({ parsed, session_id: null, duplicate, fy_locked: !!fy?.is_locked });
+    if (bulk) return NextResponse.json({ parsed, verdict, session_id: null, duplicate, fy_locked: !!fy?.is_locked });
 
     // Persist session
     const histContent = message + (attachment ? ` [Attached ${attachment.name}: ${parsed.document_summary ?? "document"}]` : "");
@@ -215,7 +227,7 @@ Never invent facts; leave out what is not shown.`,
     const newHistory = [...history, { role: "user" as const, content: histContent }, { role: "assistant" as const, content: assistantContent }].slice(-20);
 
     saveSession(newHistory);
-    return NextResponse.json({ parsed, session_id: sessionId, duplicate, fy_locked: !!fy?.is_locked });
+    return NextResponse.json({ parsed, verdict, session_id: sessionId, duplicate, fy_locked: !!fy?.is_locked });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
     if (/Gemini (429|503)|high demand|overloaded/i.test(msg)) return serverError("chat-book", e, "The AI is busy right now. Please try again in a minute.");

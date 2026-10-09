@@ -31,7 +31,7 @@ export function helpText(bizName: string): string {
     `📒 *FreBook* · ${bizName}`,
     "",
     "*Record* — just type it:",
-    "• Paid rent 25000 from HDFC",
+    "• Paid rent 25000 from bank",
     "• Sold goods to Asha 11800 incl GST, on credit",
     "• 200 ka petrol cash mein",
     "• Send a photo/PDF of a bill",

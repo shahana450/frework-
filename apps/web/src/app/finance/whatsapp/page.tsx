@@ -78,7 +78,7 @@ export default function WhatsAppPage() {
         </section>
 
         <section style={{ background: C.tile, border: `1px solid ${C.line}`, borderRadius: 22, padding: 22, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, fontSize: 14, lineHeight: 1.6 }}>
-          <div><b>Record</b><div style={{ color: C.muted }}>Paid rent 25000 from HDFC<br />Sold to Asha 11800 incl GST on credit<br />200 ka petrol cash mein<br />📷 a bill photo or PDF</div></div>
+          <div><b>Record</b><div style={{ color: C.muted }}>Paid rent 25000 from bank<br />Sold to Asha 11800 incl GST on credit<br />200 ka petrol cash mein<br />📷 a bill photo or PDF</div></div>
           <div><b>Ask</b><div style={{ color: C.muted }}>Profit this month<br />Who owes me?<br />Cash and bank balance<br />GST collected last month</div></div>
           <div><b>Reply words</b><div style={{ color: C.muted }}><b>YES</b> post the draft · <b>NO</b> drop it<br /><b>SWITCH</b> change business<br /><b>HELP</b> examples</div></div>
         </section>

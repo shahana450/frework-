@@ -19,7 +19,7 @@ journal_adjustment (ONLY for non-cash adjustments like depreciation, provisions,
 FIELDS:
 - amount: the amount stated (number, no symbols). If the user says "including GST" or a bill shows a total, give the TOTAL and set gst.inclusive=true. If they say "plus GST", give the pre-tax amount and gst.inclusive=false.
 - payment_mode: "cash" | "bank" | "credit" (credit = not paid/received yet) | null if unknown.
-- payment_account: the exact bank/cash ledger from the account list if named or obvious (e.g. "HDFC" → "HDFC Bank"); for cash use the cash ledger; null if not stated. For bank_transfer this is the SOURCE account.
+- payment_account: the exact bank/cash ledger from the account list if named or obvious (a short name the user typed → the matching full ledger name in the list; never a bank the user didn't name); for cash use the cash ledger; null if not stated. For bank_transfer this is the SOURCE account.
 - counter_account: the other ledger — the expense, income, asset, loan or destination-bank ledger. Use an existing ledger from the list when it fits the nature of the transaction; otherwise propose a specific standard name (e.g. "Electricity Charges", "Office Rent", "Travelling Expenses", "Computers"). Never vague names like "Expenses" or "Misc". For sale default "Sales", purchase default "Purchases".
 - party_name: customer/supplier/person named, else null. A missing party name is NOT a reason to ask.
 - gst: {applicable, rate, inclusive, supply:"intra"|"inter"} — the indirect tax (GST/VAT). Only set applicable when tax is mentioned or shown on the document. Follow the TAX rules for this business below.

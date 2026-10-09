@@ -94,7 +94,7 @@ export async function handleWhatsApp(sb: SupabaseClient, m: Incoming): Promise<s
   const res = await getAI().messages.create({ model: "claude-sonnet-4-6", max_tokens: 1500, system: intentSystemFor(biz), messages: msgs as never });
   const raw = res.content[0]?.type === "text" ? res.content[0].text.trim() : "";
   let ai: AiIntent;
-  try { ai = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? ""); } catch { return "🤔 I couldn't understand that. Try e.g. *Paid rent 25000 from HDFC* or *Profit this month*."; }
+  try { ai = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? ""); } catch { return "🤔 I couldn't understand that. Try e.g. *Paid rent 25000 from bank* or *Profit this month*."; }
   const hist = (assistant: string) => [...sess.history, { role: "user" as const, content: message.slice(0, 500) || "[document]" }, { role: "assistant" as const, content: assistant }];
 
   if (ai.kind === "query") {

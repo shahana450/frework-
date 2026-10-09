@@ -8,6 +8,7 @@ import { LEDGER_HEADS } from "@/lib/ledgerHeads";
 import StatementModal from "./StatementModal";
 import ReviewChecks from "./ReviewChecks";
 import BulkTemplateModal from "./BulkTemplateModal";
+import type { Verdict } from "@/lib/frebook/validateDraft";
 import SimpleTemplateModal from "./SimpleTemplateModal";
 import { parseSimpleGrid, SIMPLE_HEADERS, type SimpleEntry } from "@/lib/simpleTemplate";
 import InstallApp from "./InstallApp";
@@ -22,6 +23,7 @@ type ChatMessage = {
   role: Role;
   text?: string;
   transaction?: ParsedTransaction;
+  verdict?: Verdict;
   status?: MsgStatus;
   entryNo?: string;
   journalId?: string;
@@ -84,7 +86,7 @@ async function downloadTemplate() {
   const ws = XLSX.utils.aoa_to_sheet([
     SIMPLE_HEADERS,
     ["01-04-2026", "Rent", 25000, "", "Office rent for April"],
-    ["", "HDFC Bank", "", 25000, ""],
+    ["", "Bank Account", "", 25000, ""],
     ["02-04-2026", "Cash", 11800, "", "Sale to Asha Traders"],
     ["", "Sales", "", 10000, ""],
     ["", "Output GST", "", 1800, ""],
@@ -95,7 +97,7 @@ async function downloadTemplate() {
     [""],
     ["• Write each entry like a journal: one row per ledger, debits and credits."],
     ["• Date (DD-MM-YYYY) goes on the FIRST row of an entry. Leave it blank on the rows below that belong to the same entry."],
-    ["• Particulars: the ledger name (e.g. Rent, HDFC Bank, Cash, Sales, Asha Traders). New names are created after you confirm their group."],
+    ["• Particulars: the ledger name (e.g. Rent, your bank ledger, Cash, Sales, Asha Traders). New names are created after you confirm their group."],
     ["• Debit / Credit: the amount in one of the two columns. Each entry's debits must equal its credits."],
     ["• Narration: optional, on the first row of the entry."],
     ["• Delete the sample rows, then upload the file in FreBook with the 📎 button. You review every entry before anything is posted."],
@@ -208,7 +210,7 @@ export default function FreBookPage() {
   // ── New chat ───────────────────────────────────────────────────────────────
   function newChat() {
     setCurrentSession(null);
-    setMessages([{ id: "welcome", role: "system", text: `Hello! I'm FreBook, your chat bookkeeper for **${bizName}**. Tell me any transaction in plain language and I'll convert it into a proper journal entry.\n\n**Examples:**\n• "Paid office rent ₹25,000 by HDFC Bank"\n• "Sold goods to ABC Ltd for ₹1,18,000 including 18% GST on credit"\n• "Received ₹50,000 from customer Rahul against INV-101"\n• "Paid salary ₹75,000 through bank"\n\n**Or ask your books:**\n• "How much am I owed?" · "Show expenses above ₹10,000 this month" · "Why did profit fall?" · "GST collected last month"`, timestamp: Date.now() }]);
+    setMessages([{ id: "welcome", role: "system", text: `Hello! I'm FreBook, your chat bookkeeper for **${bizName}**. Tell me any transaction in plain language and I'll convert it into a proper journal entry.\n\n**Examples:**\n• "Paid office rent ₹25,000 from the bank"\n• "Sold goods to ABC Ltd for ₹1,18,000 including 18% GST on credit"\n• "Received ₹50,000 from customer Rahul against INV-101"\n• "Paid salary ₹75,000 through bank"\n\n**Or ask your books:**\n• "How much am I owed?" · "Show expenses above ₹10,000 this month" · "Why did profit fall?" · "GST collected last month"`, timestamp: Date.now() }]);
   }
 
   useEffect(() => { if (bizName) newChat(); }, [bizName]);
@@ -356,7 +358,7 @@ export default function FreBookPage() {
         return;
       }
 
-      const { parsed, session_id, duplicate, fy_locked } = data as { parsed: ParsedTransaction; session_id: string; duplicate: ChatMessage["duplicate"]; fy_locked: boolean };
+      const { parsed, verdict, session_id, duplicate, fy_locked } = data as { parsed: ParsedTransaction; verdict?: Verdict; session_id: string; duplicate: ChatMessage["duplicate"]; fy_locked: boolean };
       if (!currentSession && session_id) {
         setCurrentSession(session_id);
         if (uid && bid) loadSessions(uid, bid);
@@ -374,7 +376,7 @@ export default function FreBookPage() {
       }
 
       const aiMsg: ChatMessage = {
-        id: `a-${Date.now()}`, role: "ai", transaction: parsed,
+        id: `a-${Date.now()}`, role: "ai", transaction: parsed, verdict,
         status: parsed.status === "needs_clarification" ? "pending" : "pending",
         duplicate, fyLocked: fy_locked, timestamp: Date.now(),
         text: parsed.status === "needs_clarification" ? parsed.needs_clarification[0] : undefined,
@@ -594,7 +596,7 @@ export default function FreBookPage() {
                       onKeyDown={handleKey}
                       autoFocus
                       aria-label="Describe a transaction or ask a question"
-                      placeholder="e.g. Paid office rent ₹25,000 from HDFC Bank — or ask: how much do customers owe me?"
+                      placeholder="e.g. Paid office rent ₹25,000 from the bank — or ask: how much do customers owe me?"
                       rows={4}
                       style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: "none", borderBottom: "1px solid #EAE3D3", padding: "18px 6px 14px", color: "#10241F", fontSize: "1.05rem", fontFamily: "inherit", outline: "none", resize: "none", lineHeight: 1.55 }}
                     />
@@ -827,7 +829,7 @@ export default function FreBookPage() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder="Type a transaction… e.g. 'Paid office rent ₹25,000 by HDFC Bank'"
+                placeholder="Type a transaction… e.g. 'Paid office rent ₹25,000 from the bank'"
                 rows={2}
                 style={{ flex: 1, background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "10px 14px", borderRadius: 12, fontSize: "0.9rem", fontFamily: "inherit", outline: "none", resize: "none", lineHeight: 1.5 }}
               />
@@ -972,13 +974,28 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
           <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{label}</div>
         </div>
         <div style={{ flex: 1 }} />
-        {/* Confidence badge */}
-        <span style={{ fontSize: "0.66rem", padding: "2px 8px", borderRadius: 20, background: tx.confidence > 0.85 ? "rgba(11,122,85,0.1)" : tx.confidence > 0.6 ? "rgba(184,120,0,0.1)" : "rgba(194,50,31,0.1)", color: tx.confidence > 0.85 ? GREEN : tx.confidence > 0.6 ? AMBER : RED, border: `1px solid ${tx.confidence > 0.85 ? "rgba(11,122,85,0.3)" : tx.confidence > 0.6 ? "rgba(184,120,0,0.3)" : "rgba(194,50,31,0.3)"}` }}>
-          {Math.round(tx.confidence * 100)}% confident
-        </span>
+        {/* Status comes from FreBook's checks — "Ready" only when nothing was assumed */}
+        {msg.verdict && (() => {
+          const st = msg.verdict.status;
+          const [bg, fg, label] = st === "ready" ? ["rgba(11,122,85,0.1)", GREEN, "✓ Ready"] : st === "blocked" ? ["rgba(194,50,31,0.1)", RED, "⛔ Can't post"] : ["rgba(184,120,0,0.12)", AMBER, "Needs review"];
+          return <span style={{ fontSize: "0.7rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: bg, color: fg }}>{label}</span>;
+        })()}
         {isPosted && <span style={{ fontSize: "0.72rem", color: GREEN, fontWeight: 700 }}>✓ Posted</span>}
         {isCancelled && <span style={{ fontSize: "0.72rem", color: MUTED }}>Cancelled</span>}
       </div>
+
+      {msg.verdict && !isPosted && (msg.verdict.blocked.length > 0 || msg.verdict.questions.length > 0 || msg.verdict.assumptions.length > 0) && (
+        <div style={{ padding: "0.7rem 1rem", borderBottom: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", gap: 6, fontSize: "0.8rem", background: msg.verdict.status === "blocked" ? "rgba(194,50,31,0.05)" : "rgba(184,120,0,0.05)" }}>
+          {msg.verdict.blocked.map((b, i) => <div key={"b" + i} style={{ color: RED, fontWeight: 700 }}>⛔ {b}</div>)}
+          {msg.verdict.questions.map((q, i) => (
+            <div key={"q" + i} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontWeight: 700 }}>❓ {q.text}</span>
+              {q.options && q.options.length > 0 && <span style={{ color: MUTED }}>Options: {q.options.join(" · ")} — use Edit to choose, then post.</span>}
+            </div>
+          ))}
+          {msg.verdict.assumptions.map((a, i) => <div key={"a" + i} style={{ color: AMBER }}>• {a}</div>)}
+        </div>
+      )}
 
       {/* Meta row */}
       <div style={{ padding: "0.6rem 1rem", borderBottom: `1px solid ${BORDER}`, display: "flex", gap: "1.5rem", flexWrap: "wrap", fontSize: "0.78rem" }}>
@@ -1045,7 +1062,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span>{line.account}</span>
                       {line.is_new_account && <span style={{ fontSize: "0.62rem", color: AMBER, background: "rgba(184,120,0,0.1)", padding: "1px 6px", borderRadius: 8, border: `1px solid rgba(184,120,0,0.25)` }}>New</span>}
-                      {line.confidence < 0.85 && !line.is_new_account && <span style={{ fontSize: "0.62rem", color: AMBER }}>~{Math.round(line.confidence * 100)}%</span>}
+
                     </div>
                   )}
                 </td>
@@ -1091,7 +1108,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
               <span style={{ color: MUTED }}>Account:</span>
               <strong>{tx.counter_account}</strong>
-              {typeof tx.account_confidence === "number" && (
+              {typeof window !== "undefined" && /[?&]debug=1/.test(window.location.search) && typeof tx.account_confidence === "number" && (
                 <span style={{ fontSize: "0.66rem", padding: "1px 7px", borderRadius: 10, color: tx.account_confidence >= 0.85 ? GREEN : tx.account_confidence >= 0.7 ? AMBER : RED, background: tx.account_confidence >= 0.85 ? "rgba(11,122,85,0.1)" : tx.account_confidence >= 0.7 ? "rgba(184,120,0,0.1)" : "rgba(194,50,31,0.1)" }}>
                   {tx.account_confidence < 0.7 ? "⚠ Needs review · " : ""}{Math.round(tx.account_confidence * 100)}%
                 </span>

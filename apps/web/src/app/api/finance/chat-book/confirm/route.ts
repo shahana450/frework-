@@ -5,6 +5,12 @@ import { resolveLedgers } from "@/lib/ledgerResolve";
 import { postJournal, validateEntry, voucherTypeFor, postingErrorMessage } from "@/lib/posting";
 import { requireBusiness, serverError } from "@/lib/apiAuth";
 import { can } from "@/lib/permissions";
+import { canonicalName } from "@/lib/frebook/validateDraft";
+import { inferHead, headFromType } from "@/lib/ledgerHeads";
+
+const canonKeyOf = (s: string) => canonicalName(s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const isGstLedger = (s: string) => /\b(cgst|sgst|igst|utgst|gst|cess)\b/i.test(s);
+const suggestedHead = (name: string, type?: string | null) => (inferHead(name) ?? headFromType(type)).key;
 
 // Runs at the edge nearest the user (Mumbai for India) — next to the database, not across the world
 export const runtime = "edge";
@@ -50,6 +56,23 @@ export async function POST(req: NextRequest) {
     // Check the amounts before creating any ledgers
     try { validateEntry(transaction.lines.map(l => ({ accountId: l.account || "?", dr: l.debit ?? 0, cr: l.credit ?? 0 })), transaction.transaction_date); }
     catch (e) { const p = postingErrorMessage(e); return NextResponse.json({ error: p.message }, { status: p.status }); }
+
+    // The same gate as drafting, enforced here so nothing reaches the books by skipping the draft card
+    const [{ data: bizRow }, { data: existing }] = await Promise.all([
+      supabase.from("fw_fin_businesses").select("gstin,country").eq("id", business_id).maybeSingle(),
+      supabase.from("fw_fin_chart_of_accounts").select("name").eq("business_id", business_id).eq("is_group", false).limit(5000),
+    ]);
+    const gstin = (bizRow as { gstin?: string | null } | null)?.gstin ?? null;
+    const country = (bizRow as { country?: string | null } | null)?.country ?? "IN";
+    if (country === "IN" && !(gstin && gstin.trim().length >= 15) && transaction.lines.some(l => isGstLedger(l.account) && ((l.debit ?? 0) || (l.credit ?? 0)))) {
+      return NextResponse.json({ error: "This business has no GSTIN, so GST can't be charged or claimed. Remove the GST lines, or add your GSTIN in Business Details if you're registered.", code: "GST_UNREGISTERED" }, { status: 422 });
+    }
+    // No silent ledger creation: every new ledger needs its group confirmed by the user
+    const have = new Set((existing ?? []).map(a => canonKeyOf(a.name)));
+    const unconfirmed = [...new Set(transaction.lines.map(l => l.account.trim()))].filter(n => !have.has(canonKeyOf(n)) && !(account_heads ?? {})[n]);
+    if (unconfirmed.length) {
+      return NextResponse.json({ needs_heads: unconfirmed.map(account => ({ account, suggested: suggestedHead(account, transaction.lines.find(l => l.account.trim() === account)?.suggested_type) })), will_create: [] });
+    }
 
     const resolved = await resolveLedgers(supabase, business_id, transaction.lines.map(l => ({ name: l.account, suggestedType: l.suggested_type })), account_heads ?? {});
     if (!resolved.ok) return NextResponse.json({ needs_heads: resolved.needHeads, will_create: resolved.willCreate });
