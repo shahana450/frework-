@@ -4,6 +4,19 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { signedMoney, type PresentedBS, type PresentedPL, type StmtSection } from "@/lib/statements";
+import { plExportRows, bsExportRows, exportFileName, type ExportMeta } from "@/lib/statementExport";
+
+// Excel export of the presented statement — the same lines and signs as the screen (and as Print → PDF)
+async function downloadStatementExcel(kind: "pl" | "bs", presented: PresentedPL | PresentedBS, meta: ExportMeta) {
+  const XLSX = await import("xlsx");
+  const rows = kind === "pl" ? plExportRows(presented as PresentedPL, meta) : bsExportRows(presented as PresentedBS, meta);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = [{ wch: 52 }, { wch: 18 }];
+  for (let r = 0; r < rows.length; r++) { const c = ws[XLSX.utils.encode_cell({ r, c: 1 })]; if (c && typeof c.v === "number") c.z = "#,##,##0.00;-#,##,##0.00"; }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, kind === "pl" ? "Profit & Loss" : "Balance Sheet");
+  XLSX.writeFile(wb, exportFileName(kind === "pl" ? "Profit-and-Loss" : "Balance-Sheet", meta));
+}
 
 type ReportTab = "trial_balance" | "profit_loss" | "balance_sheet" | "cash_flow";
 type AccRow = { code?: string; name: string; type: string; sub_type: string | null; dr: number; cr: number };
@@ -90,6 +103,7 @@ export default function ReportsPage() {
   const [bsData, setBsData] = useState<BSData | null>(null);
   const [tbData, setTbData] = useState<TBData | null>(null);
   const [error, setError] = useState("");
+  const [bizName, setBizName] = useState("");
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -97,6 +111,7 @@ export default function ReportsPage() {
       const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
+      supabase.from("fw_fin_businesses").select("name").eq("id", saved).maybeSingle().then(({ data }) => { if (data?.name) setBizName(data.name); });
       const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label,is_current,start_date,end_date").eq("business_id", saved).order("start_date", { ascending: false });
       const list = (fys ?? []).map(f => ({ id: f.id, label: f.label, start_date: f.start_date, end_date: f.end_date }));
       // Make sure the year that contains today is always available, even if it isn't set up yet
@@ -156,8 +171,14 @@ export default function ReportsPage() {
             {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
           </select>
         )}
-        <button onClick={() => window.print()} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "#141A3A", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
-          🖨 Print
+        {((tab === "profit_loss" && plData?.presented) || (tab === "balance_sheet" && bsData?.presented)) && (
+          <button onClick={() => downloadStatementExcel(tab === "profit_loss" ? "pl" : "bs", (tab === "profit_loss" ? plData!.presented : bsData!.presented)!, { business: bizName || "Business", period: period ? `FY ${period.label} (${period.start_date} to ${period.end_date})` : "" })}
+            style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "#141A3A", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
+            ⬇ Excel
+          </button>
+        )}
+        <button onClick={() => window.print()} title="Print, or choose 'Save as PDF' — the printout is the presented statement shown on screen" style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "#141A3A", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
+          🖨 Print / PDF
         </button>
       </nav>
 
