@@ -99,19 +99,32 @@ export async function loadQueryBooks(sb: SupabaseClient, businessId: string, unt
     accounts.push(...(data ?? []));
     if (!data || data.length < 1000) break;
   }
-  const journals: QJournal[] = [];
+  // Journals first, then their lines in chunks: a joined read of lines per journal times out on big books
+  const heads: { id: string; date: string; entry_no: string; narration: string | null; type: string; party_name?: string | null }[] = [];
   let withParty = true;
-  for (let from = 0; ; from += 500) {
-    const cols = `id,date,entry_no,narration,type${withParty ? ",party_name" : ""},fw_fin_journal_lines(account_id,dr_amount,cr_amount)`;
-    const { data, error } = await sb.from("fw_fin_journals").select(cols).eq("business_id", businessId).eq("status", "posted").lte("date", until).order("date").range(from, from + 499);
-    if (error && withParty && /party_name/.test(error.message)) { withParty = false; from -= 500; continue; }
-    if (error) return { accounts, journals, error };
-    for (const j of (data ?? []) as unknown as { id: string; date: string; entry_no: string; narration: string | null; type: string; party_name?: string | null; fw_fin_journal_lines: { account_id: string; dr_amount: number; cr_amount: number }[] }[]) {
-      journals.push({ id: j.id, date: String(j.date).slice(0, 10), entry_no: j.entry_no, narration: j.narration ?? "", type: j.type, party_name: j.party_name ?? null,
-        lines: (j.fw_fin_journal_lines ?? []).map(l => ({ account_id: l.account_id, dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0 })) });
-    }
-    if (!data || data.length < 500) break;
+  for (let from = 0; ; from += 1000) {
+    const cols = `id,date,entry_no,narration,type${withParty ? ",party_name" : ""}`;
+    const { data, error } = await sb.from("fw_fin_journals").select(cols).eq("business_id", businessId).eq("status", "posted").lte("date", until).order("date").order("id").range(from, from + 999);
+    if (error && withParty && /party_name/.test(error.message)) { withParty = false; from -= 1000; continue; }
+    if (error) return { accounts, journals: [], error };
+    heads.push(...((data ?? []) as unknown as typeof heads));
+    if (!data || data.length < 1000) break;
   }
+  const lines = new Map<string, { account_id: string; dr: number; cr: number }[]>();
+  const chunks: string[][] = [];
+  for (let i = 0; i < heads.length; i += 300) chunks.push(heads.slice(i, i + 300).map(h => h.id));
+  for (let i = 0; i < chunks.length; i += 6) {
+    const res = await Promise.all(chunks.slice(i, i + 6).map(ids => sb.from("fw_fin_journal_lines").select("journal_id,account_id,dr_amount,cr_amount").in("journal_id", ids)));
+    for (const { data, error } of res) {
+      if (error) return { accounts, journals: [], error };
+      for (const l of (data ?? []) as { journal_id: string; account_id: string; dr_amount: number; cr_amount: number }[]) {
+        const list = lines.get(l.journal_id) ?? [];
+        list.push({ account_id: l.account_id, dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0 });
+        lines.set(l.journal_id, list);
+      }
+    }
+  }
+  const journals: QJournal[] = heads.map(j => ({ id: j.id, date: String(j.date).slice(0, 10), entry_no: j.entry_no, narration: j.narration ?? "", type: j.type, party_name: j.party_name ?? null, lines: lines.get(j.id) ?? [] }));
   return { accounts, journals };
 }
 
