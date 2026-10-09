@@ -67,3 +67,49 @@ export function voucherOf(lines: SimpleLine[]): string {
   if (lines.some(l => cb(l.ledger) && l.debit > 0) && lines.every(l => !cb(l.ledger) || l.debit > 0)) return "receipt";
   return "journal";
 }
+
+// ── Cash / bank receipts & payments template ───────────────────────────────────
+// Date | Receipt/Payment | Cash/Bank | Party / Ledger | Amount | Narration — one row per entry.
+// Receipt: Dr Cash/Bank, Cr Party.  Payment: Dr Party, Cr Cash/Bank.
+export const CASHBANK_HEADERS = ["Date", "Receipt/Payment", "Cash/Bank", "Party / Ledger", "Amount", "Narration"];
+
+function cashBankHeader(grid: unknown[][]) {
+  for (let r = 0; r < Math.min(grid.length, 15); r++) {
+    const h = (grid[r] ?? []).map(norm);
+    const at = (...names: string[]) => h.findIndex(x => names.includes(x));
+    const c = { date: at("date"), kind: at("receiptpayment", "paymentreceipt", "type", "rp", "vouchertype"), cb: at("cashbank", "cashorbank", "bankcash", "mode", "paidvia", "cashbankledger"),
+      party: at("partyledger", "party", "ledger", "particulars", "account", "ledgername", "partyname"), amt: at("amount", "amountrs", "amountinr", "rs"), nar: at("narration", "remarks", "description", "notes") };
+    if (c.date >= 0 && c.kind >= 0 && c.cb >= 0 && c.party >= 0 && c.amt >= 0) return { row: r, ...c };
+  }
+  return null;
+}
+
+/** Null when the sheet isn't the receipts & payments template. */
+export function parseCashBankGrid(grid: unknown[][]): SimpleEntry[] | null {
+  const h = cashBankHeader(grid);
+  if (!h) return null;
+  const out: SimpleEntry[] = [];
+  for (let i = h.row + 1; i < grid.length; i++) {
+    const r = grid[i] ?? [];
+    const kindRaw = String(r[h.kind] ?? "").trim(), cb = String(r[h.cb] ?? "").replace(/\s+/g, " ").trim();
+    const party = String(r[h.party] ?? "").replace(/\s+/g, " ").trim(), n = cellNum(r[h.amt]);
+    const amount = isNaN(n) ? 0 : r2(Math.abs(n));
+    const nar = h.nar >= 0 ? String(r[h.nar] ?? "").trim() : "";
+    if (!kindRaw && !cb && !party && !amount) continue;                       // blank row
+    const date = cellDate(r[h.date]);
+    const k = kindRaw.toLowerCase();
+    const kind = /^(r|rec|rcpt|receipt|received|in|credit)/.test(k) ? "receipt" : /^(p|pay|pmt|payment|paid|out|debit)/.test(k) ? "payment" : null;
+    const e: SimpleEntry = { row: i + 1, date: date || "", narration: nar || `${kind === "receipt" ? "Received from" : "Paid to"} ${party}`.trim(), lines: [], debit: amount, credit: amount, error: null };
+    if (!date) e.error = `Row ${i + 1}: "${String(r[h.date] ?? "")}" isn't a date (use DD-MM-YYYY).`;
+    else if (!kind) e.error = `Row ${i + 1}: write Receipt or Payment.`;
+    else if (!cb) e.error = `Row ${i + 1}: Cash/Bank is empty — write Cash or your bank ledger name.`;
+    else if (!party) e.error = `Row ${i + 1}: Party / Ledger is empty.`;
+    else if (!amount) e.error = `Row ${i + 1}: Amount is empty.`;
+    else if (cb.toLowerCase() === party.toLowerCase()) e.error = `Row ${i + 1}: Cash/Bank and Party / Ledger are the same.`;
+    if (!e.error) e.lines = kind === "receipt"
+      ? [{ ledger: cb, debit: amount, credit: 0 }, { ledger: party, debit: 0, credit: amount }]
+      : [{ ledger: party, debit: amount, credit: 0 }, { ledger: cb, debit: 0, credit: amount }];
+    out.push(e);
+  }
+  return out;
+}

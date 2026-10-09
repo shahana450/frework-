@@ -13,7 +13,7 @@ import type { Verdict } from "@/lib/frebook/validateDraft";
 import { postWarnings } from "@/lib/frebook/postWarnings";
 import { saveDrafts, loadDrafts, isOpenDraft, pickDrafts, type StoredMsg } from "@/lib/frebook/draftStore";
 import SimpleTemplateModal from "./SimpleTemplateModal";
-import { parseSimpleGrid, SIMPLE_HEADERS, type SimpleEntry } from "@/lib/simpleTemplate";
+import { parseSimpleGrid, parseCashBankGrid, SIMPLE_HEADERS, CASHBANK_HEADERS, type SimpleEntry } from "@/lib/simpleTemplate";
 import InstallApp from "./InstallApp";
 import AnswerCard from "./AnswerCard";
 import type { Answer } from "@/lib/bookQueries";
@@ -113,12 +113,44 @@ async function downloadTemplate() {
   XLSX.writeFile(wb, "FreBook-Bulk-Template.xlsx");
 }
 
+// Cash / bank receipts & payments: one row per entry
+async function downloadCashBankTemplate() {
+  const XLSX = await import("xlsx");
+  const ws = XLSX.utils.aoa_to_sheet([
+    CASHBANK_HEADERS,
+    ["01-04-2026", "Receipt", "HDFC Bank", "Asha Traders", 50000, "Received against INV-101"],
+    ["02-04-2026", "Payment", "Cash", "Office Rent", 25000, "Rent for April"],
+    ["03-04-2026", "Payment", "HDFC Bank", "Salary", 42000, "Salary to Anu"],
+    ["04-04-2026", "Receipt", "Cash", "Sales", 11800, "Cash sale"],
+  ]);
+  ws["!cols"] = [{ wch: 13 }, { wch: 17 }, { wch: 20 }, { wch: 28 }, { wch: 14 }, { wch: 40 }];
+  const help = XLSX.utils.aoa_to_sheet([
+    ["FreBook receipts & payments template — how to fill"],
+    [""],
+    ["• One row = one entry."],
+    ["• Date: DD-MM-YYYY."],
+    ["• Receipt/Payment: write Receipt (money came in) or Payment (money went out)."],
+    ["• Cash/Bank: write Cash, or your bank ledger name exactly as in your books (e.g. HDFC Bank)."],
+    ["• Party / Ledger: who paid you or whom you paid (customer, supplier), or the expense/income head (Rent, Salary, Sales)."],
+    ["• Amount: the full amount, no ₹ sign needed."],
+    ["• Narration: optional."],
+    ["• Receipt posts Dr Cash/Bank, Cr Party. Payment posts Dr Party, Cr Cash/Bank."],
+    ["• Delete the sample rows, then upload the file in FreBook with the 📎 button. You review every entry before anything is posted."],
+  ]);
+  help["!cols"] = [{ wch: 120 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Entries");
+  XLSX.utils.book_append_sheet(wb, help, "Instructions");
+  XLSX.writeFile(wb, "FreBook-Receipts-Payments-Template.xlsx");
+}
+
 // The simple template, read exactly (null when the file isn't laid out that way)
 async function parseSimpleTemplate(file: File): Promise<SimpleEntry[] | null> {
   const XLSX = await import("xlsx");
   const wb = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
   const ws = wb.Sheets["Entries"] ?? wb.Sheets[wb.SheetNames[0]];
-  const entries = parseSimpleGrid(XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: true }) as unknown[][]);
+  const grid = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: true }) as unknown[][];
+  const entries = parseCashBankGrid(grid) ?? parseSimpleGrid(grid);
   return entries && entries.length ? entries : null;
 }
 
@@ -717,7 +749,8 @@ export default function FreBookPage() {
               <div className="fb-more" style={{ background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: 16, padding: "18px 24px", display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
                 <span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: "1.1rem", fontWeight: 700, color: "#10241F", flex: 1, minWidth: 220 }}>Your books, in conversation.</span>
                 <Link href="/finance/whatsapp" style={{ color: "#2E3B36", fontSize: "0.85rem", textDecoration: "none" }}>💬 Entries via WhatsApp</Link>
-                <button onClick={downloadTemplate} style={{ background: "none", border: "none", color: "#2E3B36", cursor: "pointer", fontFamily: "inherit", fontSize: "0.85rem", padding: 0 }}>⬇ Excel template for bulk entries</button>
+                <button onClick={downloadTemplate} style={{ background: "none", border: "none", color: "#2E3B36", cursor: "pointer", fontFamily: "inherit", fontSize: "0.85rem", padding: 0 }}>⬇ Journal template</button>
+                <button onClick={downloadCashBankTemplate} style={{ background: "none", border: "none", color: "#2E3B36", cursor: "pointer", fontFamily: "inherit", fontSize: "0.85rem", padding: 0 }}>⬇ Receipts &amp; payments template</button>
                 {sessions.length > 0 && <button onClick={() => setSidebarOpen(true)} style={{ background: "none", border: "none", color: "#2E3B36", cursor: "pointer", fontFamily: "inherit", fontSize: "0.85rem", padding: 0 }}>🕘 Previous chats ({sessions.length})</button>}
               </div>
             </div>
@@ -875,7 +908,10 @@ export default function FreBookPage() {
             {/* Suggestions */}
             <div className="fb-chips" style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }}>
               <button onClick={downloadTemplate} className="fb-chip" style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #0F2B25", background: "#0F2B25", color: "#FFFFFF", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg> Excel template
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg> Journal template
+              </button>
+              <button onClick={downloadCashBankTemplate} className="fb-chip" style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #0F2B25", background: "#0F2B25", color: "#FFFFFF", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg> Receipts &amp; payments template
               </button>
               {["Paid rent ₹25,000 by bank", "Received ₹10,000 cash from customer", "How much am I owed?", "Biggest expenses this year", "Profit this month vs last"].map(chip => (
                 <button key={chip} onClick={() => { setInput(chip); inputRef.current?.focus(); }} className="fb-chip" style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #E0D6C1", background: "#FFFFFF", color: "#2E3B36", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
