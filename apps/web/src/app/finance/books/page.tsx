@@ -103,26 +103,16 @@ export default function BooksPage() {
   const load = useCallback(async () => {
     if (!bizId || !ready || (!allYears && !fy)) return;
     setLoading(true); setLoadErr(""); setSelected(new Set()); setInTally({}); setCheckMsg("");
-    const all: Journal[] = [];
-    // Small pages: a big page with every line and ledger name can hit the database time limit
-    let size = 200;
-    for (let from = 0; from < 50000; from += size) {
-      let q = supabase.from("fw_fin_journals")
-        .select("id,entry_no,date,narration,type,status,total_debit,total_credit,reference_no,ai_generated,fw_fin_journal_lines(dr_amount,cr_amount,fw_fin_chart_of_accounts(name))")
-        .eq("business_id", bizId);
-      if (!allYears && fy) q = q.gte("date", fy.start_date).lte("date", fy.end_date);
-      const { data, error } = await q.order("date", { ascending: false }).order("entry_no", { ascending: false }).range(from, from + size - 1);
-      if (error && size > 50) { size = 50; from -= size; continue; }            // retry this page smaller
-      if (error) { console.error("books load failed", { bizId, from, error }); setLoadErr(`We couldn't load your entries right now (${error.message || error.code || "database error"}).`); break; }
-      all.push(...((data ?? []) as unknown as Journal[]));
-      if (!data || data.length < size) break;
-    }
+    // Read on the server: one access check instead of row security on every journal, line and ledger
+    const qs = new URLSearchParams({ business_id: bizId });
+    if (!allYears && fy) { qs.set("from", fy.start_date); if (fy.end_date) qs.set("to", fy.end_date); }
+    const r = await fetch(`/api/finance/books?${qs}`).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (!r || !r.ok) { console.error("books load failed", { bizId, status: r?.status, d }); setLoadErr(d.error ?? "We couldn't load your entries right now."); setJournals([]); setLoading(false); return; }
+    const all = (d.journals ?? []) as Journal[];
     setJournals(all); setLoading(false);
     // Entries outside the selected year are easy to miss (e.g. last year's bank statement) — count them so the page can say so
-    if (!allYears) {
-      const { count } = await supabase.from("fw_fin_journals").select("id", { count: "exact", head: true }).eq("business_id", bizId);
-      setTotalAll(Math.max(0, (count ?? 0) - all.length));
-    } else setTotalAll(0);
+    setTotalAll(allYears ? 0 : Math.max(0, (d.total ?? 0) - all.length));
   }, [bizId, fy, allYears, ready]);
 
   useEffect(() => { load(); }, [load]);
