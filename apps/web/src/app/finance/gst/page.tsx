@@ -8,6 +8,7 @@ import Link from "next/link";
 type GSTSummary = {
   month: string;
   total_sales: number;
+  taxable_sales?: number; nil_exempt_sales?: number; non_gst_sales?: number;
   total_purchases: number;
   output_tax: number;
   cgst_payable: number;
@@ -127,7 +128,7 @@ export default function GSTPage() {
               <>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
                   {[
-                    { label: "Total Sales (Taxable)", value: summary.total_sales, color: "#0B7A55" },
+                    { label: "Taxable sales", value: summary.taxable_sales ?? summary.total_sales, color: "#0B7A55" },
                     { label: "Total Purchases", value: summary.total_purchases, color: "#1F5EFF" },
                     { label: "Net GST Payable", value: summary.net_gst_payable, color: summary.net_gst_payable > 0 ? "#C2321F" : "#0B7A55" },
                   ].map(k => (
@@ -176,7 +177,9 @@ export default function GSTPage() {
                 <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid rgba(20,26,58,0.11)", fontWeight: 700 }}>GSTR-3B Summary — {monthLabel}</div>
                 {[
                   { section: "3.1", label: "Tax on outward and reverse charge inward supplies", value: summary.output_tax },
-                  { section: "3.1(a)", label: "Outward taxable supplies (other than zero rated, nil and exempted)", value: summary.total_sales, sub: true },
+                  { section: "3.1(a)", label: "Outward taxable supplies (other than zero rated, nil and exempted)", value: summary.taxable_sales ?? summary.total_sales, sub: true },
+                  { section: "3.1(c)", label: "Other outward supplies (nil rated, exempted)", value: summary.nil_exempt_sales ?? 0, sub: true },
+                  { section: "3.1(e)", label: "Non-GST outward supplies", value: summary.non_gst_sales ?? 0, sub: true },
                   { section: "4", label: "Eligible ITC", value: summary.input_credit },
                   { section: "4(A)(5)", label: "All other ITC (inputs, capital goods, services)", value: summary.input_credit, sub: true },
                   { section: "6.1", label: "Net Tax Payable (3.1 − 4)", value: summary.net_gst_payable },

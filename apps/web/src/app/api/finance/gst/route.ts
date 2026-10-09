@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { buildGstr1 } from "@/lib/gstr1";
 import { fileToShelf, fyOfDate } from "@/lib/shelf";
 import { docsFromJournals, type SrcJournal } from "@/lib/gstr1Source";
+import { gstSummary } from "@/lib/gstSummary";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -57,21 +58,9 @@ export async function GET(req: NextRequest) {
 
     if (report === "summary") {
       const rows = await monthJournals(bizId!, from, to);
-      let cgst = 0, sgst = 0, igst = 0, input = 0, sales = 0, purchases = 0;
-      for (const j of rows) for (const l of j.fw_fin_journal_lines ?? []) {
-        const name = l.fw_fin_chart_of_accounts?.name ?? "";
-        const net = (Number(l.cr_amount) || 0) - (Number(l.dr_amount) || 0);
-        const k = outKind(name);
-        if (k === "cgst") cgst += net; else if (k === "sgst") sgst += net; else if (k === "igst") igst += net;
-        if (isInput(name)) input -= net;
-        if (/^sales\b|sales account|revenue/i.test(name) && !/return/i.test(name)) sales += net;
-        if (/purchase|cost of goods/i.test(name) && !/return/i.test(name)) purchases -= net;
-      }
-      const output = cgst + sgst + igst;
-      return NextResponse.json({
-        month, total_sales: sales, total_purchases: purchases, output_tax: output,
-        cgst_payable: cgst, sgst_payable: sgst, igst_payable: igst, input_credit: input, net_gst_payable: Math.max(0, output - input),
-      });
+      // Sales are classified per entry: taxable only when that entry charged output GST
+      const s = gstSummary(rows.map(j => ({ metadata: (j.metadata ?? null) as never, lines: (j.fw_fin_journal_lines ?? []).map(l => ({ account: l.fw_fin_chart_of_accounts?.name ?? "", dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0 })) })));
+      return NextResponse.json({ month, ...s });
     }
 
     if (report === "gstr1" || report === "gstr1_json") {
