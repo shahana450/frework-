@@ -47,10 +47,14 @@ const isBankish = (l: { name?: string; account?: string; sub_type?: string | nul
 };
 const isGstLine = (account: string) => /\b(cgst|sgst|igst|utgst|gst|cess)\b/.test(norm(account));
 
-/** A ledger that already exists (exact, or same canonical name). */
-function findLedger(name: string, ledgers: Ledger[]): Ledger | undefined {
-  const k = norm(name), c = canonKey(name);
-  return ledgers.find(l => norm(l.name) === k) ?? ledgers.find(l => canonKey(l.name) === c);
+// Party names match case-insensitively and ignoring legal suffixes / punctuation ("ABC Traders Pvt. Ltd." = "abc traders")
+export const partyKey = (s: string) => norm(s).replace(/\b(m s|ms|messrs|pvt|private|ltd|limited|llp|inc|co|company|and co|traders?|enterprises?)\b/g, " ").replace(/\s+/g, "").trim();
+
+/** A ledger that already exists (exact, same canonical name, or the same party written differently). */
+export function findLedger(name: string, ledgers: Ledger[]): Ledger | undefined {
+  const k = norm(name), c = canonKey(name), p = partyKey(name);
+  return ledgers.find(l => norm(l.name) === k) ?? ledgers.find(l => canonKey(l.name) === c)
+    ?? (p.length >= 3 ? ledgers.filter(l => partyKey(l.name) === p).length === 1 ? ledgers.find(l => partyKey(l.name) === p) : undefined : undefined);
 }
 
 /** Did the user literally name it (this message or the conversation)? Every significant word must appear. */

@@ -18,13 +18,17 @@ test("rent paid from bank: Dr Office Rent / Cr HDFC Bank", () => {
 
 test("GST-inclusive purchase on credit splits CGST/SGST and credits creditors", () => {
   const r = buildEntry(base({ action: "purchase", amount: 118000, payment_mode: "credit", payment_account: null, party_name: "ABC Traders", gst: { applicable: true, rate: 18, inclusive: true, supply: "intra" } }));
-  assert.deepEqual(pick(r), [["Purchases", 100000, 0], ["Input CGST", 9000, 0], ["Input SGST", 9000, 0], ["Creditors Control", 0, 118000]]);
+  assert.deepEqual(pick(r), [["Purchases", 100000, 0], ["Input CGST", 9000, 0], ["Input SGST", 9000, 0], ["ABC Traders", 0, 118000]]);
   assert.equal(r.gst.taxable_value, 100000);
 });
 
 test("GST-exclusive inter-state sale uses IGST on top", () => {
-  const r = buildEntry(base({ action: "sale", amount: 50000, payment_mode: "credit", payment_account: null, gst: { applicable: true, rate: 18, inclusive: false, supply: "inter" } }));
-  assert.deepEqual(pick(r), [["Debtors Control", 59000, 0], ["Sales", 0, 50000], ["Output IGST", 0, 9000]]);
+  const r = buildEntry(base({ action: "sale", amount: 50000, payment_mode: "credit", payment_account: null, party_name: "Bengaluru Electricals", gst: { applicable: true, rate: 18, inclusive: false, supply: "inter" } }));
+  assert.deepEqual(pick(r), [["Bengaluru Electricals", 59000, 0], ["Sales", 0, 50000], ["Output IGST", 0, 9000]]);
+  // B2: no customer named → ask; never post to a control ledger
+  const noParty = buildEntry(base({ action: "sale", amount: 50000, payment_mode: "credit", payment_account: null, gst: { applicable: true, rate: 18, inclusive: false, supply: "inter" } }));
+  assert.ok(noParty.missing.includes("customer"));
+  assert.ok(!noParty.lines.some(l => /control/i.test(l.account)));
 });
 
 test("professional fees with TDS 10%: net paid, TDS payable", () => {
@@ -47,8 +51,8 @@ test("cash payments default to Cash in Hand", () => {
 
 test("customer receipt, supplier payment, capital, drawings, transfer, loans", () => {
   const cases: [Partial<Intent>, (string | number)[][]][] = [
-    [{ action: "receipt_from_customer", amount: 50000 }, [["HDFC Bank", 50000, 0], ["Debtors Control", 0, 50000]]],
-    [{ action: "payment_to_supplier", amount: 20000 }, [["Creditors Control", 20000, 0], ["HDFC Bank", 0, 20000]]],
+    [{ action: "receipt_from_customer", amount: 50000, party_name: "Kumar Traders" }, [["HDFC Bank", 50000, 0], ["Kumar Traders", 0, 50000]]],
+    [{ action: "payment_to_supplier", amount: 20000, party_name: "Malabar Suppliers" }, [["Malabar Suppliers", 20000, 0], ["HDFC Bank", 0, 20000]]],
     [{ action: "capital_introduced", amount: 100000 }, [["HDFC Bank", 100000, 0], ["Capital Account", 0, 100000]]],
     [{ action: "drawings", amount: 5000 }, [["Drawings", 5000, 0], ["HDFC Bank", 0, 5000]]],
     [{ action: "bank_transfer", amount: 10000, counter_account: "Cash in Hand" }, [["Cash in Hand", 10000, 0], ["HDFC Bank", 0, 10000]]],
@@ -100,7 +104,7 @@ test("TDS deducted by the customer becomes TDS Receivable", () => {
   const rows = (r: ReturnType<typeof buildEntry>) => r.lines.map(l => [l.account, l.debit, l.credit]);
   // Client paid an earlier invoice: 45,000 into bank after TDS 5,000
   assert.deepEqual(rows(buildEntry({ action: "receipt_from_customer", amount: 45000, payment_mode: "bank", payment_account: "HDFC Bank", counter_account: null, party_name: "Acme", tds: t(5000, true) })),
-    [["HDFC Bank", 45000, 0], ["TDS Receivable", 5000, 0], ["Debtors Control", 0, 50000]]);
+    [["HDFC Bank", 45000, 0], ["TDS Receivable", 5000, 0], ["Acme", 0, 50000]]);
   // New sale received net of TDS
   assert.deepEqual(rows(buildEntry({ action: "sale", amount: 45000, payment_mode: "bank", payment_account: "HDFC Bank", counter_account: "Sales", party_name: "Acme", tds: t(5000, true) })),
     [["TDS Receivable", 5000, 0], ["HDFC Bank", 45000, 0], ["Sales", 0, 50000]]);
@@ -109,5 +113,5 @@ test("TDS deducted by the customer becomes TDS Receivable", () => {
     [["SBI", 9000, 0], ["TDS Receivable", 1000, 0], ["Interest on FD", 0, 10000]]);
   // Paying a supplier's bill after deducting our TDS
   assert.deepEqual(rows(buildEntry({ action: "payment_to_supplier", amount: 100000, payment_mode: "bank", payment_account: "HDFC Bank", counter_account: null, party_name: "BuildCo", tds: t(2000, false) })),
-    [["Creditors Control", 100000, 0], ["TDS Payable", 0, 2000], ["HDFC Bank", 0, 98000]]);
+    [["BuildCo", 100000, 0], ["TDS Payable", 0, 2000], ["HDFC Bank", 0, 98000]]);
 });

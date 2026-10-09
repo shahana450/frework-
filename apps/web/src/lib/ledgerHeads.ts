@@ -51,7 +51,7 @@ export function inferHead(name: string): LedgerHead | null {
 
 // Head from an AI type hint ("expense", "asset" ...), used only as the pre-selected suggestion
 export function headFromType(type: string | null | undefined): LedgerHead {
-  return headByKey(({ asset: "current_asset", liability: "current_liability", equity: "capital", income: "sales", expense: "indirect_expense" } as Record<string, string>)[type ?? ""] ?? "indirect_expense")!;
+  return headByKey(({ asset: "current_asset", liability: "current_liability", equity: "capital", income: "sales", expense: "indirect_expense", debtors: "debtors", creditors: "creditors" } as Record<string, string>)[type ?? ""] ?? "indirect_expense")!;
 }
 
 // Tally group for an existing account

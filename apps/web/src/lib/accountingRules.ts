@@ -128,6 +128,13 @@ function buildLocal(intent: Intent, tax: TaxModule): RuleResult {
   const inputTax = () => { for (const t of split.components) if (t.amount) lines.push(DR(t.inputLedger, t.amount, `Input ${t.code}`, "asset")); };
   const outputTax = () => { for (const t of split.components) if (t.amount) lines.push(CR(t.outputLedger, t.amount, `Output ${t.code}`, "liability")); };
   const needCounter = (label: string) => { if (!counter) missing.push(label); return counter ?? ""; };
+  // A customer/supplier is its own ledger (under Sundry Debtors / Creditors). A control-ledger name from the model is ignored.
+  const isControl = (s: string | null) => !!s && /\b(debtors?|creditors?|receivables?|payables?)\b.*\bcontrol\b|^sundry (debtors|creditors)$|^(debtors|creditors)$/i.test(s.trim());
+  const partyLedger = (side: "customer" | "supplier") => {
+    const p = party ?? (counter && !isControl(counter) ? counter : null);
+    if (!p) { missing.push(side === "customer" ? "customer" : "supplier"); return ""; }
+    return p;
+  };
 
   switch (intent.action) {
     case "expense_payment":
@@ -139,32 +146,36 @@ function buildLocal(intent: Intent, tax: TaxModule): RuleResult {
       inputTax();
       if (tdsAmt) lines.push(CR(tdsPayable, tdsAmt, `TDS ${intent.tds?.section ?? ""}`.trim(), "liability"));
       const net = gst.gross - tdsAmt;
-      lines.push(credit ? CR(DEFAULT_LEDGERS.creditors, net, party ? `Payable to ${party}` : "Creditors", "liability") : CR(settle ?? "", net, "Paid from", "asset"));
-      rule = `${intent.action === "asset_purchase" ? "Asset bought" : intent.action === "purchase" ? "Purchase" : "Expense"}: Dr ${acc}${g ? " + Input GST" : ""} — Cr ${credit ? "Creditors (unpaid)" : settle}${tdsAmt ? " + TDS Payable" : ""}`;
+      const supplier = credit ? partyLedger("supplier") : "";
+      lines.push(credit ? CR(supplier, net, `Payable to ${supplier || "supplier"}`, "creditors") : CR(settle ?? "", net, "Paid from", "asset"));
+      rule = `${intent.action === "asset_purchase" ? "Asset bought" : intent.action === "purchase" ? "Purchase" : "Expense"}: Dr ${acc}${g ? " + Input GST" : ""} — Cr ${credit ? `${supplier || "supplier"} (unpaid)` : settle}${tdsAmt ? " + TDS Payable" : ""}`;
       return { lines, rule, gst: gstOut, tds: tdsOut(net), missing, warnings };
     }
     case "sale": {
-      const acc = counter || DEFAULT_LEDGERS.sales;
+      const acc = counter && !isControl(counter) ? counter : DEFAULT_LEDGERS.sales;
       if (tdsAmt) lines.push(DR(tdsReceivable, tdsAmt, "TDS deducted by customer", "asset"));
-      lines.push(credit ? DR(DEFAULT_LEDGERS.debtors, gst.gross - tdsAmt, party ? `Receivable from ${party}` : "Debtors", "asset") : DR(settle ?? "", gst.gross - tdsAmt, "Received into", "asset"));
+      const customer = credit ? partyLedger("customer") : "";
+      lines.push(credit ? DR(customer, gst.gross - tdsAmt, `Receivable from ${customer || "customer"}`, "debtors") : DR(settle ?? "", gst.gross - tdsAmt, "Received into", "asset"));
       lines.push(CR(acc, gst.taxable, "Sales", "income"));
       outputTax();
-      rule = `Sale: Dr ${credit ? "Debtors (not yet received)" : settle} — Cr ${acc}${g ? " + Output GST" : ""}`;
+      rule = `Sale: Dr ${credit ? `${customer || "customer"} (not yet received)` : settle} — Cr ${acc}${g ? " + Output GST" : ""}`;
       return { lines, rule, gst: gstOut, tds: tdsOut(gst.gross - tdsAmt), missing, warnings };
     }
     case "receipt_from_customer":
       // Customer paid the invoice after deducting TDS: the TDS is a credit we claim against our own tax
       lines.push(DR(settle ?? "", amount - tdsAmt, "Received into", "asset"));
       if (tdsAmt) lines.push(DR(tdsReceivable, tdsAmt, "TDS deducted by customer", "asset"));
-      lines.push(CR(counter || DEFAULT_LEDGERS.debtors, amount, party ? `From ${party}` : "Debtors", "asset"));
-      rule = `Customer receipt: Dr ${settle}${tdsAmt ? " + TDS Receivable" : ""} — Cr ${counter || DEFAULT_LEDGERS.debtors}`;
+      { const customer = partyLedger("customer");
+        lines.push(CR(customer, amount, `From ${customer || "customer"} — on account / advance unless matched to an invoice`, "debtors"));
+        rule = `Customer receipt (on account): Dr ${settle}${tdsAmt ? " + TDS Receivable" : ""} — Cr ${customer || "customer"}`; }
       break;
     case "payment_to_supplier":
       // Paying a bill after deducting TDS: the TDS is owed to the government
-      lines.push(DR(counter || DEFAULT_LEDGERS.creditors, amount, party ? `To ${party}` : "Creditors", "liability"));
+      const supplierPaid = partyLedger("supplier");
+      lines.push(DR(supplierPaid, amount, `To ${supplierPaid || "supplier"} — on account unless matched to a bill`, "creditors"));
       if (tdsAmt) lines.push(CR(tdsPayable, tdsAmt, `TDS ${intent.tds?.section ?? ""}`.trim(), "liability"));
       lines.push(CR(settle ?? "", amount - tdsAmt, "Paid from", "asset"));
-      rule = `Supplier payment: Dr ${counter || DEFAULT_LEDGERS.creditors} — Cr ${settle}${tdsAmt ? " + TDS Payable" : ""}`;
+      rule = `Supplier payment (on account): Dr ${supplierPaid || "supplier"} — Cr ${settle}${tdsAmt ? " + TDS Payable" : ""}`;
       break;
     case "advance_to_supplier":
       lines.push(DR(counter || DEFAULT_LEDGERS.advanceToSupplier, amount, "Advance paid", "asset"), CR(settle ?? "", amount, "Paid from", "asset"));
@@ -247,6 +258,8 @@ export function questionFor(missing: string, intent: Intent): string {
       ? "Was this received in cash, into which bank, or is it still to be received (credit)?"
       : "Was this paid in cash, from which bank, or is it unpaid (on credit)?";
     case "expense_account": return "What was this expense for (e.g. rent, travel, office supplies)?";
+    case "customer": return "Which customer is this? (Name them so it goes to their own account.)";
+    case "supplier": return "Which supplier is this? (Name them so it goes to their own account.)";
     case "asset_account": return "What asset was bought (e.g. computer, furniture, vehicle)?";
     case "destination_account": return "Which account was the money transferred to?";
     case "loan_account": return "Which loan is this (lender name)?";

@@ -32,8 +32,8 @@ test("unknown regimes fall back to no tax instead of guessing", () => {
 });
 
 test("foreign-currency receipt is posted in base currency and keeps the foreign amount", () => {
-  const r = buildEntry(base({ action: "receipt_from_customer", amount: 2000, currency: "USD", exchange_rate: 83.25 }), { baseCurrency: "INR" });
-  assert.deepEqual(pick(r), [["HDFC Bank", 166500, 0], ["Debtors Control", 0, 166500]]);
+  const r = buildEntry(base({ action: "receipt_from_customer", amount: 2000, currency: "USD", exchange_rate: 83.25, party_name: "Acme Inc" }), { baseCurrency: "INR" });
+  assert.deepEqual(pick(r), [["HDFC Bank", 166500, 0], ["Acme Inc", 0, 166500]]);
   assert.deepEqual(r.lines.map(l => [l.fc_debit, l.fc_credit]), [[2000, 0], [0, 2000]]);
   assert.deepEqual(r.fx, { currency: "USD", rate: 83.25, base_currency: "INR" });
   assert.match(r.rule, /USD at 83.25 = INR/);

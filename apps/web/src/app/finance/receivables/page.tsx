@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { loadBookLines } from "@/lib/books";
+import { partyBalances } from "@/lib/partyBalances";
 
 type AREntry = {
   contact_id: string | null;
@@ -33,66 +35,24 @@ export default function ReceivablesPage() {
     });
   }, []);
 
+  // B2 — one ledger per customer: balances, FIFO ageing and advances come from the ledgers themselves
   async function loadReceivables(bid: string) {
     setLoading(true);
-
-    // Load all posted sales journals
-    const { data: journals } = await supabase
-      .from("fw_fin_journals")
-      .select("id,date,total_debit,total_credit,contact_id,entry_no,narration,type")
-      .eq("business_id", bid)
-      .eq("status", "posted")
-      .in("type", ["sales", "receipt"]);
-
-    type Journal = { id: string; date: string; total_debit: number; total_credit: number; contact_id: string | null; entry_no: string; narration: string; type: string };
-    const jList = (journals ?? []) as Journal[];
-
-    // Load contacts
-    const { data: contactsData } = await supabase
-      .from("fw_fin_contacts")
-      .select("id,name")
-      .eq("business_id", bid);
-
-    const contactMap = new Map((contactsData ?? []).map((c: { id: string; name: string }) => [c.id, c.name]));
-
-    // Group by contact
-    const byContact = new Map<string | null, { sales: Journal[]; receipts: Journal[] }>();
-
-    for (const j of jList) {
-      const key = j.contact_id;
-      if (!byContact.has(key)) byContact.set(key, { sales: [], receipts: [] });
-      if (j.type === "sales") byContact.get(key)!.sales.push(j);
-      else byContact.get(key)!.receipts.push(j);
-    }
-
-    const today = new Date();
-    const result: AREntry[] = [];
-
-    for (const [contactId, { sales, receipts }] of byContact) {
-      const totalInvoiced = sales.reduce((s, j) => s + j.total_debit, 0);
-      const totalReceived = receipts.reduce((s, j) => s + j.total_credit, 0);
-      const outstanding = totalInvoiced - totalReceived;
-      if (outstanding <= 0) continue;
-
-      const oldestDate = sales.reduce((oldest, j) => j.date < oldest ? j.date : oldest, sales[0]?.date ?? today.toISOString());
-      const daysOverdue = Math.floor((today.getTime() - new Date(oldestDate).getTime()) / (1000 * 60 * 60 * 24));
-
-      result.push({
-        contact_id: contactId,
-        contact_name: contactId ? (contactMap.get(contactId) ?? "Unknown Customer") : "Walk-in / Untagged",
-        invoice_count: sales.length,
-        total_invoiced: totalInvoiced,
-        total_received: totalReceived,
-        outstanding,
-        oldest_invoice: oldestDate,
-        days_overdue: daysOverdue,
-      });
-    }
-
-    result.sort((a, b) => b.outstanding - a.outstanding);
+    const today = new Date().toLocaleDateString("en-CA");
+    const { lines, accounts } = await loadBookLines(supabase, bid, today);
+    const report = partyBalances("receivable", accounts, lines, today);
+    const result: AREntry[] = report.rows.map(r => {
+      const own = lines.filter(l => l.account_id === r.id);
+      return {
+        contact_id: r.id, contact_name: r.name,
+        invoice_count: own.filter(l => l.dr > 0).length,
+        total_invoiced: own.reduce((s, l) => s + l.dr, 0), total_received: own.reduce((s, l) => s + l.cr, 0),
+        outstanding: r.balance, oldest_invoice: r.oldest ?? "", days_overdue: r.days,
+      };
+    });
     setEntries(result);
-    setTotalOutstanding(result.reduce((s, e) => s + e.outstanding, 0));
-    setOverdueAmount(result.filter(e => e.days_overdue > 30).reduce((s, e) => s + e.outstanding, 0));
+    setTotalOutstanding(report.total);
+    setOverdueAmount(result.filter(e => e.outstanding > 0 && e.days_overdue > 30).reduce((s, e) => s + e.outstanding, 0));
     setLoading(false);
   }
 
@@ -189,13 +149,13 @@ export default function ReceivablesPage() {
                       <td style={{ padding: "0.75rem 0.85rem", fontSize: "0.82rem", color: "rgba(20,26,58,0.75)" }}>{e.invoice_count}</td>
                       <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>₹{fmt(e.total_invoiced)}</td>
                       <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "#0B7A55" }}>₹{fmt(e.total_received)}</td>
-                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontWeight: 800, fontSize: "0.9rem", fontVariantNumeric: "tabular-nums", color: aging.color }}>₹{fmt(e.outstanding)}</td>
+                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontWeight: 800, fontSize: "0.9rem", fontVariantNumeric: "tabular-nums", color: e.outstanding < 0 ? "#0B7A55" : aging.color }}>{e.outstanding < 0 ? "−" : ""}₹{fmt(Math.abs(e.outstanding))}</td>
                       <td style={{ padding: "0.75rem 0.85rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>
-                        {new Date(e.oldest_invoice).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                        {e.oldest_invoice ? new Date(e.oldest_invoice).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" }) : "—"}
                       </td>
                       <td style={{ padding: "0.75rem 0.85rem" }}>
                         <span style={{ fontSize: "0.72rem", padding: "3px 10px", borderRadius: 12, background: `${aging.color}18`, color: aging.color, border: `1px solid ${aging.color}40`, fontWeight: 700 }}>
-                          {aging.label}
+                          {e.outstanding < 0 ? "Advance received" : aging.label}
                         </span>
                       </td>
                       <td style={{ padding: "0.75rem 0.85rem" }}>
@@ -209,7 +169,7 @@ export default function ReceivablesPage() {
               </tbody>
               <tfoot>
                 <tr style={{ borderTop: "2px solid rgba(35,42,99,0.3)", background: "rgba(35,42,99,0.05)" }}>
-                  <td colSpan={4} style={{ padding: "0.7rem 0.85rem", fontWeight: 800, fontSize: "0.85rem" }}>Total Outstanding</td>
+                  <td colSpan={4} style={{ padding: "0.7rem 0.85rem", fontWeight: 800, fontSize: "0.85rem" }}>Total outstanding (net of advances)</td>
                   <td style={{ padding: "0.7rem 0.85rem", textAlign: "right", fontWeight: 900, fontSize: "1rem", color: "#232A63", fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalOutstanding)}</td>
                   <td colSpan={3} />
                 </tr>

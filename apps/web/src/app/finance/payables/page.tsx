@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { loadBookLines } from "@/lib/books";
+import { partyBalances } from "@/lib/partyBalances";
 
 type APEntry = {
   contact_id: string | null;
@@ -33,58 +35,24 @@ export default function PayablesPage() {
     });
   }, []);
 
+  // B2 — one ledger per supplier: balances, FIFO ageing and advances paid come from the ledgers themselves
   async function loadPayables(bid: string) {
     setLoading(true);
-
-    const { data: journals } = await supabase
-      .from("fw_fin_journals")
-      .select("id,date,total_debit,total_credit,contact_id,type")
-      .eq("business_id", bid)
-      .eq("status", "posted")
-      .in("type", ["purchase", "payment", "expense"]);
-
-    type Journal = { id: string; date: string; total_debit: number; total_credit: number; contact_id: string | null; type: string };
-    const jList = (journals ?? []) as Journal[];
-
-    const { data: contactsData } = await supabase.from("fw_fin_contacts").select("id,name").eq("business_id", bid);
-    const contactMap = new Map((contactsData ?? []).map((c: { id: string; name: string }) => [c.id, c.name]));
-
-    const byContact = new Map<string | null, { bills: Journal[]; payments: Journal[] }>();
-    for (const j of jList) {
-      const key = j.contact_id;
-      if (!byContact.has(key)) byContact.set(key, { bills: [], payments: [] });
-      if (j.type === "purchase" || j.type === "expense") byContact.get(key)!.bills.push(j);
-      else byContact.get(key)!.payments.push(j);
-    }
-
-    const today = new Date();
-    const result: APEntry[] = [];
-
-    for (const [contactId, { bills, payments }] of byContact) {
-      const totalBilled = bills.reduce((s, j) => s + j.total_debit, 0);
-      const totalPaid = payments.reduce((s, j) => s + j.total_debit, 0);
-      const outstanding = totalBilled - totalPaid;
-      if (outstanding <= 0) continue;
-
-      const oldestDate = bills.reduce((oldest, j) => j.date < oldest ? j.date : oldest, bills[0]?.date ?? today.toISOString());
-      const daysPending = Math.floor((today.getTime() - new Date(oldestDate).getTime()) / (1000 * 60 * 60 * 24));
-
-      result.push({
-        contact_id: contactId,
-        contact_name: contactId ? (contactMap.get(contactId) ?? "Unknown Vendor") : "Misc / Untagged",
-        bill_count: bills.length,
-        total_billed: totalBilled,
-        total_paid: totalPaid,
-        outstanding,
-        oldest_bill: oldestDate,
-        days_pending: daysPending,
-      });
-    }
-
-    result.sort((a, b) => b.outstanding - a.outstanding);
+    const today = new Date().toLocaleDateString("en-CA");
+    const { lines, accounts } = await loadBookLines(supabase, bid, today);
+    const report = partyBalances("payable", accounts, lines, today);
+    const result: APEntry[] = report.rows.map(r => {
+      const own = lines.filter(l => l.account_id === r.id);
+      return {
+        contact_id: r.id, contact_name: r.name,
+        bill_count: own.filter(l => l.cr > 0).length,
+        total_billed: own.reduce((s, l) => s + l.cr, 0), total_paid: own.reduce((s, l) => s + l.dr, 0),
+        outstanding: r.balance, oldest_bill: r.oldest ?? "", days_pending: r.days,
+      };
+    });
     setEntries(result);
-    setTotalOutstanding(result.reduce((s, e) => s + e.outstanding, 0));
-    setOverdueAmount(result.filter(e => e.days_pending > 30).reduce((s, e) => s + e.outstanding, 0));
+    setTotalOutstanding(report.total);
+    setOverdueAmount(result.filter(e => e.outstanding > 0 && e.days_pending > 30).reduce((s, e) => s + e.outstanding, 0));
     setLoading(false);
   }
 
@@ -175,9 +143,9 @@ export default function PayablesPage() {
                       <td style={{ padding: "0.75rem 0.85rem", fontSize: "0.82rem", color: "rgba(20,26,58,0.75)" }}>{e.bill_count}</td>
                       <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>₹{fmt(e.total_billed)}</td>
                       <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "#0B7A55" }}>₹{fmt(e.total_paid)}</td>
-                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontWeight: 800, fontSize: "0.9rem", fontVariantNumeric: "tabular-nums", color: aging.color }}>₹{fmt(e.outstanding)}</td>
+                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontWeight: 800, fontSize: "0.9rem", fontVariantNumeric: "tabular-nums", color: e.outstanding < 0 ? "#0B7A55" : aging.color }}>{e.outstanding < 0 ? "−" : ""}₹{fmt(Math.abs(e.outstanding))}</td>
                       <td style={{ padding: "0.75rem 0.85rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>
-                        {new Date(e.oldest_bill).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                        {e.oldest_bill ? new Date(e.oldest_bill).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" }) : "—"}
                       </td>
                       <td style={{ padding: "0.75rem 0.85rem" }}>
                         <span style={{ fontSize: "0.72rem", padding: "3px 10px", borderRadius: 12, background: `${aging.color}18`, color: aging.color, border: `1px solid ${aging.color}40`, fontWeight: 700 }}>
