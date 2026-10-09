@@ -3,6 +3,7 @@ import { useState, useEffect, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { signedMoney, type PresentedBS, type PresentedPL, type StmtSection } from "@/lib/statements";
 
 type ReportTab = "trial_balance" | "profit_loss" | "balance_sheet" | "cash_flow";
 type AccRow = { code?: string; name: string; type: string; sub_type: string | null; dr: number; cr: number };
@@ -11,6 +12,7 @@ type PLData = {
   direct_income: AccRow[]; indirect_income: AccRow[];
   direct_expense: AccRow[]; indirect_expense: AccRow[];
   gross_profit: number; total_income: number; total_expense: number; net_profit: number;
+  presented?: PresentedPL;
 };
 
 type BSData = {
@@ -18,6 +20,7 @@ type BSData = {
   current_liabilities: AccRow[]; long_term_liabilities: AccRow[];
   equity: AccRow[]; net_profit: number;
   total_assets: number; total_liabilities_equity: number;
+  presented?: PresentedBS;
 };
 
 type TBData = { accounts: AccRow[]; total_dr: number; total_cr: number };
@@ -36,7 +39,7 @@ function SectionTable({ title, rows, drLabel = "Debit", crLabel = "Credit", netL
       {rows.map(r => (
         <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 1rem", borderTop: "1px solid rgba(20,26,58,0.08)", fontSize: "0.85rem" }}>
           <span style={{ color: "rgba(20,26,58,0.95)" }}>{r.name}</span>
-          <span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(Math.abs(r.dr - r.cr))}</span>
+          <span style={{ fontVariantNumeric: "tabular-nums" }}>{signedMoney(/Assets|Expenses|Cost/i.test(title) ? r.dr - r.cr : r.cr - r.dr)}</span>
         </div>
       ))}
       {netLabel && netValue !== undefined && (
@@ -47,6 +50,28 @@ function SectionTable({ title, rows, drLabel = "Debit", crLabel = "Credit", netL
       )}
     </div>
   );
+}
+
+// Signed lines exactly as presented by the server; the total is the sum of what is shown
+function Section({ s }: { s: StmtSection }) {
+  return (
+    <div style={{ marginBottom: "1.5rem" }}>
+      <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, padding: "0.5rem 1rem", background: "#FFFFFF" }}>{s.title}</div>
+      {s.lines.map(l => (
+        <div key={l.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0.5rem 1rem", borderTop: "1px solid rgba(20,26,58,0.08)", fontSize: "0.85rem" }}>
+          <span style={{ color: "rgba(20,26,58,0.95)" }}>{l.name}{l.note && <span style={{ marginLeft: 8, fontSize: "0.72rem", color: "#8A5A00" }}>({l.note})</span>}</span>
+          <span style={{ fontVariantNumeric: "tabular-nums", color: l.amount < 0 ? "#C2321F" : undefined }}>{signedMoney(l.amount)}</span>
+        </div>
+      ))}
+      <div style={{ display: "flex", justifyContent: "space-between", padding: "0.45rem 1rem", borderTop: "1px solid rgba(20,26,58,0.15)", fontSize: "0.82rem", fontWeight: 700 }}>
+        <span>Total {s.title}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{signedMoney(s.total)}</span>
+      </div>
+    </div>
+  );
+}
+function FootingBanner({ problems }: { problems: string[] }) {
+  if (!problems.length) return null;
+  return <div role="alert" style={{ margin: "0.75rem 1rem", padding: "0.75rem 1rem", borderRadius: 10, background: "#FDECEA", color: "#C2321F", fontSize: "0.85rem", fontWeight: 600 }}>⚠ This statement doesn't add up — {problems.join("; ")}. Please report this; don't rely on these figures.</div>;
 }
 
 export default function ReportsPage() {
@@ -162,20 +187,19 @@ export default function ReportsPage() {
                   <div style={{ fontWeight: 800, fontSize: "1rem" }}>Profit & Loss Statement</div>
                   <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>For the period — Financial Year {financialYears.find(f => f.id === fyId)?.label}</div>
                 </div>
-                <SectionTable title="Revenue / Sales" rows={plData.direct_income} />
-                <SectionTable title="Direct Expenses (Cost of Goods Sold)" rows={plData.direct_expense} />
+                {plData.presented && <FootingBanner problems={plData.presented.problems} />}
+                {plData.presented ? <><Section s={plData.presented.sections[0]} /><Section s={plData.presented.sections[1]} /></> : <><SectionTable title="Revenue / Sales" rows={plData.direct_income} /><SectionTable title="Direct Expenses (Cost of Goods Sold)" rows={plData.direct_expense} /></>}
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: "rgba(35,42,99,0.06)", fontWeight: 800, fontSize: "0.95rem" }}>
                   <span>Gross Profit</span>
                   <span style={{ color: plData.gross_profit >= 0 ? "#0B7A55" : "#C2321F", fontVariantNumeric: "tabular-nums" }}>
-                    {plData.gross_profit < 0 ? "-" : ""}₹{fmt(plData.gross_profit)}
+                    {signedMoney(plData.gross_profit)}
                   </span>
                 </div>
-                <SectionTable title="Other Income" rows={plData.indirect_income} />
-                <SectionTable title="Operating Expenses" rows={plData.indirect_expense} />
+                {plData.presented ? <><Section s={plData.presented.sections[2]} /><Section s={plData.presented.sections[3]} /></> : <><SectionTable title="Other Income" rows={plData.indirect_income} /><SectionTable title="Operating Expenses" rows={plData.indirect_expense} /></>}
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "1rem 1.5rem", background: "rgba(35,42,99,0.1)", fontWeight: 800, fontSize: "1.1rem", borderTop: "2px solid rgba(35,42,99,0.3)" }}>
                   <span>Net {plData.net_profit >= 0 ? "Profit" : "Loss"}</span>
                   <span style={{ color: plData.net_profit >= 0 ? "#0B7A55" : "#C2321F", fontVariantNumeric: "tabular-nums" }}>
-                    {plData.net_profit < 0 ? "-" : ""}₹{fmt(plData.net_profit)}
+                    {signedMoney(plData.net_profit)}
                   </span>
                 </div>
                 {plData.total_income === 0 && plData.total_expense === 0 && (
@@ -193,28 +217,22 @@ export default function ReportsPage() {
                   <div style={{ fontWeight: 800, fontSize: "1rem" }}>Balance Sheet</div>
                   <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>As at end of FY {financialYears.find(f => f.id === fyId)?.label}</div>
                 </div>
+                {bsData.presented && <FootingBanner problems={bsData.presented.problems} />}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
                   <div style={{ borderRight: "1px solid rgba(20,26,58,0.11)" }}>
                     <div style={{ padding: "0.6rem 1rem", fontSize: "0.75rem", fontWeight: 700, color: "#1F5EFF", textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(31,94,255,0.05)" }}>Assets</div>
-                    <SectionTable title="Current Assets" rows={bsData.current_assets} />
-                    <SectionTable title="Fixed Assets" rows={bsData.fixed_assets} />
+                    {bsData.presented ? bsData.presented.assets.map(s => <Section key={s.key} s={s} />) : <><SectionTable title="Current Assets" rows={bsData.current_assets} /><SectionTable title="Fixed Assets" rows={bsData.fixed_assets} /></>}
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: "rgba(31,94,255,0.08)", fontWeight: 800 }}>
                       <span>Total Assets</span>
-                      <span style={{ color: "#1F5EFF", fontVariantNumeric: "tabular-nums" }}>₹{fmt(bsData.total_assets)}</span>
+                      <span style={{ color: "#1F5EFF", fontVariantNumeric: "tabular-nums" }}>{signedMoney(bsData.presented?.totalAssets ?? bsData.total_assets)}</span>
                     </div>
                   </div>
                   <div>
                     <div style={{ padding: "0.6rem 1rem", fontSize: "0.75rem", fontWeight: 700, color: "#C2321F", textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(194,50,31,0.05)" }}>Liabilities & Capital</div>
-                    <SectionTable title="Current Liabilities" rows={bsData.current_liabilities} />
-                    <SectionTable title="Long-term Liabilities" rows={bsData.long_term_liabilities} />
-                    <SectionTable title="Capital & Equity" rows={bsData.equity} />
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 1rem", borderTop: "1px solid rgba(20,26,58,0.08)", fontSize: "0.85rem" }}>
-                      <span style={{ color: "rgba(20,26,58,0.95)" }}>Net {bsData.net_profit >= 0 ? "Profit" : "Loss"} (current year)</span>
-                      <span style={{ color: bsData.net_profit >= 0 ? "#0B7A55" : "#C2321F", fontVariantNumeric: "tabular-nums" }}>₹{fmt(bsData.net_profit)}</span>
-                    </div>
+                    {bsData.presented ? bsData.presented.liabilities.map(s => <Section key={s.key} s={s} />) : <><SectionTable title="Current Liabilities" rows={bsData.current_liabilities} /><SectionTable title="Long-term Liabilities" rows={bsData.long_term_liabilities} /><SectionTable title="Capital & Equity" rows={bsData.equity} /></>}
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: "rgba(194,50,31,0.08)", fontWeight: 800 }}>
                       <span>Total Liabilities & Capital</span>
-                      <span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>₹{fmt(bsData.total_liabilities_equity)}</span>
+                      <span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>{signedMoney(bsData.presented?.totalLiabilities ?? bsData.total_liabilities_equity)}</span>
                     </div>
                   </div>
                 </div>

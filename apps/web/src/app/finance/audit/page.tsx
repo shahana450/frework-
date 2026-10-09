@@ -1085,7 +1085,7 @@ export default function AuditPage() {
                   ))}
                   <div style={{ borderTop: "2px solid rgba(20,26,58,0.15)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
                     <span>Total Assets</span>
-                    <span className="au-mono" style={{ color: "#0B7A55" }}>{fmtDec(bs.totalAssets)}</span>
+                    <span className="au-mono" style={{ color: "#0B7A55" }}>{bs.totalAssets < 0 ? "−" : ""}{fmtDec(bs.totalAssets)}</span>
                   </div>
                 </div>
                 <div className="au-card">
@@ -1101,7 +1101,7 @@ export default function AuditPage() {
                       {sec.rows.map(r => (
                         <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.35rem 0", fontSize: "0.83rem" }}>
                           <span style={{ color: "rgba(20,26,58,0.85)" }}>{r.name}</span>
-                          <span className="au-mono">{fmtDec(r.balance)}</span>
+                          <span className="au-mono" style={{ color: r.balance < 0 ? "#C2321F" : undefined }}>{r.balance < 0 ? "−" : ""}{fmtDec(r.balance)}</span>
                         </div>
                       ))}
                     </div>
@@ -1114,7 +1114,7 @@ export default function AuditPage() {
                   )}
                   <div style={{ borderTop: "2px solid rgba(20,26,58,0.15)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
                     <span>Total Liab. + Equity</span>
-                    <span className="au-mono" style={{ color: "#1F5EFF" }}>{fmtDec(bs.totalLiabEq)}</span>
+                    <span className="au-mono" style={{ color: "#1F5EFF" }}>{bs.totalLiabEq < 0 ? "−" : ""}{fmtDec(bs.totalLiabEq)}</span>
                   </div>
                   {Math.abs(bs.totalAssets - bs.totalLiabEq) > 1 && (
                     <div style={{ marginTop: "0.75rem", fontSize: "0.72rem", color: "#8A5A00", background: "rgba(184,120,0,0.08)", padding: "0.5rem 0.75rem", borderRadius: 7, lineHeight: 1.6 }}>

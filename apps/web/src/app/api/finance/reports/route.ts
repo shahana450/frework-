@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { buildTrialBalance, buildPL, buildBS, loadBookLines, GROUP_LABEL, type TBRow } from "@/lib/books";
 import { loadQueryBooks } from "@/lib/intentEngine";
 import { computeCashFlow } from "@/lib/cashFlow";
+import { presentBalanceSheet, presentPL } from "@/lib/statements";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -64,6 +65,7 @@ export async function GET(req: NextRequest) {
       total_income: pl.revenue + pl.otherIncome,
       total_expense: pl.cogs + pl.expenses,
       net_profit: pl.netProfit,
+      presented: presentPL(pl),
     });
   }
 
@@ -79,6 +81,8 @@ export async function GET(req: NextRequest) {
       net_profit: pl.netProfit,
       total_assets: bs.totalAssets,
       total_liabilities_equity: bs.totalLiabEq,
+      // Signed, reclassified (overdrafts → liabilities) and footed — what the page and exports show
+      presented: presentBalanceSheet(bs, tb.map(r => ({ ...r, sub_type: accounts.find(a => a.id === r.id)?.sub_type ?? null }))),
     });
   }
 
