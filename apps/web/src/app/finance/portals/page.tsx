@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Link = { portal: "gst" | "it"; identifier: string; provider: string; status: string; expires_at: string | null; last_sync_at: string | null; last_error: string | null };
 type Row = { portal: string; kind: string; form: string; period: string; status: string; arn: string | null; filed_on: string | null; amount: number | null; details: Record<string, unknown>; demo: boolean; fetched_at: string };
@@ -154,7 +155,7 @@ export default function PortalsPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const biz = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const biz = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!biz) { router.push("/finance/setup"); return; }
       setBizId(biz); load(biz);
     });

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { COUNTRIES, CURRENCIES, COUNTRY_TAX, getTaxModule } from "@/lib/tax";
 import { formatMoney } from "@/lib/money";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Settings = { country: string; state: string | null; currency: string; timezone: string; locale: string; tax_regime: string; fiscal_year_start: string };
 
@@ -26,7 +27,7 @@ export default function RegionSettingsPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const res = await fetch(`/api/finance/business-settings?business_id=${saved}`);

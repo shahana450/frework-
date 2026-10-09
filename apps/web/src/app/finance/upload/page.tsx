@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 import Link from "next/link";
+import { readActiveBusiness, setActiveBusiness } from "@/lib/activeBusiness";
 
 type HistoryDoc = {
   id: string;
@@ -64,13 +65,13 @@ export default function UploadPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
       setUserId(user.id);
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/\uFEFF/g, "").trim();
       if (saved) {
         const { data } = await supabase.from("fw_fin_businesses").select("id,name").eq("id", saved).single();
         if (data) { setBizId(data.id); setBizName(data.name); loadHistory(data.id); }
       } else {
         const { data } = await supabase.from("fw_fin_businesses").select("id,name").eq("owner_id", user.id).eq("is_active", true).limit(1).single();
-        if (data) { setBizId(data.id); setBizName(data.name); if (user) localStorage.setItem(`fw_fin_biz_${user.id}`, data.id); loadHistory(data.id); }
+        if (data) { setBizId(data.id); setBizName(data.name); if (user) setActiveBusiness(user.id, data.id); loadHistory(data.id); }
         else router.push("/finance/setup");
       }
     });

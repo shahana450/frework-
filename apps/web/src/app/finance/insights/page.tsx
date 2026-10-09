@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type MonthData = { month: string; revenue: number; expenses: number; profit: number };
 type TopAccount = { name: string; amount: number; type: string };
@@ -25,7 +26,7 @@ export default function InsightsPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data: biz } = await supabase.from("fw_fin_businesses").select("name").eq("id", saved).single();

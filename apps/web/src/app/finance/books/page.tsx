@@ -8,6 +8,7 @@ import TallyBar from "@/components/TallyBar";
 import { tallyFetch, parseTallyVouchers, monthsInRange, VOUCHER_FETCH_XML } from "@/lib/tallyUtils";
 import { explainTallyError, eduDateOk, parseImportReply, licenseXml, isEducational } from "@/lib/integrations/tally";
 import { type PushState, pushView, isPushedHere, fromSyncRows } from "@/lib/integrations/pushStatus";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type FY = { id: string; label: string; is_current: boolean; start_date: string; end_date: string };
 type Line = { dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { name: string } | null };
@@ -76,7 +77,7 @@ export default function BooksPage() {
     if (f === "chat" || f === "pending" || f === "pushed") setFilter(f);
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       try { setPushed(JSON.parse(localStorage.getItem(`fw_tally_pushed_${saved}`) ?? "{}")); } catch { /* */ }

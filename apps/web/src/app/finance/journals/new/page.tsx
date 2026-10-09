@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { saveEntry } from "@/lib/postEntry";
 import Link from "next/link";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Account = { id: string; code: string; name: string; type: string };
 type Line = { account_id: string; account_name: string; dr: string; cr: string; narration: string };
@@ -40,7 +41,7 @@ export default function NewJournalPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const [coaRes, fyRes] = await Promise.all([

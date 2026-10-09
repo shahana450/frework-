@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type JournalRow = {
   id: string;
@@ -23,7 +24,7 @@ export default function BankHistoryPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
-      const bizId = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").trim();
+      const bizId = (readActiveBusiness(user.id) ?? "").trim();
       if (!bizId) { setLoading(false); return; }
 
       // Load journals that came from bank import (source = 'bank_import')

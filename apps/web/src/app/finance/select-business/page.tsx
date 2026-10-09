@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { setActiveBusiness } from "@/lib/activeBusiness";
 
 type Business = {
   id: string;
@@ -46,7 +47,7 @@ export default function SelectBusinessPage() {
         return;
       }
       if (data.length === 1) {
-        localStorage.setItem(`fw_fin_biz_${user.id}`, data[0].id);
+        setActiveBusiness(user.id, data[0].id);
         router.replace("/finance");
         return;
       }
@@ -58,7 +59,7 @@ export default function SelectBusinessPage() {
   function enter(biz: Business) {
     if (!userId) return;
     setSelecting(biz.id);
-    localStorage.setItem(`fw_fin_biz_${userId}`, biz.id);
+    setActiveBusiness(userId, biz.id);
     router.replace("/finance");
   }
 

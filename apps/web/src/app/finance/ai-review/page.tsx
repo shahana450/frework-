@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { saveEntry, NeedsHeadsError } from "@/lib/postEntry";
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type SugLine = { account_name: string; dr: number; cr: number };
 type Dup = { kind: string; message: string; ref?: string };
@@ -63,7 +64,7 @@ export default function AIReviewPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved); load(saved);
     });

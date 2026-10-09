@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { PROVIDERS, type Provider } from "@/lib/integrations";
 import { useConnectors, ConnectPanel, ReviewList } from "./Connectors";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Status = {
   tally: { pushed: number; failed: number; imported: number; last_sync: string | null; company: string | null; setup_needed: boolean };
@@ -29,7 +30,7 @@ export default function IntegrationsPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const biz = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const biz = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!biz) { router.push("/finance/setup"); return; }
       setBizId(biz);
       const q = new URLSearchParams(window.location.search);

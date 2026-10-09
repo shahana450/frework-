@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
 import { Suspense } from "react";
+import { setActiveBusiness } from "@/lib/activeBusiness";
 
 function AuthCallbackInner() {
   const router = useRouter();
@@ -56,7 +57,7 @@ function AuthCallbackInner() {
         const count = bizList?.length ?? 0;
         if (count === 0) { router.replace("/finance/setup"); return; }
         if (count === 1) {
-          localStorage.setItem(`fw_fin_biz_${user.id}`, bizList![0].id);
+          setActiveBusiness(user.id, bizList![0].id);
           router.replace("/finance");
           return;
         }

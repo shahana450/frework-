@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { deleteConfirmed, PURGE_AFTER_DAYS } from "@/lib/dataExport";
+import { clearActiveBusiness } from "@/lib/activeBusiness";
 
 const C = { surface: "#FFFFFF", line: "#E1E4EE", strong: "#C9CEDF", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", pos: "#0B7A55", neg: "#C2321F", negSoft: "#FDECEA" };
 
@@ -40,7 +41,7 @@ export default function DataControls({ businessId, businessName, role }: { busin
     if (!r.ok) { setMsg({ ok: false, text: d.error ?? "Couldn't delete the business." }); return; }
     // Forget it as the active business on this device, then let the user pick another
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) { try { localStorage.removeItem(`fw_fin_biz_${user.id}`); } catch { /* */ } }
+    if (user) { clearActiveBusiness(user.id); }
     window.location.href = "/finance/select-business";
   }
 

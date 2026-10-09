@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type BankStat = {
   name: string;
@@ -18,7 +19,7 @@ export default function BankingLanding() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
-      const bizId = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").trim();
+      const bizId = (readActiveBusiness(user.id) ?? "").trim();
       if (!bizId) { setLoading(false); return; }
 
       // Load bank/cash accounts + recent journal count with bank lines

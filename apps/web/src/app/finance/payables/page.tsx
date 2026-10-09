@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { loadBookLines } from "@/lib/books";
 import { partyBalances } from "@/lib/partyBalances";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type APEntry = {
   contact_id: string | null;
@@ -28,7 +29,7 @@ export default function PayablesPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       await loadPayables(saved);

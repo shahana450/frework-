@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import LogoPicker from "@/components/LogoPicker";
 import DataControls from "@/components/DataControls";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 const STATES = ["Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"];
 const TYPES = [["proprietorship", "Proprietorship"], ["partnership", "Partnership"], ["llp", "LLP"], ["private_limited", "Private Limited"], ["public_limited", "Public Limited"], ["opc", "One Person Company"], ["huf", "HUF"], ["trust", "Trust / Society"]];
@@ -26,7 +27,7 @@ export default function BusinessDetailsPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const biz = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const biz = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!biz) { router.push("/finance/setup"); return; }
       setBizId(biz);
       const r = await fetch(`/api/finance/business-profile?business_id=${biz}`);

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
 import { planOpening, isPL } from "@/lib/openingTb";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Row = { ledger: string; head: string; debit: number; credit: number; existing?: boolean };
 type Fy = { id: string; label: string; start_date: string; end_date: string; is_current: boolean; is_locked: boolean };
@@ -41,7 +42,7 @@ export default function OpeningBalancesPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const b = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const b = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!b) { router.push("/finance/setup"); return; }
       setBizId(b); load(b);
     });

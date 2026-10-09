@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { reminderText, type Debtor, type Tone } from "@/lib/collect";
 import { formatMoney } from "@/lib/money";
 import { FreBookMark } from "@/components/FreBookLogo";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Data = { total: number; buckets: Record<"0-30" | "31-60" | "60+", number>; collectedThisMonth: number; debtors: Debtor[]; business: string; currency: string; locale: string };
 
@@ -27,7 +28,7 @@ export default function CollectPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const biz = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const biz = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!biz) { router.push("/finance/setup"); return; }
       setBizId(biz);
       try { setUpi(localStorage.getItem(`fw_upi_${biz}`) ?? ""); } catch { /* storage blocked */ }

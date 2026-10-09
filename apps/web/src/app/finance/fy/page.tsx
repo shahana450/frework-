@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type FY = { id: string; label: string; start_date: string; end_date: string; is_current: boolean; is_closed: boolean; is_locked?: boolean; locked_at?: string | null };
 
@@ -21,7 +22,7 @@ export default function FinancialYearPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       load(saved);

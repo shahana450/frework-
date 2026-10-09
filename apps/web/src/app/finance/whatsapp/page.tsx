@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type LinkRow = { id: string; phone: string; verified: boolean; code: string | null; code_expires: string | null };
 type Data = { links: LinkRow[]; bot_number?: string | null; live?: boolean; setup_needed?: string };
@@ -24,7 +25,7 @@ export default function WhatsAppPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const b = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const b = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!b) { router.push("/finance/setup"); return; }
       setBizId(b); load(b);
     });

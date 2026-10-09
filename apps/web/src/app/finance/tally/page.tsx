@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { readTallyLedgerGroups, importTallyVouchers, summaryText } from "@/lib/integrations/tallyClient";
 import { downloadApiFile } from "@/lib/apiAuthClient";
 import Link from "next/link";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 // ── Chrome extension bridge ──────────────────────────────────────────────────
 // Lets HTTPS pages reach Tally's HTTP server via the FreWork Tally Bridge extension.
@@ -328,7 +329,7 @@ export default function TallyPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label,start_date,end_date,is_current").eq("business_id", saved).order("start_date", { ascending: false });

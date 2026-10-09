@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import type { Recap } from "@/lib/recap";
 import { formatMoney } from "@/lib/money";
 import { FreBookBookGlyph } from "@/components/FreBookLogo";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 const NAVY = "#232A63", SKY = "#7FB0FF", SOFT = "#C8D2F2";
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
@@ -22,7 +23,7 @@ export default function RecapPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const biz = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const biz = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!biz) { router.push("/finance/setup"); return; }
       setBizId(biz);
     });

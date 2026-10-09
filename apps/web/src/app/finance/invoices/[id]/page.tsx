@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { amountInWords, invoiceTotals, recalcItem, type InvItem, type InvoiceDoc } from "@/lib/invoiceDoc";
 import { stateCode } from "@/lib/gstr1";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 const C = { bg: "#F5F6FA", line: "#E1E4EE", strong: "#C9CEDF", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", soft: "#E6E8F4", pos: "#0B7A55", neg: "#C2321F", warn: "#8A5A00", warnSoft: "#FFF4DB" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
@@ -35,7 +36,7 @@ export default function InvoicePage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const biz = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const biz = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!biz) { router.push("/finance/setup"); return; }
       setBizId(biz);
       const r = await fetch(`/api/finance/invoice-doc?business_id=${biz}&journal_id=${id}`);

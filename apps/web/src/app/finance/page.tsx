@@ -10,6 +10,7 @@ import type { TallyVoucher } from "@/lib/tallyUtils";
 import { formatMoney } from "@/lib/money";
 import Link from "next/link";
 import HomeDesk from "./HomeDesk";
+import { readActiveBusiness, setActiveBusiness } from "@/lib/activeBusiness";
 
 // Dashboard period presets; "fy" uses the financial-year picker
 const PERIODS = [
@@ -228,7 +229,7 @@ export default function FinanceDashboard() {
       .select("id,name,gstin,gst_registration_type,state").eq("owner_id", uid).eq("is_active", true).order("created_at");
     if (!data || data.length === 0) { setLoading(false); return; }
     setBusinesses(data);
-    const saved = (localStorage.getItem(`fw_fin_biz_${uid}`) ?? "").replace(/﻿/g, "").trim();
+    const saved = (readActiveBusiness(uid) ?? "").replace(/﻿/g, "").trim();
     const biz = data.find(b => b.id === saved) || data[0];
     setActiveBiz(biz);
     loadStats(biz.id, uid);
@@ -375,7 +376,7 @@ export default function FinanceDashboard() {
 
   function switchBiz(biz: Business) {
     setActiveBiz(biz);
-    if (user) { localStorage.setItem(`fw_fin_biz_${user.id}`, biz.id); loadStats(biz.id, user.id, null); }
+    if (user) { setActiveBusiness(user.id, biz.id); loadStats(biz.id, user.id, null); }
   }
 
   async function createCurrentFy() {

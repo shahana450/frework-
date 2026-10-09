@@ -9,6 +9,7 @@ import { FINANCE_NAV, isActive } from "@/lib/financeNav";
 import { FreBookMark } from "@/components/FreBookLogo";
 import UpdatePrompt from "@/components/UpdatePrompt";
 import { navIconPath } from "@/lib/navIcons";
+import { ActiveBusinessProvider, useActiveBusinessStore, setActiveBusiness, readActiveBusiness, getActiveBusiness, rememberedBusiness } from "@/lib/activeBusiness";
 
 
 // Navy Prestige type + phone layout for every finance page
@@ -65,6 +66,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const [accountant, setAccountant] = useState(false);
   const [reviewCount, setReviewCount] = useState(0);
   const [search, setSearch] = useState("");
+  // The one active business (Task 6): resolved here, shown in the header, provided to every page
+  const active = useActiveBusinessStore();
 
   useEffect(() => { try { setAccountant(localStorage.getItem("fw_nav_mode") === "accountant"); } catch { /* */ } }, []);
   useEffect(() => { setSearch(window.location.search); }, [pathname]);
@@ -72,12 +75,12 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
     // Waiting-for-review count on the Review Queue item
     currentUser().then(async (user) => {
       if (!user) return;
-      const biz = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
+      const biz = readActiveBusiness(user.id);
       if (!biz) return;
       const { count } = await supabase.from("fw_fin_ai_suggestions").select("id", { count: "exact", head: true }).eq("business_id", biz).eq("status", "pending");
       setReviewCount(count ?? 0);
     });
-  }, [pathname]);
+  }, [pathname, active.businessId]);
   function toggleMode() {
     setAccountant(a => { const next = !a; try { localStorage.setItem("fw_nav_mode", next ? "accountant" : "simple"); } catch { /* */ } return next; });
   }
@@ -105,19 +108,21 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         }
         if (!valid) { router.replace("/finance/pricing"); return; }
       }
+      // Resolve the active business BEFORE any page mounts: this tab's current one, else the remembered one,
+      // as long as the user can still see it (owner or team member); else their first own business.
+      const now = getActiveBusiness();
+      const want = (now.userId === user.id && now.businessId) || rememberedBusiness(user.id);
+      const { data: owned } = await supabase.from("fw_fin_businesses").select("id,name").eq("owner_id", user.id).order("created_at");
+      setBizCount(owned?.length ?? 0);
+      let pick: { id: string; name: string } | null | undefined = owned?.find(b => b.id === want);
+      if (!pick && want) {
+        // A business the user is a team member of (CA desk, invited accountant) — row level security decides
+        const { data: member } = await supabase.from("fw_fin_businesses").select("id,name").eq("id", want).maybeSingle();
+        pick = member;
+      }
+      pick = pick ?? owned?.[0];
+      if (pick) { setActiveBusiness(user.id, pick.id, pick.name); setBizName(pick.name); setTallyBusiness(pick.id); }
       setSubChecked(true);
-
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
-      const { data: allBiz } = await supabase.from("fw_fin_businesses").select("id,name").eq("owner_id", user.id);
-      setBizCount(allBiz?.length ?? 0);
-      if (saved) {
-        const active = allBiz?.find(b => b.id === saved);
-        if (active) { setBizName(active.name); setTallyBusiness(active.id); return; }
-      }
-      if (allBiz?.length) {
-        setBizName(allBiz[0].name); setTallyBusiness(allBiz[0].id);
-        localStorage.setItem(`fw_fin_biz_${user.id}`, allBiz[0].id);
-      }
     });
   }, [pathname]);
 
@@ -128,7 +133,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   }, [pathname]);
 
   // Don't show sidebar on setup/pricing/admin pages, and wait for sub check
-  if (UNGUARDED.some(p => pathname.startsWith(p))) return <>{children}</>;
+  if (UNGUARDED.some(p => pathname.startsWith(p))) return <ActiveBusinessProvider>{children}</ActiveBusinessProvider>;
   if (!subChecked) return <div style={{ minHeight: "100vh", background: "#F5F6FA" }} />;
 
   const sidebarW = collapsed ? 96 : 240;
@@ -291,8 +296,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       </aside>
 
       {/* Main content */}
-      <main className="fw-main" style={{ flex: 1, marginLeft: sidebarW, minWidth: 0, transition: "margin-left 0.2s" }}>
-        {children}
+      {/* Keyed by business: switching business remounts the page, so it can't keep reading or posting to the old one */}
+      <main key={active.businessId ?? "none"} className="fw-main" style={{ flex: 1, marginLeft: sidebarW, minWidth: 0, transition: "margin-left 0.2s" }}>
+        <ActiveBusinessProvider>{children}</ActiveBusinessProvider>
       </main>
 
       {/* Phone tab bar */}

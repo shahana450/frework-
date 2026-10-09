@@ -17,6 +17,7 @@ import { parseSimpleGrid, SIMPLE_HEADERS, type SimpleEntry } from "@/lib/simpleT
 import InstallApp from "./InstallApp";
 import AnswerCard from "./AnswerCard";
 import type { Answer } from "@/lib/bookQueries";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Role = "user" | "ai" | "system";
@@ -194,7 +195,7 @@ export default function FreBookPage() {
     currentUser().then(async (user) => {
       if (!user) { router.replace("/login"); return; }
       setUserId(user.id); userIdRef.current = user.id;
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved); bizIdRef.current = saved;
       const { data: biz } = await supabase.from("fw_fin_businesses").select("name").eq("id", saved).single();

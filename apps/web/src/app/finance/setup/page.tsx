@@ -6,6 +6,7 @@ import LogoPicker from "@/components/LogoPicker";
 import { COUNTRIES } from "@/lib/tax";
 import { stepError, canCreate } from "@/lib/setupSteps";
 import { askInApp } from "@/lib/apiAuthClient";
+import { setActiveBusiness } from "@/lib/activeBusiness";
 
 // Current Indian financial year start (April), e.g. "2026-04-01"
 function indianFyStart(d = new Date()) { const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `${y}-04-01`; }
@@ -147,7 +148,7 @@ export default function BusinessSetup() {
       await seedCoA(biz.id, form.coa_preset);
 
       // Save as active business
-      if (userId) localStorage.setItem(`fw_fin_biz_${userId}`, biz.id);
+      if (userId) setActiveBusiness(userId, biz.id);
 
       // If user already had businesses, go to selector; otherwise straight to finance
       const { count } = await supabase

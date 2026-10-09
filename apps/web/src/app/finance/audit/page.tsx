@@ -7,6 +7,7 @@ import Link from "next/link";
 import { tallyFetch, parseTallyVouchers, tallyVoucherTypeToFP, tallyParentToType, monthsInRange, VOUCHER_FETCH_XML } from "@/lib/tallyUtils";
 import { readTallyLedgerGroups, importTallyVouchers, summaryText } from "@/lib/integrations/tallyClient";
 import { buildTrialBalance, buildPL, buildBS, loadBookLines, GROUP_LABEL, statementAmount, type TBRow, type BookLine, type Account as BookAccount } from "@/lib/books";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Journal = {
   id: string; entry_no: string; date: string; narration: string;
@@ -369,7 +370,7 @@ export default function AuditPage() {
       if (e.key === "fw_tally_last_import") {
         supabase.auth.getUser().then(({ data: { user } }) => {
           if (!user) return;
-          const bid = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+          const bid = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
           const now2 = new Date();
           const yr2 = now2.getMonth() >= 3 ? now2.getFullYear() : now2.getFullYear() - 1;
           if (bid) loadDataByRange(bid, `${yr2}-04-01`, `${yr2 + 1}-03-31`);
@@ -380,7 +381,7 @@ export default function AuditPage() {
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved); bizIdRef.current = saved;
       const { data: fysData } = await supabase.from("fw_fin_financial_years").select("id,label,is_current,start_date,end_date").eq("business_id", saved).order("start_date", { ascending: false });

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { parseStatementGrid } from "@/lib/bankExcel";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 /* ─── Types ─────────────────────────────────────────────── */
 type TxRow = {
@@ -83,7 +84,7 @@ export default function BankingPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       setUserId(user.id);
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").trim();
       if (!saved) return;
       setBizId(saved);
 

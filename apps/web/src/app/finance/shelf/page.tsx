@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { RACKS, type RackKey } from "@/lib/shelf";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Item = {
   id: string; rack: RackKey; fy: string | null; period: string | null; title: string; doc_type: string | null; file_name: string | null; mime: string | null;
@@ -44,7 +45,7 @@ export default function ShelfPage() {
     const r = sp.get("rack"); if (r && RACKS.some(x => x.key === r)) setRack(r as RackKey);
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const biz = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const biz = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!biz) { router.push("/finance/setup"); return; }
       setBizId(biz); load(biz);
     });

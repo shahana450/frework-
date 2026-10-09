@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { readActiveBusiness, setActiveBusiness } from "@/lib/activeBusiness";
 
 type Client = {
   id: string;
@@ -42,7 +43,7 @@ export default function CADashboardPage() {
       setUserId(user.id);
 
       // Read currently active client from localStorage
-      const current = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const current = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       setActiveClient(current);
 
       // Load all businesses this user has access to
@@ -88,7 +89,7 @@ export default function CADashboardPage() {
   const switchClient = (clientId: string) => {
     setSwitchingTo(clientId);
     if (!userId) return;
-    localStorage.setItem(`fw_fin_biz_${userId}`, clientId);
+    setActiveBusiness(userId, clientId);
     setActiveClient(clientId);
     setTimeout(() => { setSwitchingTo(null); router.push("/finance"); }, 500);
   };

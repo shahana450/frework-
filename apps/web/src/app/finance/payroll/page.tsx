@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { saveEntry } from "@/lib/postEntry";
 import Link from "next/link";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Employee = {
   id: string;
@@ -106,7 +107,7 @@ export default function PayrollPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
       setUserId(user.id);
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const emps = JSON.parse(localStorage.getItem(`fw_payroll_employees_${saved}`) ?? "[]") as Employee[];
