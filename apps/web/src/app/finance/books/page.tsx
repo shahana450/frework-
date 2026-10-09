@@ -104,15 +104,18 @@ export default function BooksPage() {
     if (!bizId || !ready || (!allYears && !fy)) return;
     setLoading(true); setLoadErr(""); setSelected(new Set()); setInTally({}); setCheckMsg("");
     const all: Journal[] = [];
-    for (let from = 0; from < 50000; from += 500) {
+    // Small pages: a big page with every line and ledger name can hit the database time limit
+    let size = 200;
+    for (let from = 0; from < 50000; from += size) {
       let q = supabase.from("fw_fin_journals")
         .select("id,entry_no,date,narration,type,status,total_debit,total_credit,reference_no,ai_generated,fw_fin_journal_lines(dr_amount,cr_amount,fw_fin_chart_of_accounts(name))")
         .eq("business_id", bizId);
       if (!allYears && fy) q = q.gte("date", fy.start_date).lte("date", fy.end_date);
-      const { data, error } = await q.order("date", { ascending: false }).order("entry_no", { ascending: false }).range(from, from + 499);
-      if (error) { console.error("books load failed", { bizId, from, error }); setLoadErr("We couldn't load your entries right now."); break; }
+      const { data, error } = await q.order("date", { ascending: false }).order("entry_no", { ascending: false }).range(from, from + size - 1);
+      if (error && size > 50) { size = 50; from -= size; continue; }            // retry this page smaller
+      if (error) { console.error("books load failed", { bizId, from, error }); setLoadErr(`We couldn't load your entries right now (${error.message || error.code || "database error"}).`); break; }
       all.push(...((data ?? []) as unknown as Journal[]));
-      if (!data || data.length < 500) break;
+      if (!data || data.length < size) break;
     }
     setJournals(all); setLoading(false);
     // Entries outside the selected year are easy to miss (e.g. last year's bank statement) — count them so the page can say so
