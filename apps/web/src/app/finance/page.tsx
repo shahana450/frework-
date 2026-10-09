@@ -595,13 +595,19 @@ export default function FinanceDashboard() {
   useEffect(() => {
     if (!activeBiz) return;
     let cancelled = false;
-    setDash(null); setDashErr("");
+    setDashErr("");
     const pr = periodRange(periodKey, custom);
     if (periodKey === "custom" && !pr) return;
-    fetch(`/api/finance/dashboard?business_id=${activeBiz.id}${fyId ? `&fy_id=${fyId}` : ""}${pr ? `&from=${pr.from}&to=${pr.to}&label=${encodeURIComponent(pr.label)}` : ""}`)
+    const url = `/api/finance/dashboard?business_id=${activeBiz.id}${fyId ? `&fy_id=${fyId}` : ""}${pr ? `&from=${pr.from}&to=${pr.to}&label=${encodeURIComponent(pr.label)}` : ""}`;
+    // Show the last figures for this view at once; fresh ones replace them when they arrive
+    const cacheKey = `fw_dash_${url}`;
+    let cached: unknown = null;
+    try { cached = JSON.parse(localStorage.getItem(cacheKey) ?? "null"); } catch { /* */ }
+    setDash(cached as typeof dash);
+    fetch(url)
       .then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error ?? "We couldn't load your dashboard right now."); return d; })
-      .then(d => { if (!cancelled) setDash(d); })
-      .catch(e => { if (!cancelled) setDashErr(e instanceof Error ? e.message : "We couldn't load your dashboard right now."); });
+      .then(d => { if (cancelled) return; setDash(d); try { localStorage.setItem(cacheKey, JSON.stringify(d)); } catch { /* full */ } })
+      .catch(e => { if (!cancelled && !cached) setDashErr(e instanceof Error ? e.message : "We couldn't load your dashboard right now."); });
     return () => { cancelled = true; };
   }, [activeBiz, fyId, dashTick, periodKey, custom]);
   const fmt = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });

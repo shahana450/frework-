@@ -101,14 +101,18 @@ export async function loadQueryBooks(sb: SupabaseClient, businessId: string, unt
   }
   // Journals first, then their lines in chunks: a joined read of lines per journal times out on big books
   const heads: { id: string; date: string; entry_no: string; narration: string | null; type: string; party_name?: string | null }[] = [];
+  // Count first, then read the pages in parallel
+  const base = () => sb.from("fw_fin_journals").select("id", { count: "exact", head: true }).eq("business_id", businessId).eq("status", "posted").lte("date", until);
+  const { count, error: cErr } = await base();
+  if (cErr) return { accounts, journals: [], error: cErr };
+  const pageOf = (from: number, withParty: boolean) => sb.from("fw_fin_journals").select(`id,date,entry_no,narration,type${withParty ? ",party_name" : ""}`).eq("business_id", businessId).eq("status", "posted").lte("date", until).order("date").order("id").range(from, from + 999);
   let withParty = true;
-  for (let from = 0; ; from += 1000) {
-    const cols = `id,date,entry_no,narration,type${withParty ? ",party_name" : ""}`;
-    const { data, error } = await sb.from("fw_fin_journals").select(cols).eq("business_id", businessId).eq("status", "posted").lte("date", until).order("date").order("id").range(from, from + 999);
-    if (error && withParty && /party_name/.test(error.message)) { withParty = false; from -= 1000; continue; }
-    if (error) return { accounts, journals: [], error };
-    heads.push(...((data ?? []) as unknown as typeof heads));
-    if (!data || data.length < 1000) break;
+  const starts: number[] = [];
+  for (let f = 0; f < Math.max(count ?? 0, 1); f += 1000) starts.push(f);
+  for (let i = 0; i < starts.length; i += 6) {
+    let res = await Promise.all(starts.slice(i, i + 6).map(f => pageOf(f, withParty)));
+    if (withParty && res.some(r => r.error && /party_name/.test(r.error.message))) { withParty = false; res = await Promise.all(starts.slice(i, i + 6).map(f => pageOf(f, false))); }
+    for (const r of res) { if (r.error) return { accounts, journals: [], error: r.error }; heads.push(...((r.data ?? []) as unknown as typeof heads)); }
   }
   const lines = new Map<string, { account_id: string; dr: number; cr: number }[]>();
   const chunks: string[][] = [];
