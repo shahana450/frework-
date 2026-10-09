@@ -47,7 +47,7 @@ export default function ReviewChecks({ bizId, date, lines, onResult }: { bizId: 
           {bad.map((c, i) => (
             <div key={i} style={{ fontSize: 14.5, lineHeight: 1.55, color: "#141A3A", background: "#FDECEA", borderRadius: 12, padding: "10px 12px" }}><b style={{ color: "#C2321F" }}>{c.title}.</b> {c.detail}</div>
           ))}
-          <div style={{ fontSize: 12.5, color: "#5A6080" }}>Use <b>Edit</b> on the draft to add a &quot;TDS Payable&quot; line or change Cash to your bank.</div>
+          {[...new Set(bad.map(c => c.fix).filter(Boolean))].map(f => <div key={f} style={{ fontSize: 12.5, color: "#5A6080" }}>{f}</div>)}
           <button autoFocus onClick={() => setSeen(badKey)} style={{ alignSelf: "flex-end", height: 42, padding: "0 20px", borderRadius: 12, border: "none", background: "#232A63", color: "#FFFFFF", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>I&apos;ll review it</button>
         </div>
       </div>
@@ -58,7 +58,8 @@ export default function ReviewChecks({ bizId, date, lines, onResult }: { bizId: 
         {bad.map((c, i) => (
           <div key={i} style={{ fontSize: 13.5, lineHeight: 1.5, color: "#141A3A" }}><b style={{ color: "#C2321F" }}>{c.title}.</b> {c.detail}</div>
         ))}
-        <div style={{ fontSize: 12, color: "#5A6080" }}>Use <b>Edit</b> to add a &quot;TDS Payable&quot; line or change Cash to your bank. FreBook flags these from the Income-tax Act 2025 rules — check special cases with your CA.</div>
+        {[...new Set(bad.map(c => c.fix).filter(Boolean))].map(f => <div key={f} style={{ fontSize: 12, color: "#5A6080" }}>{f}</div>)}
+        <div style={{ fontSize: 11.5, color: "#5A6080" }}>Flagged from the Income-tax Act 2025 rules — check special cases with your CA.</div>
       </section>
     )}
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>

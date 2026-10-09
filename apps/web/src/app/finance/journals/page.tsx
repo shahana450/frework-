@@ -85,7 +85,7 @@ export default function JournalsPage() {
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const { data } = await supabase.from("fw_fin_journals")
-        .select("id,entry_no,date,narration,type,status,total_debit,total_credit,reference_no,ai_generated,created_at")
+        .select("id,entry_no,date,narration,type,status,total_debit,total_credit,reference_no,ai_generated,created_at,reversed_by,reversal_of")
         .eq("business_id", saved)
         .order("date", { ascending: false });
       const rows = data ?? [];
@@ -254,6 +254,9 @@ export default function JournalsPage() {
                             <span style={{ color: STATUS_COLOR[j.status] ?? "#141A3A", background: `${STATUS_COLOR[j.status] ?? "#141A3A"}18`, padding: "2px 8px", borderRadius: 4, fontSize: "0.7rem", fontWeight: 700 }}>
                               {j.status.charAt(0).toUpperCase() + j.status.slice(1)}
                             </span>
+                            {/* B13 — reversal pairs are linked both ways */}
+                            {(j as { reversed_by?: string | null }).reversed_by && <div style={{ fontSize: "0.68rem", color: "#C2321F", marginTop: 3 }}>Reversed by {journals.find(x => x.id === (j as { reversed_by?: string | null }).reversed_by)?.entry_no ?? "a reversal"}</div>}
+                            {(j as { reversal_of?: string | null }).reversal_of && <div style={{ fontSize: "0.68rem", color: "#5A6080", marginTop: 3 }}>Reverses {journals.find(x => x.id === (j as { reversal_of?: string | null }).reversal_of)?.entry_no ?? "an entry"}</div>}
                           </td>
                           <td style={{ padding: "0.65rem 0.75rem", whiteSpace: "nowrap" }}>
                             {j.ai_generated && <span style={{ fontSize: "0.68rem", color: "#5B4BC4", background: "rgba(91,75,196,0.1)", padding: "2px 6px", borderRadius: 4 }}>AI</span>}

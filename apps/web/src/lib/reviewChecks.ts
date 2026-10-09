@@ -3,7 +3,7 @@ import { groupOf, type Account } from "./books";
 import { monthPeriod, type QJournal } from "./bookQueries";
 
 export type DraftLine = { account: string; debit: number; credit: number };
-export type Check = { tone: "ok" | "warn" | "bad" | "info"; title: string; detail: string };
+export type Check = { tone: "ok" | "warn" | "bad" | "info"; title: string; detail: string; rule?: string; fix?: string };
 export type Impact = { account: string; before: number; after: number };
 export type ReviewResult = { checks: Check[]; impact: Impact[] };
 
@@ -32,8 +32,9 @@ export function reviewChecks(accounts: Account[], journals: QJournal[], today: s
   const ids = new Set(lines.map(l => l.acc?.id).filter(Boolean) as string[]);
   const checks: Check[] = [];
 
-  // 1. Duplicate: same total, same ledgers, within 3 days
-  const dup = journals.find(j => days(j.date, draft.date) <= 3 && Math.abs(r2(j.lines.reduce((s, l) => s + l.dr, 0)) - total) < 0.5
+  // 1. Duplicate: same total, same ledgers, within 3 days — reversal pairs excluded (a reversal and its original aren't duplicates)
+  const reversedNos = new Set(journals.map(j => /^Reversal of (\S+)/i.exec(j.narration ?? "")?.[1]).filter(Boolean) as string[]);
+  const dup = journals.find(j => !/^Reversal of /i.test(j.narration ?? "") && !reversedNos.has(j.entry_no) && days(j.date, draft.date) <= 3 && Math.abs(r2(j.lines.reduce((s, l) => s + l.dr, 0)) - total) < 0.5
     && ids.size > 0 && [...ids].every(id => j.lines.some(l => l.account_id === id)));
   if (dup) checks.push({ tone: "bad", title: "Possible duplicate", detail: `${dup.entry_no} on ${dup.date} has the same amount and ledgers. Post only if this is a separate transaction.` });
   else checks.push({ tone: "ok", title: "No duplicate found", detail: "Nothing with this amount and these ledgers in the 3 days around this date." });
@@ -63,7 +64,7 @@ export function reviewChecks(accounts: Account[], journals: QJournal[], today: s
     const deducted = lines.some(x => x.credit > 0 && /tds/i.test(x.account));
     if (why && !deducted) {
       const how = rule.rates.map(([who, pct]) => `${pct}% for ${who} = ${inr(l.debit * pct / 100)}`).join("; ");
-      checks.push({ tone: "bad", title: `TDS must be deducted · ${rule.what}`, detail: `${inr(l.debit)} is ${why}. Deduct TDS (${how}), pay the net amount and credit "TDS Payable". Section ${rule.now}, Income-tax Act 2025 (was s.${rule.was}). Missing TDS makes 30% of the expense disallowable plus interest and penalty.` });
+      checks.push({ tone: "bad", title: `TDS must be deducted · ${rule.what}`, detail: `${inr(l.debit)} is ${why}. Deduct TDS (${how}), pay the net amount and credit "TDS Payable". Section ${rule.now}, Income-tax Act 2025 (was s.${rule.was}). Missing TDS makes 30% of the expense disallowable plus interest and penalty.`, rule: "tds", fix: "Use Edit to add a \"TDS Payable\" credit line and reduce the amount paid to the net figure." });
     }
   }
 
@@ -75,25 +76,28 @@ export function reviewChecks(accounts: Account[], journals: QJournal[], today: s
     const loanRepaid = others.some(l => l.debit > 0 && isLoanName(l.account));
     const limit = others.some(l => l.debit > 0 && isTransport(l.account)) ? 35000 : 10000;
     if (loanRepaid && cashCr >= 20000) {
-      checks.push({ tone: "bad", title: "Loan repaid in cash", detail: `Repaying a loan or deposit of ${inr(cashCr)} in cash (₹20,000 or more) is barred by section 188, Income-tax Act 2025 (was s.269T) — penalty equal to the amount. Repay by bank transfer or account-payee cheque.` });
+      checks.push({ tone: "bad", title: "Loan repaid in cash", detail: `Repaying a loan or deposit of ${inr(cashCr)} in cash (₹20,000 or more) is barred by section 188, Income-tax Act 2025 (was s.269T) — penalty equal to the amount. Repay by bank transfer or account-payee cheque.`, rule: "cash_loan_repaid", fix: "Use Edit to change Cash to your bank account." });
     } else if (!loanRepaid && cashCr > limit && others.some(l => l.debit > 0 && !/drawings|capital|salary payable|creditor|payable/i.test(l.account))) {
       const asset = others.some(l => l.debit > 0 && l.acc && /fixed|asset/i.test(`${l.acc.type} ${l.acc.sub_type ?? ""}`));
-      checks.push({ tone: "bad", title: `Cash payment over ${inr(limit)}`, detail: `Paying ${inr(cashCr)} in cash to one person in a day means ${asset ? "the asset's cost won't qualify for depreciation" : "the expense is not deductible"} (section 36(4), Income-tax Act 2025 — was s.40A(3)). Pay by bank transfer, UPI or account-payee cheque — or split only if they are genuinely separate days' payments.` });
+      checks.push({ tone: "bad", title: `Cash payment over ${inr(limit)}`, detail: `Paying ${inr(cashCr)} in cash to one person in a day means ${asset ? "the asset's cost won't qualify for depreciation" : "the expense is not deductible"} (section 36(4), Income-tax Act 2025 — was s.40A(3)). Pay by bank transfer, UPI or account-payee cheque — or split only if they are genuinely separate days' payments.`, rule: "cash_payment_limit", fix: "Use Edit to change Cash to your bank account if it was paid that way." });
     }
   }
   if (cashDr > 0) {
     const loanTaken = others.some(l => l.credit > 0 && isLoanName(l.account));
-    if (loanTaken && cashDr >= 20000) checks.push({ tone: "bad", title: "Loan accepted in cash", detail: `Taking a loan or deposit of ${inr(cashDr)} in cash (₹20,000 or more) is barred by section 185, Income-tax Act 2025 (was s.269SS) — penalty equal to the amount. Receive it by bank transfer.` });
-    else if (cashDr >= 200000) checks.push({ tone: "bad", title: "Cash receipt of ₹2 lakh or more", detail: `Receiving ${inr(cashDr)} in cash from one person (in a day, for one transaction or event) is barred by section 186, Income-tax Act 2025 (was s.269ST) — penalty equal to the amount. Ask for a bank transfer or UPI.` });
+    if (loanTaken && cashDr >= 20000) checks.push({ tone: "bad", title: "Loan accepted in cash", detail: `Taking a loan or deposit of ${inr(cashDr)} in cash (₹20,000 or more) is barred by section 185, Income-tax Act 2025 (was s.269SS) — penalty equal to the amount. Receive it by bank transfer.`, rule: "cash_loan_taken", fix: "Use Edit to change Cash to your bank account if it came in that way." });
+    else if (cashDr >= 200000) checks.push({ tone: "bad", title: "Cash receipt of ₹2 lakh or more", detail: `Receiving ${inr(cashDr)} in cash from one person (in a day, for one transaction or event) is barred by section 186, Income-tax Act 2025 (was s.269ST) — penalty equal to the amount. Ask for a bank transfer or UPI.`, rule: "cash_receipt_limit", fix: "Use Edit to change Cash to your bank account if it came in that way." });
   }
 
   // 4. Impact on cash and bank balances
   const impact: Impact[] = [];
   for (const l of lines) {
-    if (!l.acc || !isCashBank(l.acc)) continue;
-    const before = r2(journals.filter(j => j.date <= today).reduce((s, j) => s + j.lines.filter(x => x.account_id === l.acc!.id).reduce((t, x) => t + x.dr - x.cr, 0), 0));
-    impact.push({ account: l.acc.name, before, after: r2(before + (l.debit || 0) - (l.credit || 0)) });
-    if (before + (l.debit || 0) - (l.credit || 0) < -0.5) checks.push({ tone: "warn", title: `${l.acc.name} goes below zero`, detail: "A receipt may be missing, or the payment came from another account." });
+    const isNewCashBank = !l.acc && (isCashName(l.account) || isBankName(l.account));
+    if (!isNewCashBank && (!l.acc || !isCashBank(l.acc))) continue;
+    const name = l.acc?.name ?? l.account.trim();
+    const before = l.acc ? r2(journals.filter(j => j.date <= today).reduce((s, j) => s + j.lines.filter(x => x.account_id === l.acc!.id).reduce((t, x) => t + x.dr - x.cr, 0), 0)) : 0;
+    const after = r2(before + (l.debit || 0) - (l.credit || 0));
+    impact.push({ account: name, before, after });
+    if (after < -0.5) checks.push({ tone: "warn", title: `${name} goes below zero`, detail: l.acc ? "A receipt may be missing, or the payment came from another account." : "This is the first entry to this ledger, so it starts below zero — add its opening balance or the receipt that funded it.", rule: "negative_balance" });
   }
   return { checks, impact };
 }

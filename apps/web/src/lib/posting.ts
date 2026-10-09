@@ -87,7 +87,7 @@ const shiftDate = (d: string, days: number) => { const x = new Date(d + "T00:00:
 export async function findLikelyDuplicate(sb: SupabaseClient, businessId: string, date: string, lines: PostingLine[]): Promise<DuplicateHit | null> {
   const total = round2(lines.reduce((s, l) => s + l.dr, 0));
   const { data } = await sb.from("fw_fin_journals").select("id,entry_no,date,narration,total_debit,fw_fin_journal_lines(account_id)")
-    .eq("business_id", businessId).eq("status", "posted").gte("date", shiftDate(date, -3)).lte("date", shiftDate(date, 3)).eq("total_debit", total).limit(20);
+    .eq("business_id", businessId).eq("status", "posted").is("reversed_by", null).gte("date", shiftDate(date, -3)).lte("date", shiftDate(date, 3)).eq("total_debit", total).limit(20);
   const mine = { date, total, accountIds: lines.map(l => l.accountId) };
   for (const j of (data ?? []) as { id: string; entry_no: string; date: string; narration: string | null; total_debit: number; fw_fin_journal_lines: { account_id: string }[] }[]) {
     if (/^REV|reversal/i.test(j.entry_no) || /^Reversal of/i.test(j.narration ?? "")) continue;
