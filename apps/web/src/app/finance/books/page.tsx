@@ -97,7 +97,7 @@ export default function BooksPage() {
       // Open the year that contains today; if none does, show every year
       const today = new Date().toISOString().slice(0, 10);
       const containing = (fyData ?? []).find(f => f.start_date <= today && (f.end_date ?? "9999") >= today);
-      if (containing) setFy(containing); else setAllYears(true);
+      if (containing) setFy(containing); setAllYears(true); // open on every year; the dropdown narrows it
       setReady(true);
     });
   }, []);
@@ -289,6 +289,7 @@ export default function BooksPage() {
         ))}
         <select value={allYears ? "all" : fy?.id ?? ""} onChange={e => { if (e.target.value === "all") setAllYears(true); else { setAllYears(false); setFy(fys.find(f => f.id === e.target.value) ?? null); } }} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "5px 10px", borderRadius: 8, fontSize: "0.78rem", fontFamily: "inherit" }}>
           <option value="all">All years</option>
+          {fys.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
         </select>
       </nav>
 
