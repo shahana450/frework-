@@ -53,3 +53,7 @@ Thumbs.db
 # Tally bridge installer (111 MB) — never served or committed; ship it as a GitHub Release asset if needed
 apps/web/public/tally-bridge-setup.zip
 apps/web/public/tally-bridge-setup.exe
+
+# E2E
+apps/web/e2e/fixtures/test-users.json
+apps/web/e2e-report

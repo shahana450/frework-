@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy to test-users.json (git-ignored) and fill in. Users and businesses are created by `npx tsx scripts/seed-e2e.ts` on LOCAL or STAGING Supabase only. Never use real customer accounts.",
+  "userA": { "email": "e2e-a@example.test", "password": "<set by you>", "business": "E2E Alpha Traders" },
+  "userB": { "email": "e2e-b@example.test", "password": "<set by you>", "business": "E2E Beta Stores" }
+}

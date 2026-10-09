@@ -1,0 +1,6 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "allowImportingTsExtensions": true, "noEmit": true, "module": "esnext", "target": "ES2022", "incremental": false },
+  "include": ["./**/*.ts"],
+  "exclude": []
+}
