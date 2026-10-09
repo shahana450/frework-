@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { currentUser } from "@/lib/currentUser";
 import type { ParsedTransaction } from "@/app/api/finance/chat-book/route";
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
 import StatementModal from "./StatementModal";
@@ -190,7 +191,7 @@ export default function FreBookPage() {
 
   // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    currentUser().then(async (user) => {
       if (!user) { router.replace("/login"); return; }
       setUserId(user.id); userIdRef.current = user.id;
       const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").trim();

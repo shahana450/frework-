@@ -4,6 +4,7 @@ import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { currentUser } from "@/lib/currentUser";
 import { FINANCE_NAV, isActive } from "@/lib/financeNav";
 import { FreBookMark } from "@/components/FreBookLogo";
 import UpdatePrompt from "@/components/UpdatePrompt";
@@ -69,7 +70,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   useEffect(() => { setSearch(window.location.search); }, [pathname]);
   useEffect(() => {
     // Waiting-for-review count on the Review Queue item
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    currentUser().then(async (user) => {
       if (!user) return;
       const biz = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/\uFEFF/g, "").trim();
       if (!biz) return;
@@ -82,7 +83,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   }
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    currentUser().then(async (user) => {
       if (!user) return;
 
       // Subscription gate \u2014 skip for unguarded pages
