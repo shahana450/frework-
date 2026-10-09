@@ -3,8 +3,8 @@ import type { NextConfig } from "next";
 // Stamped into every build so open apps can tell when a newer version is live
 const BUILD_ID = process.env.VERCEL_DEPLOYMENT_ID ?? process.env.VERCEL_GIT_COMMIT_SHA ?? String(Date.now());
 
-// Content-Security-Policy, in REPORT-ONLY mode first (it logs what it would block without blocking anything).
-// Switch the header key to "Content-Security-Policy" once the reports are clean. Tally runs on the user's PC (localhost).
+// Content-Security-Policy, ENFORCED (Task 9) after the staging report-only run showed nothing the app needs being
+// blocked. Tally runs on the user's PC (localhost). Add any new third-party origin here before using it.
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://mercury.phonepe.com https://checkout.razorpay.com",
@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "Content-Security-Policy-Report-Only", value: CSP },
+          { key: "Content-Security-Policy", value: CSP },
           // Never a wildcard: pages and API answer only to frework.online
           { key: "Access-Control-Allow-Origin", value: "https://frework.online" },
           { key: "Vary", value: "Origin" },
