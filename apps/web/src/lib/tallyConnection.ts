@@ -6,7 +6,7 @@
 // business never shows (or pushes to) another business's Tally company. The port is per computer.
 import { useEffect, useState } from "react";
 import { tallyFetch } from "./tallyUtils";
-import { companiesXml, companiesFrom, licenseXml, isEducational } from "./integrations/tally";
+import { companiesXml, companiesFrom, licenseXml, isEducational, tallyProblem } from "./integrations/tally";
 
 export type TallyState = {
   port: string;
@@ -68,6 +68,8 @@ export async function connectTally(opts: { port?: string; preferName?: string; q
   if (!opts.quiet) set({ status: "connecting", message: "" }, false);
   try {
     const res = await tallyFetch(`http://localhost:${port}`, companiesXml(), 8000);
+    // The bridge answers 502 when Tally isn't on this port — never call that "connected"
+    if (!res.ok) throw new Error(res.status === 502 ? tallyProblem(port, "bridge502") : tallyProblem(port, "http", res.status));
     const names = companiesFrom(await res.text());
     const pick = names.includes(state.company) ? state.company
       : names.find(n => opts.preferName && n.toLowerCase() === opts.preferName.toLowerCase()) ?? names[0] ?? state.company;
@@ -82,7 +84,7 @@ export async function connectTally(opts: { port?: string; preferName?: string; q
     misses++;
     // A background check needs two misses in a row before calling Tally closed
     if (opts.quiet && state.status === "connected" && misses < 2) return state;
-    set({ port, status: "error", checkedAt: Date.now(), message: e instanceof Error ? e.message : "Tally isn't responding — is it still open?" });
+    set({ port, status: "error", checkedAt: Date.now(), message: e instanceof Error && /port \d+/.test(e.message) ? e.message : tallyProblem(port, "unreachable") });
   }
   return state;
 }

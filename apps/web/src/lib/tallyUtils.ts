@@ -1,4 +1,5 @@
 // Shared Tally utilities — used by both Tally Sync page and Audit page
+import { tallyProblem } from "./integrations/tally";
 
 // ── Chrome extension bridge ──────────────────────────────────────────────────
 // Track whether the extension has announced itself (used for error messages only)
@@ -20,10 +21,11 @@ function tryExtensionBridge(url: string, body: string, timeoutMs: number): Promi
       if (settled) return;
       settled = true;
       window.removeEventListener("message", handler);
+      const port = url.match(/:(\d+)/)?.[1] ?? "7001";
       reject(new Error(
         _bridgeReady
-          ? "Tally did not respond via Chrome extension."
-          : "Cannot reach Tally. Run the FreWork Tally Bridge app, or install the Chrome Extension."
+          ? `Tally did not answer through the Chrome extension. ${tallyProblem(port, "unreachable")}`
+          : tallyProblem(port, "unreachable")
       ));
     }, Math.min(timeoutMs, 8000));
 
@@ -34,7 +36,7 @@ function tryExtensionBridge(url: string, body: string, timeoutMs: number): Promi
       clearTimeout(timeout);
       window.removeEventListener("message", handler);
       if (e.data.ok) resolve(new Response(e.data.text, { status: e.data.status ?? 200 }));
-      else reject(new Error(e.data.error ?? "Bridge error"));
+      else reject(new Error(`${e.data.error ?? "Bridge error"} — ${tallyProblem(url.match(/:(\d+)/)?.[1], "unreachable")}`));
     }
 
     window.addEventListener("message", handler);

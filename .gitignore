@@ -49,3 +49,7 @@ Thumbs.db
 
 .vercel
 .env*
+
+# Tally bridge installer (111 MB) — never served or committed; ship it as a GitHub Release asset if needed
+apps/web/public/tally-bridge-setup.zip
+apps/web/public/tally-bridge-setup.exe

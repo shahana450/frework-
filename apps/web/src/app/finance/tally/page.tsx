@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { findTallyPort } from "@/lib/tallyUtils";
+import { tallyProblem } from "@/lib/integrations/tally";
 import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -25,10 +26,11 @@ function tryExtensionBridge(url: string, body: string, timeoutMs: number): Promi
     const timeout = setTimeout(() => {
       if (settled) return; settled = true;
       window.removeEventListener("message", handler);
+      const port = url.match(/:(\d+)/)?.[1] ?? "7001";
       reject(new Error(
         _bridgeReady
-          ? "Tally did not respond via Chrome extension."
-          : "Cannot reach Tally. Run the FreWork Tally Bridge app, or install the Chrome Extension from the download link below."
+          ? `Tally did not answer through the Chrome extension. ${tallyProblem(port, "unreachable")}`
+          : tallyProblem(port, "unreachable")
       ));
     }, Math.min(timeoutMs, 8000));
     function handler(e: MessageEvent) {
@@ -37,7 +39,7 @@ function tryExtensionBridge(url: string, body: string, timeoutMs: number): Promi
       clearTimeout(timeout);
       window.removeEventListener("message", handler);
       if (e.data.ok) resolve(new Response(e.data.text, { status: e.data.status ?? 200 }));
-      else reject(new Error(e.data.error ?? "Bridge error"));
+      else reject(new Error(`${e.data.error ?? "Bridge error"} — ${tallyProblem(url.match(/:(\d+)/)?.[1], "unreachable")}`));
     }
     window.addEventListener("message", handler);
     window.postMessage({ type: "TALLY_BRIDGE_REQUEST", id, url, method: "POST", body, timeout: timeoutMs }, "*");
@@ -662,8 +664,8 @@ export default function TallyPage() {
         setTriggerImport(t => t + 1);
       } else {
         setConnStatus("error"); setConnMsg(res.status === 502
-          ? `The bridge is running, but Tally isn't answering on port ${tallyPort} (also tried 9000 and 7001). In Tally: F1 → Settings → Connectivity → set "TallyPrime acts as" to Both, note the port, enter it here, and make sure a company is open.`
-          : `Tally responded with HTTP ${res.status}`);
+          ? `${tallyProblem(tallyPort, "bridge502")} (Also tried ports 9000, 7001, 9999 and 9001.)`
+          : tallyProblem(tallyPort, "http", res.status));
       }
     } catch (e: unknown) {
       setConnStatus("error");
@@ -673,7 +675,7 @@ export default function TallyPage() {
           msg.toLowerCase().includes("aborted") || msg.toLowerCase().includes("signal")) {
         setConnMsg(`Tally is not responding on port ${tallyPort}. Fix: 1) Open Tally Prime  2) In Tally: F1 → Settings → Connectivity → Enable Tally HTTP Server → Port ${tallyPort} → Accept (Ctrl+A)  3) Click Connect again`);
       } else {
-        setConnMsg(msg);
+        setConnMsg(/port \d+/.test(msg) ? msg : `${msg} — ${tallyProblem(tallyPort, "unreachable")}`);
       }
     }
   }

@@ -77,12 +77,25 @@ export const ledgersFrom = (reply: string) => [...reply.matchAll(/<LEDGER NAME="
 /** Educational (unlicensed) TallyPrime accepts only these days of the month. */
 export const eduDateOk = (date: string) => ["01", "02", "31"].includes(String(date).slice(8, 10));
 
-export function explainTallyError(raw: string, educational: boolean): string {
+/**
+ * Every Tally connection problem names the port in the box and says what to check.
+ * unreachable: neither Tally nor the bridge answered; bridge502: the bridge (port 7002) answered but Tally isn't on `port`;
+ * http: Tally answered with an HTTP error.
+ */
+export function tallyProblem(port: string | number | null | undefined, kind: "unreachable" | "bridge502" | "http", status?: number): string {
+  const p = String(port ?? "").replace(/\D/g, "") || "7001";
+  const settings = `In Tally: F1 → Settings → Connectivity → "TallyPrime acts as" Both, port ${p} (or type Tally's port in the Port box)`;
+  if (kind === "bridge502") return `The FreWork Tally Bridge is running, but Tally isn't answering on port ${p}. ${settings}, and open a company.`;
+  if (kind === "http") return `Tally on port ${p} answered HTTP ${status ?? "error"}. Check that a company is open in Tally and try again.`;
+  return `Can't reach Tally on port ${p}. Check: Tally is open with a company loaded; ${settings}; the FreWork Tally Bridge window is open (it uses port 7002).`;
+}
+
+export function explainTallyError(raw: string, educational: boolean, port?: string | number | null): string {
   if (/voucher date is missing/i.test(raw)) return educational
     ? "Tally is in Educational mode — it only accepts dates on the 1st, 2nd or 31st. Activate your TallyPrime licence and push again."
     : "Tally rejected the date — check the company's books-beginning date and current period in Tally.";
   if (/ledger .* does not exist|could not find ledger/i.test(raw)) return `${raw} — the ledger couldn't be created in Tally; check its name for special characters.`;
-  if (/network|failed to fetch|timeout|abort/i.test(raw)) return "Lost the connection to Tally — keep the Tally Bridge window open and try again.";
+  if (/network|failed to fetch|timeout|abort|can't reach tally/i.test(raw)) return tallyProblem(port, "unreachable");
   return raw;
 }
 

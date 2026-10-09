@@ -7,6 +7,7 @@ import { useTally } from "@/lib/tallyConnection";
 import TallyBar from "@/components/TallyBar";
 import { tallyFetch, parseTallyVouchers, monthsInRange, VOUCHER_FETCH_XML } from "@/lib/tallyUtils";
 import { explainTallyError, eduDateOk, parseImportReply, licenseXml, isEducational } from "@/lib/integrations/tally";
+import { type PushState, pushView, isPushedHere, fromSyncRows } from "@/lib/integrations/pushStatus";
 
 type FY = { id: string; label: string; is_current: boolean; start_date: string; end_date: string };
 type Line = { dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { name: string } | null };
@@ -16,7 +17,6 @@ type Journal = {
   fw_fin_journal_lines: Line[];
 };
 type Source = "chat" | "tally" | "manual";
-type PushState = { at: string } | { error: string };
 
 const BG = "#F5F6FA", CARD = "#FFFFFF", BORDER = "rgba(20,26,58,0.12)";
 const GOLD = "#232A63", GREEN = "#0B7A55", RED = "#C2321F", BLUE = "#1F5EFF", PURPLE = "#5B4BC4", AMBER = "#8A5A00";
@@ -82,10 +82,7 @@ export default function BooksPage() {
       try { setPushed(JSON.parse(localStorage.getItem(`fw_tally_pushed_${saved}`) ?? "{}")); } catch { /* */ }
       // Server copy wins: the same push status on every device
       fetch(`/api/finance/integrations/sync?business_id=${saved}&provider=tally`).then(r => r.json()).then(d => {
-        const server: Record<string, PushState> = {};
-        for (const r of (d.rows ?? []) as { journal_id: string; status: string; error: string | null; synced_at: string }[]) {
-          server[r.journal_id] = r.status === "failed" ? { error: r.error ?? "Failed" } : { at: r.synced_at };
-        }
+        const server = fromSyncRows(d.rows ?? []);
         if (Object.keys(server).length) setPushed(prev => ({ ...prev, ...server }));
       }).catch(() => { /* browser copy still works */ });
       const [{ data: biz }, { data: fyData }] = await Promise.all([
@@ -131,7 +128,8 @@ export default function BooksPage() {
     try { localStorage.setItem(pushKey, JSON.stringify(next)); } catch { /* */ }
   }
 
-  const isPushed = (id: string) => !!inTally[id] || (!!pushed[id] && "at" in pushed[id]);
+  // "Pushed" means pushed to the company open in Tally now (see pushStatus.ts)
+  const isPushed = (id: string) => !!inTally[id] || isPushedHere(pushed[id], company);
 
   // Reads Tally's vouchers for the loaded dates and marks FreWork entries already there
   const checkTally = useCallback(async () => {
@@ -177,12 +175,12 @@ export default function BooksPage() {
     // A "pushed" mark that Tally doesn't confirm (e.g. pushed to another company) is cleared, so Push all sends it again
     let stale = 0;
     if (!failedMonths) {
-      const gone = own.filter(j => !found[j.id] && pushed[j.id] && "at" in pushed[j.id]).map(j => j.id);
+      const gone = own.filter(j => !found[j.id] && isPushedHere(pushed[j.id], company)).map(j => j.id);
       stale = gone.length;
       if (stale) {
         // functional update: no dependency on pushed, so the check never re-runs itself
         setPushed(prev => { const next = { ...prev }; for (const id of gone) delete next[id]; try { localStorage.setItem(pushKey, JSON.stringify(next)); } catch { /* */ } return next; });
-        fetch("/api/finance/integrations/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, provider: "tally", target: company, results: own.filter(j => !found[j.id]).map(j => ({ journal_id: j.id, status: "failed", error: `Not found in Tally company ${company || "open"} — push again` })) }) }).catch(() => { /* local copy cleared */ });
+        fetch("/api/finance/integrations/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, provider: "tally", target: company, results: gone.map(id => ({ journal_id: id, status: "failed", error: `Not found in Tally company ${company || "open"} — push again` })) }) }).catch(() => { /* local copy cleared */ });
       }
     }
     setCheckMsg(`Checked ${read} Tally vouchers in ${company || "the open company"}: ${n} of ${own.length} FreWork entries are already in Tally.${stale ? ` ${stale} marked "pushed" earlier aren't in this company — they're back under "Not in Tally"; use Push all to send them.` : ""}${failedMonths ? ` (${failedMonths} month${failedMonths > 1 ? "s" : ""} couldn't be read)` : ""}`);
@@ -252,10 +250,10 @@ export default function BooksPage() {
           try {
             const text = await (await tallyFetch(tallyUrl, v.xml, 15000)).text();
             const reply = parseImportReply(text);
-            if (!reply.ok) { next[v.id] = { error: explainTallyError(reply.error ?? "Tally rejected the voucher", eduMode) }; failed++; }
-            else { next[v.id] = { at: new Date().toISOString() }; ok++; }
+            if (!reply.ok) { next[v.id] = { error: explainTallyError(reply.error ?? "Tally rejected the voucher", eduMode, port), target: company || null }; failed++; }
+            else { next[v.id] = { at: new Date().toISOString(), target: company || null }; ok++; }
           } catch (e) {
-            next[v.id] = { error: e instanceof Error ? e.message : "Network error" }; failed++;
+            next[v.id] = { error: explainTallyError(e instanceof Error ? e.message : "Network error", eduMode, port), target: company || null }; failed++;
           }
           await new Promise(r => setTimeout(r, 50));
         }
@@ -371,6 +369,7 @@ export default function BooksPage() {
                 {visible.map(j => {
                   const src = sourceOf(j);
                   const p = pushed[j.id];
+                  const pv = pushView(p, company);
                   const lines = j.fw_fin_journal_lines ?? [];
                   const drNames = lines.filter(l => l.dr_amount > 0).map(l => l.fw_fin_chart_of_accounts?.name ?? "?");
                   const crNames = lines.filter(l => l.cr_amount > 0).map(l => l.fw_fin_chart_of_accounts?.name ?? "?");
@@ -397,7 +396,8 @@ export default function BooksPage() {
                         <td style={{ padding: "0.5rem 0.75rem", whiteSpace: "nowrap" }}>
                           {src === "tally" ? <span style={{ fontSize: "0.7rem", color: MUTED }}>Came from Tally</span>
                             : inTally[j.id] ? <span style={{ fontSize: "0.7rem", fontWeight: 700, color: GREEN }} title={inTally[j.id].how === "tag" ? "Found in Tally by its FreWork entry number" : "Tally has a voucher on the same date, same amount and a shared ledger"}>✓ In Tally{inTally[j.id].vno ? ` · Vch ${inTally[j.id].vno}` : ""}{inTally[j.id].how === "match" ? " (likely)" : ""}</span>
-                            : p && "at" in p ? <span style={{ fontSize: "0.7rem", fontWeight: 700, color: GREEN }} title={new Date(p.at).toLocaleString("en-IN")}>✓ Pushed {new Date(p.at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</span>
+                            : pv.kind === "pushed" ? <span style={{ fontSize: "0.7rem", fontWeight: 700, color: GREEN }} title={`${new Date(pv.at).toLocaleString("en-IN")}${pv.companyKnown ? "" : " · company not recorded — Check Tally confirms it"}`}>✓ Pushed {new Date(pv.at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</span>
+                            : pv.kind === "elsewhere" ? <span style={{ display: "inline-flex", flexDirection: "column" }} title={`Pushed to Tally company "${pv.company}" on ${new Date(pv.at).toLocaleString("en-IN")}. Not pushed to the company open now.`}><span style={{ fontSize: "0.7rem", color: AMBER }}>Not pushed</span><span style={{ fontSize: "0.64rem", color: MUTED }}>Pushed to {pv.company}</span></span>
                             : p && "error" in p ? <span style={{ display: "inline-flex", flexDirection: "column", maxWidth: 260, whiteSpace: "normal" }} title={p.error}><span style={{ fontSize: "0.7rem", fontWeight: 700, color: RED }}>✗ Failed</span><span style={{ fontSize: "0.66rem", color: MUTED, lineHeight: 1.35 }}>{explainTallyError(p.error, eduMode)}</span></span>
                             : <span style={{ fontSize: "0.7rem", color: AMBER }}>Not pushed</span>}
                         </td>

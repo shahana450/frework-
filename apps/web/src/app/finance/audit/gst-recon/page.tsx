@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { tallyFetch, parseTallyVouchers, tallyVoucherTypeToFP, monthsInRange, VOUCHER_FETCH_XML } from "@/lib/tallyUtils";
+import { tallyProblem } from "@/lib/integrations/tally";
 
 const DUTIES_LEDGERS_XML = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_DutyLedgers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_DutyLedgers" ISMODIFY="No"><TYPE>Ledger</TYPE><CHILDOF>$$GroupDutiesTaxes</CHILDOF><BELONGSTO>Yes</BELONGSTO><FETCH>Name,Parent</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
 const xmlDecode = (s: string) => s.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").trim();
@@ -403,7 +404,7 @@ export default function GSTReconPage() {
       setUploadMsg(`✓ Imported from Tally: ${inp} input GST (ITC) entries, ${lines.length-inp} output GST entries`);
       setTab("summary");
     }catch(e){
-      setUploadMsg(e instanceof Error?e.message:"Could not reach Tally. Open Tally with the company loaded and run the FreWork Tally Bridge.");
+      setUploadMsg(e instanceof Error&&/port \d+/.test(e.message)?e.message:tallyProblem(tallyPort,"unreachable"));
     }finally{ setTallyImporting(false); }
   }
 
