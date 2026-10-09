@@ -6,6 +6,7 @@ import { requireBusiness, serverError } from "@/lib/apiAuth";
 // re-run row security for every journal, line and ledger (that timed out on large books).
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const PAGE = 1000;
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,15 +34,19 @@ export async function GET(req: NextRequest) {
     // 2) their lines with ledger names, in chunks
     const ids = journals.map(j => j.id as string);
     const lines = new Map<string, { dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { name: string } | null }[]>();
-    for (let i = 0; i < ids.length; i += 300) {
-      const { data, error } = await supabase.from("fw_fin_journal_lines")
-        .select("journal_id,dr_amount,cr_amount,fw_fin_chart_of_accounts(name)")
-        .in("journal_id", ids.slice(i, i + 300));
-      if (error) throw error;
-      for (const l of (data ?? []) as unknown as { journal_id: string; dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { name: string } | null }[]) {
-        const list = lines.get(l.journal_id) ?? [];
-        list.push({ dr_amount: l.dr_amount, cr_amount: l.cr_amount, fw_fin_chart_of_accounts: l.fw_fin_chart_of_accounts });
-        lines.set(l.journal_id, list);
+    // chunks run in parallel — sequential round-trips were the slow part on big books
+    const chunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += 300) chunks.push(ids.slice(i, i + 300));
+    for (let i = 0; i < chunks.length; i += 8) {
+      const results = await Promise.all(chunks.slice(i, i + 8).map(chunk => supabase.from("fw_fin_journal_lines")
+        .select("journal_id,dr_amount,cr_amount,fw_fin_chart_of_accounts(name)").in("journal_id", chunk)));
+      for (const { data, error } of results) {
+        if (error) throw error;
+        for (const l of (data ?? []) as unknown as { journal_id: string; dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { name: string } | null }[]) {
+          const list = lines.get(l.journal_id) ?? [];
+          list.push({ dr_amount: l.dr_amount, cr_amount: l.cr_amount, fw_fin_chart_of_accounts: l.fw_fin_chart_of_accounts });
+          lines.set(l.journal_id, list);
+        }
       }
     }
 
