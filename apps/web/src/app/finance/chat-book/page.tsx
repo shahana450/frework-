@@ -9,6 +9,7 @@ import StatementModal from "./StatementModal";
 import ReviewChecks from "./ReviewChecks";
 import BulkTemplateModal from "./BulkTemplateModal";
 import type { Verdict } from "@/lib/frebook/validateDraft";
+import { postWarnings } from "@/lib/frebook/postWarnings";
 import SimpleTemplateModal from "./SimpleTemplateModal";
 import { parseSimpleGrid, SIMPLE_HEADERS, type SimpleEntry } from "@/lib/simpleTemplate";
 import InstallApp from "./InstallApp";
@@ -220,6 +221,8 @@ export default function FreBookPage() {
   const [snapHint, setSnapHint] = useState(false);
   const [violations, setViolations] = useState<Record<string, string[]>>({});
   const [bulk, setBulk] = useState<{ fileName: string; fileKey: string; sentences: string[] } | null>(null);
+  // B14 — one in-app confirmation listing every warning, instead of stacked browser pop-ups
+  const [confirmPost, setConfirmPost] = useState<{ msgId: string; warnings: string[]; run: () => void } | null>(null);
   const [simpleBulk, setSimpleBulk] = useState<{ fileName: string; fileKey: string; entries: SimpleEntry[] } | null>(null);
   const postingRef = useRef(new Set<string>());
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -761,13 +764,14 @@ export default function FreBookPage() {
                           onApplyEdit={() => applyEdit(msg.id)}
                           onCancelEdit={() => setEditingMsg(null)}
                           onConfirm={() => {
-                            const v = violations[msg.id] ?? [];
-                            if (v.length && !window.confirm(`This entry has compliance problems:\n\n• ${v.join("\n• ")}\n\nPost it anyway? (Better: Cancel, then Edit to fix it.)`)) return;
                             const tx = editingMsg === msg.id
                               ? { ...msg.transaction!, transaction_date: editDate, narrative: editNarration, lines: editLines }
                               : msg.transaction!;
                             const lastUser = [...messages].reverse().find(m => m.role === "user");
-                            postTransaction(tx, currentSession, lastUser?.text ?? "", msg.id);
+                            const run = () => postTransaction(tx, currentSession, lastUser?.text ?? "", msg.id);
+                            const warnings = postWarnings({ compliance: violations[msg.id], questions: msg.verdict?.questions, duplicate: msg.duplicate });
+                            if (warnings.length) { setConfirmPost({ msgId: msg.id, warnings, run }); return; }
+                            run();
                           }}
                           onSwapAccount={alt => setMessages(prev => prev.map(m => {
                             if (m.id !== msg.id || !m.transaction) return m;
@@ -851,6 +855,21 @@ export default function FreBookPage() {
         )}
       </div>
 
+      {confirmPost && (
+        <div role="dialog" aria-modal="true" aria-labelledby="cp-title" onClick={() => setConfirmPost(null)} style={{ position: "fixed", inset: 0, zIndex: 9500, background: "rgba(15,43,37,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 18, maxWidth: 520, width: "100%", padding: 22, display: "flex", flexDirection: "column", gap: 12, boxShadow: "0 24px 60px -20px rgba(0,0,0,0.5)", borderTop: "5px solid #C2321F" }}>
+            <div id="cp-title" style={{ fontSize: "1.05rem", fontWeight: 800, color: "#C2321F" }}>Check before posting</div>
+            <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6, fontSize: "0.9rem", lineHeight: 1.5, color: "#10241F" }}>
+              {confirmPost.warnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+            <div style={{ fontSize: "0.8rem", color: "#5E6B66" }}>Better: go back, use Edit to fix it, then post.</div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+              <button autoFocus onClick={() => setConfirmPost(null)} style={{ height: 42, padding: "0 18px", borderRadius: 11, border: "1px solid #D8CDB4", background: "#FFFFFF", color: "#10241F", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Go back and fix</button>
+              <button onClick={() => { const r = confirmPost.run; setConfirmPost(null); r(); }} style={{ height: 42, padding: "0 18px", borderRadius: 11, border: "none", background: "#C2321F", color: "#FFFFFF", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Post anyway</button>
+            </div>
+          </div>
+        </div>
+      )}
       {simpleBulk && bizId && (
         <SimpleTemplateModal fileName={simpleBulk.fileName} fileKey={simpleBulk.fileKey} entries={simpleBulk.entries} bizId={bizId}
           onClose={() => setSimpleBulk(null)}
@@ -879,6 +898,7 @@ export default function FreBookPage() {
         .fb-tile { transition: border-color .15s, box-shadow .15s, transform .15s; } .fb-tile:hover { transform: translateY(-2px); }
         @media (max-width: 1100px) { .fb-hero { grid-template-columns: minmax(0,1fr) !important; } .fb-tiles6 { grid-template-columns: repeat(3, minmax(0,1fr)) !important; } .fb-ask { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
         @media (max-width: 640px) { .fb-tiles6 { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } .fb-ask { grid-template-columns: minmax(0,1fr) !important; } }
+        .fb-spin { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: fbSpin .7s linear infinite; vertical-align: -2px; margin-right: 6px; } @keyframes fbSpin { to { transform: rotate(360deg); } }
         .fb-mic-dot { animation: fbPulse 1.2s ease-in-out infinite; } @keyframes fbPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
         .fb-toplink:hover, .fb-toplink:focus-visible { background: rgba(217,181,111,0.14); color: #FFFFFF !important; outline: none; }
         @media (max-width: 760px) {
@@ -1168,7 +1188,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
           ) : (
             <>
               <button onClick={onConfirm} disabled={!balanced || !!msg.fyLocked || msg.status === "confirmed"} aria-busy={msg.status === "confirmed"} style={{ background: balanced && !msg.fyLocked ? GREEN : "rgba(11,122,85,0.15)", color: balanced && !msg.fyLocked ? "#F5F6FA" : "rgba(11,122,85,0.4)", border: "none", padding: "7px 20px", borderRadius: 8, fontWeight: 800, cursor: msg.status === "confirmed" ? "wait" : balanced && !msg.fyLocked ? "pointer" : "not-allowed", opacity: msg.status === "confirmed" ? 0.7 : 1, fontFamily: "inherit", fontSize: "0.84rem" }}>
-                {msg.fyLocked ? "🔒 Period Locked" : msg.status === "confirmed" ? "Posting…" : "✓ Confirm & Post"}
+                {msg.fyLocked ? "🔒 Period Locked" : msg.status === "confirmed" ? <><span className="fb-spin" aria-hidden="true" /> Posting…</> : "✓ Confirm & Post"}
               </button>
               <button onClick={onStartEdit} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "7px 14px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>✏ Edit</button>
               <button onClick={onCancel} style={{ background: "rgba(194,50,31,0.07)", border: `1px solid rgba(194,50,31,0.2)`, color: RED, padding: "7px 14px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>✕</button>

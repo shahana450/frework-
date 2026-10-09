@@ -23,6 +23,8 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
   const [rows, setRows] = useState<BRow[]>(() => sentences.slice(0, MAX_ROWS).map((text, i) => ({ i, text, state: "reading" })));
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [posting, setPosting] = useState(false);
+  // B14 — flagged entries need a second, deliberate click (no browser pop-up)
+  const [confirmFlagged, setConfirmFlagged] = useState(0);
   const [heads, setHeads] = useState<Record<string, string>>({});
   const [needHeads, setNeedHeads] = useState<{ account: string; suggested: string }[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -78,7 +80,8 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
   async function postSelected() {
     if (!chosen.length || posting) return;
     const flagged = chosen.filter(r => r.duplicate || r.issues?.length);
-    if (flagged.length && !window.confirm(`${flagged.length} of the ticked entries have a possible duplicate or a compliance warning.\n\nPost them anyway?`)) return;
+    if (flagged.length && !confirmFlagged) { setConfirmFlagged(flagged.length); return; }
+    setConfirmFlagged(0);
     setPosting(true); setMsg(null);
     const ids = new Set(chosen.map(r => r.i));
     setRows(prev => prev.map(r => ids.has(r.i) ? { ...r, state: "posting" } : r));
@@ -212,7 +215,8 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            {msg && <span role="status" style={{ fontSize: 13.5, fontWeight: 700, color: msg.ok ? C.pos : C.warn }}>{msg.text}</span>}
+            {confirmFlagged > 0 && !posting && <span role="alert" style={{ fontSize: 13.5, fontWeight: 700, color: C.neg }}>⚠ {confirmFlagged} ticked entr{confirmFlagged === 1 ? "y has" : "ies have"} a possible duplicate or compliance warning. Untick {confirmFlagged === 1 ? "it" : "them"}, or press Post again to post anyway. <button onClick={() => setConfirmFlagged(0)} style={{ border: "none", background: "none", color: C.ink, textDecoration: "underline", cursor: "pointer", fontWeight: 700 }}>Cancel</button></span>}
+            {msg && !confirmFlagged && <span role="status" style={{ fontSize: 13.5, fontWeight: 700, color: msg.ok ? C.pos : C.warn }}>{msg.text}</span>}
             <div style={{ flex: 1 }} />
             {pending.length > 0 && !posting && (
               <button onClick={() => { onSendToChat(pending.map(r => r.text)); onClose(); }} style={{ height: 42, padding: "0 14px", borderRadius: 10, border: `1px solid ${C.strong}`, background: "#FFFFFF", color: C.ink, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
@@ -220,7 +224,7 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
               </button>
             )}
             <button onClick={postSelected} disabled={!chosen.length || posting || counts.reading > 0 && !chosen.length} style={{ height: 42, padding: "0 20px", borderRadius: 10, border: "none", background: C.pos, color: "#FFFFFF", fontWeight: 800, fontSize: 14.5, cursor: chosen.length && !posting ? "pointer" : "default", opacity: chosen.length && !posting ? 1 : 0.5 }}>
-              {posting ? "Posting…" : `✓ Post ${chosen.length} entr${chosen.length === 1 ? "y" : "ies"} · ₹${fmt(chosenTotal)}`}
+              {posting ? "Posting…" : confirmFlagged ? `Post anyway (${chosen.length})` : `✓ Post ${chosen.length} entr${chosen.length === 1 ? "y" : "ies"} · ₹${fmt(chosenTotal)}`}
             </button>
           </div>
         </footer>
