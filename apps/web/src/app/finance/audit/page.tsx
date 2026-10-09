@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useTally } from "@/lib/tallyConnection";
+import { useTally, tallyCompanyNow } from "@/lib/tallyConnection";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
@@ -474,8 +474,8 @@ export default function AuditPage() {
       }
       if (!allVouchers.length) { setImportMsg("No vouchers found in Tally for this FY. Check that the correct company is open."); setImporting(false); return; }
       // Through FreWork's posting engine: validated, year-lock aware, audit-logged, never imported twice
-      const groups = await readTallyLedgerGroups(tallyUrl, localStorage.getItem("fw_tally_company"));
-      const sum = await importTallyVouchers(bid, allVouchers, { ledgerGroups: groups, company: localStorage.getItem("fw_tally_company"), onProgress: setImportMsg });
+      const groups = await readTallyLedgerGroups(tallyUrl, tallyCompanyNow());
+      const sum = await importTallyVouchers(bid, allVouchers, { ledgerGroups: groups, company: tallyCompanyNow(), onProgress: setImportMsg });
       try { localStorage.setItem("fw_tally_last_import", Date.now().toString()); } catch { /* */ }
       setImportMsg(summaryText(sum));
       if (sum.imported > 0) setImportDone(true);

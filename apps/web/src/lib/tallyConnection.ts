@@ -2,6 +2,8 @@
 // The one Tally connection for the whole app. Every page reads it; only the Tally page changes the port or company.
 // Once connected it stays connected — across pages, tabs and reloads — until you press Disconnect or Tally really
 // closes (two failed checks in a row, so one slow reply never drops it).
+// B5: the link is PER BUSINESS. Company, session and the Disconnect flag are stored under the active business, so a
+// business never shows (or pushes to) another business's Tally company. The port is per computer.
 import { useEffect, useState } from "react";
 import { tallyFetch } from "./tallyUtils";
 import { companiesXml, companiesFrom, licenseXml, isEducational } from "./integrations/tally";
@@ -18,6 +20,9 @@ export type TallyState = {
 
 const SAVED = "fw_tally_session";           // last known connection, shared by every tab
 const OFF = "fw_tally_off";                  // set by Disconnect; cleared by Connect
+let biz = "";                                 // active FreWork business (set by the finance layout)
+const key = (base: string) => (biz ? `${base}:${biz}` : base);
+const COMPANY = "fw_tally_company";
 const read = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
 const write = (k: string, v: string | null) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* */ } };
 
@@ -27,15 +32,15 @@ let misses = 0;
 const listeners = new Set<(s: TallyState) => void>();
 const set = (patch: Partial<TallyState>, persist = true) => {
   state = { ...state, ...patch };
-  if (persist) write(SAVED, JSON.stringify({ status: state.status === "connected" ? "connected" : "off", companies: state.companies, educational: state.educational, checkedAt: state.checkedAt }));
+  if (persist) write(key(SAVED), JSON.stringify({ status: state.status === "connected" ? "connected" : "off", companies: state.companies, educational: state.educational, checkedAt: state.checkedAt }));
   listeners.forEach(l => l(state));
 };
 export const tallyUrl = () => `http://localhost:${state.port}`;
-export const tallyManuallyOff = () => read(OFF, "") === "1";
+export const tallyManuallyOff = () => read(key(OFF), "") === "1";
 
 function restore() {
   try {
-    const s = JSON.parse(read(SAVED, "{}"));
+    const s = JSON.parse(read(key(SAVED), "{}"));
     // Still connected from before (another page, tab or a reload) — show it straight away, then confirm quietly
     if (s.status === "connected" && !tallyManuallyOff()) return { status: "connected" as const, companies: s.companies ?? [], educational: !!s.educational, checkedAt: s.checkedAt ?? 0, message: "Connected to Tally" };
   } catch { /* */ }
@@ -45,19 +50,19 @@ function restore() {
 function load() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
-  state = { ...state, port: read("fw_tally_port", "7001"), company: read("fw_tally_company", ""), ...restore() };
+  state = { ...state, port: read("fw_tally_port", "7001"), company: read(key(COMPANY), ""), ...restore() };
   // Another tab connected, disconnected, or changed the port/company
   window.addEventListener("storage", e => {
     if (e.key === "fw_tally_port" && e.newValue) set({ port: e.newValue }, false);
-    if (e.key === "fw_tally_company") set({ company: e.newValue ?? "" }, false);
-    if (e.key === SAVED || e.key === OFF) { const r = restore(); set(r.status ? r : { status: "idle", message: tallyManuallyOff() ? "Disconnected" : "" }, false); }
+    if (e.key === key(COMPANY)) set({ company: e.newValue ?? "" }, false);
+    if (e.key === key(SAVED) || e.key === key(OFF)) { const r = restore(); set(r.status ? r : { status: "idle", message: tallyManuallyOff() ? "Disconnected" : "" }, false); }
   });
 }
 
 /** Asks Tally which companies are open. Picks the saved company, else one matching the business name, else the first. */
 export async function connectTally(opts: { port?: string; preferName?: string; quiet?: boolean } = {}): Promise<TallyState> {
   load();
-  if (!opts.quiet) write(OFF, null);                       // an explicit Connect turns it back on
+  if (!opts.quiet) write(key(OFF), null);                       // an explicit Connect turns it back on
   if (opts.quiet && tallyManuallyOff()) return state;       // stay off until the user connects again
   const port = (opts.port ?? state.port).replace(/\D/g, "") || "7001";
   if (!opts.quiet) set({ status: "connecting", message: "" }, false);
@@ -67,7 +72,7 @@ export async function connectTally(opts: { port?: string; preferName?: string; q
     const pick = names.includes(state.company) ? state.company
       : names.find(n => opts.preferName && n.toLowerCase() === opts.preferName.toLowerCase()) ?? names[0] ?? state.company;
     write("fw_tally_port", port);
-    if (pick) write("fw_tally_company", pick);
+    if (pick) { write(key(COMPANY), pick); if (pick !== state.company || !opts.quiet) linkOnServer(pick); }
     let educational = state.educational;
     try { educational = isEducational(await (await tallyFetch(`http://localhost:${port}`, licenseXml(), 8000)).text()); } catch { /* keep last */ }
     misses = 0;
@@ -84,12 +89,31 @@ export async function connectTally(opts: { port?: string; preferName?: string; q
 
 /** Disconnect: stays disconnected on every page and tab until Connect is pressed again. */
 export function disconnectTally() {
-  load(); write(OFF, "1"); misses = 0;
+  load(); write(key(OFF), "1"); misses = 0;
   set({ status: "idle", companies: [], message: "Disconnected" });
 }
 
 /** Choose the Tally company (Tally page only). */
-export function chooseTallyCompany(name: string) { load(); write("fw_tally_company", name); set({ company: name }, false); }
+export function chooseTallyCompany(name: string) { load(); write(key(COMPANY), name); set({ company: name }, false); if (name) linkOnServer(name); }
+
+/** Saves which Tally company this business pushes to, so the server can refuse a push to any other company. */
+function linkOnServer(company: string) {
+  if (!biz || typeof window === "undefined") return;
+  fetch("/api/finance/tally-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: biz, company }) }).catch(() => { /* retried on next connect */ });
+}
+
+/** Called by the finance layout whenever the active business changes: every Tally surface follows it. */
+export function setTallyBusiness(id: string) {
+  if (!id || id === biz) return;
+  biz = id; loaded = true; misses = 0;
+  const company = read(key(COMPANY), "");
+  state = { ...state, port: read("fw_tally_port", "7001"), company, companies: [], status: "idle", message: "", educational: false, checkedAt: 0, ...(company ? restore() : {}) };
+  listeners.forEach(l => l(state));
+  if (company && !tallyManuallyOff()) connectTally({ quiet: true });
+}
+export const tallyBusiness = () => biz;
+/** The Tally company linked to the active business (read this, never the old device-wide key). */
+export const tallyCompanyNow = () => { load(); return state.company; };
 /** Change the port (Tally page only). */
 export function setTallyPort(port: string) { load(); const p = port.replace(/\D/g, "") || "7001"; write("fw_tally_port", p); set({ port: p }, false); }
 

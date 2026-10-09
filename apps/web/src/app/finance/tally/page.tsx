@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { connectTally, chooseTallyCompany, disconnectTally, useTally } from "@/lib/tallyConnection";
+import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readTallyLedgerGroups, importTallyVouchers, summaryText } from "@/lib/integrations/tallyClient";
@@ -304,7 +304,7 @@ export default function TallyPage() {
   const [connMsg, setConnMsg] = useState("");
   const [companyName, setCompanyName] = useState<string>(() => {
     if (typeof window === "undefined") return "";
-    const stored = localStorage.getItem("fw_tally_company") ?? "";
+    const stored = tallyCompanyNow() ?? "";
     return stored.length >= 2 ? stored : "";
   });
   const [allCompanies, setAllCompanies] = useState<string[]>([]);
@@ -599,7 +599,7 @@ export default function TallyPage() {
           while ((m = re2.exec(listText)) !== null) { const n = m[1].trim(); if (n && !names.includes(n)) names.push(n); }
           setAllCompanies(names);
           // Auto-select the detected one; if not detected, keep whatever is stored
-          const pick = (found && found.length >= 2) ? found : (names.length === 1 ? names[0] : (localStorage.getItem("fw_tally_company") ?? ""));
+          const pick = (found && found.length >= 2) ? found : (names.length === 1 ? names[0] : (tallyCompanyNow() ?? ""));
           setCompanyName(pick);
           if (pick) localStorage.setItem("fw_tally_company", pick);
         } catch {

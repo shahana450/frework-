@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useTally, disconnectTally } from "@/lib/tallyConnection";
+import { useTally, disconnectTally , tallyCompanyNow } from "@/lib/tallyConnection";
 import TallyBar from "@/components/TallyBar";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -74,7 +74,7 @@ async function checkTally(): Promise<TallyStatus & { _raw: string }> {
     if (parsed?.length >= 2) {
       try { localStorage.setItem("fw_tally_company", parsed); } catch { /* */ }
     }
-    const stored = typeof window !== "undefined" ? localStorage.getItem("fw_tally_company") ?? "" : "";
+    const stored = typeof window !== "undefined" ? tallyCompanyNow() ?? "" : "";
     const company = parsed?.length >= 2 ? parsed : (stored.length >= 2 ? stored : "Tally");
     return { state: "connected", company, _raw: text.slice(0, 800) };
   } catch (e) {

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useTally } from "@/lib/tallyConnection";
+import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -111,10 +111,10 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       setBizCount(allBiz?.length ?? 0);
       if (saved) {
         const active = allBiz?.find(b => b.id === saved);
-        if (active) { setBizName(active.name); return; }
+        if (active) { setBizName(active.name); setTallyBusiness(active.id); return; }
       }
       if (allBiz?.length) {
-        setBizName(allBiz[0].name);
+        setBizName(allBiz[0].name); setTallyBusiness(allBiz[0].id);
         localStorage.setItem(`fw_fin_biz_${user.id}`, allBiz[0].id);
       }
     });

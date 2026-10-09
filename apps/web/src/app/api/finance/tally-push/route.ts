@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireBusiness, serverError } from "@/lib/apiAuth";
 import { tallyGroupFor } from "@/lib/ledgerHeads";
 import { voucherXml, ledgerMastersXml, openingBalancesXml } from "@/lib/integrations/tally";
+import { checkTallyTarget } from "@/lib/tallyTarget";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -26,11 +27,14 @@ export async function POST(req: NextRequest) {
     if (error) return serverError("tally-push", error, "We couldn't prepare these entries for Tally.");
     if (!data?.length) return NextResponse.json({ error: "None of these entries can be pushed (only posted entries can)." }, { status: 404 });
 
-    let company = String(company_name ?? "").trim();
-    if (!company) {
-      const { data: biz } = await supabase.from("fw_fin_businesses").select("name,legal_name").eq("id", business_id).single();
-      company = biz?.legal_name ?? biz?.name ?? "";
-    }
+    // B5 — push only into the Tally company linked to THIS business
+    let bizRow = await supabase.from("fw_fin_businesses").select("name,legal_name,tally_company").eq("id", business_id).single();
+    const hasLink = !bizRow.error;
+    if (bizRow.error) bizRow = await supabase.from("fw_fin_businesses").select("name,legal_name").eq("id", business_id).single() as typeof bizRow;
+    const b = (bizRow.data ?? {}) as { name?: string; legal_name?: string | null; tally_company?: string | null };
+    const target = checkTallyTarget(hasLink ? (b.tally_company ?? null) : undefined, company_name, b.legal_name ?? b.name ?? "This business");
+    if (!target.ok) return NextResponse.json({ error: target.error, code: "TALLY_COMPANY_MISMATCH" }, { status: target.status });
+    const company = target.company;
 
     const rows = data as unknown as JRow[];
     // Which of these is the opening-balances entry (looked up separately so it can never block a push)
