@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import LogoPicker from "@/components/LogoPicker";
 import { COUNTRIES } from "@/lib/tax";
+import { stepError, canCreate } from "@/lib/setupSteps";
+import { askInApp } from "@/lib/apiAuthClient";
 
 // Current Indian financial year start (April), e.g. "2026-04-01"
 function indianFyStart(d = new Date()) { const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `${y}-04-01`; }
@@ -51,6 +53,7 @@ type Step = 1 | 2 | 3 | 4;
 export default function BusinessSetup() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
+  const [reviewSince, setReviewSince] = useState(0);   // when the Review step opened (guards a double-click)
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export default function BusinessSetup() {
     gst_username: "", gst_trade_name: "",
     address: "", city: "", state: "Kerala", pincode: "",
     email: "", phone: "",
-    gst_registration_type: "regular",
+    gst_registration_type: "",
     coa_preset: "services",
     fy_start: indianFyStart(),
     country: "IN",
@@ -83,11 +86,14 @@ export default function BusinessSetup() {
 
   async function handleSubmit() {
     if (!userId) return;
+    const gate = canCreate(step, form);
+    if (!gate.ok) { setError(gate.error); setStep(gate.step as Step); return; }
+    if (Date.now() - reviewSince < 800) return;          // a double-click on "Next" never creates the business
     // Already have a business with this GSTIN or name? Ask before creating a second copy.
     const { data: mine } = await supabase.from("fw_fin_businesses").select("name,gstin").eq("owner_id", userId);
     const g = form.gstin.trim().toUpperCase();
     const twin = (mine ?? []).find(b => (g && b.gstin?.toUpperCase() === g) || b.name?.trim().toLowerCase() === form.name.trim().toLowerCase());
-    if (twin && !window.confirm(`You already have "${twin.name}"${twin.gstin ? ` (GSTIN ${twin.gstin})` : ""} with the same ${g && twin.gstin?.toUpperCase() === g ? "GSTIN" : "name"}.\n\nPress OK only if this is a separate business. To change its details instead, use Settings → Business Details.`)) return;
+    if (twin && !(await askInApp("This business may already exist", `You already have "${twin.name}"${twin.gstin ? ` (GSTIN ${twin.gstin})` : ""} with the same ${g && twin.gstin?.toUpperCase() === g ? "GSTIN" : "name"}. Create a separate business only if it really is one — to change its details, use Settings → Business Details.`, "Create separate business", "Go back"))) return;
     setSaving(true);
     setError("");
     try {
@@ -109,7 +115,7 @@ export default function BusinessSetup() {
           pincode: form.pincode,
           email: form.email,
           phone: form.phone,
-          gst_registration_type: isIN ? form.gst_registration_type : (form.gstin ? "regular" : "unregistered"),
+          gst_registration_type: isIN ? (form.gst_registration_type || "unregistered") : (form.gstin ? "regular" : "unregistered"),
           currency: country.currency,
           fiscal_year_start: form.fy_start.slice(5),
           country: country.code, timezone: country.timezone, locale: country.locale, tax_regime: isIN ? "IN_GST" : "NONE",
@@ -148,7 +154,7 @@ export default function BusinessSetup() {
         .from("fw_fin_businesses")
         .select("id", { count: "exact", head: true })
         .eq("owner_id", userId);
-      router.push((count ?? 0) > 1 ? "/finance/select-business" : "/finance");
+      router.push((count ?? 0) > 1 ? "/finance/select-business" : "/finance/opening-balances?welcome=1");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
       if (msg.includes("schema cache") || msg.includes("does not exist") || msg.includes("relation")) {
@@ -298,7 +304,7 @@ export default function BusinessSetup() {
                 <select style={inputStyle} value={form.country} onChange={e => {
                   const cc = e.target.value;
                   // India keeps its April year and state list; other countries default to a January year and free-text region
-                  setForm(f => ({ ...f, country: cc, state: cc === "IN" ? "Kerala" : "", fy_start: cc === "IN" ? indianFyStart() : fyStartFor(1), gst_registration_type: cc === "IN" ? f.gst_registration_type : "regular" }));
+                  setForm(f => ({ ...f, country: cc, state: cc === "IN" ? "Kerala" : "", fy_start: cc === "IN" ? indianFyStart() : fyStartFor(1), gst_registration_type: cc === "IN" ? f.gst_registration_type : "" }));
                 }}>
                   {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
                 </select>
@@ -518,7 +524,7 @@ export default function BusinessSetup() {
           )}
           {step < 4 ? (
             <button
-              onClick={() => { if (step === 1 && !form.name) { setError("Business name is required"); return; } setError(""); setStep(s => (s + 1) as Step); }}
+              onClick={() => { const e = stepError(step, form); if (e) { setError(e); return; } setError(""); if (step === 3) setReviewSince(Date.now()); setStep(s => (s + 1) as Step); }}
               style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem" }}
             >
               Next →
@@ -526,7 +532,7 @@ export default function BusinessSetup() {
           ) : (
             <button
               onClick={handleSubmit}
-              disabled={saving}
+              disabled={saving || Date.now() - reviewSince < 800}
               style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "10px 28px", borderRadius: 8, cursor: saving ? "wait" : "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: saving ? 0.7 : 1 }}
             >
               {saving ? "Creating…" : "Create Business →"}
