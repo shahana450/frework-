@@ -6,6 +6,7 @@ import { postJournal, validateEntry, voucherTypeFor, postingErrorMessage } from 
 import { requireBusiness, serverError } from "@/lib/apiAuth";
 import { can } from "@/lib/permissions";
 import { canonicalName } from "@/lib/frebook/validateDraft";
+import { voucherKind } from "@/lib/voucherSeries";
 import { inferHead, headFromType } from "@/lib/ledgerHeads";
 
 const canonKeyOf = (s: string) => canonicalName(s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
     // The same gate as drafting, enforced here so nothing reaches the books by skipping the draft card
     const [{ data: bizRow }, { data: existing }] = await Promise.all([
       supabase.from("fw_fin_businesses").select("gstin,country").eq("id", business_id).maybeSingle(),
-      supabase.from("fw_fin_chart_of_accounts").select("name").eq("business_id", business_id).eq("is_group", false).limit(5000),
+      supabase.from("fw_fin_chart_of_accounts").select("name,type,sub_type").eq("business_id", business_id).eq("is_group", false).limit(5000),
     ]);
     const gstin = (bizRow as { gstin?: string | null } | null)?.gstin ?? null;
     const country = (bizRow as { country?: string | null } | null)?.country ?? "IN";
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
     try {
       posted = await postJournal(supabase, {
         businessId: business_id, actorId: user_id, date: transaction.transaction_date,
-        type: voucherTypeFor(transaction.transaction_type), narration, referenceNo: transaction.invoice_number,
+        type: voucherKind(voucherTypeFor(transaction.transaction_type), transaction.lines.map(l => { const a = (existing ?? []).find(x => canonKeyOf(x.name) === canonKeyOf(l.account)) as { sub_type?: string | null; type?: string } | undefined; return { cashBank: a?.sub_type === "bank" || a?.sub_type === "cash" || /^(cash|bank)$/i.test(a?.type ?? "") || /\b(cash in hand|petty cash)\b|^cash$|\bbank\b/i.test(l.account) && !/charges|interest|commission/i.test(l.account), dr: l.debit ?? 0, cr: l.credit ?? 0, isGoodsPurchase: transaction.transaction_type === "purchase" && /^purchases?\b|purchase a\/c|stock|raw material/i.test(l.account) }; })), narration, referenceNo: transaction.invoice_number,
         partyName: transaction.party_name, source: "ai_copilot", aiGenerated: true, force: force_post,
         lines: resolvedLines.map(l => ({ accountId: l.account_id, dr: l.dr_amount, cr: l.cr_amount, fcDr: l.fc_dr, fcCr: l.fc_cr })),
         currency: transaction.fx?.currency ?? null, exchangeRate: transaction.fx?.rate ?? null,
