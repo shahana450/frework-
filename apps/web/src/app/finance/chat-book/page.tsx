@@ -10,6 +10,7 @@ import ReviewChecks from "./ReviewChecks";
 import BulkTemplateModal from "./BulkTemplateModal";
 import type { Verdict } from "@/lib/frebook/validateDraft";
 import { postWarnings } from "@/lib/frebook/postWarnings";
+import { saveDrafts, loadDrafts, isOpenDraft, pickDrafts, type StoredMsg } from "@/lib/frebook/draftStore";
 import SimpleTemplateModal from "./SimpleTemplateModal";
 import { parseSimpleGrid, SIMPLE_HEADERS, type SimpleEntry } from "@/lib/simpleTemplate";
 import InstallApp from "./InstallApp";
@@ -211,10 +212,24 @@ export default function FreBookPage() {
   // ── New chat ───────────────────────────────────────────────────────────────
   function newChat() {
     setCurrentSession(null);
-    setMessages([{ id: "welcome", role: "system", text: `Hello! I'm FreBook, your chat bookkeeper for **${bizName}**. Tell me any transaction in plain language and I'll convert it into a proper journal entry.\n\n**Examples:**\n• "Paid office rent ₹25,000 from the bank"\n• "Sold goods to ABC Ltd for ₹1,18,000 including 18% GST on credit"\n• "Received ₹50,000 from customer Rahul against INV-101"\n• "Paid salary ₹75,000 through bank"\n\n**Or ask your books:**\n• "How much am I owed?" · "Show expenses above ₹10,000 this month" · "Why did profit fall?" · "GST collected last month"`, timestamp: Date.now() }]);
+    // Unposted drafts carry over to the new chat — they leave only when posted or cancelled (B17)
+    setMessages(prev => [{ id: "welcome", role: "system", text: `Hello! I'm FreBook, your chat bookkeeper for **${bizName}**. Tell me any transaction in plain language and I'll convert it into a proper journal entry.\n\n**Examples:**\n• "Paid office rent ₹25,000 from the bank"\n• "Sold goods to ABC Ltd for ₹1,18,000 including 18% GST on credit"\n• "Received ₹50,000 from customer Rahul against INV-101"\n• "Paid salary ₹75,000 through bank"\n\n**Or ask your books:**\n• "How much am I owed?" · "Show expenses above ₹10,000 this month" · "Why did profit fall?" · "GST collected last month"`, timestamp: Date.now() }, ...(pickDrafts(prev as unknown as StoredMsg[]) as unknown as ChatMessage[])]);
   }
 
-  useEffect(() => { if (bizName) newChat(); }, [bizName]);
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (!bizName) return;
+    newChat();
+    // B17 — bring back drafts that weren't posted before a reload / in another tab
+    if (!restoredRef.current && bizIdRef.current) {
+      restoredRef.current = true;
+      const back = loadDrafts(localStorage, bizIdRef.current) as unknown as ChatMessage[];
+      if (back.length) setMessages(prev => [...prev, ...back, { id: `s-restored-${Date.now()}`, role: "system", text: `↩ Restored ${back.filter(m => m.role === "ai").length} unposted draft(s) from your last visit.`, timestamp: Date.now() }]);
+    }
+  }, [bizName]);
+  // Keep the unposted drafts saved as they change (posted or cancelled ones drop out)
+  useEffect(() => { if (bizIdRef.current && restoredRef.current) saveDrafts(localStorage, bizIdRef.current, messages as unknown as StoredMsg[]); }, [messages]);
+  const openDrafts = messages.filter(m => isOpenDraft(m as unknown as StoredMsg)).length;
 
   // Handoff from the dashboard command box: ?q= sends straight away, ?prefill= fills the box
   const handoffDone = useRef(false);
@@ -707,6 +722,11 @@ export default function FreBookPage() {
         ) : (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
+          {openDrafts > 0 && (
+            <div role="status" style={{ margin: "0.6rem 1.25rem 0", padding: "8px 12px", borderRadius: 10, background: "#FFF4DB", color: "#8A5A00", fontSize: "0.8rem", fontWeight: 600 }}>
+              {openDrafts} unposted draft{openDrafts === 1 ? "" : "s"} — post or cancel {openDrafts === 1 ? "it" : "them"}. They're kept on this device if you leave.
+            </div>
+          )}
           {/* Messages */}
           <div ref={chatRef} style={{ flex: 1, overflowY: "auto", padding: "1rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
             {messages.map(msg => (
