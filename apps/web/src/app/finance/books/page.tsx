@@ -174,7 +174,18 @@ export default function BooksPage() {
     }
     setInTally(found);
     const n = Object.keys(found).length;
-    setCheckMsg(`Checked ${read} Tally vouchers in ${company || "the open company"}: ${n} of ${own.length} FreWork entries are already in Tally.${failedMonths ? ` (${failedMonths} month${failedMonths > 1 ? "s" : ""} couldn't be read)` : ""}`);
+    // A "pushed" mark that Tally doesn't confirm (e.g. pushed to another company) is cleared, so Push all sends it again
+    let stale = 0;
+    if (!failedMonths) {
+      const gone = own.filter(j => !found[j.id] && pushed[j.id] && "at" in pushed[j.id]).map(j => j.id);
+      stale = gone.length;
+      if (stale) {
+        // functional update: no dependency on pushed, so the check never re-runs itself
+        setPushed(prev => { const next = { ...prev }; for (const id of gone) delete next[id]; try { localStorage.setItem(pushKey, JSON.stringify(next)); } catch { /* */ } return next; });
+        fetch("/api/finance/integrations/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, provider: "tally", target: company, results: own.filter(j => !found[j.id]).map(j => ({ journal_id: j.id, status: "failed", error: `Not found in Tally company ${company || "open"} — push again` })) }) }).catch(() => { /* local copy cleared */ });
+      }
+    }
+    setCheckMsg(`Checked ${read} Tally vouchers in ${company || "the open company"}: ${n} of ${own.length} FreWork entries are already in Tally.${stale ? ` ${stale} marked "pushed" earlier aren't in this company — they're back under "Not in Tally"; use Push all to send them.` : ""}${failedMonths ? ` (${failedMonths} month${failedMonths > 1 ? "s" : ""} couldn't be read)` : ""}`);
     setChecking(false);
   }, [journals, conn, company, port]);
 
