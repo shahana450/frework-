@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Hire Verified CAs, Lawyers & Freelancers Online India | FreWork",
+  title: { absolute: "Hire Verified CAs, Lawyers & Freelancers Online India | FreWork" },
   description: "Find and hire verified Chartered Accountants, Company Secretaries, lawyers, developers, designers and skilled professionals across India. All profiles manually verified.",
   keywords: ["hire CA online India","freelance CA India","hire chartered accountant","hire lawyer India","find professionals online","verified freelancers India","hire developer India","FreWork freelancers"],
   openGraph: {

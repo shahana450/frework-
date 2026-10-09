@@ -528,7 +528,7 @@ export default function FreBookPage() {
       <nav className="fb-top" style={{ borderBottom: "1px solid rgba(217,181,111,0.18)", padding: "0 1rem", display: "flex", alignItems: "center", gap: "0.6rem", height: 60, background: "#0F2B25", flexShrink: 0, zIndex: 20, overflowX: "auto", paddingTop: "env(safe-area-inset-top)" }}>
         <button onClick={() => setSidebarOpen(o => !o)} aria-label="Previous chats" style={{ background: "none", border: "none", color: "#C9D3CE", cursor: "pointer", fontSize: "1.1rem", padding: "4px 8px" }}>☰</button>
         <Link href="/finance" style={{ display: "flex", alignItems: "baseline", gap: 8, textDecoration: "none" }}><span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 700, fontSize: "1.45rem", color: "#FFFFFF" }}>FreBook</span><span className="fb-tag" style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontStyle: "italic", fontSize: "0.85rem", color: "#D9B56F" }}>Chat in. Books out.</span></Link>
-                <span style={{ marginLeft: 10, fontSize: "0.78rem", fontWeight: 700, color: "#E7ECE9", border: "1px solid rgba(217,181,111,0.3)", background: "rgba(255,255,255,0.04)", padding: "6px 12px", borderRadius: 999, whiteSpace: "nowrap" }}>{bizName}</span>
+                <Link href="/finance/select-business" title="Switch business" style={{ marginLeft: 10, fontSize: "0.78rem", fontWeight: 700, color: "#E7ECE9", border: "1px solid rgba(217,181,111,0.3)", background: "rgba(255,255,255,0.04)", padding: "6px 12px", borderRadius: 999, whiteSpace: "nowrap", textDecoration: "none" }}>{bizName} <span aria-hidden="true" style={{ color: "#D9B56F" }}>⇄</span></Link>
         <div style={{ flex: 1 }} />
         <InstallApp />
         {[

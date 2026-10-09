@@ -3,7 +3,7 @@ import { ServicePage } from "@/components/services/service-page";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Income Tax Return (ITR) Filing Online India — Starting ₹799 | FreWork",
+  title: { absolute: "Income Tax Return (ITR) Filing Online India — Starting ₹799 | FreWork" },
   description:
     "Online income tax return (ITR) filing for individuals, salaried employees, freelancers, businesses and companies. ITR-1 to ITR-6. Expert CA filing from ₹799. TDS, advance tax, notice handling across India.",
   keywords: [

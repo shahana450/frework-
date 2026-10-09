@@ -3,7 +3,7 @@ import { ServicePage } from "@/components/services/service-page";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Online Accounting & Bookkeeping Services India — ₹1,499/mo | FreWork",
+  title: { absolute: "Online Accounting & Bookkeeping Services India — ₹1,499/mo | FreWork" },
   description:
     "Monthly bookkeeping, accounting, payroll, invoicing and MIS reports for Indian businesses. Virtual accountant service by qualified CAs. Works with Tally, Zoho Books, QuickBooks. Starting ₹1,499/month.",
   keywords: [

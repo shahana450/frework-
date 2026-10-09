@@ -59,6 +59,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      { source: "/refund", destination: "/refund-policy", permanent: true },
       {
         source: "/:path*",
         has: [{ type: "host", value: "www.frework.online" }],

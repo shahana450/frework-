@@ -3,7 +3,7 @@ import { ServicePage } from "@/components/services/service-page";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Company Registration Online India — Pvt Ltd, LLP, OPC | FreWork",
+  title: { absolute: "Company Registration Online India — Pvt Ltd, LLP, OPC | FreWork" },
   description:
     "Online company registration in India — Private Limited, LLP, OPC, Sole Proprietorship, Partnership. Expert Professional filing. GST & MSME registration included. Starting ₹1,499. Nationwide service.",
   keywords: [

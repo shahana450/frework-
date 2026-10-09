@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pricing Plans – GST, ITR & CA Services | FreWork India",
+  title: { absolute: "Pricing Plans – GST, ITR & CA Services | FreWork India" },
   description: "Simple, transparent pricing for GST registration, GST filing, income tax return, accounting and CA services. Start free. Upgrade anytime. No hidden charges.",
   keywords: ["GST registration price India","ITR filing charges","CA service fees India","accounting service cost","FreWork pricing","online CA fees"],
   openGraph: {

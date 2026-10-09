@@ -3,7 +3,7 @@ import { ServicePage } from "@/components/services/service-page";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "GST Registration & Filing Online India — Starting ₹499 | FreWork",
+  title: { absolute: "GST Registration & Filing Online India — Starting ₹499 | FreWork" },
   description:
     "Online GST registration and GST return filing (GSTR-1, GSTR-3B, GSTR-9) by expert CAs across India. Get your GSTIN in 3–5 days. Monthly GST filing from ₹999.",
   keywords: [

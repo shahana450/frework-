@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "MSME / Udyam Registration India 2025 — Benefits, Process & Documents | FreWork",
+  title: { absolute: "MSME / Udyam Registration India 2025 — Benefits, Process & Documents | FreWork" },
   description:
     "Complete guide to MSME Udyam registration in India 2025. Who can register, benefits of MSME certificate, documents needed, online process and how to get Udyam certificate free.",
   keywords: [

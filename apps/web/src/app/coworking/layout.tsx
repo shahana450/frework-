@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Coworking Spaces India – Hot Desk, Cabin & Virtual Office | FreWork",
+  title: { absolute: "Coworking Spaces India – Hot Desk, Cabin & Virtual Office | FreWork" },
   description: "Find verified coworking spaces, hot desks, private cabins and virtual offices across Mumbai, Bangalore, Delhi, Hyderabad, Pune and 8 more cities in India.",
   keywords: ["coworking space India","hot desk Mumbai","coworking Bangalore","virtual office India","private cabin office India","coworking space near me","day pass office India","FreWork coworking"],
   openGraph: {

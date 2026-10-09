@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ContactClient from "./contact-client";
 
 export const metadata: Metadata = {
-  title: "Talk to a CA Expert — Free Consultation | FreWork India",
+  title: { absolute: "Talk to a CA Expert — Free Consultation | FreWork India" },
   description:
     "Get a free consultation with a qualified CA or CS. We handle GST registration, income tax filing, company registration, accounting, audit and all compliance needs. Contact FreWork today.",
   keywords: [

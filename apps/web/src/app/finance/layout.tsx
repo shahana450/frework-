@@ -135,6 +135,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <title>{bizName ? `${bizName} · FreBook | FreWork` : "FreBook — Accounting | FreWork"}</title>
+      <meta name="description" content="FreBook: chat bookkeeping, GST, reports and Tally sync for your business." />
       <style>{FINANCE_CSS}</style>
       <UpdatePrompt />
       {collapsed && tip && <span className="fw-tip" role="tooltip" style={{ left: sidebarW + 8, top: tip.top }}>{tip.label}</span>}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "GST, Income Tax & Business Compliance Blog India | FreWork",
+  title: { absolute: "GST, Income Tax & Business Compliance Blog India | FreWork" },
   description: "Expert guides on GST registration, ITR filing, company registration, ROC compliance and business taxation in India. Written by qualified CAs.",
   keywords: ["GST registration guide India","ITR filing guide","company registration process India","GST return filing steps","income tax guide India","CA blog India","FreWork blog"],
   openGraph: {

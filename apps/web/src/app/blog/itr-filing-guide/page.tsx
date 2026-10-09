@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "How to File Income Tax Return (ITR) Online in India 2025 | FreWork",
+  title: { absolute: "How to File Income Tax Return (ITR) Online in India 2025 | FreWork" },
   description:
     "Complete step-by-step guide to filing income tax return (ITR) online in India 2025. Which ITR form to use, documents needed, last date, how to e-verify, and get refund faster. Expert CA help from ₹799.",
   keywords: [

@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "GST Registration in India 2025: Complete Step-by-Step Guide | FreWork",
+  title: { absolute: "GST Registration in India 2025: Complete Step-by-Step Guide | FreWork" },
   description:
     "Complete guide to GST registration in India 2025. Who needs GST registration, documents required, how to apply online, fees, GSTIN process and timeline. Get expert CA help from ₹499.",
   keywords: [

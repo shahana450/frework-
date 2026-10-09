@@ -3,7 +3,7 @@ import { ServicePage } from "@/components/services/service-page";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Statutory Audit, Tax Audit & Internal Audit Services India | FreWork",
+  title: { absolute: "Statutory Audit, Tax Audit & Internal Audit Services India | FreWork" },
   description:
     "Statutory audit under Companies Act, tax audit under Section 44AB, internal audit, GST audit and stock audit services by qualified Chartered Accountants across India. Get audit reports on time.",
   keywords: [

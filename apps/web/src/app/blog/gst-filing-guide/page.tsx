@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "GST Return Filing Guide India 2025 — GSTR-1, GSTR-3B, GSTR-9 | FreWork",
+  title: { absolute: "GST Return Filing Guide India 2025 — GSTR-1, GSTR-3B, GSTR-9 | FreWork" },
   description:
     "Complete guide to GST return filing in India 2025. How to file GSTR-1, GSTR-3B, GSTR-9, due dates, late fees and penalties. Expert help from ₹499/month.",
   keywords: [

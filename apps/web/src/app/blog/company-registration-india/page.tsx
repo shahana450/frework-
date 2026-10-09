@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "How to Register a Company in India 2025 — Pvt Ltd, LLP, OPC Guide | FreWork",
+  title: { absolute: "How to Register a Company in India 2025 — Pvt Ltd, LLP, OPC Guide | FreWork" },
   description:
     "Complete guide to company registration in India 2025. How to register Private Limited company, LLP, OPC or Sole Proprietorship online. Documents, process, fees, timeline and CA help from ₹1,499.",
   keywords: [

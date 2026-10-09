@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "ITR Filing for Salaried Employees India 2025 — Complete Guide | FreWork",
+  title: { absolute: "ITR Filing for Salaried Employees India 2025 — Complete Guide | FreWork" },
   description:
     "Complete guide to ITR filing for salaried employees in India 2025. Which ITR form to use, documents needed, how to file online, last date and tax saving tips. File from ₹499.",
   keywords: [

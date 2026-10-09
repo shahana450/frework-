@@ -311,7 +311,7 @@ function LandingInner() {
         {/* ── Footer strip ── */}
         <footer className="border-t border-white/6 py-6 px-4 text-center">
           <p className="text-xs text-white/20">
-            © 2026 FreWork · <a href="/privacy" className="hover:text-white/40 transition-colors">Privacy Policy</a> · <a href="/terms" className="hover:text-white/40 transition-colors">Terms</a>
+            © 2026 FreWork · <a href="/privacy" className="hover:text-white/40 transition-colors">Privacy Policy</a> · <a href="/terms" className="hover:text-white/40 transition-colors">Terms</a> · <a href="/refund-policy" className="hover:text-white/40 transition-colors">Refund Policy</a> · <a href="/contact" className="hover:text-white/40 transition-colors">Contact</a>
           </p>
         </footer>
 
