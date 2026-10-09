@@ -538,14 +538,7 @@ export default function TallyPage() {
     if (!bizId || connStatus !== "connected") return;
     if (!confirm("This will delete ALL existing Tally-imported entries (TLY-xxxx) and re-import fresh from Tally. Continue?")) return;
     setSyncing("importVouchers"); setImportVoucherResult(null); setSyncProgress("Clearing old Tally entries…");
-    const { data: oldJournals } = await supabase.from("fw_fin_journals").select("id").eq("business_id", bizId).like("entry_no", "TLY-%");
-    if (oldJournals?.length) {
-      const ids = oldJournals.map(j => j.id);
-      for (let i = 0; i < ids.length; i += 100) {
-        await supabase.from("fw_fin_journal_lines").delete().in("journal_id", ids.slice(i, i + 100));
-        await supabase.from("fw_fin_journals").delete().in("id", ids.slice(i, i + 100));
-      }
-    }
+    await fetch("/api/finance/tally-imports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action: "clear" }) });
     setSyncing(null); setSyncProgress(null);
     await importVouchers();
   }, [bizId, connStatus, importVouchers]);
@@ -1129,14 +1122,8 @@ export default function TallyPage() {
                       {!r.ok && (
                         <td style={{ whiteSpace: "nowrap", padding: "0.5rem 1rem" }}>
                           <a href={`/finance/journals/${r.id}/edit`} style={{ fontSize: "0.72rem", color: "#0F2B25", marginRight: 10, textDecoration: "none", fontWeight: 600 }}>Edit</a>
-                          <button className="tb-link-btn" onClick={async () => {
-                            if (!confirm(`Delete journal ${r.entry_no}? This cannot be undone.`)) return;
-                            await supabase.from("fw_fin_journal_lines").delete().eq("journal_id", r.id);
-                            await supabase.from("fw_fin_journals").delete().eq("id", r.id);
-                            setPushResults(prev => prev.filter(x => x.id !== r.id));
-                            setJournals(prev => prev.filter(x => x.id !== r.id));
-                            setJournalCount(prev => (prev ?? 1) - 1);
-                          }} style={{ fontSize: "0.72rem", color: "#C2321F", fontWeight: 600 }}>Delete</button>
+                          {/* Posted entries are never deleted — they are corrected (reversal + new entry) from the edit page */}
+                          <a href={`/finance/journals/${r.id}/edit`} style={{ fontSize: "0.72rem", color: "#C2321F", fontWeight: 600, textDecoration: "none" }}>Correct / reverse</a>
                         </td>
                       )}
                       {r.ok && <td />}

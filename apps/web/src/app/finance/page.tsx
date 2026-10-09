@@ -205,15 +205,7 @@ export default function FrePilotDashboard() {
                           // Journals exist but no lines → orphaned headers from broken import
                           // Silently delete them all so doImportVouchers can re-import fresh
                           setTallySyncProgress("Auto-healing: clearing orphaned entries…");
-                          const { data: allOrphans } = await supabase.from("fw_fin_journals")
-                            .select("id").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
-                          if (allOrphans?.length) {
-                            for (let oi = 0; oi < allOrphans.length; oi += 100) {
-                              const ids = allOrphans.slice(oi, oi + 100).map((j: {id: string}) => j.id);
-                              await supabase.from("fw_fin_journal_lines").delete().in("journal_id", ids);
-                              await supabase.from("fw_fin_journals").delete().in("id", ids);
-                            }
-                          }
+                          await fetch("/api/finance/tally-imports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: activeBiz.id, action: "orphans" }) });
                           localStorage.removeItem(syncedMonthsKey);
                         }
                         doImportVouchers(false);
@@ -514,14 +506,7 @@ export default function FrePilotDashboard() {
 
     if (clearFirst) {
       setTallySyncProgress("Clearing old entries…");
-      const { data: old } = await supabase.from("fw_fin_journals").select("id").eq("business_id", activeBiz.id).like("entry_no", "TLY-%");
-      if (old?.length) {
-        const ids = old.map(j => j.id);
-        for (let i = 0; i < ids.length; i += 100) {
-          await supabase.from("fw_fin_journal_lines").delete().in("journal_id", ids.slice(i, i + 100));
-          await supabase.from("fw_fin_journals").delete().in("id", ids.slice(i, i + 100));
-        }
-      }
+      await fetch("/api/finance/tally-imports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: activeBiz.id, action: "clear" }) });
       localStorage.removeItem(syncedMonthsKey);
     }
 
@@ -593,22 +578,10 @@ export default function FrePilotDashboard() {
     if (!activeBiz) return;
     setTallySyncing("vouchers"); setTallySyncMsg(null);
     setTallySyncProgress("Scanning for duplicates…");
-    const { data: all } = await supabase.from("fw_fin_journals")
-      .select("id,entry_no,created_at").eq("business_id", activeBiz.id).like("entry_no", "TLY-%").order("created_at", { ascending: true });
-    if (!all?.length) { setTallySyncMsg({ ok: true, msg: "No Tally entries found." }); setTallySyncing(null); setTallySyncProgress(null); return; }
-    // Group by entry_no; for each group keep the first (oldest), delete the rest
-    const groups = new Map<string, string[]>();
-    for (const j of all) { const g = groups.get(j.entry_no) ?? []; g.push(j.id); groups.set(j.entry_no, g); }
-    const toDelete: string[] = [];
-    for (const [, ids] of groups) { if (ids.length > 1) toDelete.push(...ids.slice(1)); }
-    if (!toDelete.length) { setTallySyncMsg({ ok: true, msg: "✓ No duplicates found — your data is clean." }); setTallySyncing(null); setTallySyncProgress(null); return; }
-    setTallySyncProgress(`Removing ${toDelete.length} duplicate entries…`);
-    for (let i = 0; i < toDelete.length; i += 100) {
-      const batch = toDelete.slice(i, i + 100);
-      await supabase.from("fw_fin_journal_lines").delete().in("journal_id", batch);
-      await supabase.from("fw_fin_journals").delete().in("id", batch);
-    }
-    setTallySyncMsg({ ok: true, msg: `✓ Removed ${toDelete.length} duplicate entr${toDelete.length !== 1 ? "ies" : "y"}. Figures updated.` });
+    const res = await fetch("/api/finance/tally-imports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: activeBiz.id, action: "dedupe" }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { setTallySyncMsg({ ok: false, msg: d.error ?? "Couldn't remove duplicates." }); setTallySyncing(null); setTallySyncProgress(null); return; }
+    setTallySyncMsg({ ok: true, msg: d.removed ? `✓ Removed ${d.removed} duplicate entr${d.removed !== 1 ? "ies" : "y"}. Figures updated.` : "✓ No duplicates found — your data is clean." });
     if (activeBiz && user) loadStats(activeBiz.id, user.id, fyId);
     setTallySyncing(null); setTallySyncProgress(null);
   }, [activeBiz, fyId, user]);

@@ -57,6 +57,9 @@ export async function POST(req: NextRequest) {
         referenceNo: b.reference_no, partyName: b.party_name, contactId: b.contact_id, source: b.source || "manual",
         lines, metadata: b.metadata, checkDuplicate: req.headers.get("x-confirm-duplicate") !== "1",
       });
+      // Link the source document server-side (the browser can't write posted entries — B6)
+      const docId = typeof b.metadata?.document_id === "string" ? b.metadata.document_id : null;
+      if (docId) await supabase.from("fw_fin_journals").update({ document_id: docId, ai_generated: true }).eq("id", r.id).eq("business_id", b.business_id);
       return NextResponse.json({ id: r.id, entry_no: r.entryNo, status: "posted", total: r.total, created_ledgers: created });
     } catch (e) {
       const p = postingErrorMessage(e);

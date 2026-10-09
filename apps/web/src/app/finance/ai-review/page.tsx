@@ -97,7 +97,6 @@ export default function AIReviewPage() {
         account_heads: headsOverride ?? chosenHeads,
         metadata: { document_id: s.document_id, suggestion_id: s.id, ai_confidence: s.confidence, rule: d.rule ?? null, reason: d.reason ?? null, duplicates_seen: d.duplicates ?? [] },
       });
-      await supabase.from("fw_fin_journals").update({ document_id: s.document_id, ai_generated: true }).eq("id", j.id);
       await supabase.from("fw_fin_ai_suggestions").update({ status: "accepted", journal_id: j.id, accepted_at: new Date().toISOString() }).eq("id", s.id);
       if (s.fw_fin_documents?.doc_type !== "bank_statement") await supabase.from("fw_fin_documents").update({ status: "posted", journal_id: j.id }).eq("id", s.document_id);
       setItems(prev => prev.map(x => x.id === s.id ? { ...x, status: "accepted" } : x));
