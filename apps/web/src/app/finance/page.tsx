@@ -93,7 +93,7 @@ const QUICK = [
   { icon: "💸", label: "Record Expense", href: "/finance/expenses",      color: "#5B4BC4" },
   { icon: "📤", label: "Upload Doc",     href: "/finance/upload",        color: "#0B7A55" },
   { icon: "💳", label: "Payment Entry",  href: "/finance/payment",       color: "#B4561E" },
-  { icon: "🛩️", label: "Ask FrePilot",  href: "/finance/virtual-ca",    color: "#8A5A00" },
+  { icon: "🛩️", label: "Ask FreWork AI",  href: "/finance/virtual-ca",    color: "#8A5A00" },
 ];
 
 const MODULES = [
@@ -129,7 +129,7 @@ const MODULES = [
   ]},
 ];
 
-export default function FrePilotDashboard() {
+export default function FinanceDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -609,7 +609,7 @@ export default function FrePilotDashboard() {
     return (
       <div style={{ minHeight: "100vh", background: "#F6F1E6", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "2rem", fontFamily: "'Manrope',system-ui,sans-serif" }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;500;600;700&display=swap');`}</style>
-        <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: "3rem", color: "#B4501E", marginBottom: "1rem", fontStyle: "italic", fontWeight: 500 }}>FrePilot</div>
+        <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: "3rem", color: "#B4501E", marginBottom: "1rem", fontStyle: "italic", fontWeight: 500 }}>FreWork AI</div>
         <h1 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: "1.75rem", fontWeight: 600, color: "#2B2214", margin: "0 0 0.75rem" }}>Welcome to your accounting desk</h1>
         <p style={{ color: "#847457", fontSize: "1rem", maxWidth: 380, lineHeight: 1.7, margin: "0 0 2.5rem" }}>Your AI accountant is ready. Set up your business in 2 minutes.</p>
         <Link href="/finance/setup" style={{ background: "#B4501E", color: "#FFFDF8", padding: "12px 36px", borderRadius: 2, fontWeight: 700, textDecoration: "none", fontSize: "0.9rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>
@@ -699,7 +699,7 @@ export default function FrePilotDashboard() {
               {tallySyncMsg && <div style={{ fontSize: 12, color: tallySyncMsg.ok ? WE.green : "#8A6D3B" }}>{tallySyncMsg.msg}</div>}
 
               <div style={{ fontSize: 11, color: WE.rule, textAlign: "center", paddingTop: 8 }}>
-                FrePilot · FY {fyLabel} · {activeBiz.name}
+                FreWork AI · FY {fyLabel} · {activeBiz.name}
               </div>
             </>
           )}

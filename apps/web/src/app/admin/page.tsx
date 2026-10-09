@@ -6,6 +6,7 @@ import { Users, UserCheck, Smartphone, Globe, Download, Search, RefreshCw, Trash
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { planLabel } from "@/lib/plans";
 
 interface FwUser {
   id: string;
@@ -737,14 +738,14 @@ export default function AdminPage() {
                 <table className="w-full">
                   <thead><tr className="bg-gray-50 dark:bg-gray-800/50">{["User", "Plan", "Billing", "Amount", "Status", "Since"].map(h => <th key={h} className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 px-5 py-3 uppercase tracking-wide">{h}</th>)}</tr></thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {subscriptions.filter(s => !search || s.fw_users?.email?.toLowerCase().includes(search.toLowerCase()) || s.plan.includes(search)).map((sub, i) => (
+                    {subscriptions.filter(s => !search || s.fw_users?.email?.toLowerCase().includes(search.toLowerCase()) || (s.plan ?? "").includes(search)).map((sub, i) => (
                       <motion.tr key={sub.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
                         <td className="px-5 py-4">
                           <p className="text-sm font-medium text-gray-900 dark:text-white">{sub.fw_users?.name || "—"}</p>
                           <p className="text-xs text-gray-400">{sub.fw_users?.email}</p>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="px-2.5 py-1 rounded-full text-xs font-medium capitalize bg-amber-50 text-amber-700">{sub.plan}</span>
+                          <span className="px-2.5 py-1 rounded-full text-xs font-medium capitalize bg-amber-50 text-amber-700">{planLabel(sub.plan)}</span>
                         </td>
                         <td className="px-5 py-4 text-sm text-gray-500 capitalize">{sub.billing}</td>
                         <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white">₹{sub.amount?.toLocaleString("en-IN")}</td>

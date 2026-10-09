@@ -129,7 +129,7 @@ export default function InsightsPage() {
         <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>AI Insights</span>
         <div style={{ flex: 1 }} />
         <Link href="/finance/virtual-ca" style={{ background: "rgba(35,42,99,0.1)", border: "1px solid rgba(35,42,99,0.3)", color: "#232A63", padding: "6px 14px", borderRadius: 8, textDecoration: "none", fontSize: "0.82rem" }}>
-          🛩️ Ask FrePilot
+          🛩️ Ask FreWork AI
         </Link>
       </nav>
 
@@ -176,7 +176,7 @@ export default function InsightsPage() {
                   : "Operating at a loss. Immediate action needed — cut costs or increase revenue."}
               </div>
               <Link href="/finance/virtual-ca" style={{ flexShrink: 0, background: "rgba(35,42,99,0.1)", border: "1px solid rgba(35,42,99,0.25)", color: "#232A63", padding: "8px 16px", borderRadius: 8, textDecoration: "none", fontSize: "0.8rem", fontWeight: 600 }}>
-                Ask FrePilot →
+                Ask FreWork AI →
               </Link>
             </div>
 

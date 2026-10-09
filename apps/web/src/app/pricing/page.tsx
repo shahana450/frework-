@@ -11,13 +11,14 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { FREBOOK_PLAN, FREBOOK_PRICE_LABEL } from "@/lib/plans";
 
 type PlanFeature = { text: string; note?: string };
 
 type Plan = {
   name: string;
   icon: React.ElementType;
-  price: { monthly: number; yearly: number };
+  price: number; // INR per month, + GST
   tagline: string;
   desc: string;
   popular?: boolean;
@@ -29,230 +30,42 @@ type Plan = {
 
 const PLANS: Plan[] = [
   {
-    name: "Starter",
-    icon: Zap,
-    price: { monthly: 2999, yearly: 1949 },
-    tagline: "Compliance + Accounting basics",
-    desc: "GST registration, basic filings and accounting software for solo founders and micro businesses.",
-    color: {
-      border: "border-white/10",
-      iconBg: "bg-white/6", iconText: "text-white/50",
-      glow: "rgba(255,255,255,0.04)",
-      highlight: "text-white",
-      cta: "border border-white/15 text-white/70 hover:border-white/30 hover:text-white transition-all",
-    },
-    sections: [
-      {
-        heading: "Compliance Services (CA-assisted)",
-        icon: FileText,
-        items: [
-          { text: "GST Registration", note: "one-time" },
-          { text: "Monthly GST Filing — GSTR-1 & GSTR-3B" },
-          { text: "Income Tax Return (ITR-1 / ITR-4)" },
-          { text: "TDS advisory" },
-          { text: "MSME / Udyam registration" },
-        ],
-      },
-      {
-        heading: "FreBook Accounting Software",
-        icon: BookOpen,
-        items: [
-          { text: "GST invoicing & purchase bills" },
-          { text: "Journal entries & ledger" },
-          { text: "Bank reconciliation (CSV import)" },
-          { text: "Basic P&L report" },
-          { text: "1 business · unlimited transactions" },
-        ],
-      },
-    ],
-    notIncluded: ["FreBook AI chat", "ROC / MCA filing", "TDS filing", "Audit", "Team seats"],
-    cta: "Get Started",
-  },
-  {
-    name: "Professional",
-    icon: Rocket,
-    price: { monthly: 3999, yearly: 2599 },
-    tagline: "Most popular for SMBs",
-    desc: "Full GST + TDS compliance with CA filing, and complete accounting software with AI co-pilot.",
+    name: FREBOOK_PLAN.name,
+    icon: BookOpen,
+    price: FREBOOK_PLAN.price,
+    tagline: "One plan · everything included",
+    desc: "Chat bookkeeping for Indian small businesses. Professional services (GST registration, ITR, audits) are ordered separately at the prices shown on each service.",
     popular: true,
     color: {
       border: "border-[#C9A84C]/50",
       iconBg: "bg-[#C9A84C]/15", iconText: "text-[#E8C97A]",
       glow: "rgba(201,168,76,0.22)",
-      badge: "✦ Most Popular",
       highlight: "text-[#E8C97A]",
       cta: "text-[#0B1120] font-bold",
       ctaStyle: { background: "linear-gradient(135deg,#F0D78A,#C9A84C,#A8883A)" },
     },
-    sections: [
-      {
-        heading: "Compliance Services (CA-assisted)",
-        icon: FileText,
-        items: [
-          { text: "Everything in Starter" },
-          { text: "TDS Return Filing (Form 24Q / 26Q)" },
-          { text: "Advance tax computation & challan" },
-          { text: "GST Annual Return (GSTR-9)" },
-          { text: "ROC annual filing (Form AOC-4 / MGT-7)" },
-        ],
-      },
-      {
-        heading: "FreBook Accounting + AI",
-        icon: BookOpen,
-        items: [
-          { text: "Everything in Starter" },
-          { text: "FreBook AI — ask anything about your books" },
-          { text: "GST Returns auto-prep (GSTR-1, 3B)" },
-          { text: "TDS tracker (section-wise)" },
-          { text: "Tally XML export" },
-          { text: "3 businesses" },
-        ],
-      },
-    ],
-    notIncluded: ["Statutory audit", "Transfer pricing", "Team seats", "Virtual CFO"],
-    cta: "Start Free Trial",
-  },
-  {
-    name: "Growth",
-    icon: TrendingUp,
-    price: { monthly: 4999, yearly: 3249 },
-    tagline: "For growing companies",
-    desc: "Company registration, full compliance suite, and AI accounting for scaling businesses.",
-    color: {
-      border: "border-blue-500/25",
-      iconBg: "bg-blue-500/12", iconText: "text-blue-400",
-      glow: "rgba(59,130,246,0.1)",
-      highlight: "text-blue-300",
-      cta: "border border-blue-500/35 text-blue-300 hover:bg-blue-500/8 hover:border-blue-400 transition-all",
-    },
-    sections: [
-      {
-        heading: "Compliance Services (CA-assisted)",
-        icon: FileText,
-        items: [
-          { text: "Everything in Professional" },
-          { text: "Company / LLP Registration" },
-          { text: "Director KYC & DSC renewal" },
-          { text: "PF / ESI registration & returns" },
-          { text: "Shop & Establishment registration" },
-        ],
-      },
-      {
-        heading: "FreBook Accounting + AI",
-        icon: BookOpen,
-        items: [
-          { text: "Everything in Professional" },
-          { text: "AI document analysis (invoices, bills)" },
-          { text: "AI Insights & cash flow predictions" },
-          { text: "Team access — 3 seats" },
-          { text: "P&L, Balance Sheet, Cash Flow reports" },
-          { text: "Unlimited businesses" },
-        ],
-      },
-    ],
-    notIncluded: ["Statutory audit", "Transfer pricing", "Virtual CFO"],
-    cta: "Start Growth Trial",
-  },
-  {
-    name: "Business",
-    icon: Building2,
-    price: { monthly: 5999, yearly: 3899 },
-    tagline: "For established firms",
-    desc: "Dedicated account manager and full team accounting access. Audits are quoted separately.",
-    color: {
-      border: "border-violet-500/25",
-      iconBg: "bg-violet-500/12", iconText: "text-violet-400",
-      glow: "rgba(139,92,246,0.1)",
-      highlight: "text-violet-300",
-      cta: "border border-violet-500/35 text-violet-300 hover:bg-violet-500/8 hover:border-violet-400 transition-all",
-    },
-    sections: [
-      {
-        heading: "Compliance Services (CA-assisted)",
-        icon: FileText,
-        items: [
-          { text: "Everything in Growth" },
-          { text: "Statutory, tax and internal audits — by an independent Chartered Accountant, quoted separately" },
-          { text: "DPR & CMA data preparation" },
-          { text: "Dedicated Account Manager (CA)" },
-        ],
-      },
-      {
-        heading: "FreBook Accounting + AI",
-        icon: BookOpen,
-        items: [
-          { text: "Everything in Growth" },
-          { text: "Team access — 10 seats" },
-          { text: "Custom integrations (Tally, Zoho)" },
-          { text: "Priority support (4 hr SLA)" },
-          { text: "Custom reports & export" },
-        ],
-      },
-    ],
-    notIncluded: ["Transfer pricing advisory", "M&A advisory", "Virtual CFO"],
-    cta: "Start Business Trial",
-  },
-  {
-    name: "Enterprise",
-    icon: Crown,
-    price: { monthly: 6999, yearly: 4549 },
-    tagline: "For large businesses & CA firms",
-    desc: "Virtual CFO, transfer pricing, M&A advisory, unlimited team, and white-label FreBook.",
-    color: {
-      border: "border-emerald-500/25",
-      iconBg: "bg-emerald-500/12", iconText: "text-emerald-400",
-      glow: "rgba(16,185,129,0.1)",
-      highlight: "text-emerald-300",
-      cta: "border border-emerald-500/35 text-emerald-300 hover:bg-emerald-500/8 hover:border-emerald-400 transition-all",
-    },
-    sections: [
-      {
-        heading: "Compliance Services (CA-assisted)",
-        icon: FileText,
-        items: [
-          { text: "Everything in Business" },
-          { text: "Transfer pricing advisory" },
-          { text: "M&A and restructuring advisory" },
-          { text: "Virtual CFO (monthly advisory)" },
-          { text: "Custom compliance reporting" },
-        ],
-      },
-      {
-        heading: "FreBook Accounting + AI",
-        icon: BookOpen,
-        items: [
-          { text: "Everything in Business" },
-          { text: "Unlimited team seats" },
-          { text: "White-label FreBook (your brand)" },
-          { text: "Custom domain & subdomain" },
-          { text: "Dedicated onboarding & training" },
-        ],
-      },
-    ],
+    sections: [{ heading: "FreBook Accounting", icon: BookOpen, items: FREBOOK_PLAN.features.map(text => ({ text })) }],
     notIncluded: [],
-    cta: "Contact Sales",
+    cta: "Get Started",
   },
 ];
 
 const FAQS = [
-  { q: "What is included in CA Compliance services?", a: "Every plan includes CA-assisted filings — GST, ITR, TDS, ROC and more depending on your plan tier. These are performed by qualified Chartered Accountants, not automated tools." },
-  { q: "What is FreBook Accounting Software?", a: "FreBook is our AI-powered accounting platform: invoicing, journal entries, bank reconciliation, GST returns prep, TDS tracker, reports, and an AI chat assistant for your books. Higher plans include team access, Tally export, and more." },
-  { q: "Is there a free trial?", a: "Yes — Professional, Growth, and Business plans include a 14-day free trial with no credit card required. You won't be charged until the trial ends." },
-  { q: "Can I switch plans anytime?", a: "Yes — upgrade or downgrade anytime. Upgrades are prorated; downgrades take effect at the next billing cycle." },
-  { q: "What payment methods do you accept?", a: "UPI, all major credit/debit cards (Visa, Mastercard, RuPay), Net Banking, EMI, and bank transfer for annual plans — via Razorpay." },
-  { q: "How does yearly billing work?", a: "Choosing yearly billing saves up to 35% compared to monthly. You're billed for 12 months upfront at the discounted rate." },
-  { q: "Can I get a custom quote for my CA firm?", a: "Enterprise plans are fully customisable. Contact us and our team responds within 1 business day with a tailored proposal." },
+  { q: "What does the FreBook plan include?", a: "Everything in FreBook: chat bookkeeping, invoicing, journals, ledgers, bank import and reconciliation, GST returns preparation, TDS tracker, Tally push and import, and financial reports." },
+  { q: "Are professional services included?", a: "No. GST registration, ITR filing, ROC filings and audits are ordered separately, at the price shown on each service. Audits are performed by an independent Chartered Accountant." },
+  { q: "Is GST extra?", a: `Yes. ${FREBOOK_PRICE_LABEL} per month plus GST, billed monthly.` },
+  { q: "Can I cancel?", a: "Yes, anytime. Access continues until the end of the month you paid for. See the Refund Policy for the 7-day refund rule." },
+  { q: "What payment methods do you accept?", a: "UPI, cards and net banking." },
 ];
 
 const TRUST = [
   { icon: ShieldCheck, label: "Encrypted connections (HTTPS)" },
   { icon: BadgeCheck, label: "Verified professional experts" },
-  { icon: Clock, label: "14-day free trial, no card" },
+  { icon: Clock, label: "Cancel anytime" },
   { icon: Headphones, label: "Support on WhatsApp and email" },
 ];
 
 export default function PricingPage() {
-  const [yearly, setYearly] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const router = useRouter();
@@ -263,17 +76,11 @@ export default function PricingPage() {
 
   const handlePlanClick = (plan: Plan) => {
     const key = plan.name.toLowerCase();
-    if (key === "enterprise") {
-      window.open("https://wa.me/918590874681?text=Hi%2C+I%27m+interested+in+the+Enterprise+plan", "_blank");
-      return;
-    }
     if (loggedIn) router.push(`/finance/pricing`);
     else router.push(`/register?plan=${key}`);
   };
 
   const ctaLabel = (plan: Plan) => {
-    const key = plan.name.toLowerCase();
-    if (key === "enterprise") return "Contact Sales";
     return loggedIn ? "Subscribe Now" : plan.cta;
   };
 
@@ -296,7 +103,7 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="text-white/45 text-lg mb-10 leading-relaxed">
-            GST · ITR · TDS · ROC filings by qualified CAs, combined with<br className="hidden sm:block" /> full-stack AI accounting software. One plan, everything included.
+            One FreBook plan at ₹1,499/month. Professional services<br className="hidden sm:block" /> are ordered separately when you need them.
           </p>
 
           {/* Trust pills */}
@@ -307,30 +114,15 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
-
-          {/* Billing toggle */}
-          <div className="inline-flex items-center bg-[#0A1020] border border-white/10 rounded-2xl p-1.5 gap-1">
-            <button onClick={() => setYearly(false)}
-              className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${!yearly ? "bg-white/10 text-white shadow-lg" : "text-white/30 hover:text-white/60"}`}>
-              Monthly
-            </button>
-            <button onClick={() => setYearly(true)}
-              className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${yearly ? "bg-white/10 text-white shadow-lg" : "text-white/30 hover:text-white/60"}`}>
-              Yearly
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold tracking-wide">
-                SAVE 35%
-              </span>
-            </button>
-          </div>
         </motion.div>
       </section>
 
       {/* ── Plan Cards ── */}
       <section className="px-4 pb-24">
-        <div className="max-w-[1400px] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 items-start">
+        <div className="max-w-md mx-auto grid grid-cols-1 gap-5 items-start">
           {PLANS.map((plan, i) => {
             const Icon = plan.icon;
-            const price = yearly ? plan.price.yearly : plan.price.monthly;
+            const price = plan.price;
             const isPopular = !!plan.popular;
 
             return (
@@ -389,18 +181,10 @@ export default function PricingPage() {
                         {price === 0 ? "₹0" : `₹${price.toLocaleString("en-IN")}`}
                       </span>
                       <div className="pb-1">
-                        <span className="text-white/25 text-xs block leading-none">/mo</span>
-                        {yearly && price > 0 && (
-                          <span className="text-emerald-400/80 text-[10px] block leading-none mt-0.5">billed yearly</span>
-                        )}
+                        <span className="text-white/25 text-xs block leading-none">/mo + GST</span>
                       </div>
                     </div>
                     {price === 0 && <p className="text-[11px] text-white/20 mt-1.5">Free forever · No card required</p>}
-                    {yearly && price > 0 && (
-                      <p className="text-[11px] text-white/25 mt-1.5">
-                        ₹{(price * 12).toLocaleString("en-IN")} billed annually
-                      </p>
-                    )}
                   </div>
 
                   {/* CTA */}
@@ -470,8 +254,8 @@ export default function PricingPage() {
           style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.06),rgba(201,168,76,0.02))" }}>
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/6">
             {[
-              { val: "5%", label: "Platform transaction fee", sub: "On marketplace bookings" },
-              { val: "14 days", label: "Free trial on paid plans", sub: "No credit card" },
+              { val: "₹1,499", label: "Per month + GST", sub: "One plan" },
+              { val: "7 days", label: "Refund window", sub: "See Refund Policy" },
               { val: "< 4 hrs", label: "Avg. support response", sub: "For paid plans" },
               { val: "Zero", label: "Lock-in or exit fees", sub: "Cancel anytime" },
             ].map(({ val, label, sub }) => (

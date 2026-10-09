@@ -120,7 +120,7 @@ function LoginForm() {
           </h2>
           <p className="text-white/45 text-sm mb-10 leading-relaxed">Find workspaces, freelancers & jobs — or grow your business with expert Professional Services.</p>
           <div className="space-y-3">
-            {[["GST", "Registration & filing"], ["expert professionals", "Qualified experts"], ["₹999", "Starting per month"]].map(([v, l]) => (
+            {[["GST", "Registration & filing"], ["expert professionals", "Qualified experts"], ["₹1,499", "FreBook per month + GST"]].map(([v, l]) => (
               <div key={l} className="flex items-center gap-4 bg-white/4 border border-white/6 rounded-2xl px-4 py-3">
                 <span className="text-lg font-bold w-20 text-[#E8C97A]" style={{ fontFamily: "var(--font-cormorant), serif" }}>{v}</span>
                 <span className="text-white/50 text-sm">{l}</span>

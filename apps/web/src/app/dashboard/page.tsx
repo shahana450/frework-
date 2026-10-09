@@ -13,6 +13,7 @@ import {
   CheckCircle, Clock,
 } from "lucide-react";
 import { FreWorkLogo } from "@/components/ui/frework-logo";
+import { FREBOOK_PLAN, planLabel } from "@/lib/plans";
 
 const PAID_SERVICES = [
   {
@@ -102,7 +103,7 @@ const PLATFORM_CARDS: AdminCard[] = [
 
 const FINANCE_CARDS: AdminCard[] = [
   { icon: "🛩️", title: "Finance Dashboard", desc: "Overview — P&L snapshot, pending tasks, quick actions", href: "/finance", color: "#232A63", border: "rgba(35,42,99,0.25)", bg: "rgba(35,42,99,0.07)", badge: "Dashboard" },
-  { icon: "🔑", title: "FrePilot Admin", desc: "Grant trials, activate or revoke FrePilot subscriptions", href: "/finance/admin", color: "#3A4170", border: "rgba(35,42,99,0.25)", bg: "rgba(35,42,99,0.07)", badge: "Manage Subs" },
+  { icon: "🔑", title: "FreBook Admin", desc: "Grant trials, activate or revoke FreBook subscriptions", href: "/finance/admin", color: "#3A4170", border: "rgba(35,42,99,0.25)", bg: "rgba(35,42,99,0.07)", badge: "Manage Subs" },
   { icon: "🧾", title: "Sales Invoices", desc: "Create and manage sales invoices for clients", href: "/finance/sales/new", color: "#232A63", border: "rgba(35,42,99,0.2)", bg: "rgba(35,42,99,0.06)", badge: "New Invoice" },
   { icon: "📦", title: "Purchase Bills", desc: "Record vendor bills and purchase entries", href: "/finance/purchases/new", color: "#232A63", border: "rgba(35,42,99,0.2)", bg: "rgba(35,42,99,0.06)", badge: "New Bill" },
   { icon: "💸", title: "Expenses", desc: "Record and categorise business expenses", href: "/finance/expenses", color: "#3A4170", border: "rgba(35,42,99,0.2)", bg: "rgba(35,42,99,0.06)", badge: "Record" },
@@ -149,7 +150,7 @@ function AdminCardGrid({ cards }: { cards: AdminCard[] }) {
 
 function TrialGrantWidget() {
   const [userId, setUserId] = useState("");
-  const [plan, setPlan] = useState("professional");
+  const [plan, setPlan] = useState<string>(FREBOOK_PLAN.id);
   const [days, setDays] = useState(7);
   const [working, setWorking] = useState(false);
   const [msg, setMsg] = useState("");
@@ -178,7 +179,7 @@ function TrialGrantWidget() {
     <div className="rounded-2xl mb-8 p-6" style={{ background: "rgba(35,42,99,0.06)", border: "1px solid rgba(35,42,99,0.2)" }}>
       <div className="flex items-center gap-2 mb-4">
         <span className="text-lg">🛩️</span>
-        <p className="font-black text-sm" style={{ color: "#232A63" }}>Grant FrePilot Access</p>
+        <p className="font-black text-sm" style={{ color: "#232A63" }}>Grant FreBook Access</p>
         <Link href="/finance/admin" className="ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: "rgba(35,42,99,0.12)", color: "#3A4170", border: "1px solid rgba(35,42,99,0.2)" }}>
           Full Admin →
         </Link>
@@ -191,7 +192,7 @@ function TrialGrantWidget() {
         <div>
           <label className="block text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "rgba(20,26,58,0.60)" }}>Plan</label>
           <select value={plan} onChange={e => setPlan(e.target.value)} style={{ ...inp, width: "auto", cursor: "pointer" }}>
-            {["starter","professional","growth","business","enterprise"].map(p => <option key={p} value={p}>{p}</option>)}
+            {[FREBOOK_PLAN.id].map(p => <option key={p} value={p}>{planLabel(p)}</option>)}
           </select>
         </div>
         <div>
@@ -406,7 +407,7 @@ export default function DashboardPage() {
             </div>
             <AdminCardGrid cards={PLATFORM_CARDS} />
             <div className="col-span-full mt-6 mb-1">
-              <p className="text-[10px] font-black tracking-[0.2em] uppercase mb-1" style={{ color: "rgba(35,42,99,0.9)" }}>FrePilot Finance</p>
+              <p className="text-[10px] font-black tracking-[0.2em] uppercase mb-1" style={{ color: "rgba(35,42,99,0.9)" }}>FreWork Finance</p>
               <div className="h-px" style={{ background: "rgba(35,42,99,0.15)" }} />
             </div>
             <AdminCardGrid cards={FINANCE_CARDS} />
@@ -500,7 +501,7 @@ export default function DashboardPage() {
                   ● Active account
                 </span>
                 <span style={{ fontSize: "0.72rem", padding: "5px 14px", borderRadius: 20, background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.07)", color: "rgba(20,26,58,0.80)", fontWeight: 600, textTransform: "capitalize" }}>
-                  {subscription ? `${subscription.plan} Plan` : "Free Plan"}
+                  {subscription ? `${planLabel(subscription.plan)} Plan` : "Free Plan"}
                 </span>
               </div>
             </div>
@@ -515,7 +516,7 @@ export default function DashboardPage() {
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.3rem" }}>
                   <span style={{ fontSize: "0.6rem", padding: "2px 8px", borderRadius: 10, background: "rgba(240,102,43,0.2)", border: "1px solid rgba(240,102,43,0.35)", color: "#C2410C", fontWeight: 800, letterSpacing: "0.06em" }}>NEW</span>
-                  <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#C2410C" }}>FrePilot Finance — AI Bookkeeping</span>
+                  <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#C2410C" }}>FreWork Finance — AI Bookkeeping</span>
                 </div>
                 <p style={{ fontSize: "0.76rem", color: "rgba(20,26,58,0.80)", margin: 0, lineHeight: 1.6 }}>
                   Upload invoices, bills &amp; bank statements · AI posts journal entries · GST returns, P&amp;L, Balance Sheet

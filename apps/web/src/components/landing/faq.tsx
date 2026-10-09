@@ -33,8 +33,8 @@ const faqs = [
     a: "Yes. FreWork is available on iOS and Android with full feature parity. You can manage projects, chat with clients, book workspaces, and track payments on the go.",
   },
   {
-    q: "What's the platform fee?",
-    a: "FreWork charges a 5% platform fee on marketplace transactions. The fee covers payment processing, escrow, dispute resolution, and platform maintenance. Enterprise plans have custom fee structures.",
+    q: "Are there any extra fees?",
+    a: "No. You pay the FreBook plan (₹1,499/month + GST) and the price shown on any service you order — nothing else.",
   },
   {
     q: "Can agencies use FreWork?",

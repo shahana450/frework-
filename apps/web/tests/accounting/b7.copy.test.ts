@@ -23,7 +23,7 @@ test("B7: no unverified client counts or ratings", () => {
 });
 
 test("B7: forbidden firm description never appears", () => {
-  assert.deepEqual(hits(/Chartered Accountants & Tax Consultants/i), []);
+  assert.deepEqual(hits(new RegExp(["Chartered Accountants", "Tax Consultants"].join(" & "), "i")), []);
 });
 
 test("B8: CA-reserved audits are not bundled in software tiers; the accounting app is FreBook", () => {

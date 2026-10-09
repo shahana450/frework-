@@ -3,60 +3,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { FREBOOK_PLAN, isLegacyPlan, planLabel } from "@/lib/plans";
 
-const PLANS = [
-  {
-    id: "starter",
-    name: "Starter",
-    price: 2999,
-    badge: null,
-    color: "#8A9BB8",
-    features: [
-      "GST Invoicing & Purchase Bills",
-      "Journal Entries (Double Entry)",
-      "Account Ledger & Chart of Accounts",
-      "Receivables & Payables",
-      "Bank Reconciliation (CSV import)",
-      "Basic Financial Reports",
-      "1 Business",
-    ],
-    excluded: ["GST Returns (GSTR-1, 3B)", "TDS Tracker", "AI FrePilot (Claude)", "Team Access", "Tally Export"],
-  },
-  {
-    id: "professional",
-    name: "Professional",
-    price: 3999,
-    badge: "Most Popular",
-    color: "#232A63",
-    features: [
-      "Everything in Starter",
-      "GST Returns — GSTR-1 & GSTR-3B auto-prep",
-      "TDS Tracker (section-wise)",
-      "Tally XML Export",
-      "Contacts with opening balances",
-      "Financial Year management",
-      "3 Businesses",
-    ],
-    excluded: ["AI FrePilot (Claude)", "Team Access & roles"],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: 4999,
-    badge: "AI Powered",
-    color: "#5B4BC4",
-    features: [
-      "Everything in Professional",
-      "AI FrePilot — ask anything about your books",
-      "AI document analysis (invoices, bills)",
-      "AI Insights & cash flow predictions",
-      "Team Access with role-based permissions",
-      "Unlimited Businesses",
-      "Priority Support",
-    ],
-    excluded: [],
-  },
-];
+const PLANS = [{ ...FREBOOK_PLAN, badge: null as string | null, color: "#232A63", features: [...FREBOOK_PLAN.features], excluded: [] as string[] }];
 
 declare global {
   interface Window {
@@ -112,7 +61,7 @@ export default function PricingPage() {
         key: key_id,
         amount: plan.price * 100,
         currency: "INR",
-        name: "FrePilot",
+        name: "FreWork",
         description: `${plan.name} Plan — ₹${plan.price.toLocaleString("en-IN")}/month`,
         order_id,
         prefill: { name: user.name, email: user.email },
@@ -142,7 +91,7 @@ export default function PricingPage() {
       <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/" style={{ color: "#232A63", fontWeight: 900, textDecoration: "none", fontSize: "0.95rem" }}>FreWork</Link>
         <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
-        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>FrePilot Pricing</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>FreBook Plan</span>
         <div style={{ flex: 1 }} />
         {user && <span style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>{user.email}</span>}
       </nav>
@@ -152,7 +101,7 @@ export default function PricingPage() {
         <div style={{ textAlign: "center", marginBottom: "3rem" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🛩️</div>
           <h1 style={{ fontSize: "2.2rem", fontWeight: 900, margin: "0 0 0.5rem", letterSpacing: "-0.03em" }}>
-            Choose your <span style={{ color: "#232A63" }}>FrePilot</span> plan
+            One plan. <span style={{ color: "#232A63" }}>Everything in FreBook.</span>
           </h1>
           <p style={{ color: "rgba(20,26,58,0.75)", fontSize: "1rem", margin: 0 }}>
             Full-stack accounting for Indian SMBs. GST, TDS, Journals, AI — all in one.
@@ -162,16 +111,16 @@ export default function PricingPage() {
         {/* Current subscription banner */}
         {currentSub && (
           <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", borderRadius: 10, padding: "0.85rem 1.5rem", marginBottom: "2rem", textAlign: "center", fontSize: "0.88rem", color: "#0B7A55" }}>
-            You are on the <strong>{currentSub.plan}</strong> plan ({currentSub.status}).
+            You are on the <strong>{planLabel(currentSub.plan)}</strong> plan ({currentSub.status}).
             {currentSub.ends_at && ` Renews/expires: ${new Date(currentSub.ends_at).toLocaleDateString("en-IN")}.`}
             <Link href="/finance" style={{ color: "#232A63", marginLeft: "1rem", fontWeight: 700, textDecoration: "none" }}>Go to Dashboard →</Link>
           </div>
         )}
 
         {/* Plans grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1.5rem", marginBottom: "3rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,440px)", justifyContent: "center", gap: "1.5rem", marginBottom: "3rem" }}>
           {PLANS.map(plan => {
-            const isCurrent = currentSub?.plan === plan.id;
+            const isCurrent = currentSub?.plan === plan.id || isLegacyPlan(currentSub?.plan);
             const isPopular = !!plan.badge;
             return (
               <div key={plan.id} style={{
@@ -213,10 +162,10 @@ export default function PricingPage() {
                   style={{
                     marginTop: "1.5rem", width: "100%", padding: "12px", borderRadius: 10, cursor: "pointer",
                     fontWeight: 700, fontSize: "0.9rem",
-                    background: isCurrent ? "rgba(11,122,85,0.15)" : isPopular ? "#232A63" : `rgba(${plan.id === "enterprise" ? "167,139,250" : "201,168,76"},0.15)`,
-                    color: isCurrent ? "#0B7A55" : isPopular ? "#F5F6FA" : plan.color,
+                    background: isCurrent ? "rgba(11,122,85,0.15)" : "#232A63",
+                    color: isCurrent ? "#0B7A55" : "#F5F6FA",
                     opacity: paying && paying !== plan.id ? 0.5 : 1,
-                    border: isCurrent ? "1px solid rgba(11,122,85,0.3)" : isPopular ? "none" : `1px solid ${plan.color}40`,
+                    border: isCurrent ? "1px solid rgba(11,122,85,0.3)" : "none",
                   }}
                 >
                   {isCurrent ? "✓ Current Plan" : paying === plan.id ? "Opening payment…" : `Subscribe · ₹${fmt(plan.price)}/mo`}

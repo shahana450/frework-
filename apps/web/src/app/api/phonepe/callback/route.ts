@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const txnId   = searchParams.get("txnId")  ?? "";
   const plan    = (searchParams.get("plan") ?? "").toLowerCase();
-  const billing = searchParams.get("billing") === "yearly" ? "yearly" : "monthly";
+  const billing = searchParams.get("billing") === "yearly" ? "yearly" : "monthly"; // kept for signature checks on older links
   const userId  = searchParams.get("userId")  ?? "";
   const sig     = searchParams.get("sig")     ?? "";
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://frework.online";

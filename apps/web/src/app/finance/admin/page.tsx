@@ -2,9 +2,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { FREBOOK_PLAN, planLabel } from "@/lib/plans";
 
 const ADMIN_EMAILS = ["admin.frework@gmail.com"];
-const PLANS = ["starter", "professional", "enterprise"];
+const PLANS = [FREBOOK_PLAN.id];
 
 type Sub = {
   id: string;
@@ -29,7 +30,7 @@ export default function AdminPortal() {
   const [subs, setSubs] = useState<Sub[]>([]);
   const [loading, setLoading] = useState(true);
   const [newUserId, setNewUserId] = useState("");
-  const [newPlan, setNewPlan] = useState("professional");
+  const [newPlan, setNewPlan] = useState<string>(FREBOOK_PLAN.id);
   const [trialDays, setTrialDays] = useState(7);
   const [working, setWorking] = useState(false);
   const [msg, setMsg] = useState("");
@@ -93,7 +94,7 @@ export default function AdminPortal() {
   return (
     <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
       <nav style={{ borderBottom: "1px solid rgba(31,94,255,0.2)", padding: "0 2rem", height: 56, display: "flex", alignItems: "center", gap: "1rem" }}>
-        <span style={{ fontWeight: 900, color: "#1F5EFF", fontSize: "0.95rem" }}>FrePilot Admin</span>
+        <span style={{ fontWeight: 900, color: "#1F5EFF", fontSize: "0.95rem" }}>FreBook Admin</span>
         <span style={{ flex: 1 }} />
         <a href="/finance" style={{ color: "rgba(20,26,58,0.65)", fontSize: "0.8rem", textDecoration: "none" }}>← Back to Finance</a>
       </nav>
@@ -113,7 +114,7 @@ export default function AdminPortal() {
             <div>
               <label style={{ display: "block", fontSize: "0.65rem", color: "rgba(20,26,58,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>Plan</label>
               <select value={newPlan} onChange={e => setNewPlan(e.target.value)} style={{ ...inp, cursor: "pointer" }}>
-                {PLANS.map(p => <option key={p} value={p}>{p}</option>)}
+                {PLANS.map(p => <option key={p} value={p}>{planLabel(p)}</option>)}
               </select>
             </div>
             <div>
@@ -156,7 +157,7 @@ export default function AdminPortal() {
                   {subs.map((s, i) => (
                     <tr key={s.id} style={{ borderTop: i === 0 ? "none" : "1px solid rgba(20,26,58,0.08)" }}>
                       <td style={{ padding: "0.65rem 1rem", fontFamily: "monospace", fontSize: "0.72rem", color: "rgba(20,26,58,0.75)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.user_id}</td>
-                      <td style={{ padding: "0.65rem 1rem", fontWeight: 700, textTransform: "capitalize" }}>{s.plan}</td>
+                      <td style={{ padding: "0.65rem 1rem", fontWeight: 700, }}>{planLabel(s.plan)}</td>
                       <td style={{ padding: "0.65rem 1rem" }}>
                         <span style={{ fontSize: "0.72rem", fontWeight: 700, color: statusColor(s.status), background: `${statusColor(s.status)}18`, padding: "2px 8px", borderRadius: 20 }}>{s.status}</span>
                       </td>

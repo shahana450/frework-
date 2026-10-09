@@ -6,17 +6,12 @@ import Link from "next/link";
 import { CheckCircle } from "lucide-react";
 import { Loader2 } from "lucide-react";
 
-const PLAN_NAMES: Record<string, string> = {
-  professional: "Professional",
-  growth: "Growth",
-  business: "Business",
-  enterprise: "Enterprise",
-};
+import { FREBOOK_PLAN, planLabel } from "@/lib/plans";
 
 function SuccessInner() {
   const params = useSearchParams();
-  const plan = params.get("plan") ?? "professional";
-  const planName = PLAN_NAMES[plan] ?? "Premium";
+  const plan = params.get("plan") ?? FREBOOK_PLAN.id;
+  const planName = planLabel(plan);
 
   return (
     <div className="min-h-screen bg-[#060C18] flex items-center justify-center px-4">

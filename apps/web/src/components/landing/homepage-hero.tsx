@@ -235,7 +235,7 @@ export function HomepageHero() {
                   { num: "₹499", label: "Starting price", sub: "GST registration", color: "text-[#C9A84C]" },
                   { num: "expert professionals", label: "Qualified Experts", sub: "on your team", color: "text-blue-400" },
                   { num: "24 hrs", label: "Response Time", sub: "guaranteed", color: "text-emerald-400" },
-                  { num: "₹999", label: "Starting / month", sub: "no hidden fees", color: "text-purple-400" },
+                  { num: "₹1,499", label: "FreBook / month", sub: "+ GST, no hidden fees", color: "text-purple-400" },
                 ].map(({ num, label, sub, color }) => (
                   <div key={label} className="flex flex-col items-center justify-center py-6 px-4 text-center gap-1 hover:bg-white/2 transition-colors">
                     <span className={`text-2xl font-bold ${color}`} style={{ fontFamily: "var(--font-cormorant), serif" }}>{num}</span>

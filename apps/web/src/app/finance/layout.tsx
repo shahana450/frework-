@@ -44,7 +44,7 @@ const SHORT: Record<string, string> = {
   "Customers & Suppliers": "Parties", "Import Statement": "Import", "Bank History": "History", "Books & Tally Push": "Books", "Trial Balance": "TB",
   "Chart of Accounts": "Accounts", "Opening Balances": "Opening", "Audit Log": "Audit log", "Profit & Loss": "P&L", "Balance Sheet": "Bal. sheet",
   "Monthly Recap": "Recap", "Analysis & Audit": "Analysis", "GST Returns": "GST", "GST Reconciliation": "GST recon", "Review Queue": "Review",
-  "Upload Documents": "Upload", "FrePilot (Virtual CA)": "FrePilot", "Business Details": "Business", "Region & Currency": "Region", "Portal Connect": "Portals",
+  "Upload Documents": "Upload", "FreWork AI": "AI", "Business Details": "Business", "Region & Currency": "Region", "Portal Connect": "Portals",
   "Financial Years": "Years", "Team & Access": "Team", "Tally Sync": "Tally", "CA Dashboard": "CA desk", "New Bill": "New bill",
 };
 const shortLabel = (l: string) => SHORT[l] ?? l;

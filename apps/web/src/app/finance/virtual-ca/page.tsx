@@ -31,7 +31,7 @@ function MarkdownText({ text }: { text: string }) {
   return <div dangerouslySetInnerHTML={{ __html: html }} style={{ lineHeight: 1.65, fontSize: "0.88rem" }} />;
 }
 
-export default function FrePilotPage() {
+export default function FreWorkAIPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
   const [bizName, setBizName] = useState("");
@@ -52,7 +52,7 @@ export default function FrePilotPage() {
       if (data) setBizName(data.name);
       setMessages([{
         role: "assistant",
-        content: `Namaste! I'm **FrePilot** — your AI financial co-pilot for **${data?.name ?? "your business"}**.\n\n*You Build, We Pilot* — I have full access to your financial data and can help you with:\n\n- **Accounting queries** — journal entries, ledgers, double-entry\n- **GST** — GSTR-1, GSTR-3B, ITC reconciliation\n- **Income Tax** — ITR filing, advance tax, TDS\n- **Financial analysis** — P&L interpretation, cash flow\n- **Compliance** — due dates, penalties, notices\n\nAsk me anything about your finances or Indian tax laws.`,
+        content: `Namaste! I'm **FreWork AI** — your AI financial co-pilot for **${data?.name ?? "your business"}**.\n\n — I have full access to your financial data and can help you with:\n\n- **Accounting queries** — journal entries, ledgers, double-entry\n- **GST** — GSTR-1, GSTR-3B, ITC reconciliation\n- **Income Tax** — ITR filing, advance tax, TDS\n- **Financial analysis** — P&L interpretation, cash flow\n- **Compliance** — due dates, penalties, notices\n\nAsk me anything about your finances or Indian tax laws.`,
         ts: Date.now(),
       }]);
     });
@@ -97,7 +97,7 @@ export default function FrePilotPage() {
   function clearChat() {
     setMessages([{
       role: "assistant",
-      content: `Chat cleared. I'm FrePilot — how can I help with ${bizName}'s finances?`,
+      content: `Chat cleared. I'm FreWork AI — how can I help with ${bizName}'s finances?`,
       ts: Date.now(),
     }]);
   }
@@ -109,8 +109,8 @@ export default function FrePilotPage() {
         <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
         <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
         <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
-          <span style={{ color: "#232A63", fontWeight: 800, fontSize: "0.88rem" }}>FrePilot</span>
-          <span style={{ color: "rgba(20,26,58,0.35)", fontSize: "0.6rem", letterSpacing: "0.04em" }}>You Build We Pilot</span>
+          <span style={{ color: "#232A63", fontWeight: 800, fontSize: "0.88rem" }}>FreWork AI</span>
+          <span style={{ color: "rgba(20,26,58,0.35)", fontSize: "0.6rem", letterSpacing: "0.04em" }}>Ask about your books</span>
         </div>
         <div style={{ flex: 1 }} />
         {bizName && <span style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>{bizName}</span>}
@@ -183,7 +183,7 @@ export default function FrePilotPage() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder="Ask FrePilot anything — GST, TDS, ITR, journal entries, financial advice…"
+                placeholder="Ask FreWork AI anything — GST, TDS, ITR, journal entries, financial advice…"
                 rows={2}
                 style={{
                   flex: 1, background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.21)", color: "#141A3A",
@@ -202,7 +202,7 @@ export default function FrePilotPage() {
                 {loading ? "…" : "Send"}
               </button>
             </div>
-            <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.35)", marginTop: "0.4rem" }}>Press Enter to send · Shift+Enter for new line · FrePilot powered by Claude AI</div>
+            <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.35)", marginTop: "0.4rem" }}>Press Enter to send · Shift+Enter for new line · FreWork AI powered by Claude AI</div>
           </div>
         </div>
       </div>

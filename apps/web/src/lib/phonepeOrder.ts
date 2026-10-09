@@ -1,8 +1,10 @@
 // PhonePe subscription orders are bound to (transaction, user, plan, billing, amount) with an HMAC, so the redirect
 // back can't be edited to another plan or another user, and the paid amount must match. Server-only.
 import crypto from "crypto";
+import { FREBOOK_PLAN } from "./plans";
 
-export const PLAN_PAISE: Record<string, number> = { professional: 99900, growth: 299900, business: 499900, enterprise: 999900 };
+// One plan, monthly only. Old ids (professional, growth, ...) are no longer sold.
+export const PLAN_PAISE: Record<string, number> = { [FREBOOK_PLAN.id]: FREBOOK_PLAN.price * 100 };
 export type OrderClaim = { txnId: string; userId: string; plan: string; billing: string; amount: number };
 
 const secret = () => {

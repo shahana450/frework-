@@ -1,4 +1,4 @@
-// FrePilot access grants — shared by the admin route and the first-sign-in claim.
+// FreWork AI access grants — shared by the admin route and the first-sign-in claim.
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type GrantAction = "grant_trial" | "activate";

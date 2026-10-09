@@ -84,7 +84,7 @@ const MODULES = [
       heading: "Your finance team, built in",
       why: "Most SMEs lose money due to poor bookkeeping and late invoicing. FreWork gives you professional-grade finance tools without hiring a full-time accountant.",
       steps: ["Connect your bank account", "Auto-categorize transactions", "Generate GST-ready invoices", "Get monthly P&L reports"],
-      pricing: "From ₹999/mo",
+      pricing: "FreBook ₹1,499/mo + GST",
       time: "Real-time updates",
       features: [
         { icon: FileText, text: "GST-compliant invoicing in seconds" },
@@ -231,7 +231,7 @@ export function BusinessOSHomepage() {
     });
   }, []);
 
-  const handleFrePilotClick = () => {
+  const handleFreBookClick = () => {
     if (loggedIn) {
       window.location.href = "/finance";
     } else {
@@ -409,9 +409,9 @@ export function BusinessOSHomepage() {
               </div>
             </motion.div>
 
-            {/* PILLAR 2 — FREPILOT */}
+            {/* PILLAR 2 — FREBOOK */}
             <motion.div initial={{ opacity:0, x:24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.25, duration:0.5 }}>
-              <button onClick={handleFrePilotClick} className="w-full h-full text-left group" style={{ background:"none", border:"none", padding:0, cursor:"pointer" }}>
+              <button onClick={handleFreBookClick} className="w-full h-full text-left group" style={{ background:"none", border:"none", padding:0, cursor:"pointer" }}>
                 <div className="relative rounded-2xl overflow-hidden h-full transition-all"
                   style={{ background:"linear-gradient(150deg,#2C3374 0%,#232A63 55%,#1A1F4E 100%)", border:"1px solid rgba(255,255,255,0.25)" }}>
                   <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#F58A5B,#FFFFFF 50%,transparent)" }} />
@@ -424,7 +424,7 @@ export function BusinessOSHomepage() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold leading-none mb-0.5" style={{ color:"#FFD9C7" }}>FreBook — AI Accountant</p>
-                        <p className="text-[11px]" style={{ color:"#C8D2F2" }}>You Build, We Pilot · ₹2,999/month</p>
+                        <p className="text-[11px]" style={{ color:"#C8D2F2" }}>₹1,499/month + GST</p>
                       </div>
                     </div>
                     <span className="text-[9px] font-bold px-2.5 py-1 rounded-full flex-shrink-0"
@@ -458,7 +458,7 @@ export function BusinessOSHomepage() {
                       ))}
                     </div>
                     <div className="flex gap-0 mb-6 rounded-xl overflow-hidden border" style={{ borderColor:"rgba(255,255,255,0.15)", background:"rgba(255,255,255,0.05)" }}>
-                      {[["₹2,999","Per Month"],["Unlimited","Transactions"],["AI","Powered"]].map(([n,l],i,arr) => (
+                      {[["₹1,499","Per Month"],["Unlimited","Transactions"],["AI","Powered"]].map(([n,l],i,arr) => (
                         <div key={l} className="flex-1 text-center py-3" style={{ borderRight:i<arr.length-1?"1px solid rgba(255,255,255,0.1)":"none" }}>
                           <p className="text-sm font-bold leading-none" style={{ color:"#FFD9C7" }}>{n}</p>
                           <p className="text-[9px] font-medium mt-0.5" style={{ color:"#DCE3F8" }}>{l}</p>
@@ -1175,7 +1175,7 @@ export function BusinessOSHomepage() {
         <span className="hidden sm:inline">WhatsApp Us</span>
       </a>
 
-      {/* ═══ FREPILOT AUTH MODAL ═══ */}
+      {/* ═══ FREBOOK AUTH MODAL ═══ */}
       {showAuthModal && (
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center p-4"

@@ -277,7 +277,7 @@ export default function BusinessSetup() {
 
       <div style={{ maxWidth: 640, margin: "3rem auto", padding: "0 1.5rem" }}>
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.65)", letterSpacing: "0.05em" }}>You Build, We Pilot — let's get your books ready</div>
+          <div style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.65)", letterSpacing: "0.05em" }}> — let's get your books ready</div>
         </div>
         {/* Step indicator */}
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2.5rem" }}>

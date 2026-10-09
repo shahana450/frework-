@@ -12,7 +12,7 @@ export default function RefundPolicyPage() {
       <div className="max-w-3xl mx-auto px-6 py-16">
         <Link href="/" className="text-sm text-white/30 hover:text-white/60 transition-colors mb-8 inline-block">← Back to FreWork</Link>
         <h1 className="text-4xl font-bold mb-2" style={{ fontFamily: "var(--font-cormorant), serif" }}>Refund &amp; Cancellation Policy</h1>
-        <p className="text-white/30 text-sm mb-12">Last updated: July 2026</p>
+        <p className="text-white/30 text-sm mb-12">Last updated: October 2026</p>
 
         <div className="space-y-10 text-white/60 leading-relaxed text-[15px]">
 
@@ -26,7 +26,7 @@ export default function RefundPolicyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mb-3">2. Service Orders (One-Time Payments)</h2>
             <ul className="list-disc list-inside space-y-2.5 text-white/50">
-              <li><span className="text-white/70 font-medium">Before work begins:</span> Full refund within 48 hours of payment if work has not yet been initiated by our team.</li>
+              <li><span className="text-white/70 font-medium">7-day rule:</span> Full refund if you ask within 7 days of payment and work on your order has not started.</li>
               <li><span className="text-white/70 font-medium">After work begins:</span> No refund once the professional has started work on your order. You may request a revision instead.</li>
               <li><span className="text-white/70 font-medium">Government filing fees:</span> Non-refundable once paid to the government authority (e.g., MCA, GST portal, Income Tax portal).</li>
               <li><span className="text-white/70 font-medium">Duplicate payments:</span> If you are charged more than once for the same order, the extra amount will be refunded within 5–7 business days.</li>
@@ -34,11 +34,10 @@ export default function RefundPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">3. Subscription Plans</h2>
+            <h2 className="text-lg font-semibold text-white mb-3">3. FreBook Plan (₹1,499/month + GST)</h2>
             <ul className="list-disc list-inside space-y-2.5 text-white/50">
-              <li><span className="text-white/70 font-medium">Monthly plans:</span> Cancel any time. Access continues until the end of the current billing period. No partial refunds for unused days.</li>
-              <li><span className="text-white/70 font-medium">Annual plans:</span> Refundable (pro-rated) within 7 days of purchase if no services have been consumed. After 7 days or after services are used, no refund.</li>
-              <li><span className="text-white/70 font-medium">Trial periods:</span> If a free trial is offered, you will not be charged during the trial. Cancel before the trial ends to avoid any charge.</li>
+              <li><span className="text-white/70 font-medium">7-day rule:</span> Full refund of your first payment if you ask within 7 days of it.</li>
+              <li><span className="text-white/70 font-medium">After 7 days:</span> Cancel any time. Access continues until the end of the month you paid for. No partial refunds.</li>
             </ul>
           </section>
 
@@ -78,7 +77,6 @@ export default function RefundPolicyPage() {
             <h2 className="text-lg font-semibold text-white mb-3">7. Non-Refundable Items</h2>
             <ul className="list-disc list-inside space-y-2.5 text-white/50">
               <li>Government fees, stamp duty, or statutory charges paid on your behalf</li>
-              <li>Convenience fees or platform charges (if any)</li>
               <li>Services already delivered and accepted by the customer</li>
               <li>Orders where government filing has been initiated</li>
             </ul>

@@ -7,7 +7,7 @@ import { SERVICE_PAISE } from "./phonepeOrder";
 export const PRODUCT = {
   company: "FreWork",
   app: "FreBook",               // the accounting app (chat bookkeeping)
-  virtualCa: "FrePilot",        // the AI/virtual-CA assistant
+  virtualCa: "FreWork AI",        // the AI/virtual-CA assistant
 } as const;
 
 /** FreBook software plans, ₹ per month — the single source for every pricing surface. */

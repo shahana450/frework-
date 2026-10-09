@@ -8,9 +8,9 @@ export async function POST(req: NextRequest) {
     // The payer is the signed-in user — never a userId sent by the browser
     const user = await requireUser(req);
     if (user instanceof NextResponse) return user;
-    const { plan: rawPlan, billing: rawBilling } = await req.json();
+    const { plan: rawPlan } = await req.json();
     const plan = String(rawPlan ?? "").toLowerCase();
-    const billing = rawBilling === "yearly" ? "yearly" : "monthly";
+    const billing = "monthly"; // one monthly FreBook plan; no yearly billing
 
     const amount = PLAN_PAISE[plan];
     if (!amount) return NextResponse.json({ error: "Invalid plan" }, { status: 400 });

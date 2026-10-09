@@ -462,7 +462,7 @@ export default function TallyPage() {
     setCreatingLedgers(false);
   }
 
-  // ── Import vouchers FROM Tally → FrePilot ────────────────────────────────
+  // ── Import vouchers FROM Tally → FreWork ────────────────────────────────
 
   const importVouchers = useCallback(async () => {
     if (!bizId || connStatus !== "connected") return;
@@ -636,7 +636,7 @@ export default function TallyPage() {
             const endIso = fyEnd(iso);
             setTo(endIso);
 
-            // Try to find matching FY in FrePilot; if missing, create it automatically
+            // Try to find matching FY in FreWork; if missing, create it automatically
             let matchedFy = financialYears.find(f => f.start_date === iso);
             if (!matchedFy && bizId) {
               // Derive FY label e.g. "2026-27" from start date
@@ -701,7 +701,7 @@ export default function TallyPage() {
     setSyncing(null);
   }, [bizId, connStatus, tallyUrl, from, to]);
 
-  // ── Import ledgers FROM Tally → FrePilot Chart of Accounts ──────────────────
+  // ── Import ledgers FROM Tally → FreWork Chart of Accounts ──────────────────
 
   const importLedgers = useCallback(async () => {
     if (!bizId || connStatus !== "connected") return;
@@ -1162,7 +1162,7 @@ export default function TallyPage() {
           <div className="tb-card" style={{ marginBottom: "1.5rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
               <div>
-                <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#10241F", marginBottom: "0.2rem" }}>Export FrePilot → Tally XML</div>
+                <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#10241F", marginBottom: "0.2rem" }}>Export FreWork → Tally XML</div>
                 <div style={{ color: "#5E6B66", fontSize: "0.8rem" }}>Download XML and import via Gateway of Tally → Import → Vouchers.</div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>

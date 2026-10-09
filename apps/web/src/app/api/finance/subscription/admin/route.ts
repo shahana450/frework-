@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { applyGrant, findUserIdByEmail, type GrantAction } from "@/lib/grants";
+import { FREBOOK_PLAN } from "@/lib/plans";
 
 const ADMIN_EMAILS = ["admin.frework@gmail.com"];
 
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (!caller || !ADMIN_EMAILS.includes(caller)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { action, user_id: rawUserId, plan: rawPlan, trial_days } = await req.json().catch(() => ({}));
-  const plan = typeof rawPlan === "string" && rawPlan ? rawPlan : "professional";
+  const plan = typeof rawPlan === "string" && rawPlan ? rawPlan : FREBOOK_PLAN.id;
   const raw = String(rawUserId ?? "").trim();
   if (!raw) return NextResponse.json({ error: "Enter a user ID or email." }, { status: 400 });
 

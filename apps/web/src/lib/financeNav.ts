@@ -52,7 +52,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "📎", label: "Upload Documents", href: "/finance/upload" },
     { icon: "🗄", label: "Shelf", href: "/finance/shelf" },
     { icon: "💡", label: "Insights", href: "/finance/insights" },
-    { icon: "🛩️", label: "FrePilot (Virtual CA)", href: "/finance/virtual-ca" },
+    { icon: "🛩️", label: "FreWork AI", href: "/finance/virtual-ca" },
   ] },
   { label: "Settings", items: [
     { icon: "🏢", label: "Business Details", href: "/finance/settings/business" },
