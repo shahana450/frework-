@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ParsedTransaction } from "@/lib/intentEngine";
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
+import GroupChips, { guessGroup } from "@/components/GroupChips";
 
 type RowState = "reading" | "ready" | "question" | "error" | "posting" | "posted" | "failed";
 type BRow = {
@@ -97,7 +98,7 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
         const d = await res.json().catch(() => ({}));
         if (d.needs_heads) {
           setNeedHeads(d.needs_heads);
-          setHeads(h => ({ ...Object.fromEntries((d.needs_heads as { account: string; suggested: string }[]).map(n => [n.account, n.suggested])), ...h }));
+          setHeads(h => ({ ...Object.fromEntries((d.needs_heads as { account: string; suggested: string }[]).map(n => [n.account, guessGroup(n.account) === "indirect_expense" ? n.suggested : guessGroup(n.account)])), ...h }));
           setRows(prev => prev.map(r => r.state === "posting" ? { ...r, state: "ready" } : r));
           setMsg({ ok: false, text: "Choose a group for the new ledgers below, then press Post again." });
           return;
@@ -203,14 +204,12 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
         <footer style={{ borderTop: `1px solid ${C.line}`, background: "#FFFFFF", padding: "12px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
           {needHeads.length > 0 && (
             <div style={{ display: "flex", gap: "8px 16px", flexWrap: "wrap", alignItems: "center", fontSize: 13 }}>
-              <b style={{ color: C.warn }}>New ledgers — choose a group:</b>
+              <b style={{ color: C.warn, width: "100%" }}>New ledgers — likely group is ticked ✓; change if wrong, then post again:</b>
               {needHeads.map(n => (
-                <label key={n.account} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  {n.account}
-                  <select value={heads[n.account] ?? n.suggested} onChange={e => setHeads(h => ({ ...h, [n.account]: e.target.value }))} style={{ border: `1px solid ${C.line}`, borderRadius: 7, padding: "3px 6px", fontSize: 12.5 }}>
-                    {LEDGER_HEADS.map(h => <option key={h.key} value={h.key}>{h.label}</option>)}
-                  </select>
-                </label>
+                <div key={n.account} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", width: "100%" }}>
+                  <b style={{ minWidth: 140 }}>{n.account}</b>
+                  <GroupChips compact value={heads[n.account] ?? n.suggested} onChange={k => setHeads(h => ({ ...h, [n.account]: k }))} />
+                </div>
               ))}
             </div>
           )}

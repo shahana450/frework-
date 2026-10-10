@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { currentUser } from "@/lib/currentUser";
 import type { ParsedTransaction } from "@/app/api/finance/chat-book/route";
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
+import GroupChips, { guessGroup } from "@/components/GroupChips";
 import StatementModal from "./StatementModal";
 import ReviewChecks from "./ReviewChecks";
 import BulkTemplateModal from "./BulkTemplateModal";
@@ -1035,20 +1036,18 @@ function HeadPicker({ needs, willCreate, busy, onSubmit }: {
   needs: { account: string; suggested: string }[]; willCreate: { account: string; head: string }[];
   busy: boolean; onSubmit: (heads: Record<string, string>) => void;
 }) {
-  const [heads, setHeads] = useState<Record<string, string>>(() => Object.fromEntries(needs.map(n => [n.account, n.suggested])));
+  const [heads, setHeads] = useState<Record<string, string>>(() => Object.fromEntries(needs.map(n => [n.account, guessGroup(n.account) === "indirect_expense" ? n.suggested : guessGroup(n.account)])));
   return (
     <div style={{ padding: "0.8rem 1rem", borderTop: `1px solid rgba(184,120,0,0.25)`, background: "rgba(184,120,0,0.05)" }}>
       <div style={{ fontSize: "0.82rem", color: AMBER, fontWeight: 700, marginBottom: 8 }}>
-        🤔 {needs.length === 1 ? "This is a new ledger." : "These are new ledgers."} Which group should {needs.length === 1 ? "it" : "they"} go under?
+        {needs.length === 1 ? "New ledger" : "New ledgers"} — the likely group is ticked ✓. Change it if wrong, then post.
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {needs.map(n => (
-          <label key={n.account} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.82rem", flexWrap: "wrap" }}>
-            <span style={{ minWidth: 160, fontWeight: 600 }}>{n.account}</span>
-            <select value={heads[n.account]} onChange={e => setHeads(h => ({ ...h, [n.account]: e.target.value }))} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", borderRadius: 7, fontSize: "0.8rem", fontFamily: "inherit" }}>
-              {LEDGER_HEADS.map(h => <option key={h.key} value={h.key}>{h.label}</option>)}
-            </select>
-          </label>
+          <div key={n.account} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.82rem", flexWrap: "wrap" }}>
+            <span style={{ minWidth: 160, fontWeight: 700 }}>{n.account}</span>
+            <GroupChips compact value={heads[n.account]} onChange={k => setHeads(h => ({ ...h, [n.account]: k }))} />
+          </div>
         ))}
       </div>
       {willCreate.length > 0 && (

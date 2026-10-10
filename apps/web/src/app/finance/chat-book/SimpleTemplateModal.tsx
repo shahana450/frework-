@@ -5,6 +5,7 @@ import { LEDGER_HEADS } from "@/lib/ledgerHeads";
 import { useTally, tallyUrl } from "@/lib/tallyConnection";
 import { readTallyLedgerGroups } from "@/lib/integrations/tallyClient";
 import { headForTallyGroup } from "@/lib/integrations/tally";
+import GroupChips, { guessGroup } from "@/components/GroupChips";
 
 // Closest Tally ledger for a name: exact (ignoring case/spaces/punctuation), else one containing the other
 const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -74,7 +75,15 @@ export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId,
         // Names come back as sent (possibly renamed) — map them to the template names shown in the panel
         const back = Object.fromEntries(Object.entries(rename).map(([k, v]) => [v, k]));
         d.needs_heads = d.needs_heads.map((x: { account: string; suggested: string }) => ({ ...x, account: back[x.account] ?? x.account }));
-        setNeed(d.needs_heads); setHeads(h => ({ ...Object.fromEntries(d.needs_heads.map((n: { account: string; suggested: string }) => [n.account, n.suggested])), ...h })); setBusy(false); setMsg("Some ledgers are new — check the group for each, then post again."); return; }
+        const sideOf = (acct: string): "in" | "out" | null => {
+          for (const en of entries) for (const l of en.lines) if (l.ledger === acct) {
+            const kind = voucherOf(en.lines);
+            if (kind === "receipt") return "in";
+            if (kind === "payment") return "out";
+          }
+          return null;
+        };
+        setNeed(d.needs_heads); setHeads(h => ({ ...Object.fromEntries(d.needs_heads.map((n: { account: string; suggested: string }) => [n.account, guessGroup(n.account, sideOf(n.account))])), ...h })); setBusy(false); setMsg("New ledgers found — check the ✓ group for each and press Post again."); return; }
       if (!r.ok) { setBusy(false); setMsg(d.error ?? "Couldn't post. Nothing in this batch was saved."); return; }
       const posted = Object.fromEntries(((d.results ?? []) as { ref: string; entry_no: string }[]).map(x => [Number(x.ref), x.entry_no]));
       setDone(p => ({ ...p, ...posted }));
@@ -101,14 +110,14 @@ export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId,
 
         {need.length > 0 && (
           <div style={{ background: "#FFF4DB", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-            <b style={{ fontSize: 14 }}>New ledgers — match them to Tally, or choose a group</b>
+            <b style={{ fontSize: 14 }}>New ledgers — we picked the likely group (✓). Change any that are wrong, then post.</b>
             <span style={{ fontSize: 12.5, color: C.muted }}>{tally.status === "connected" ? (tallyLedgers ? `${Object.keys(tallyLedgers).length} ledgers loaded from Tally${tally.company ? ` (${tally.company})` : ""}. Matches are filled in — change any you like.` : "Loading ledgers from Tally…") : "Connect Tally (Tally page) to pick from your Tally ledgers."}</span>
             {tallyLedgers && <datalist id="tally-ledgers">{Object.keys(tallyLedgers).sort().map(l => <option key={l} value={l}>{tallyLedgers[l]}</option>)}</datalist>}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {need.map(nd => {
                 const chosen = nameFor(nd.account), parent = tallyLedgers?.[chosen];
                 return (
-                  <div key={nd.account} style={{ display: "grid", gridTemplateColumns: "minmax(110px,160px) minmax(0,1fr) minmax(0,1fr)", gap: 8, alignItems: "center", fontSize: 13, background: "#FFFFFF", borderRadius: 10, padding: "8px 10px" }}>
+                  <div key={nd.account} style={{ display: "grid", gridTemplateColumns: "minmax(110px,160px) minmax(0,0.8fr) minmax(0,1.6fr)", gap: 8, alignItems: "center", fontSize: 13, background: "#FFFFFF", borderRadius: 10, padding: "8px 10px" }}>
                     <b style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={nd.account}>{nd.account}</b>
                     <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: C.muted }}>Ledger to use{parent ? " · in Tally ✓" : ""}</span>
@@ -117,10 +126,7 @@ export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId,
                     </label>
                     <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: C.muted }}>Group{parent ? ` · Tally: ${parent}` : ""}</span>
-                      <select value={heads[nd.account] ?? ""} onChange={e => setHeads(h => ({ ...h, [nd.account]: e.target.value }))} style={{ height: 38, lineHeight: "normal", padding: "0 8px", borderRadius: 8, border: `1px solid ${C.line}`, fontSize: 13.5, fontFamily: "inherit", color: C.ink, background: "#FFFFFF" }}>
-                        <option value="">Choose…</option>
-                        {LEDGER_HEADS.map(hd => <option key={hd.key} value={hd.key}>{hd.label}</option>)}
-                      </select>
+                      <GroupChips value={heads[nd.account] ?? ""} onChange={k => setHeads(h => ({ ...h, [nd.account]: k }))} />
                     </label>
                   </div>
                 );

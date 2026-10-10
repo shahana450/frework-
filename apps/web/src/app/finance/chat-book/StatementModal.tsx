@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { LEDGER_HEADS, inferHead, headFromType } from "@/lib/ledgerHeads";
+import GroupChips, { guessGroup } from "@/components/GroupChips";
 import { groupStatement, learnHistory } from "@/lib/statementGroups";
 
 type Account = { id: string; name: string; type: string; sub_type: string | null };
@@ -370,12 +371,10 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
                 <div style={{ display: "flex", gap: "0.5rem 1rem", flexWrap: "wrap", alignItems: "center", fontSize: "0.78rem" }}>
                   <span style={{ color: unsureHeads.length ? AMBER : MUTED, fontWeight: 700 }}>{unsureHeads.length ? "🤔 Choose a group for new ledgers:" : "New ledgers will be created:"}</span>
                   {[...newLedgers.entries()].map(([name, key]) => (
-                    <label key={name} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ color: unsureHeads.includes(name) ? AMBER : TEXT }}>{name}</span>
-                      <select value={key} onChange={e => setHeads(h => ({ ...h, [name]: e.target.value }))} style={{ ...inputStyle, padding: "4px 6px", borderColor: unsureHeads.includes(name) ? AMBER : BORDER }}>
-                        {LEDGER_HEADS.map(h => <option key={h.key} value={h.key}>{h.label}</option>)}
-                      </select>
-                    </label>
+                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%" }}>
+                      <b style={{ minWidth: 140, color: unsureHeads.includes(name) ? AMBER : TEXT }}>{name}</b>
+                      <GroupChips compact value={key} onChange={k => setHeads(h => ({ ...h, [name]: k }))} />
+                    </div>
                   ))}
                   {unsureHeads.length > 0 && (
                     <button onClick={() => setHeads(h => ({ ...h, ...Object.fromEntries(unsureHeads.map(n => [n, newLedgers.get(n)!])) }))} style={{ ...chip(true, AMBER) }}>✓ Use these groups</button>
