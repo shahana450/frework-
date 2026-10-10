@@ -14,6 +14,14 @@ import { ActiveBusinessProvider, useActiveBusinessStore, setActiveBusiness, read
 
 // Navy Prestige type + phone layout for every finance page
 const FINANCE_CSS = `
+  .fw-topicons { display: flex; gap: 4px; overflow-x: auto; padding: 8px 16px; background: rgba(246,241,231,0.96); backdrop-filter: blur(8px); border-bottom: 1px solid #E6DFD0; scrollbar-width: none; }
+  .fw-topicons::-webkit-scrollbar { display: none; }
+  .fw-topicons a { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 64px; padding: 6px 8px; border-radius: 12px; text-decoration: none; color: #2E3B36; font-size: 11.5px; font-weight: 600; white-space: nowrap; transition: background .15s, color .15s; }
+  .fw-topicons a svg { color: #0F2B25; }
+  .fw-topicons a:hover, .fw-topicons a:focus-visible { background: #EFE6D3; outline: none; }
+  .fw-topicons a.on { background: #0F2B25; color: #FFFFFF; }
+  .fw-topicons a.on svg { color: #D9B56F; }
+
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 .fw-main { background: #F6F1E7; min-height: 100vh; }
 .fw-main > div:first-child { background-color: #F6F1E7 !important; }
@@ -51,6 +59,21 @@ const SHORT: Record<string, string> = {
 const shortLabel = (l: string) => SHORT[l] ?? l;
 
 const UNGUARDED = ["/finance/pricing", "/finance/setup", "/finance/admin"];
+
+const TOP_ICONS = [
+  { href: "/finance", label: "Home" },
+  { href: "/finance/chat-book", label: "FreBook" },
+  { href: "/finance/sales/new", label: "Invoice" },
+  { href: "/finance/purchases/new", label: "Bill" },
+  { href: "/finance/books", label: "Books" },
+  { href: "/finance/banking", label: "Banking" },
+  { href: "/finance/receivables", label: "Receivables" },
+  { href: "/finance/payables", label: "Payables" },
+  { href: "/finance/reports?tab=profit_loss", label: "P&L" },
+  { href: "/finance/reports?tab=balance_sheet", label: "Balance Sheet" },
+  { href: "/finance/gst", label: "GST" },
+  { href: "/finance/tally", label: "Tally" },
+];
 
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -298,6 +321,20 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       {/* Main content */}
       {/* Keyed by business: switching business remounts the page, so it can't keep reading or posting to the old one */}
       <main key={active.businessId ?? "none"} className="fw-main" style={{ flex: 1, marginLeft: sidebarW, minWidth: 0, transition: "margin-left 0.2s" }}>
+        {/* Main icons along the top (FreBook has its own top bar) */}
+        {!pathname.startsWith("/finance/chat-book") && (
+          <nav className="fw-topicons" aria-label="Main sections">
+            {TOP_ICONS.map(t => {
+              const on = t.href.includes("?") ? pathname + search === t.href : t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
+              return (
+                <Link key={t.href} href={t.href} className={on ? "on" : ""} title={t.label}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(t.href)} /></svg>
+                  <span>{t.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        )}
         <ActiveBusinessProvider>{children}</ActiveBusinessProvider>
       </main>
 
