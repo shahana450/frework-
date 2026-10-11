@@ -20,6 +20,7 @@ type Item = {
   state: ItemState; reason?: string; matched?: string; matchedId?: string; party?: string; entryNo?: string; journalId?: string; tally?: "pushed" | "failed"; tallyError?: string;
   kind: "template" | "statement" | "bill";
   bank?: string; card?: boolean;      // statements: the bank / card ledger of the file — the server posts against it
+  dupOk?: boolean;                    // the user checked a possible duplicate and chose to post it anyway
 };
 type FileJob = { id: string; name: string; size: number; kind: string; status: "queued" | "reading" | "done" | "error"; note?: string; key: string };
 
@@ -256,7 +257,7 @@ export default function SmartInbox() {
       setBusy(`Posting ${i + 1}–${i + chunk.length} of ${todo.length}…`);
       setItems(prev => prev.map(x => chunk.some(c => c.id === x.id) ? { ...x, state: "posting" } : x));
       const payload = chunk.map(it => ({
-        ref: it.id, against_invoice_id: it.matchedId ?? null, party_name: it.party ?? null, client_key: `inbox:${fileKey.get(it.fileId)}:${it.narration.slice(0, 40)}:${it.date}:${it.amount}`.slice(0, 160),
+        ref: it.id, confirm_duplicate: !!it.dupOk, against_invoice_id: it.matchedId ?? null, party_name: it.party ?? null, client_key: `inbox:${fileKey.get(it.fileId)}:${it.narration.slice(0, 40)}:${it.date}:${it.amount}`.slice(0, 160),
         original_message: `Smart Inbox: ${it.narration}`,
         transaction: { status: "complete", transaction_date: it.date, transaction_type: it.lines.some(l => isCashBank(l.account) && l.credit > 0) ? "payment" : it.lines.some(l => isCashBank(l.account) && l.debit > 0) ? "receipt" : "journal",
           narrative: it.narration.slice(0, 200), amount: it.amount, party_name: null, party_type: null, invoice_number: null, payment_mode: null, bank_account_name: null,
@@ -280,6 +281,13 @@ export default function SmartInbox() {
       if (d.created_ledgers?.length) setAccounts(prev => [...prev, ...(d.created_ledgers as { name: string }[]).map(c => ({ name: c.name, sub_type: null }))]);
     }
     setBusy(""); setMsg(`✓ ${ok} entr${ok === 1 ? "y" : "ies"} posted to your books.${tally.status === "connected" ? " Send them to Tally with one click." : ""}`);
+  }
+
+  // A possible duplicate the user has checked: post it once, on purpose
+  function postAnyway(it: Item) {
+    const next = { ...it, state: "ready" as const, dupOk: true, reason: undefined };
+    setItems(prev => prev.map(x => x.id === it.id ? next : x));
+    post([next]);
   }
 
   async function sendToTally() {
@@ -436,6 +444,8 @@ export default function SmartInbox() {
                     </div>
                   )}
                   {(it.reason || it.tallyError) && <div style={{ fontSize: 12.5, color: st === "failed" || it.tally === "failed" ? C.neg : C.amber, fontWeight: 600 }}>{it.tallyError ?? it.reason}</div>}
+                  {st === "check" && /Possible duplicate/.test(it.reason ?? "") && <button onClick={() => postAnyway(it)} disabled={!!busy} style={{ alignSelf: "flex-start", height: 30, padding: "0 12px", borderRadius: 8, border: `1px solid ${C.amber}`, background: "transparent", color: C.amber, fontWeight: 800, fontSize: 12.5, cursor: "pointer" }}>Not a duplicate — post anyway</button>}
+                  {st === "check" && /Saved as a draft for review/.test(it.reason ?? "") && <a href="/finance/review" style={{ fontSize: 12.5, fontWeight: 800, color: C.amber }}>Open the review list →</a>}
                   {editable && (
                     <div style={{ display: "flex", gap: 8 }}>
                       {it.lines.length >= 2 && <button onClick={() => markReady(it.id)} style={{ ...btn(true), height: 34, fontSize: 13 }}>Looks right</button>}
