@@ -186,13 +186,20 @@ export default function PortalsPage() {
       <div style={{ maxWidth: 980, margin: "0 auto", padding: "28px 20px 100px", display: "flex", flexDirection: "column", gap: 18 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 32 }}>Portal Connect</h1>
-          <p style={{ margin: "6px 0 0", color: C.muted, fontSize: 15, maxWidth: 680, lineHeight: 1.55 }}>Live filing status from the GST and Income-tax portals, through a licensed GSP / ERI. Each business approves access with a portal OTP — passwords are never stored. Filed returns show as <b>Filed ✓</b> in your Due dates.</p>
+          <p style={{ margin: "6px 0 0", color: C.muted, fontSize: 15, maxWidth: 680, lineHeight: 1.55 }}>Live GST filing status through a licensed GSP. Income-tax details come from the Form 168 / 130 PDFs you upload — passwords are never asked for or stored. Filed returns show as <b>Filed ✓</b> in your Due dates.</p>
         </div>
         {data?.setup_needed && <div style={{ background: C.warnSoft, color: C.warn, borderRadius: 12, padding: "12px 16px", fontWeight: 600 }}>{data.setup_needed}</div>}
         {!data ? <div style={{ color: C.muted }}>Loading…</div> : !data.setup_needed && bizId && (
           <>
             <PortalCard portal="gst" data={data} bizId={bizId} reload={() => load(bizId)} />
-            <PortalCard portal="it" data={data} bizId={bizId} reload={() => load(bizId)} />
+            {/* Income-tax portal login is off for launch; turn on with NEXT_PUBLIC_IT_PORTAL=on once the ERI partner is signed */}
+            {process.env.NEXT_PUBLIC_IT_PORTAL === "on" ? <PortalCard portal="it" data={data} bizId={bizId} reload={() => load(bizId)} /> : (
+              <section style={{ background: C.tile, border: `1px solid ${C.line}`, borderRadius: 22, padding: 22, display: "flex", flexDirection: "column", gap: 10 }}>
+                <h2 style={{ margin: 0, fontSize: 20 }}>Income-tax portal</h2>
+                <div style={{ fontSize: 13.5, color: C.muted, lineHeight: 1.55 }}>Download Form 168 (old 26AS) or Form 130 (old Form 16) from the Income-tax portal and upload the PDF. FreWork reads it and fills in TDS credits — no portal password needed.</div>
+                <a href="/finance/tax-docs" style={{ alignSelf: "flex-start", height: 42, lineHeight: "42px", padding: "0 16px", borderRadius: 11, background: C.navy, color: "#FFFFFF", fontWeight: 800, fontSize: 14, textDecoration: "none" }}>Upload Form 168 / 130</a>
+              </section>
+            )}
           </>
         )}
         <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>Notices are not available through the portal APIs. Save notices on the Shelf — the AI reads the reply-by date and adds it to Due dates.</p>
