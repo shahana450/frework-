@@ -116,7 +116,14 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       if (!user) return;
 
       // Subscription gate \u2014 skip for unguarded pages
-      if (!UNGUARDED.some(p => pathname.startsWith(p))) {
+      // Businesses the user owns or was invited to; invited team members work under the owner's plan
+      const { data: { session } } = await supabase.auth.getSession();
+      const listed = await fetch("/api/finance/businesses", { headers: { Authorization: `Bearer ${session?.access_token ?? ""}` } })
+        .then(r => r.ok ? r.json() : null).catch(() => null) as { businesses: { id: string; name: string; role?: string }[]; test: { id: string; name: string; role?: string }[] } | null;
+      const visible = listed ? [...listed.businesses, ...listed.test] : [];
+      const isTeamMember = visible.some(b => b.role && b.role !== "owner");
+
+      if (!UNGUARDED.some(p => pathname.startsWith(p)) && !isTeamMember) {
         const { data: sub } = await supabase
           .from("fw_fin_subscriptions")
           .select("status,subscription_ends_at")
@@ -138,7 +145,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       // as long as the user can still see it (owner or team member); else their first own business.
       const now = getActiveBusiness();
       const want = (now.userId === user.id && now.businessId) || rememberedBusiness(user.id);
-      const { data: owned } = await supabase.from("fw_fin_businesses").select("id,name").eq("owner_id", user.id).order("created_at");
+      let owned: { id: string; name: string }[] | null = visible;
+      if (!listed) ({ data: owned } = await supabase.from("fw_fin_businesses").select("id,name").eq("owner_id", user.id).order("created_at"));
       setBizCount(owned?.length ?? 0);
       let pick: { id: string; name: string } | null | undefined = owned?.find(b => b.id === want);
       if (!pick && want) {

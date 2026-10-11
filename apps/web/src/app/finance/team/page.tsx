@@ -59,7 +59,7 @@ export default function TeamPage() {
     if (e) {
       setError(e.message.includes("duplicate") ? "This email is already invited." : e.message);
     } else {
-      setSuccess(`Invitation sent to ${inviteEmail} as ${ROLES.find(r => r.value === inviteRole)?.label}`);
+      setSuccess(`Access added for ${inviteEmail} as ${ROLES.find(r => r.value === inviteRole)?.label}. Send them the invite below — no email goes out automatically.`);
       setInviteEmail("");
       const { data } = await supabase.from("fw_fin_team_members").select("*").eq("business_id", bizId).order("created_at");
       setMembers((data ?? []) as Member[]);
@@ -71,6 +71,8 @@ export default function TeamPage() {
     await supabase.from("fw_fin_team_members").update({ role: newRole }).eq("id", memberId);
     setMembers(m => m.map(x => x.id === memberId ? { ...x, role: newRole } : x));
   }
+
+  const inviteText = (m: Member) => `You've been given ${ROLES.find(r => r.value === m.role)?.label ?? m.role} access to ${bizName || "our business"} on FreWork. Sign in at https://frework.online/login?next=/finance with ${m.invited_email} (Google sign-in works) and pick the business.`;
 
   async function removeMember(memberId: string, email: string) {
     if (!confirm(`Remove ${email} from this business?`)) return;
@@ -173,6 +175,10 @@ export default function TeamPage() {
                       {new Date(m.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                     </td>
                     <td style={{ padding: "0.75rem 1rem" }}>
+                      {m.status === "pending" && <>
+                        <a href={`https://wa.me/?text=${encodeURIComponent(inviteText(m))}`} target="_blank" rel="noopener noreferrer" style={{ marginRight: 6, background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", color: "#0B7A55", padding: "3px 10px", borderRadius: 5, fontSize: "0.75rem", textDecoration: "none" }}>WhatsApp</a>
+                        <button onClick={() => { navigator.clipboard?.writeText(inviteText(m)); setSuccess(`Invite message for ${m.invited_email} copied.`); }} style={{ marginRight: 6, background: "rgba(35,42,99,0.06)", border: "1px solid rgba(35,42,99,0.2)", color: "#232A63", padding: "3px 10px", borderRadius: 5, cursor: "pointer", fontSize: "0.75rem" }}>Copy invite</button>
+                      </>}
                       <button onClick={() => removeMember(m.id, m.invited_email)} style={{ background: "rgba(194,50,31,0.08)", border: "1px solid rgba(194,50,31,0.2)", color: "#C2321F", padding: "3px 10px", borderRadius: 5, cursor: "pointer", fontSize: "0.75rem" }}>
                         Remove
                       </button>
@@ -185,7 +191,7 @@ export default function TeamPage() {
         </div>
 
         <div style={{ marginTop: "1.25rem", background: "rgba(35,42,99,0.05)", border: "1px solid rgba(35,42,99,0.12)", borderRadius: 10, padding: "0.85rem 1rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.65)", lineHeight: 1.65 }}>
-          <strong style={{ color: "#232A63" }}>Note:</strong> Invitations are stored in the system. The invited user needs to sign up/log in to FreWork with the same email to get access. Full OAuth-linked team member activation coming soon.
+          <strong style={{ color: "#232A63" }}>Note:</strong> FreWork doesn't email invitations yet. Send the invite by WhatsApp or copy it. The person signs in at frework.online with <b>exactly the invited email</b> (Google sign-in, or an email they have confirmed); this business then appears in their company list and the status turns <b>Active</b>. They work under your plan — they don't need their own subscription. Remove them any time to cut access.
         </div>
       </div>
     </div>

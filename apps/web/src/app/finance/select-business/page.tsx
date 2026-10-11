@@ -36,9 +36,11 @@ export default function SelectBusinessPage() {
       if (!user) { router.replace("/login"); return; }
       setUserId(user.id);
 
-      // is_test arrives with 2026-10-26_p5_small.sql; older databases fall back to the plain list
-      let { data, error } = await supabase.from("fw_fin_businesses").select("id,name,legal_name,gstin,business_type,is_active,is_test").eq("owner_id", user.id).order("created_at");
-      if (error) ({ data } = await supabase.from("fw_fin_businesses").select("id,name,legal_name,gstin,business_type,is_active").eq("owner_id", user.id).order("created_at") as unknown as { data: typeof data; error: null });
+      // Owned businesses plus ones this user was invited to (Team & Access); the server activates the invitation
+      const { data: { session } } = await supabase.auth.getSession();
+      const r = await fetch("/api/finance/businesses", { headers: { Authorization: `Bearer ${session?.access_token ?? ""}` } }).catch(() => null);
+      const body = r?.ok ? await r.json().catch(() => null) as { businesses: Business[]; test: Business[] } | null : null;
+      const data = body ? [...body.businesses, ...body.test] : [];
 
       if (!data || data.length === 0) {
         router.replace("/finance/setup");

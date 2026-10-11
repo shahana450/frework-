@@ -49,19 +49,7 @@ function AuthCallbackInner() {
       sessionStorage.removeItem("auth_next");
 
       if (next.startsWith("/finance") || next === "/dashboard") {
-        const { data: bizList } = await supabase
-          .from("fw_fin_businesses")
-          .select("id")
-          .eq("owner_id", user.id);
-
-        const count = bizList?.length ?? 0;
-        if (count === 0) { router.replace("/finance/setup"); return; }
-        if (count === 1) {
-          setActiveBusiness(user.id, bizList![0].id);
-          router.replace("/finance");
-          return;
-        }
-        // Multiple businesses — let user pick
+        // The picker lists owned and invited businesses: none → setup, one → straight in, several → choose
         router.replace("/finance/select-business");
         return;
       }
