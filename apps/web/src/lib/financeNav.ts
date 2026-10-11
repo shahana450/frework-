@@ -54,7 +54,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "🧾", label: "ITC Match & 3B Table 4", href: "/finance/gst/itc" },
     { icon: "🔄", label: "GST Reconciliation", href: "/finance/audit/gst-recon", accountant: true },
     { icon: "🔖", label: "TDS", href: "/finance/tds", accountant: true },
-    { icon: "📄", label: "26AS & Form 16", href: "/finance/tax-docs" },
+    { icon: "📄", label: "Form 168 / 130 (26AS / 16)", href: "/finance/tax-docs" },
   ] },
   { label: "AI", items: [
     { icon: "🤖", label: "Review Queue", href: "/finance/ai-review", badge: "review" },

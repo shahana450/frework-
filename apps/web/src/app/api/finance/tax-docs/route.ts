@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       const msg = String(d?.message ?? "");
       if (/password/i.test(msg)) return NextResponse.json({ error: "This PDF is password protected — enter its password (usually PAN in lowercase + date of birth DDMMYYYY).", needsPassword: true }, { status: 400 });
       if (r.status === 401 || r.status === 403) return NextResponse.json({ error: "Sandbox refused the request — check that the Income Tax OCR API is enabled on your Sandbox plan." }, { status: 502 });
-      return NextResponse.json({ error: msg || `Couldn't read this ${kind === "26as" ? "Form 26AS" : "Form 16"} (Sandbox error ${r.status}).` }, { status: 502 });
+      return NextResponse.json({ error: msg || `Couldn't read this ${kind === "26as" ? "Form 168 / 26AS" : "Form 130 / Form 16"} (Sandbox error ${r.status}).` }, { status: 502 });
     }
     if (kind === "form16") return NextResponse.json({ kind, form16: summarizeForm16(d) });
     const s = summarize26AS(d);
