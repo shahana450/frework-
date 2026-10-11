@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, Fragment } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { signedMoney, type PresentedBS, type PresentedPL, type StmtSection } from "@/lib/statements";
@@ -90,11 +90,14 @@ function FootingBanner({ problems }: { problems: string[] }) {
 
 export default function ReportsPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<ReportTab>("profit_loss");
+  const [tab, setTabState] = useState<ReportTab>("profit_loss");
+  const searchParams = useSearchParams();
+  // The URL is the source of truth: links (?tab=) switch the view, and clicking a tab updates the URL
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get("tab");
-    if (t === "trial_balance" || t === "profit_loss" || t === "balance_sheet" || t === "cash_flow") setTab(t);
-  }, []);
+    const t = searchParams.get("tab");
+    if (t === "trial_balance" || t === "profit_loss" || t === "balance_sheet" || t === "cash_flow") setTabState(t);
+  }, [searchParams]);
+  const setTab = (t: ReportTab) => { setTabState(t); router.replace(`/finance/reports?tab=${t}`, { scroll: false }); };
   const [loading, setLoading] = useState(false);
   const [bizId, setBizId] = useState<string | null>(null);
   const [fyId, setFyId] = useState<string | null>(null);

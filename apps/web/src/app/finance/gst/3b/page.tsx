@@ -16,7 +16,7 @@ const KEYS: (keyof Tax)[] = ["igst", "cgst", "sgst", "cess"];
 const LABEL: Record<keyof Tax, string> = { igst: "Integrated", cgst: "Central", sgst: "State/UT", cess: "Cess" };
 const inr = (n: number) => (n < 0 ? "−" : "") + "₹" + Math.abs(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 function lastMonth() { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); }
-type Resp = { period: string; gstin: string; state: string | null; table3: Table3; itc: Tax; rcm: Tax; derivedDocs: number };
+type Resp = { period: string; gstin: string; state: string | null; table3: Table3; itc: Tax; rcm: Tax; derivedDocs: number; books_cash?: number | null };
 
 // Defined outside the page so its inputs keep focus while typing
 function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
@@ -122,6 +122,7 @@ export default function Gstr3bPage() {
                 <div key={l as string}><div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: C.gold, fontWeight: 800 }}>{l}</div><div style={{ fontFamily: SERIF, fontSize: "1.8rem", fontWeight: 700 }}>{inr(v as number)}</div></div>
               ))}
             </div>
+            {data!.books_cash != null && <div style={{ fontSize: 13, color: C.muted }}>Tax payable per books for this month (the amount shown in Due dates, with input credit carried forward): <b style={{ fontFamily: MONO, color: C.ink }}>{inr(data!.books_cash)}</b></div>}
             {data!.derivedDocs > 0 && <div style={{ background: C.amberSoft, color: C.amber, borderRadius: 12, padding: "10px 14px", fontSize: 13, fontWeight: 600 }}>{data!.derivedDocs} sale(s) were booked by chat without item detail — their rate was worked out from the tax amount. Check Table 3.1 before filing.</div>}
 
             <Section title="3.1 Outward and reverse-charge supplies" action={<button onClick={() => copy("31", [["(a)", t.a], ["(b)", t.b], ["(c)", t.c], ["(d)", t.d], ["(e)", t.e]])} style={btn(false)}>{copied === "31" ? "✓ Copied" : "Copy"}</button>}>

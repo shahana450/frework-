@@ -1,6 +1,7 @@
 // The single way the server posts accounting entries.
 // Validation here mirrors fw_fin_post_journal in the database, which is the final authority.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { validateJournal, type RuleAccount, type RuleFy } from "./journalRules";
 
 export type PostingLine = { accountId: string; dr: number; cr: number; narration?: string; fcDr?: number; fcCr?: number };
 export type PostingRequest = {
@@ -21,12 +22,14 @@ export type PostingRequest = {
   exchangeRate?: number | null; // base units per 1 unit of currency (required with currency)
   entryNo?: string | null;      // imports only: keep the source system's number (e.g. "TLY-Sales 105")
   checkDuplicate?: boolean;     // stop if a near-identical entry exists (the user can confirm and re-send)
+  reviewed?: boolean;           // the user has seen and accepted the review warnings — post anyway
+  againstInvoiceId?: string | null; // receipts/payments: the invoice or bill this settles
 };
 export type DuplicateHit = { id: string; entry_no: string; date: string; narration: string; total: number };
 export type PostingResult = { id: string; entryNo: string; total: number };
 
 export class PostingError extends Error {
-  constructor(public code: "UNBALANCED" | "INVALID" | "ACCOUNT" | "LOCKED" | "NOT_FOUND" | "DUPLICATE" | "POSSIBLE_DUPLICATE" | "FAILED", message: string, public duplicate?: DuplicateHit) { super(message); }
+  constructor(public code: "UNBALANCED" | "INVALID" | "ACCOUNT" | "LOCKED" | "NOT_FOUND" | "DUPLICATE" | "POSSIBLE_DUPLICATE" | "NEEDS_REVIEW" | "FAILED", message: string, public duplicate?: DuplicateHit, public draftId?: string) { super(message); }
 }
 
 // The database lock trigger lets a forced post through only when it's marked in metadata
@@ -65,7 +68,7 @@ export function voucherTypeFor(transactionType: string): string {
 }
 
 function toPostingError(message: string): PostingError {
-  const m = message.match(/FW_(UNBALANCED|INVALID|ACCOUNT|LOCKED|NOT_FOUND|DUPLICATE):\s*(.*)/);
+  const m = message.match(/FW_(UNBALANCED|INVALID|ACCOUNT|LOCKED|NOT_FOUND|DUPLICATE|POSSIBLE_DUPLICATE):\s*(.*)/);
   if (m) return new PostingError(m[1] as PostingError["code"], m[2]);
   return new PostingError("FAILED", message);
 }
@@ -97,9 +100,68 @@ export async function findLikelyDuplicate(sb: SupabaseClient, businessId: string
   return null;
 }
 
+/** A control ledger ("Debtors Control", "Sundry Creditors" …) — a group total, never a posting ledger. */
+export const isControlLedger = (name: string) => /^(sundry\s+)?(debtors|creditors|trade\s+(receivables|payables))(\s+control)?$/i.test(name.trim());
+
+/**
+ * Lines aimed at a control ledger go to the party's own ledger (created under Sundry Debtors / Creditors if needed),
+ * whenever the entry names its customer or supplier. Without a party they stay put and validateJournal refuses
+ * them once the control ledger is a group.
+ */
+async function routeToParty(sb: SupabaseClient, req: PostingRequest): Promise<PostingRequest> {
+  const party = (req.partyName ?? "").trim();
+  if (!party && !req.contactId) return req;
+  const ids = [...new Set(req.lines.map(l => l.accountId).filter(Boolean))];
+  if (!ids.length) return req;
+  const { data } = await sb.from("fw_fin_chart_of_accounts").select("id,name,sub_type,is_group").eq("business_id", req.businessId).in("id", ids);
+  const controls = ((data ?? []) as { id: string; name: string; sub_type: string | null; is_group: boolean | null }[]).filter(a => isControlLedger(a.name));
+  if (!controls.length) return req;
+  const swap = new Map<string, string>();
+  for (const a of controls) {
+    const kind = /debtor|receivable/i.test(a.name) ? "customer" : "supplier";
+    let name = party;
+    if (!name && req.contactId) { const { data: ct } = await sb.from("fw_fin_contacts").select("name").eq("id", req.contactId).maybeSingle(); name = (ct?.name ?? "").trim(); }
+    if (!name) continue;
+    const { data: acc, error } = await sb.rpc("fw_fin_ensure_party_ledger", { p_business: req.businessId, p_name: name, p_kind: kind, p_contact: req.contactId ?? null });
+    if (!error && acc) swap.set(a.id, acc as string);
+  }
+  return swap.size ? { ...req, lines: req.lines.map(l => swap.has(l.accountId) ? { ...l, accountId: swap.get(l.accountId)! } : l) } : req;
+}
+
+/** What validateJournal needs about this business: the ledgers used, the financial years and GST registration. */
+async function ruleContext(sb: SupabaseClient, req: PostingRequest) {
+  const ids = [...new Set(req.lines.map(l => l.accountId).filter(Boolean))];
+  const [{ data: accs }, { data: fys }, { data: biz }] = await Promise.all([
+    sb.from("fw_fin_chart_of_accounts").select("id,name,type,sub_type,is_group").eq("business_id", req.businessId).in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
+    sb.from("fw_fin_financial_years").select("start_date,end_date,is_locked").eq("business_id", req.businessId),
+    sb.from("fw_fin_businesses").select("gstin").eq("id", req.businessId).maybeSingle(),
+  ]);
+  return { accounts: new Map(((accs ?? []) as RuleAccount[]).map(a => [a.id, a])), fys: (fys ?? []) as RuleFy[], gstRegistered: !!(biz?.gstin ?? "").trim(), force: !!req.force };
+}
+
+/** Saves an entry that needs a look as a draft (not in the books) with the reasons, and returns its id. */
+async function saveForReview(sb: SupabaseClient, req: PostingRequest, lines: PostingLine[], reasons: string[]) {
+  const total = round2(lines.reduce((s, l) => s + l.dr, 0));
+  const { data: j, error } = await sb.from("fw_fin_journals").insert({
+    business_id: req.businessId, entry_no: `DRAFT-${Date.now().toString(36).toUpperCase()}`, date: req.date, type: req.type,
+    narration: req.narration.slice(0, 500), reference_no: req.referenceNo ?? null, status: "draft", total_debit: total, total_credit: total,
+    created_by: req.actorId, contact_id: req.contactId ?? null, party_name: req.partyName ?? null, source: req.source,
+    metadata: { ...(req.metadata ?? {}), needs_review: reasons },
+  }).select("id").single();
+  if (error || !j) throw new PostingError("FAILED", error?.message ?? "Could not save the draft");
+  await sb.from("fw_fin_journal_lines").insert(lines.map((l, i) => ({ journal_id: j.id, account_id: l.accountId, dr_amount: l.dr, cr_amount: l.cr, narration: l.narration ?? null, sort_order: i + 1 })));
+  return j.id as string;
+}
+
 /** Posts one balanced entry atomically through the database posting function. */
-export async function postJournal(sb: SupabaseClient, req: PostingRequest): Promise<PostingResult> {
-  const lines = validateEntry(req.lines, req.date);
+export async function postJournal(sb: SupabaseClient, reqIn: PostingRequest): Promise<PostingResult> {
+  validateEntry(reqIn.lines, reqIn.date);
+  const req = await routeToParty(sb, reqIn);
+  const { lines, review } = validateJournal({ type: req.type, date: req.date, lines: req.lines }, await ruleContext(sb, req));
+  if (review.length && !req.reviewed) {
+    const draftId = await saveForReview(sb, req, lines, review);
+    throw new PostingError("NEEDS_REVIEW", `Saved as a draft for review, not posted: ${review.join("; ")}`, undefined, draftId);
+  }
   if (req.checkDuplicate) {
     const hit = await findLikelyDuplicate(sb, req.businessId, req.date, lines);
     if (hit) throw new PostingError("POSSIBLE_DUPLICATE", `This looks like a duplicate of ${hit.entry_no} (${hit.date}${hit.narration ? ` — ${hit.narration.slice(0, 80)}` : ""}), same amount and same ledgers.`, hit);
@@ -117,6 +179,7 @@ export async function postJournal(sb: SupabaseClient, req: PostingRequest): Prom
     if (isMissingFunction(error)) return legacyPost(sb, req, lines);
     throw toPostingError(error.message);
   }
+  if (req.againstInvoiceId) await sb.from("fw_fin_journals").update({ against_invoice_id: req.againstInvoiceId }).eq("id", data.id).eq("business_id", req.businessId);
   return { id: data.id, entryNo: data.entry_no, total: Number(data.total) };
 }
 
@@ -183,7 +246,7 @@ async function legacyPost(sb: SupabaseClient, req: PostingRequest, lines: Postin
 /** Plain-language message for a posting failure. */
 export function postingErrorMessage(e: unknown): { status: number; message: string; code?: string; duplicate?: DuplicateHit } {
   if (e instanceof PostingError) {
-    const status = e.code === "LOCKED" ? 403 : e.code === "DUPLICATE" || e.code === "POSSIBLE_DUPLICATE" ? 409 : e.code === "FAILED" ? 500 : 422;
+    const status = e.code === "LOCKED" ? 403 : e.code === "DUPLICATE" || e.code === "POSSIBLE_DUPLICATE" ? 409 : e.code === "NEEDS_REVIEW" ? 422 : e.code === "FAILED" ? 500 : 422;
     return { status, code: e.code, duplicate: e.duplicate, message: e.code === "FAILED" ? "We couldn't post this entry. Nothing was saved — please try again." : e.message };
   }
   return { status: 500, message: "We couldn't post this entry. Nothing was saved — please try again." };

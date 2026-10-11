@@ -17,8 +17,9 @@ type Line = { account: string; debit: number; credit: number };
 type ItemState = "ready" | "check" | "posting" | "posted" | "failed";
 type Item = {
   id: string; fileId: string; date: string; narration: string; amount: number; lines: Line[];
-  state: ItemState; reason?: string; matched?: string; entryNo?: string; journalId?: string; tally?: "pushed" | "failed"; tallyError?: string;
+  state: ItemState; reason?: string; matched?: string; matchedId?: string; party?: string; entryNo?: string; journalId?: string; tally?: "pushed" | "failed"; tallyError?: string;
   kind: "template" | "statement" | "bill";
+  bank?: string; card?: boolean;      // statements: the bank / card ledger of the file — the server posts against it
 };
 type FileJob = { id: string; name: string; size: number; kind: string; status: "queued" | "reading" | "done" | "error"; note?: string; key: string };
 
@@ -127,16 +128,16 @@ export default function SmartInbox() {
       const out = r.debit > 0;
       let sure = !!other && (s?.confidence ?? 0) >= 0.75;
       let reason: string | undefined = sure ? undefined : other ? "Not sure about the ledger" : "Choose a ledger";
-      let matchedTo: string | undefined;
+      let matchedTo: string | undefined, matchedId: string | undefined;
       // Money in/out against an unpaid sale or purchase → post to that customer / supplier
       const m = card ? null : matchLine(r, docsRef.current, usedDocs.current);
       if (m) {
         other = m.doc.ledger; matchedTo = `${m.doc.kind === "sale" ? "Sale" : "Bill"} ${m.doc.entryNo} · ${m.doc.date}`;
-        if (m.sure) { usedDocs.current.add(m.doc.id); sure = true; reason = undefined; matched++; }
+        if (m.sure) { usedDocs.current.add(m.doc.id); sure = true; reason = undefined; matched++; matchedId = m.doc.id; }
         else { sure = false; reason = `Possible match: ${m.doc.ledger} — ${matchedTo} (open ₹${m.doc.open.toLocaleString("en-IN")})`; }
       }
       return {
-        id: uid("s"), fileId: job.id, date: r.date, narration: r.description.slice(0, 200), amount, kind: "statement" as const, matched: matchedTo,
+        id: uid("s"), fileId: job.id, date: r.date, narration: r.description.slice(0, 200), amount, kind: "statement" as const, matched: matchedTo, matchedId, party: matchedId ? other : undefined, bank, card,
         lines: out ? [{ account: other, debit: amount, credit: 0 }, { account: bank, debit: 0, credit: amount }] : [{ account: bank, debit: amount, credit: 0 }, { account: other, debit: 0, credit: amount }],
         state: sure ? "ready" as const : "check" as const, reason,
       };
@@ -246,19 +247,23 @@ export default function SmartInbox() {
     setBusy("Posting…"); setMsg("");
     const fileKey = new Map(files.map(f => [f.id, f.key]));
     let ok = 0;
-    for (let i = 0; i < todo.length; i += 100) {
-      const chunk = todo.slice(i, i + 100);
+    const groups = new Map<string, Item[]>();
+    for (const it of todo) { const g = it.kind === "statement" ? `s|${it.card ? "card" : "bank"}|${it.bank}` : "doc"; groups.set(g, [...(groups.get(g) ?? []), it]); }
+    for (const group of groups.values())
+    for (let i = 0; i < group.length; i += 100) {
+      const chunk = group.slice(i, i + 100);
+      const stmt = chunk[0].kind === "statement";
       setBusy(`Posting ${i + 1}–${i + chunk.length} of ${todo.length}…`);
       setItems(prev => prev.map(x => chunk.some(c => c.id === x.id) ? { ...x, state: "posting" } : x));
       const payload = chunk.map(it => ({
-        ref: it.id, client_key: `inbox:${fileKey.get(it.fileId)}:${it.narration.slice(0, 40)}:${it.date}:${it.amount}`.slice(0, 160),
+        ref: it.id, against_invoice_id: it.matchedId ?? null, party_name: it.party ?? null, client_key: `inbox:${fileKey.get(it.fileId)}:${it.narration.slice(0, 40)}:${it.date}:${it.amount}`.slice(0, 160),
         original_message: `Smart Inbox: ${it.narration}`,
         transaction: { status: "complete", transaction_date: it.date, transaction_type: it.lines.some(l => isCashBank(l.account) && l.credit > 0) ? "payment" : it.lines.some(l => isCashBank(l.account) && l.debit > 0) ? "receipt" : "journal",
           narrative: it.narration.slice(0, 200), amount: it.amount, party_name: null, party_type: null, invoice_number: null, payment_mode: null, bank_account_name: null,
           lines: it.lines.map(l => ({ account: l.account.trim(), debit: l.debit, credit: l.credit, confidence: 1, is_new_account: isNew(l.account), suggested_type: null })),
           needs_clarification: [], warnings: [], confidence: 1 },
       }));
-      const r = await fetch("/api/finance/chat-book/confirm-batch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: payload, business_id: bizId, account_heads: heads, source: chunk[0].kind === "statement" ? "statement" : "template" }) });
+      const r = await fetch("/api/finance/chat-book/confirm-batch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: payload, business_id: bizId, account_heads: heads, source: stmt ? "statement" : "template", ...(stmt ? { bank_account_name: chunk[0].bank, card: !!chunk[0].card, file_name: files.find(x => x.id === chunk[0].fileId)?.name ?? null } : {}) }) });
       const d = await r.json().catch(() => ({}));
       if (d.needs_heads?.length) {
         setHeads(h => ({ ...Object.fromEntries((d.needs_heads as { account: string; suggested: string }[]).map(n => [n.account, guessGroup(n.account)])), ...h }));
@@ -266,11 +271,12 @@ export default function SmartInbox() {
         setBusy(""); setMsg("Check the groups for the new ledgers below, then press Approve again."); return;
       }
       if (!r.ok) { setItems(prev => prev.map(x => chunk.some(c => c.id === x.id) ? { ...x, state: "failed", reason: d.error ?? "Couldn't post" } : x)); continue; }
+      // Possible duplicates and entries held for review aren't posted — they go back to "Needs a look" with the reason
       const done = new Map(((d.results ?? []) as { ref: string; entry_no: string; journal_id: string }[]).map(x => [x.ref, x]));
       const fails = new Map(((d.failures ?? []) as { ref: string; error: string }[]).map(f => [f.ref, f.error]));
       ok += done.size;
       setItems(prev => prev.map(x => done.has(x.id) ? { ...x, state: "posted", entryNo: done.get(x.id)!.entry_no, journalId: done.get(x.id)!.journal_id, reason: undefined }
-        : fails.has(x.id) ? { ...x, state: "failed", reason: fails.get(x.id) } : x));
+        : fails.has(x.id) ? { ...x, state: /Possible duplicate|Saved as a draft for review/.test(fails.get(x.id) ?? "") ? "check" : "failed", reason: fails.get(x.id) } : x));
       if (d.created_ledgers?.length) setAccounts(prev => [...prev, ...(d.created_ledgers as { name: string }[]).map(c => ({ name: c.name, sub_type: null }))]);
     }
     setBusy(""); setMsg(`✓ ${ok} entr${ok === 1 ? "y" : "ies"} posted to your books.${tally.status === "connected" ? " Send them to Tally with one click." : ""}`);

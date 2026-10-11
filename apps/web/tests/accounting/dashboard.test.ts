@@ -29,7 +29,7 @@ const journals = [
   J("2027-05-01", null, [["rent", 999, 0], ["hdfc", 0, 999]]),                       // after today: ignored
 ];
 const fy = { from: "2026-04-01", to: "2027-03-31", label: "FY 2026-27" };
-const d = computeDashboard(accounts, journals, "2026-10-25", fy, { pendingReview: 3, drafts: 0 });
+const d = computeDashboard(accounts, journals, "2026-10-25", fy, { pendingReview: 3, drafts: 0, business: { gstin: "32ABCDE1234F1Z5", state: "Kerala" } });
 
 test("headline figures match the ledger", () => {
   assert.equal(d.cash, 17500);          // HDFC 29,500 + SBI −12,000

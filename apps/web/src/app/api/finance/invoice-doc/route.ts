@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const size = JSON.stringify(b.doc).length;
     if (size > 400_000) return NextResponse.json({ error: "The invoice is too large to save — use a smaller logo." }, { status: 413 });
 
-    const { data: j } = await supabase.from("fw_fin_journals").select("id").eq("id", b.journal_id).eq("business_id", b.business_id!).maybeSingle();
+    const { data: j } = await supabase.from("fw_fin_journals").select("id,contact_id").eq("id", b.journal_id).eq("business_id", b.business_id!).maybeSingle();
     if (!j) return NextResponse.json({ error: "Entry not found." }, { status: 404 });
 
     // Same invoice number on another entry? Ask before saving.
@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabase.from("fw_fin_invoice_docs").upsert({
       business_id: b.business_id, journal_id: b.journal_id, invoice_no: b.doc.invoiceNo?.slice(0, 40) ?? null, data: b.doc, updated_by: gate.user.id, updated_at: new Date().toISOString(),
+      ...((j as { contact_id?: string | null } | null)?.contact_id ? { party_id: (j as { contact_id: string }).contact_id } : {}),
     }, { onConflict: "journal_id" });
     if (error) {
       if (missingTable(error.message)) return NextResponse.json({ error: NEEDS_SQL }, { status: 409 });

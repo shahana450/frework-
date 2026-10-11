@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -36,11 +36,9 @@ export default function SelectBusinessPage() {
       if (!user) { router.replace("/login"); return; }
       setUserId(user.id);
 
-      const { data } = await supabase
-        .from("fw_fin_businesses")
-        .select("id,name,legal_name,gstin,business_type,is_active")
-        .eq("owner_id", user.id)
-        .order("created_at");
+      // is_test arrives with 2026-10-26_p5_small.sql; older databases fall back to the plain list
+      let { data, error } = await supabase.from("fw_fin_businesses").select("id,name,legal_name,gstin,business_type,is_active,is_test").eq("owner_id", user.id).order("created_at");
+      if (error) ({ data } = await supabase.from("fw_fin_businesses").select("id,name,legal_name,gstin,business_type,is_active").eq("owner_id", user.id).order("created_at") as unknown as { data: typeof data; error: null });
 
       if (!data || data.length === 0) {
         router.replace("/finance/setup");
@@ -99,13 +97,16 @@ export default function SelectBusinessPage() {
 
         {/* Business cards */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
-          {businesses.map(biz => {
+          {[...businesses].sort((a, b) => Number(!!(a as { is_test?: boolean }).is_test) - Number(!!(b as { is_test?: boolean }).is_test)).map((biz, i, all) => {
+            const test = !!(biz as { is_test?: boolean }).is_test, firstTest = test && !(all[i - 1] as { is_test?: boolean } | undefined)?.is_test;
             const btype = biz.business_type ?? "Proprietorship";
             const [color, bg, icon] = TYPE_COLORS[btype] ?? ["#7A93B4", "rgba(122,147,180,0.1)", "🏢"];
             const isSelecting = selecting === biz.id;
 
             return (
-              <div key={biz.id} className="biz-card" onClick={() => enter(biz)} style={{ borderColor: isSelecting ? "#232A63" : undefined, background: isSelecting ? "rgba(37,99,235,0.06)" : undefined }}>
+              <Fragment key={biz.id}>
+              {firstTest && <div style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#8A5A00", margin: "0.5rem 0 0" }}>Test companies</div>}
+              <div className="biz-card" onClick={() => enter(biz)} style={{ borderColor: isSelecting ? "#232A63" : undefined, background: isSelecting ? "rgba(37,99,235,0.06)" : undefined }}>
                 {/* Icon */}
                 <div style={{ width: 48, height: 48, borderRadius: 13, background: bg, border: `1px solid ${color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>{icon}</div>
 
@@ -127,6 +128,7 @@ export default function SelectBusinessPage() {
                   {isSelecting ? "Opening…" : "Enter →"}
                 </button>
               </div>
+              </Fragment>
             );
           })}
         </div>

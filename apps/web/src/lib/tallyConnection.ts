@@ -42,7 +42,7 @@ function restore() {
   try {
     const s = JSON.parse(read(key(SAVED), "{}"));
     // Still connected from before (another page, tab or a reload) — show it straight away, then confirm quietly
-    if (s.status === "connected" && !tallyManuallyOff()) return { status: "connected" as const, companies: s.companies ?? [], educational: !!s.educational, checkedAt: s.checkedAt ?? 0, message: "Connected to Tally" };
+    if (s.status === "connected" && !tallyManuallyOff()) return { status: "connecting" as const, companies: s.companies ?? [], educational: !!s.educational, checkedAt: s.checkedAt ?? 0, message: "Checking Tally…" };
   } catch { /* */ }
   return {};
 }
@@ -101,7 +101,7 @@ export function chooseTallyCompany(name: string) { load(); write(key(COMPANY), n
 /** Saves which Tally company this business pushes to, so the server can refuse a push to any other company. */
 function linkOnServer(company: string) {
   if (!biz || typeof window === "undefined") return;
-  fetch("/api/finance/tally-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: biz, company }) }).catch(() => { /* retried on next connect */ });
+  fetch("/api/finance/tally-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: biz, company, port: state.port }) }).catch(() => { /* retried on next connect */ });
 }
 
 /** Called by the finance layout whenever the active business changes: every Tally surface follows it. */

@@ -56,7 +56,7 @@ function fakeDb(opts: { rpcError?: { code?: string; message: string } } = {}) {
     const self = () => q;
     for (const m of ["select", "eq", "in", "lte", "gte", "like", "order", "limit"]) q[m] = self;
     q.maybeSingle = async () => ({ data: table === "fw_fin_financial_years" ? { id: "fy1", is_locked: false } : null, error: null });
-    q.then = (resolve: (v: unknown) => void) => resolve({ data: table === "fw_fin_chart_of_accounts" ? [{ id: "bank", is_group: false }, { id: "rent", is_group: false }] : [], error: null });
+    q.then = (resolve: (v: unknown) => void) => resolve({ data: table === "fw_fin_chart_of_accounts" ? [{ id: "bank", name: "HDFC Bank", type: "asset", sub_type: "bank", is_group: false }, { id: "rent", name: "Rent", type: "expense", sub_type: "indirect_expense", is_group: false }] : [], error: null });
     q.insert = (rows: unknown) => { calls.inserts.push({ table, rows }); return { select: () => ({ single: async () => ({ data: { id: "j1" }, error: null }) }), then: (r: (v: unknown) => void) => r({ error: null }) }; };
     q.delete = () => ({ eq: async () => ({}) });
     return q;

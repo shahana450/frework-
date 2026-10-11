@@ -27,17 +27,23 @@ export default function BankHistoryPage() {
       const bizId = (readActiveBusiness(user.id) ?? "").trim();
       if (!bizId) { setLoading(false); return; }
 
-      // Load journals that came from bank import (source = 'bank_import')
-      // Fall back to payment/receipt type journals if source column doesn't exist
-      const { data } = await supabase
-        .from("fw_fin_journals")
-        .select("id,entry_no,date,narration,type,total_debit,total_credit,status")
-        .eq("business_id", bizId)
-        .in("type", ["payment", "receipt"])
-        .order("date", { ascending: false })
-        .limit(500);
-
-      setJournals((data ?? []) as JournalRow[]);
+      // Bank entries = imported from a statement, or any entry with a bank/cash ledger on either side.
+      // Money in / out is read from the bank line itself, not from the voucher type.
+      const { data: accs } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type,sub_type").eq("business_id", bizId);
+      const bankIds = ((accs ?? []) as { id: string; name: string; type: string | null; sub_type: string | null }[])
+        .filter(a => a.sub_type === "bank" || a.sub_type === "cash" || (/\b(bank|cash)\b/i.test(a.name) && !/charges?|interest|commission|fee|loan/i.test(a.name) && (a.type ?? "asset") === "asset")).map(a => a.id);
+      const cols = "id,entry_no,date,narration,type,total_debit,total_credit,status,source";
+      const [withBank, imported] = await Promise.all([
+        bankIds.length ? supabase.from("fw_fin_journals").select(`${cols},fw_fin_journal_lines!inner(account_id,dr_amount,cr_amount)`).eq("business_id", bizId).eq("status", "posted").in("fw_fin_journal_lines.account_id", bankIds).order("date", { ascending: false }).limit(2000) : Promise.resolve({ data: [] }),
+        supabase.from("fw_fin_journals").select(cols).eq("business_id", bizId).eq("status", "posted").in("source", ["bank_import", "statement"]).order("date", { ascending: false }).limit(2000),
+      ]);
+      const byId = new Map<string, JournalRow>();
+      for (const j of (withBank.data ?? []) as (JournalRow & { fw_fin_journal_lines: { dr_amount: number; cr_amount: number }[] })[]) {
+        const inn = j.fw_fin_journal_lines.reduce((s, l) => s + (Number(l.dr_amount) || 0), 0), out = j.fw_fin_journal_lines.reduce((s, l) => s + (Number(l.cr_amount) || 0), 0);
+        byId.set(j.id, { ...j, type: inn >= out ? "receipt" : "payment", total_credit: inn - out > 0 ? inn - out : 0, total_debit: out - inn > 0 ? out - inn : 0 } as JournalRow);
+      }
+      for (const j of (imported.data ?? []) as JournalRow[]) if (!byId.has(j.id)) byId.set(j.id, j);
+      setJournals([...byId.values()].sort((a, b) => String(b.date).localeCompare(String(a.date))));
       setLoading(false);
     });
   }, []);
