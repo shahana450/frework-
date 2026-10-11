@@ -1,3 +1,102 @@
+# Round 2 (COWORK_PROMPT_2): report for review
+
+**Branch:** `fix/launch-blockers`, two new commits on top of `2d51052`. **Nothing was pushed, merged or deployed. No SQL was run. No secrets were touched.** The `wsg-hotfix` folder was only read, to copy wording.
+
+**Checks after every task:** `tsc --noEmit -p apps/web` is clean. `npm run test:accounting` (with `.test-dist` deleted first) gives **242 passed, 0 failed** (was 225).
+
+**Part A as answered by the owner (11 Oct 2026):**
+- Old Starter / Professional / Enterprise plans: **no**, only FreBook ₹1,499.
+- Income-tax portal provider: **sandbox**.
+- Legal entity name, CIN, GSTIN, address, jurisdiction, grievance officer and email: **not given yet**, so Task 4 waits.
+
+## R2.1 Status by task
+
+| Task | Status | Commit | What changed |
+|---|---|---|---|
+| 1. Pricing on the launch branch | Done | d7114ee | `/pricing` and `/finance/pricing` show only FreBook with **🎁 Claim 1 month free**. It calls `POST /api/finance/subscription/claim-trial`, shows the result and goes to `/finance/start`. Wording is from production: "Start with one month free" and "₹0 for the first month · then ₹1,499 + GST/month". Logged-out visitors go to `/register?plan=frebook`. Anyone with any subscription row (paid, trial or expired) sees Subscribe instead. The claim logic moved to `lib/claimTrial.ts`. **Bug fixed:** the route used `maybeSingle()`, which returns no row when a user has several rows, so the claim went through; it now uses `limit(1)`. Test `claimTrial`: a second claim returns 409, also after expiry, for old-plan accounts and in a race. The database is mocked. |
+| 2. Income tax through Sandbox | **Stopped: the API doesn't exist** | — | Per the prompt, no endpoints were guessed and no code was written. See R2.2. `ADAPTERS.sandbox` still uses Demo for `portal === "it"`. |
+| 3. Portal Connect data on the GST pages | Done | 93efc61 | When the GSTIN is linked through Sandbox: the GST Returns centre shows **Filed ✓** with date and ARN on each due card that is already filed; GSTR-3B and GSTR-9 show "Filed on … (ARN …)". Demo data never marks anything filed. **GSTR-2B:** Sandbox can fetch it with a taxpayer OTP session, so ITC Match has **Fetch 2B from portal** (shown only when `GSP_PROVIDER=sandbox`). Flow: GST portal username → OTP → verify and fetch. Upload still works. See R2.3. Test `portalGst`. |
+| 4. Legal pages | **Blocked: Part A legal values are blank** | — | Not started. `DRAFTS.md`, `/terms`, `/privacy` and `/refund-policy` are unchanged. When done: lawyer review before launch. |
+| 5. Hand-back | Done | (this commit) | This section, R2.4–R2.6. |
+
+## R2.2 Why Task 2 stopped
+
+Sandbox's official docs (developer.sandbox.co.in, read 11 Oct 2026) offer, for income tax:
+- **Calculator, Report and OCR** (`/api-reference/it/overview`): tax P&L, capital gains, Form 16 / 26AS reading;
+- **ITR compliance** (`/api-reference/it/compliance/openapi.json`): validate, e-file, e-verify OTP (by acknowledgement number), discard, and get ITR form.
+
+There is **no** endpoint to log in a PAN holder with an OTP, and none for ITR filed / e-verified / processed / refund status. So `createSandboxItProvider()` with `requestOtp`, `verifyOtp` and `fetchStatuses` can't be built without guessing.
+
+**Owner decides:**
+- ask Sandbox whether an ITR-status API is planned or available on request;
+- use another ERI for status; or
+- leave income tax in Demo for launch. `ERI_PROVIDER` should stay unset until then.
+
+## R2.3 Notes on the Sandbox GST work (Task 3)
+
+- **The taxpayer token is never stored.** Sandbox's taxpayer token (6 hours) can also file returns, so `/api/finance/gst/portal-2b` uses it once inside the fetch request and drops it. Each fetch asks for a new OTP. No new table or migration was needed.
+- **The taxpayer enables API access first:** GST portal → View Profile → Manage API Access → Enable API Request = Yes. The ITC Match panel says this.
+- **To confirm on the first Sandbox test** (the docs don't show these):
+  - Month format in `/gstrs/gstr-2b/{year}/{month}`: the docs only show `2023/12`. FreWork sends two digits (`2026/09`), like the portal's `MMYYYY`.
+  - Where `fc` (file count) sits when a big 2B is split (`status_cd = "3"`). FreWork reads `data.data.fc`, then `data.fc`. If neither is there, it asks the user to upload the file.
+  - How GSTR-9 appears in the track list. FreWork matches a GSTR-9 row with any period inside that financial year.
+- Filing marks need the GSTIN linked in Portal Connect (`/finance/portals`) with `GSP_PROVIDER=sandbox`.
+
+## R2.4 Migrations still to run on **staging**, in order
+
+Nothing new this round. Still outstanding from round 1 (files in `apps/web/src/app/finance/migrations/`):
+
+1. If staging was made before them: `2026-10-12_portals.sql`, `2026-10-13_connectors.sql`, `2026-10-14_whatsapp.sql`. Portal Connect and Task 3 need `2026-10-12_portals.sql`.
+2. `2026-10-15_b2_party_backfill.sql`
+3. `2026-10-16_b12_voucher_series.sql`
+4. `2026-10-17_b5_tally_link.sql`
+5. `2026-10-18_b6_rls_hardening.sql`, then run `apps/web/tests/rls/cross_tenant.sql` as two test users. Every cross-tenant query must return 0 rows or an error.
+6. `2026-10-19_t3_renumber_duplicates.sql`: run step 0 first and send me the result.
+7. `2026-10-20_t5_business_delete.sql` (enable pg_cron first).
+8. `2026-10-21_t7_perf_indexes.sql`: already run in **production** by the owner; run it on staging too.
+9. Run `cross_tenant.sql` again after step 7.
+
+## R2.5 Vercel environment variables the owner adds (names only)
+
+- `SANDBOX_API_KEY`
+- `SANDBOX_API_SECRET`
+- `GSP_PROVIDER` = `sandbox`
+- `PORTAL_TOKEN_KEY`: 32 random bytes, base64. It encrypts the stored public-record link, not the 2B session.
+- Optional: `SANDBOX_API_BASE`, only to point at Sandbox's test host.
+- **Not** `ERI_PROVIDER`: Task 2 wasn't done.
+
+## R2.6 Plan for retiring `hotfix/tally-port`
+
+Production runs `hotfix/tally-port` (`3992b47`), deployed from the `wsg-hotfix` worktree. `fix/launch-blockers` should replace it like this. **Each step that changes something waits for the owner's word.**
+
+1. **Check that nothing is lost (read-only, done 11 Oct):**
+   - `git diff --name-status fix/launch-blockers hotfix/tally-port` shows 5 files only on the hotfix: `run-tally-bridge.bat`, `tally-bridge-setup.zip`, `tally-bridge.js`, `components/landing/pricing.tsx` and `promo-offer.tsx`. Round 1 removed all five on purpose (old bridge copies, the 111 MB zip, old pricing).
+   - The features listed in the prompt (Smart Inbox, bill match, ITC match, PDF split, GST returns centre, setup, calculators, MIS, ledger groups, R&P template, speed-ups, icon bar, FreBook ₹1,499 with the free month, Sandbox connector) were copied across and are on `fix/launch-blockers`.
+   - Before step 4, run `git diff hotfix/tally-port fix/launch-blockers -- apps/web/src/app/finance/inbox apps/web/src/lib/billMatch.ts apps/web/src/lib/itcMatch.ts` and similar for each feature. Every difference should be a launch-branch improvement.
+2. **Staging:**
+   - Deploy `fix/launch-blockers` to a Vercel **preview** (not `--prod`) with the staging Supabase env.
+   - Run R2.4 on staging.
+   - Run REPORT §3 (smoke test) plus: claim the free month twice (the second says it's used); link a GSTIN through Sandbox and see Filed ✓ on the Returns centre and 3B; Fetch 2B on ITC Match with a real OTP.
+   - Run Playwright (§6).
+3. **Owner approves staging.**
+4. **Record the hotfix as merged.** The hotfix has commits made after round 1's `-s ours` merge, which was done on the old history before the rewrite. On the owner's "merge":
+
+   ```
+   git checkout fix/launch-blockers
+   git merge -s ours hotfix/tally-port -m "Merge hotfix/tally-port (features already copied across)"
+   ```
+
+   Then merge the PR into `main`.
+5. **Production database:** run the R2.4 migrations that production lacks (B2, B12, B5, B6, T3 after step 0, T5), in the same order, in a quiet hour. T7 indexes are already there. Back up first (Supabase → Database → Backups).
+6. **Deploy:**
+   - On the owner's "deploy", run the clean-clone deploy from the prompt with `--branch main` (or `fix/launch-blockers`), from the repo root: `npx vercel@59 --prod --yes`.
+   - Keep the previous production deployment's URL. Vercel → Deployments → Promote is the one-click rollback.
+7. **After 7 quiet days:** stop deploying from `wsg-hotfix`. Keep the branch as a tag (`git tag prod-before-launch-blockers hotfix/tally-port`), then remove the worktree (`git worktree remove "../wsg-hotfix"`). From then on, only `main` is deployed.
+
+**Waiting for the owner's "approved".** Nothing will be merged or deployed before that.
+
+---
+
 # Launch-blocker fixes: report for review
 
 **Branch:** `fix/launch-blockers`. It starts from the live baseline `fd7c102` and has 30 commits, including the hotfix merge.
