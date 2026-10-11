@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import { dueDates, type Scheme } from "@/lib/gstReturns";
+import { usePortalFilings } from "@/lib/portals/usePortalFilings";
+import { filingForDue } from "@/lib/portals/filings";
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", neg: "#C2321F", negSoft: "#FDECEA", amber: "#8A5A00", amberSoft: "#FFF4DB", pos: "#0B7A55", posSoft: "#E3F6EE" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
@@ -31,6 +33,7 @@ export default function GstReturnsCentre() {
   const [bizId, setBizId] = useState("");
   const [gstin, setGstin] = useState("");
   const [scheme, setScheme] = useState<Scheme>("monthly");
+  const portal = usePortalFilings(bizId);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -67,14 +70,23 @@ export default function GstReturnsCentre() {
         </header>
 
         <section style={{ ...card, background: C.forest, color: "#FFFFFF" }}>
-          <div style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: C.gold, fontWeight: 800, marginBottom: 10 }}>Due in the next 60 days</div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+            <div style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: C.gold, fontWeight: 800 }}>Due in the next 60 days</div>
+            {portal.linked
+              ? <span style={{ fontSize: 12, color: "#C9D3CE" }}>Filing status from the GST portal · <Link href="/finance/portals" style={{ color: C.gold }}>Portal Connect</Link></span>
+              : <Link href="/finance/portals" style={{ fontSize: 12, color: C.gold }}>Link your GSTIN to see what&apos;s already filed →</Link>}
+          </div>
           {due.length ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10 }}>
-              {due.map(d => { const n = days(d.due); return (
+              {due.map(d => { const n = days(d.due); const f = filingForDue(portal.statuses, d); return (
                 <Link key={d.form + d.due} href={d.href} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(217,181,111,0.3)", borderRadius: 14, padding: "12px 14px", color: "#FFFFFF", textDecoration: "none", display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><b style={{ fontSize: 16 }}>{d.form}</b><span style={{ fontSize: 11.5, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: n <= 3 ? C.negSoft : n <= 10 ? C.amberSoft : C.posSoft, color: n <= 3 ? C.neg : n <= 10 ? C.amber : C.pos }}>{n === 0 ? "Today" : `${n} days`}</span></span>
+                  <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><b style={{ fontSize: 16 }}>{d.form}</b>{f
+                    ? <span style={{ fontSize: 11.5, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: C.posSoft, color: C.pos }}>Filed ✓</span>
+                    : <span style={{ fontSize: 11.5, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: n <= 3 ? C.negSoft : n <= 10 ? C.amberSoft : C.posSoft, color: n <= 3 ? C.neg : n <= 10 ? C.amber : C.pos }}>{n === 0 ? "Today" : `${n} days`}</span>}</span>
                   <span style={{ fontSize: 13, color: "#C9D3CE" }}>{d.label} · {d.period}</span>
-                  <span style={{ fontSize: 12.5, color: C.gold }}>Due {new Date(d.due).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · Prepare →</span>
+                  {f
+                    ? <span style={{ fontSize: 12.5, color: "#9FE3C6", overflowWrap: "anywhere" }}>Filed ✓{f.on ? ` ${new Date(`${f.on}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" })}` : ""}{f.arn ? ` · ARN ${f.arn}` : ""}</span>
+                    : <span style={{ fontSize: 12.5, color: C.gold }}>Due {new Date(d.due).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · Prepare →</span>}
                 </Link>); })}
             </div>
           ) : <div style={{ color: "#C9D3CE" }}>Nothing due in the next 60 days.</div>}

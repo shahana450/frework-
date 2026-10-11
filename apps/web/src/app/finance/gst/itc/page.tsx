@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import { usePortalFilings } from "@/lib/portals/usePortalFilings";
 import { parse2BJson, parse2BGrid, purchaseRegister, matchItc, table4, taxOf, type TwoBDoc, type BookDoc, type Tax, type ItcRow } from "@/lib/itcMatch";
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", pos: "#0B7A55", posSoft: "#E3F6EE", amber: "#8A5A00", amberSoft: "#FFF4DB", neg: "#C2321F", negSoft: "#FDECEA", blue: "#1F5EFF", blueSoft: "#E8F0FF" };
@@ -33,6 +34,27 @@ export default function ItcMatchPage() {
   const [filter, setFilter] = useState<ItcRow["status"] | "all">("all");
   const [copied, setCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Fetch GSTR-2B from the portal (Sandbox taxpayer APIs): one OTP per fetch, the session is never stored
+  const portal = usePortalFilings(bizId);
+  const [pull, setPull] = useState<{ open: boolean; username: string; otp: string; step: "user" | "otp"; busy: boolean; msg: string; ok: boolean }>({ open: false, username: "", otp: "", step: "user", busy: false, msg: "", ok: false });
+  useEffect(() => { try { const u = localStorage.getItem(`fw_gst_user_${bizId}`); if (u) setPull(p => ({ ...p, username: u })); } catch { /* */ } }, [bizId]);
+
+  async function portal2b(action: "otp" | "fetch") {
+    setPull(p => ({ ...p, busy: true, msg: "" })); setErr("");
+    try {
+      const r = await fetch("/api/finance/gst/portal-2b", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action, username: pull.username.trim(), otp: pull.otp.trim(), month }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setPull(p => ({ ...p, busy: false, ok: false, msg: d.error ?? "The GST portal didn't respond.", step: d.code === "SESSION_EXPIRED" ? "user" : p.step, otp: "" })); return; }
+      if (action === "otp") {
+        try { localStorage.setItem(`fw_gst_user_${bizId}`, pull.username.trim()); } catch { /* */ }
+        setPull(p => ({ ...p, busy: false, ok: true, step: "otp", msg: d.message ?? "OTP sent." }));
+      } else {
+        setTwoB((d.docs ?? []) as TwoBDoc[]);
+        setFileName(`GSTR-2B from the GST portal (${new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "short", year: "numeric", timeZone: "UTC" })})`);
+        setPull(p => ({ ...p, open: false, otp: "", step: "user", busy: false, msg: "", ok: false }));
+      }
+    } catch { setPull(p => ({ ...p, busy: false, ok: false, msg: "The GST portal didn't respond. Try again, or upload the file." })); }
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -137,9 +159,27 @@ export default function ItcMatchPage() {
             <b style={{ fontSize: 15 }}>{fileName ? `${fileName} · ${twoB.length} documents` : "Upload GSTR-2B for the month"}</b>
             <div style={{ fontSize: 13, color: C.muted }}>GST portal → Returns → GSTR-2B → Download (JSON or Excel). Your purchase entries load automatically{loading ? " — loading…" : ` (${books.filter(b => b.date.slice(0, 7) === month).length} this month)`}.</div>
           </div>
+          {portal.gstProvider === "sandbox" && <button onClick={() => setPull(p => ({ ...p, open: !p.open, msg: "", step: "user", otp: "" }))} style={btn(false)} aria-expanded={pull.open}>Fetch 2B from portal</button>}
           <button onClick={() => fileRef.current?.click()} style={btn(true)}>{fileName ? "Upload another" : "Upload GSTR-2B"}</button>
           {rows.length > 0 && <button onClick={exportExcel} style={btn(false)}>⬇ Excel</button>}
         </section>
+        {pull.open && (
+          <section aria-label="Fetch GSTR-2B from the GST portal" style={{ ...card, display: "flex", flexDirection: "column", gap: 10 }}>
+            <b style={{ fontSize: 15 }}>Fetch GSTR-2B for {new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" })} from the GST portal</b>
+            <div style={{ fontSize: 13, color: C.muted }}>First, on the GST portal: View Profile → Manage API Access → Enable API Request = Yes. The portal then sends an OTP to your registered mobile and email. FreWork uses that session once for this fetch and doesn&apos;t keep it.</div>
+            <form onSubmit={e => { e.preventDefault(); portal2b(pull.step === "user" ? "otp" : "fetch"); }} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <input aria-label="GST portal username" placeholder="GST portal username" autoComplete="username" value={pull.username} disabled={pull.step === "otp"} onChange={e => setPull(p => ({ ...p, username: e.target.value }))}
+                style={{ height: 40, minWidth: 0, flex: "1 1 220px", borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14 }} />
+              {pull.step === "otp" && <input aria-label="OTP" placeholder="OTP" inputMode="numeric" autoComplete="one-time-code" value={pull.otp} onChange={e => setPull(p => ({ ...p, otp: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
+                style={{ height: 40, width: 130, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: MONO, fontSize: 15, letterSpacing: "0.15em" }} />}
+              <button type="submit" disabled={pull.busy || !pull.username.trim() || (pull.step === "otp" && pull.otp.length < 4)} style={btn(true)}>
+                {pull.busy ? (pull.step === "user" ? "Sending OTP…" : "Fetching 2B…") : pull.step === "user" ? "Send OTP" : "Verify & fetch"}
+              </button>
+              {pull.step === "otp" && <button type="button" onClick={() => setPull(p => ({ ...p, step: "user", otp: "", msg: "" }))} style={btn(false)}>Change username</button>}
+            </form>
+            {pull.msg && <div role="status" style={{ fontSize: 13.5, fontWeight: 700, color: pull.ok ? C.pos : C.neg }}>{pull.msg}</div>}
+          </section>
+        )}
         {err && <div role="alert" style={{ background: C.negSoft, color: C.neg, borderRadius: 12, padding: "10px 14px", fontWeight: 700 }}>{err}</div>}
 
         {rows.length > 0 && (

@@ -53,8 +53,10 @@ export function setOff(liability: Tax, itc: Tax): SetOff {
 
 // ── Due dates ──
 export type Scheme = "monthly" | "qrmp" | "composition";
-export type Due = { form: string; label: string; period: string; due: string; href: string };
+/** `ret` is the tax period the portal files it under: "YYYY-MM" (the month, or the quarter's last month), or "FY:<start year>" for annual returns. */
+export type Due = { form: string; label: string; period: string; due: string; href: string; ret: string };
 const iso = (y: number, m: number, d: number) => new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10);
+const ym = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
 const mLabel = (y: number, m: number) => new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-IN", { month: "short", year: "numeric", timeZone: "UTC" });
 /** Returns due in the 60 days from `today`, for the business's scheme. `qrmpLate` = states with the 24th 3B date (category B). */
 export function dueDates(today: string, scheme: Scheme, qrmpLate = false): Due[] {
@@ -65,24 +67,24 @@ export function dueDates(today: string, scheme: Scheme, qrmpLate = false): Due[]
     const ny = m === 12 ? y + 1 : y, nm = m === 12 ? 1 : m + 1;                                                     // month after it
     const qEnd = m % 3 === 0;
     if (scheme === "monthly") {
-      out.push({ form: "GSTR-1", label: "Sales return", period: mLabel(y, m), due: iso(ny, nm, 11), href: "/finance/gst" });
-      out.push({ form: "GSTR-3B", label: "Summary return & tax payment", period: mLabel(y, m), due: iso(ny, nm, 20), href: "/finance/gst/3b" });
+      out.push({ form: "GSTR-1", label: "Sales return", period: mLabel(y, m), due: iso(ny, nm, 11), href: "/finance/gst", ret: ym(y, m) });
+      out.push({ form: "GSTR-3B", label: "Summary return & tax payment", period: mLabel(y, m), due: iso(ny, nm, 20), href: "/finance/gst/3b", ret: ym(y, m) });
     } else if (scheme === "qrmp") {
       if (qEnd) {
-        out.push({ form: "GSTR-1", label: "Quarterly sales return", period: `Quarter ending ${mLabel(y, m)}`, due: iso(ny, nm, 13), href: "/finance/gst" });
-        out.push({ form: "GSTR-3B", label: "Quarterly summary return", period: `Quarter ending ${mLabel(y, m)}`, due: iso(ny, nm, qrmpLate ? 24 : 22), href: "/finance/gst/3b" });
+        out.push({ form: "GSTR-1", label: "Quarterly sales return", period: `Quarter ending ${mLabel(y, m)}`, due: iso(ny, nm, 13), href: "/finance/gst", ret: ym(y, m) });
+        out.push({ form: "GSTR-3B", label: "Quarterly summary return", period: `Quarter ending ${mLabel(y, m)}`, due: iso(ny, nm, qrmpLate ? 24 : 22), href: "/finance/gst/3b", ret: ym(y, m) });
       } else {
-        out.push({ form: "IFF", label: "B2B invoices (optional)", period: mLabel(y, m), due: iso(ny, nm, 13), href: "/finance/gst" });
-        out.push({ form: "PMT-06", label: "Monthly tax payment", period: mLabel(y, m), due: iso(ny, nm, 25), href: "/finance/gst/3b" });
+        out.push({ form: "IFF", label: "B2B invoices (optional)", period: mLabel(y, m), due: iso(ny, nm, 13), href: "/finance/gst", ret: ym(y, m) });
+        out.push({ form: "PMT-06", label: "Monthly tax payment", period: mLabel(y, m), due: iso(ny, nm, 25), href: "/finance/gst/3b", ret: ym(y, m) });
       }
     } else if (qEnd) {
-      out.push({ form: "CMP-08", label: "Composition tax payment", period: `Quarter ending ${mLabel(y, m)}`, due: iso(ny, nm, 18), href: "/finance/gst/composition" });
+      out.push({ form: "CMP-08", label: "Composition tax payment", period: `Quarter ending ${mLabel(y, m)}`, due: iso(ny, nm, 18), href: "/finance/gst/composition", ret: ym(y, m) });
     }
   }
   // Annual returns
   const fyStart = tm >= 4 ? ty : ty - 1;
-  out.push({ form: "GSTR-9", label: "Annual return", period: `FY ${fyStart - 1}-${String(fyStart).slice(2)}`, due: iso(fyStart, 12, 31), href: "/finance/gst/annual" });
-  if (scheme === "composition") out.push({ form: "GSTR-4", label: "Composition annual return", period: `FY ${fyStart - 1}-${String(fyStart).slice(2)}`, due: iso(fyStart, 4, 30), href: "/finance/gst/composition" });
+  out.push({ form: "GSTR-9", label: "Annual return", period: `FY ${fyStart - 1}-${String(fyStart).slice(2)}`, due: iso(fyStart, 12, 31), href: "/finance/gst/annual", ret: `FY:${fyStart - 1}` });
+  if (scheme === "composition") out.push({ form: "GSTR-4", label: "Composition annual return", period: `FY ${fyStart - 1}-${String(fyStart).slice(2)}`, due: iso(fyStart, 4, 30), href: "/finance/gst/composition", ret: `FY:${fyStart - 1}` });
   const end = new Date(Date.parse(today) + 60 * 86400000).toISOString().slice(0, 10);
   return out.filter(x => x.due >= today && x.due <= end).sort((a, b) => a.due.localeCompare(b.due));
 }

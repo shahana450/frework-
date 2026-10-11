@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import { usePortalFilings } from "@/lib/portals/usePortalFilings";
+import { annualFilingFor, filedLine } from "@/lib/portals/filings";
 import { gstr9LateFee, sumTax, type Tax, type Table3 } from "@/lib/gstReturns";
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", amber: "#8A5A00", amberSoft: "#FFF4DB", neg: "#C2321F" };
@@ -26,6 +28,8 @@ export default function AnnualPage() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
   const [filedOn, setFiledOn] = useState("");
+  const portal = usePortalFilings(bizId);
+  const filed = annualFilingFor(portal.statuses, "GSTR-9", fy);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -88,6 +92,7 @@ export default function AnnualPage() {
             <button onClick={exportExcel} disabled={!data} style={btn(false)}>⬇ Excel</button>
           </div>
         </header>
+        {filed && <div role="status" style={{ background: "#E3F6EE", color: "#0B7A55", borderRadius: 12, padding: "10px 14px", fontWeight: 700, overflowWrap: "anywhere" }}>✓ {filedLine(filed)} — from the GST portal via <Link href="/finance/portals" style={{ color: "#0B7A55" }}>Portal Connect</Link>.</div>}
         {err && <div role="alert" style={{ background: "#FDECEA", color: C.neg, borderRadius: 12, padding: "10px 14px", fontWeight: 700 }}>{err}</div>}
         {loading && <div style={{ color: C.muted }}>Adding up the year…</div>}
         {data && (
