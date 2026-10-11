@@ -25,11 +25,12 @@ test("B1: every displayed section foots, and the balance sheet balances", () => 
   assert.equal(bs.totalAssets, bs.totalLiabilities);
 });
 
-test("B1: a debtor in advance shows with a visible minus, never as an absolute amount", () => {
+test("B1/P3: a customer in credit moves to Current Liabilities as 'Advances from customers', never a positive asset", () => {
   const abc = all.find(l => l.id === "abc")!;
-  assert.equal(abc.amount, -25000);
-  assert.equal(abc.note, "Credit balance");
-  assert.equal(signedMoney(abc.amount), "−₹25,000.00");
+  assert.equal(abc.section, "current_liabilities");
+  assert.equal(abc.amount, 25000);
+  assert.match(abc.name, /^Advances from customers — ABC Traders/);
+  assert.equal(signedMoney(-25000), "−₹25,000.00");
 });
 
 test("B1: P&L presented from signed lines agrees with the engine", () => {

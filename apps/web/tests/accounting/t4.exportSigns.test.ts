@@ -32,9 +32,8 @@ test("T4: overdrawn bank and cash export under Current Liabilities as positive o
   assert.ok(!bsRows.slice(0, assetsEnd).some(r => typeof r[0] === "string" && /^\s+(Bank|Cash)( |$)/.test(r[0])), "no bank/cash line among assets");
 });
 
-test("T4: a debtor in advance exports with a minus (credit balance), not as an absolute amount", () => {
-  assert.equal(amountOf(bsRows, /^\s+ABC Traders/), -25000);
-  assert.match(String(bsRows.find(r => typeof r[0] === "string" && /ABC Traders/.test(r[0]))?.[0]), /Credit balance/);
+test("T4/P3: a customer in credit exports under liabilities as 'Advances from customers'", () => {
+  assert.equal(amountOf(bsRows, /^\s+Advances from customers — ABC Traders/), 25000);
 });
 
 test("T4: the exported Balance Sheet foots and balances", () => {

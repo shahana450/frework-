@@ -1,5 +1,6 @@
 // Dashboard figures and alerts, computed from posted entries with the same engine as the reports.
 import { buildTrialBalance, buildPL, groupOf, type Account } from "./books";
+import { arAp } from "./partyBalances";
 import { monthPeriod, type QJournal, type Period } from "./bookQueries";
 import { formatMoney, DEFAULT_MONEY, type MoneyFormat } from "./money";
 import { dueDates, type DueItem } from "./compliance";
@@ -164,7 +165,7 @@ function compute(accounts: Account[], journals: QJournal[], today: string, fy: P
     compliance, complianceSetup: setup,
     activity, streak, health: { score: Math.max(0, score), reasons }, insight, gst: gstDue,
     period: fy, month,
-    cash: balance(isCashBank, 1), receivables: balance(isDebtor, 1), payables: balance(isCreditor, -1),
+    cash: balance(isCashBank, 1), ...(() => { const x = arAp(accounts, lines, asOf); return { receivables: x.toReceive, payables: x.toPay }; })(),
     revenue: r2(yearPL.revenue + yearPL.otherIncome), expenses: r2(yearPL.cogs + yearPL.expenses), profit: r2(yearPL.netProfit),
     monthRevenue: r2(mPL.revenue + mPL.otherIncome), monthProfit: r2(mPL.netProfit), lastMonthProfit: r2(lPL.netProfit),
     recent, alerts, currency: fmt.currency, locale: fmt.locale,

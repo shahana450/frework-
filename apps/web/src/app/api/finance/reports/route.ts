@@ -42,12 +42,16 @@ export async function GET(req: NextRequest) {
   if (error) { console.error("reports load failed", bizId, error); return NextResponse.json({ error: "We couldn't load your reports right now. Please try again." }, { status: 500 }); }
 
   const tb = buildTrialBalance(accounts, lines, start, end);
-  const row = (r: TBRow) => ({ code: "", name: r.name, type: GROUP_LABEL[r.group], sub_type: r.group, dr: r.dr, cr: r.cr });
+  // Account codes for the Trial Balance "Code" column
+  const { data: codes } = await supabase.from("fw_fin_chart_of_accounts").select("id,code").eq("business_id", bizId!);
+  const codeOf = new Map(((codes ?? []) as { id: string; code: string | null }[]).map(a => [a.id, a.code ?? ""]));
+  const row = (r: TBRow) => ({ code: codeOf.get(r.id) ?? "", name: r.name, type: GROUP_LABEL[r.group], sub_type: r.group, dr: r.dr, cr: r.cr });
 
   if (report === "trial_balance") {
     return NextResponse.json({
       report: "trial_balance",
-      accounts: tb.map(row),
+      // Accounts with nothing on either side are left out (no "Bank Charges — —" rows)
+      accounts: tb.filter(r => Math.abs(r.dr) >= 0.005 || Math.abs(r.cr) >= 0.005).map(row),
       total_dr: tb.reduce((s, r) => s + r.dr, 0),
       total_cr: tb.reduce((s, r) => s + r.cr, 0),
     });

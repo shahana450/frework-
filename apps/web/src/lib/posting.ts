@@ -23,6 +23,7 @@ export type PostingRequest = {
   entryNo?: string | null;      // imports only: keep the source system's number (e.g. "TLY-Sales 105")
   checkDuplicate?: boolean;     // stop if a near-identical entry exists (the user can confirm and re-send)
   reviewed?: boolean;           // the user has seen and accepted the review warnings — post anyway
+  againstInvoiceId?: string | null; // receipts/payments: the invoice or bill this settles
 };
 export type DuplicateHit = { id: string; entry_no: string; date: string; narration: string; total: number };
 export type PostingResult = { id: string; entryNo: string; total: number };
@@ -99,6 +100,34 @@ export async function findLikelyDuplicate(sb: SupabaseClient, businessId: string
   return null;
 }
 
+/** A control ledger ("Debtors Control", "Sundry Creditors" …) — a group total, never a posting ledger. */
+export const isControlLedger = (name: string) => /^(sundry\s+)?(debtors|creditors|trade\s+(receivables|payables))(\s+control)?$/i.test(name.trim());
+
+/**
+ * Lines aimed at a control ledger go to the party's own ledger (created under Sundry Debtors / Creditors if needed),
+ * whenever the entry names its customer or supplier. Without a party they stay put and validateJournal refuses
+ * them once the control ledger is a group.
+ */
+async function routeToParty(sb: SupabaseClient, req: PostingRequest): Promise<PostingRequest> {
+  const party = (req.partyName ?? "").trim();
+  if (!party && !req.contactId) return req;
+  const ids = [...new Set(req.lines.map(l => l.accountId).filter(Boolean))];
+  if (!ids.length) return req;
+  const { data } = await sb.from("fw_fin_chart_of_accounts").select("id,name,sub_type,is_group").eq("business_id", req.businessId).in("id", ids);
+  const controls = ((data ?? []) as { id: string; name: string; sub_type: string | null; is_group: boolean | null }[]).filter(a => isControlLedger(a.name));
+  if (!controls.length) return req;
+  const swap = new Map<string, string>();
+  for (const a of controls) {
+    const kind = /debtor|receivable/i.test(a.name) ? "customer" : "supplier";
+    let name = party;
+    if (!name && req.contactId) { const { data: ct } = await sb.from("fw_fin_contacts").select("name").eq("id", req.contactId).maybeSingle(); name = (ct?.name ?? "").trim(); }
+    if (!name) continue;
+    const { data: acc, error } = await sb.rpc("fw_fin_ensure_party_ledger", { p_business: req.businessId, p_name: name, p_kind: kind, p_contact: req.contactId ?? null });
+    if (!error && acc) swap.set(a.id, acc as string);
+  }
+  return swap.size ? { ...req, lines: req.lines.map(l => swap.has(l.accountId) ? { ...l, accountId: swap.get(l.accountId)! } : l) } : req;
+}
+
 /** What validateJournal needs about this business: the ledgers used, the financial years and GST registration. */
 async function ruleContext(sb: SupabaseClient, req: PostingRequest) {
   const ids = [...new Set(req.lines.map(l => l.accountId).filter(Boolean))];
@@ -125,8 +154,9 @@ async function saveForReview(sb: SupabaseClient, req: PostingRequest, lines: Pos
 }
 
 /** Posts one balanced entry atomically through the database posting function. */
-export async function postJournal(sb: SupabaseClient, req: PostingRequest): Promise<PostingResult> {
-  validateEntry(req.lines, req.date);
+export async function postJournal(sb: SupabaseClient, reqIn: PostingRequest): Promise<PostingResult> {
+  validateEntry(reqIn.lines, reqIn.date);
+  const req = await routeToParty(sb, reqIn);
   const { lines, review } = validateJournal({ type: req.type, date: req.date, lines: req.lines }, await ruleContext(sb, req));
   if (review.length && !req.reviewed) {
     const draftId = await saveForReview(sb, req, lines, review);
@@ -149,6 +179,7 @@ export async function postJournal(sb: SupabaseClient, req: PostingRequest): Prom
     if (isMissingFunction(error)) return legacyPost(sb, req, lines);
     throw toPostingError(error.message);
   }
+  if (req.againstInvoiceId) await sb.from("fw_fin_journals").update({ against_invoice_id: req.againstInvoiceId }).eq("id", data.id).eq("business_id", req.businessId);
   return { id: data.id, entryNo: data.entry_no, total: Number(data.total) };
 }
 

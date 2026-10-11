@@ -12,7 +12,7 @@ export const runtime = "edge";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-type Item = { ref: string; transaction: ParsedTransaction; original_message?: string; client_key?: string; confirm_duplicate?: boolean };
+type Item = { ref: string; transaction: ParsedTransaction; original_message?: string; client_key?: string; confirm_duplicate?: boolean; against_invoice_id?: string | null; party_name?: string | null };
 
 // Posts many entries; each one is atomic on its own, so one bad row never blocks the rest
 export async function POST(req: NextRequest) {
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
           const posted = await postJournal(supabase, {
             businessId: business_id, actorId: user_id, date: t.transaction_date, type: voucherTypeFor(t.transaction_type),
             narration: t.narrative || it.original_message?.slice(0, 200) || (source === "template" ? "Template entry" : "Bank statement entry"),
-            referenceNo: t.invoice_number, partyName: t.party_name, source, aiGenerated: true,
+            referenceNo: t.invoice_number, partyName: t.party_name ?? it.party_name ?? null, source, aiGenerated: true, againstInvoiceId: it.against_invoice_id ?? null,
             lines: t.lines.map(l => ({ accountId: resolved.ids.get(l.account.trim())!.id, dr: l.debit ?? 0, cr: l.credit ?? 0 })),
             metadata: { client_key: it.client_key ?? null, original_message: it.original_message, transaction_type: t.transaction_type, confirmed_by: user_id, gst: t.gst ?? null, tds: t.tds ?? null,
               ...(bank ? { bank_account_id: bank.id, bank_ref: (t as ParsedTransaction & { bank_ref?: string | null }).bank_ref ?? null, bank_batch_id: batchId } : {}) },

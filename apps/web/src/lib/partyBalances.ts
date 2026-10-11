@@ -3,14 +3,14 @@
 // settling oldest first (FIFO). Credit balances on customers are advances and are shown, not hidden. Pure.
 import { inferHead } from "./ledgerHeads";
 
-export type PartyAccount = { id: string; name: string; type?: string; sub_type?: string | null };
+export type PartyAccount = { id: string; name: string; type?: string; sub_type?: string | null; is_group?: boolean | null };
 export type PartyLine = { account_id: string; dr: number; cr: number; date: string };
 export type PartyRow = { id: string; name: string; balance: number; status: "owes" | "advance"; oldest: string | null; days: number; bucket: "0-30" | "31-60" | "61-90" | "90+" | "advance" };
 export type PartyReport = { rows: PartyRow[]; total: number; owed: number; advances: number; buckets: Record<PartyRow["bucket"], number> };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
-export const isReceivable = (a: PartyAccount) => a.sub_type === "trade_receivables" || (!a.sub_type && inferHead(a.name)?.key === "debtors");
-export const isPayable = (a: PartyAccount) => a.sub_type === "trade_payables" || (!a.sub_type && inferHead(a.name)?.key === "creditors");
+export const isReceivable = (a: PartyAccount) => !a.is_group && (a.sub_type === "trade_receivables" || (!a.sub_type && inferHead(a.name)?.key === "debtors"));
+export const isPayable = (a: PartyAccount) => !a.is_group && (a.sub_type === "trade_payables" || (!a.sub_type && inferHead(a.name)?.key === "creditors"));
 
 export function partyBalances(kind: "receivable" | "payable", accounts: PartyAccount[], lines: PartyLine[], today: string): PartyReport {
   const pick = kind === "receivable" ? isReceivable : isPayable;
@@ -35,4 +35,15 @@ export function partyBalances(kind: "receivable" | "payable", accounts: PartyAcc
   const owed = r2(rows.filter(r => r.balance > 0).reduce((s, r) => s + r.balance, 0));
   const advances = r2(rows.filter(r => r.balance < 0).reduce((s, r) => s + r.balance, 0));
   return { rows, total: r2(owed + advances), owed, advances, buckets };
+}
+
+/**
+ * THE receivables / payables figures. Dashboard "To receive / To pay", the MIS report and the Receivables and
+ * Payables pages all read these, so they can never disagree. toReceive = what customers owe less their advances;
+ * toPay = what we owe suppliers less our advances to them.
+ */
+export function arAp(accounts: PartyAccount[], lines: PartyLine[], today: string) {
+  const receivable = partyBalances("receivable", accounts, lines, today);
+  const payable = partyBalances("payable", accounts, lines, today);
+  return { receivable, payable, toReceive: receivable.total, toPay: payable.total };
 }
