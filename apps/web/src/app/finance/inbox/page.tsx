@@ -10,12 +10,13 @@ import { parseCashBankGrid, parseSimpleGrid, type SimpleLine } from "@/lib/simpl
 import GroupChips, { guessGroup } from "@/components/GroupChips";
 import { useTally } from "@/lib/tallyConnection";
 import { pushToTally } from "@/lib/tallyPushRun";
+import { openDocs, matchLine, type OpenDoc, type MatchJournal } from "@/lib/billMatch";
 
 type Line = { account: string; debit: number; credit: number };
 type ItemState = "ready" | "check" | "posting" | "posted" | "failed";
 type Item = {
   id: string; fileId: string; date: string; narration: string; amount: number; lines: Line[];
-  state: ItemState; reason?: string; entryNo?: string; journalId?: string; tally?: "pushed" | "failed"; tallyError?: string;
+  state: ItemState; reason?: string; matched?: string; entryNo?: string; journalId?: string; tally?: "pushed" | "failed"; tallyError?: string;
   kind: "template" | "statement" | "bill";
 };
 type FileJob = { id: string; name: string; size: number; kind: string; status: "queued" | "reading" | "done" | "error"; note?: string; key: string };
@@ -23,8 +24,9 @@ type FileJob = { id: string; name: string; size: number; kind: string; status: "
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", amber: "#8A5A00", amberSoft: "#FFF4DB", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const inr = (n: number) => "₹" + (n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
-const isCashBank = (s: string) => /\b(cash|bank|hdfc|icici|sbi|axis|kotak|federal|canara|pnb|idfc|indusind|yes bank)\b/i.test(s);
+const isCashBank = (s: string) => /\b(cash|bank|hdfc|icici|sbi|axis|kotak|federal|canara|pnb|idfc|indusind|yes bank|credit card|card)\b/i.test(s);
 const STATEMENT_NAME = /statement|stmt|passbook|e-?statement|account\s*summary/i;
+const CARD_NAME = /credit\s*card|card\s*statement|\bcc\b|amex|visa|mastercard|rupay/i;
 let seq = 0;
 const uid = (p: string) => `${p}${Date.now().toString(36)}${(seq++).toString(36)}`;
 
@@ -41,6 +43,9 @@ export default function SmartInbox() {
   const [bizId, setBizId] = useState("");
   const [accounts, setAccounts] = useState<{ name: string; sub_type: string | null }[]>([]);
   const [bankLedger, setBankLedger] = useState("");
+  const [cardLedger, setCardLedger] = useState("");
+  const docsRef = useRef<OpenDoc[]>([]);
+  const usedDocs = useRef<Set<string>>(new Set());
   const [files, setFiles] = useState<FileJob[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [heads, setHeads] = useState<Record<string, string>>({});
@@ -68,6 +73,16 @@ export default function SmartInbox() {
       setAccounts(list);
       const bank = list.find(a => a.sub_type === "bank") ?? list.find(a => /bank/i.test(a.name));
       if (bank) setBankLedger(bank.name);
+      const card = list.find(a => /credit\s*card/i.test(a.name));
+      if (card) setCardLedger(card.name);
+      // Unpaid sales and purchases (last 18 months) for matching statement lines
+      const since = new Date(Date.now() - 548 * 86400000).toISOString().slice(0, 10);
+      fetch(`/api/finance/books?business_id=${saved}&from=${since}`).then(r => r.json()).then(d => {
+        const js = ((d.journals ?? []) as { id: string; entry_no: string; date: string; type: string; status: string; fw_fin_journal_lines: { dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { name: string } | null }[] }[])
+          .filter(j => j.status === "posted")
+          .map(j => ({ id: j.id, entry_no: j.entry_no, date: j.date, type: j.type, lines: (j.fw_fin_journal_lines ?? []).map(l => ({ name: l.fw_fin_chart_of_accounts?.name ?? "", dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0 })) })) as MatchJournal[];
+        docsRef.current = openDocs(js);
+      }).catch(() => { /* matching is a bonus */ });
     });
   }, [router]);
 
@@ -85,7 +100,7 @@ export default function SmartInbox() {
       state: e.error ? "check" : "ready", reason: e.error ?? undefined, kind: "template",
     }));
 
-  async function readStatement(job: FileJob, file: File) {
+  async function readStatement(job: FileJob, file: File, card = CARD_NAME.test(file.name)) {
     const fd = new FormData(); fd.append("file", file); fd.append("business_id", bizId);
     const res = await fetch("/api/finance/parse-bank-pdf", { method: "POST", body: fd });
     const data = await res.json().catch(() => ({}));
@@ -102,18 +117,30 @@ export default function SmartInbox() {
         for (const x of (s.suggestions ?? []) as { id: string; account: string; confidence: number }[]) sugg.set(x.id, x);
       } catch { /* those rows stay "Needs a look" */ }
     }
-    const bank = bankLedger || "Bank Account";
+    // A credit card statement: spends are debits on the card (a liability), payments to the card are credits
+    const bank = card ? (cardLedger || "Credit Card") : (bankLedger || "Bank Account");
+    let matched = 0;
     addItems(rows.map(r => {
-      const s = sugg.get(r.id); const amount = r.debit || r.credit; const other = s?.account ?? "";
+      const s = sugg.get(r.id); const amount = r.debit || r.credit;
+      let other = s?.account ?? "";
       const out = r.debit > 0;
-      const sure = !!other && (s?.confidence ?? 0) >= 0.75;
+      let sure = !!other && (s?.confidence ?? 0) >= 0.75;
+      let reason: string | undefined = sure ? undefined : other ? "Not sure about the ledger" : "Choose a ledger";
+      let matchedTo: string | undefined;
+      // Money in/out against an unpaid sale or purchase → post to that customer / supplier
+      const m = card ? null : matchLine(r, docsRef.current, usedDocs.current);
+      if (m) {
+        other = m.doc.ledger; matchedTo = `${m.doc.kind === "sale" ? "Sale" : "Bill"} ${m.doc.entryNo} · ${m.doc.date}`;
+        if (m.sure) { usedDocs.current.add(m.doc.id); sure = true; reason = undefined; matched++; }
+        else { sure = false; reason = `Possible match: ${m.doc.ledger} — ${matchedTo} (open ₹${m.doc.open.toLocaleString("en-IN")})`; }
+      }
       return {
-        id: uid("s"), fileId: job.id, date: r.date, narration: r.description.slice(0, 200), amount, kind: "statement" as const,
+        id: uid("s"), fileId: job.id, date: r.date, narration: r.description.slice(0, 200), amount, kind: "statement" as const, matched: matchedTo,
         lines: out ? [{ account: other, debit: amount, credit: 0 }, { account: bank, debit: 0, credit: amount }] : [{ account: bank, debit: amount, credit: 0 }, { account: other, debit: 0, credit: amount }],
-        state: sure ? "ready" as const : "check" as const, reason: sure ? undefined : other ? "Not sure about the ledger" : "Choose a ledger",
+        state: sure ? "ready" as const : "check" as const, reason,
       };
     }));
-    return `${rows.length} transactions`;
+    return `${rows.length} ${card ? "card " : ""}transactions${matched ? ` · ${matched} matched to bills` : ""}`;
   }
 
   async function readDocument(job: FileJob, file: File) {
@@ -146,7 +173,7 @@ export default function SmartInbox() {
         const tpl = parseCashBankGrid(grid) ?? parseSimpleGrid(grid);
         if (tpl && tpl.length) { addItems(fromSimple(job, tpl)); note = `${tpl.length} entries (template)`; }
         else note = await readStatement(job, file);
-      } else if (STATEMENT_NAME.test(file.name)) note = await readStatement(job, file);
+      } else if (STATEMENT_NAME.test(file.name) || CARD_NAME.test(file.name)) note = await readStatement(job, file);
       else note = await readDocument(job, file);
       setJob(job.id, { status: "done", note });
     } catch (e) {
@@ -176,6 +203,7 @@ export default function SmartInbox() {
     const m = new Map<string, "in" | "out" | null>();
     for (const it of items) if (it.state === "ready" || it.state === "check") for (const l of it.lines) {
       if (!isNew(l.account) || m.has(l.account)) continue;
+      if (/credit\s*card/i.test(l.account)) { m.set(l.account, null); continue; }
       const cb = it.lines.find(x => isCashBank(x.account));
       m.set(l.account, cb ? (cb.debit > 0 ? "in" : "out") : null);
     }
@@ -254,15 +282,18 @@ export default function SmartInbox() {
       <input ref={folderInput} type="file" multiple style={{ display: "none" }} {...({ webkitdirectory: "" } as Record<string, string>)} onChange={e => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} />
 
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "clamp(16px,3vw,32px)", display: "flex", flexDirection: "column", gap: 20 }}>
-        <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+        <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }} className="ib-head">
           <div>
             <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.16em", color: "#8A6420" }}>SMART INBOX</div>
             <h1 style={{ margin: "6px 0 0", fontFamily: SERIF, fontSize: "clamp(1.7rem,3.4vw,2.5rem)", fontWeight: 700, lineHeight: 1.1 }}>Drop it all in. <span style={{ fontStyle: "italic", fontWeight: 400, color: "#8A6420" }}>We&apos;ll do the typing.</span></h1>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.muted }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.muted, flexWrap: "wrap" }}>
             Bank ledger
             <input list="inbox-banks" value={bankLedger} onChange={e => setBankLedger(e.target.value)} placeholder="e.g. HDFC Bank" style={{ height: 38, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14, width: 180 }} />
             <datalist id="inbox-banks">{accounts.filter(a => a.sub_type === "bank" || /bank/i.test(a.name)).map(a => <option key={a.name} value={a.name} />)}</datalist>
+            <span style={{ marginLeft: 8 }}>Card ledger</span>
+            <input list="inbox-cards" value={cardLedger} onChange={e => setCardLedger(e.target.value)} placeholder="e.g. HDFC Credit Card" style={{ height: 38, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14, width: 180 }} />
+            <datalist id="inbox-cards">{accounts.filter(a => /card/i.test(a.name)).map(a => <option key={a.name} value={a.name} />)}</datalist>
           </div>
         </header>
 
@@ -286,7 +317,7 @@ export default function SmartInbox() {
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
           </span>
           <div style={{ fontFamily: SERIF, fontSize: "1.35rem", fontWeight: 700 }}>Drag files here</div>
-          <div style={{ fontSize: 13.5, color: C.muted, maxWidth: 520 }}>PDF statements, scanned or photographed bills (even handwritten), invoices, Excel and CSV. Hundreds at once is fine.</div>
+          <div style={{ fontSize: 13.5, color: C.muted, maxWidth: 520 }}>Bank and credit-card statements, scanned or photographed bills (even handwritten), invoices, Excel and CSV. Hundreds at once is fine. Payments are matched to your unpaid bills and invoices automatically.</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
             <button onClick={() => fileInput.current?.click()} style={btn(true)}>Choose files</button>
             <button onClick={() => folderInput.current?.click()} style={btn(false)}>Choose a folder</button>
@@ -355,6 +386,7 @@ export default function SmartInbox() {
                     <span style={chip}>{label}</span>
                     <span style={{ fontFamily: "'IBM Plex Mono',ui-monospace,monospace", fontSize: 12.5, color: C.muted }}>{it.date || "no date"}</span>
                     <b style={{ flex: 1, minWidth: 180, fontSize: 14 }}>{it.narration}</b>
+                    {it.matched && it.state !== "check" && <span style={pill("#E8F0FF", "#1F5EFF")} title="Matched to an unpaid entry">🔗 {it.matched}</span>}
                     <b style={{ fontFamily: "'IBM Plex Mono',ui-monospace,monospace" }}>{it.amount ? inr(it.amount) : ""}</b>
                     <span style={{ fontSize: 11.5, color: C.muted, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={fileName.get(it.fileId)}>{fileName.get(it.fileId)}</span>
                   </div>
