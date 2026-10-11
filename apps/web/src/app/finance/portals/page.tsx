@@ -61,7 +61,7 @@ function PortalCard({ portal, data, bizId, reload }: { portal: "gst" | "it"; dat
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ fontSize: 13.5, color: C.muted, lineHeight: 1.55 }}>
             {portal === "gst"
-              ? "Link once with an OTP sent by the GST portal to the registered mobile/email. FreWork then fetches GSTR-1 / 3B filing status, ARNs and ledger balances. Your portal password is never asked for or stored."
+              ? "Enter the GSTIN and press Connect. FreWork fetches GSTR-1, GSTR-3B and annual return filing status with ARNs from the GST record — no OTP and no portal password needed."
               : usesPassword
                 ? "Link once with the Income-tax portal password for this PAN. It goes straight to our ERI partner (Deepvue) to connect the account — FreWork never stores or logs it. FreWork then fetches ITR filing, e-verification, processing and refund status."
                 : "Approve once with an OTP from the Income-tax portal. FreWork then fetches ITR filing, e-verification and refund status. Your portal password is never asked for or stored."}

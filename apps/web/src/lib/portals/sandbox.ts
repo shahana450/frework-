@@ -3,10 +3,10 @@
 // Keys live only in server settings: SANDBOX_API_KEY, SANDBOX_API_SECRET (optional SANDBOX_API_BASE for the test host).
 import { PortalError, type PortalProvider, type PortalStatusRow } from "./types";
 
-const BASE = () => (process.env.SANDBOX_API_BASE ?? "https://api.sandbox.co.in").replace(/\/$/, "");
+export const BASE = () => (process.env.SANDBOX_API_BASE ?? "https://api.sandbox.co.in").replace(/\/$/, "");
 let cached: { token: string; until: number } | null = null;
 
-async function accessToken(): Promise<string> {
+export async function accessToken(): Promise<string> {
   if (cached && cached.until > Date.now()) return cached.token;
   const key = process.env.SANDBOX_API_KEY, secret = process.env.SANDBOX_API_SECRET;
   if (!key || !secret) throw new PortalError("NOT_CONFIGURED", "Sandbox keys aren't set on the server (SANDBOX_API_KEY, SANDBOX_API_SECRET).");

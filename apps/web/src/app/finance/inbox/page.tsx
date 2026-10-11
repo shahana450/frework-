@@ -190,6 +190,10 @@ export default function SmartInbox() {
     setJob(job.id, { status: "reading", note: "Reading…" });
     try {
       let note = "";
+      if (/26\s?as|form[\s_-]?16/i.test(file.name) && /\.pdf$/i.test(file.name)) {
+        setJob(job.id, { status: "done", note: "Tax document — open Reports → 26AS & Form 16 to read it" });
+        return;
+      }
       if (/\.(xlsx|xls|csv)$/i.test(file.name)) {
         const grid = await readGrid(file);
         const tpl = parseCashBankGrid(grid) ?? parseSimpleGrid(grid);
