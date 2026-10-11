@@ -29,11 +29,11 @@ export const metadata: Metadata = {
   applicationName: "FreWork",
   appleWebApp: { capable: true, title: "FreWork", statusBarStyle: "default" },
   title: {
-    default: "FreWork – GST Registration, ITR Filing & Business Services Online India",
+    default: "FreWork – GST, ITR & AI Bookkeeping (FreBook) | Business Platform India",
     template: "%s | FreWork",
   },
   description:
-    "FreWork is India's all-in-one business platform. GST registration, ITR filing, company registration, accounting, coworking spaces and freelance professionals — all in one place. Start, run and grow your business.",
+    "FreWork is India's all-in-one business platform: GST registration, ITR filing, company registration, FreBook AI bookkeeping with Tally, coworking spaces and freelance professionals — all in one place.",
   keywords: [
     "FreWork",
     "frework.online",
@@ -57,6 +57,11 @@ export const metadata: Metadata = {
     "GST consultant India",
     "income tax consultant India",
     "bookkeeping services India",
+    "AI accountant India",
+    "AI bookkeeping software",
+    "accounting software India",
+    "Tally AI",
+    "FreBook",
     "payroll services India",
     "coworking space India",
     "freelance professionals India",
@@ -67,7 +72,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_IN",
     url: "https://frework.online",
-    title: "FreWork – GST Registration, ITR Filing & Business Services Online India",
+    title: "FreWork – GST, ITR & AI Bookkeeping (FreBook) | Business Platform India",
     description:
       "FreWork is India's all-in-one business platform — GST registration, ITR filing, company registration, coworking spaces and expert professionals at your fingertips.",
     siteName: "FreWork",
