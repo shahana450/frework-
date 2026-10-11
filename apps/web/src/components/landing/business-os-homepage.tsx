@@ -65,7 +65,7 @@ const MODULES = [
       heading: "Never miss a compliance deadline",
       why: "Penalties for missed GST or ITR filings can be severe. FreWork tracks every deadline for you and files returns accurately and on time.",
       steps: ["Share your data or grant portal access", "We reconcile and prepare returns", "You approve before filing", "Acknowledgement delivered instantly"],
-      pricing: "Starting ₹499/filing",
+      pricing: "Priced per filing",
       time: "24–48 hrs turnaround",
       features: [
         { icon: FileText, text: "GSTR-1, GSTR-3B, Annual Return" },
@@ -525,7 +525,7 @@ export function BusinessOSHomepage() {
           {/* Stats strip */}
           <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35 }}
             className="flex items-center justify-center gap-8 flex-wrap mb-6">
-            {[["₹499","Starting Price"],["3–5 days","GSTIN turnaround"],["FreBook","Chat bookkeeping"],["Tally","Two-way sync"]].map(([n,l]) => (
+            {[["Expert CAs","Every filing"],["3–5 days","GSTIN turnaround"],["FreBook","Chat bookkeeping"],["Tally","Two-way sync"]].map(([n,l]) => (
               <div key={l} className="text-center">
                 <p className="text-xl font-black leading-none" style={{ color:"#232A63" }}>{n}</p>
                 <p className="text-[10px] font-semibold mt-1" style={{ color:"#4A5070" }}>{l}</p>
@@ -565,7 +565,7 @@ export function BusinessOSHomepage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { icon: Building2, title: "Start", sub: "Register & Set Up", stat: "7 days", items: ["Company Registration", "GST Number", "MSME Certificate"], href: "/services/business-registration", color: "#232A63" },
-              { icon: FileText, title: "Comply", sub: "Tax & Compliance", stat: "from ₹499", items: ["GST Filing", "ITR Filing", "ROC / MCA"], href: "/services/compliance", color: "#C2410C" },
+              { icon: FileText, title: "Comply", sub: "Tax & Compliance", stat: "CA-led", items: ["GST Filing", "ITR Filing", "ROC / MCA"], href: "/services/compliance", color: "#C2410C" },
               { icon: Users, title: "Hire", sub: "Talent & Experts", stat: "24 hr match", items: ["Professionals", "Developers", "Designers"], href: "/freelancers", color: "#C2410C" },
               { icon: MapPin, title: "Work", sub: "Coworking Spaces", stat: "Verified spaces", items: ["Hot Desks", "Private Cabins", "8 Cities"], href: "/coworking", color: "#C2410C" },
               { icon: TrendingUp, title: "Grow", sub: "Funding & Scale", stat: "Investor-ready", items: ["Pitch Decks", "DPR / Business Plan", "Investor Connect"], href: "/services/dpr", color: "#232A63" },

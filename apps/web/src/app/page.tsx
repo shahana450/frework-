@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "FreWork — GST Registration, ITR Filing & Business Services Online India",
   description:
-    "FreWork: India's all-in-one business platform. GST registration, ITR filing, company registration, coworking spaces and expert professionals — all online. Starting ₹499.",
+    "FreWork: India's all-in-one business platform. GST registration, ITR filing, company registration, coworking spaces and expert professionals — all online.",
   keywords: [
     "FreWork",
     "frework.online",
@@ -41,7 +41,7 @@ const faqJsonLd = {
     {
       "@type": "Question",
       "name": "What is the cost of GST registration in India?",
-      "acceptedAnswer": { "@type": "Answer", "text": "GST registration through FreWork starts at ₹499 inclusive of all government fees. Our CAs ensure quick and accurate registration." }
+      "acceptedAnswer": { "@type": "Answer", "text": "FreWork's CAs handle GST registration end to end. The current price is shown on the GST registration service page before you order." }
     },
     {
       "@type": "Question",

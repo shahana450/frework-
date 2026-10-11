@@ -232,7 +232,7 @@ export function HomepageHero() {
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#C9A84C]/40 to-transparent" />
               <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/6">
                 {[
-                  { num: "₹499", label: "Starting price", sub: "GST registration", color: "text-[#C9A84C]" },
+                  { num: "3–5 days", label: "GSTIN turnaround", sub: "GST registration", color: "text-[#C9A84C]" },
                   { num: "expert professionals", label: "Qualified Experts", sub: "on your team", color: "text-blue-400" },
                   { num: "24 hrs", label: "Response Time", sub: "guaranteed", color: "text-emerald-400" },
                   { num: "₹1,499", label: "FreBook / month", sub: "+ GST, no hidden fees", color: "text-purple-400" },
