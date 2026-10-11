@@ -1,4 +1,5 @@
 "use client";
+import { dueText, dueChip } from "@/lib/dueText";
 // FreBook home — Bento grid. White and light-grey tiles, navy and orange accents. Every figure comes from /api/finance/dashboard.
 import { useState } from "react";
 import Link from "next/link";
@@ -86,7 +87,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         const todo: { text: string; href: string; tone: "warn" | "info" | "go" }[] = [];
         for (const al of dash.alerts.slice(0, 2)) todo.push({ text: al.text, href: al.href, tone: al.tone === "info" ? "info" : "warn" });
         const nextDue = [...(dash.gst ?? [])].sort((x, y) => x.daysLeft - y.daysLeft)[0];
-        if (nextDue) todo.push({ text: `${nextDue.form} for ${nextDue.period} due in ${nextDue.daysLeft} day${nextDue.daysLeft === 1 ? "" : "s"}`, href: "/finance/gst/returns", tone: nextDue.daysLeft <= 5 ? "warn" : "info" });
+        if (nextDue) todo.push({ text: `${nextDue.form} for ${nextDue.period} ${dueText(nextDue.daysLeft)}`, href: "/finance/gst/returns", tone: nextDue.daysLeft <= 5 ? "warn" : "info" });
         todo.push({ text: "Drop bank statements & bills in Smart Inbox", href: "/finance/inbox", tone: "go" });
         if (dash.recent.length < 5) todo.push({ text: "Finish setup — about 10 minutes", href: "/finance/start", tone: "go" });
         else todo.push({ text: "This month's MIS report", href: "/finance/mis", tone: "go" });
@@ -170,7 +171,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
           {!dash ? <div style={{ fontSize: 13, color: C.muted }}>Checking…</div>
             : dues.length === 0 ? <div style={{ fontSize: 13, color: C.pos, fontWeight: 600 }}>✓ Nothing due in the next few weeks.</div>
             : (showAllDues ? dues : dues.slice(0, 6)).map(d => {
-              const t = d.filed ? [C.posSoft, C.pos, "Filed ✓"] : d.daysLeft < 0 ? [C.negSoft, C.neg, `${-d.daysLeft}d late`] : d.daysLeft <= 3 ? [C.negSoft, C.neg, d.daysLeft === 0 ? "Today" : `${d.daysLeft}d`] : d.daysLeft <= 10 ? [C.orangeSoft, C.orangeInk, `${d.daysLeft}d`] : [C.tile, C.navy, `${d.daysLeft}d`];
+              const t = d.filed ? [C.posSoft, C.pos, "Filed ✓"] : d.daysLeft < 0 ? [C.negSoft, C.neg, dueChip(d.daysLeft)] : d.daysLeft <= 3 ? [C.negSoft, C.neg, dueChip(d.daysLeft)] : d.daysLeft <= 10 ? [C.orangeSoft, C.orangeInk, `${d.daysLeft}d`] : [C.tile, C.navy, `${d.daysLeft}d`];
               return (
                 <Link key={d.key} href={d.href} title={d.filed ? `Filed${d.filed.on ? " on " + d.filed.on : ""}${d.filed.arn ? " · ARN " + d.filed.arn : ""}${d.filed.demo ? " (demo data)" : ""}` : d.note} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 14, background: C.tile, opacity: d.filed ? 0.75 : 1, textDecoration: "none", color: C.ink }}>
                   <span style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 38, flexShrink: 0 }}>

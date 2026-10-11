@@ -1,4 +1,5 @@
 "use client";
+import { financeTitle } from "@/lib/dueText";
 import { useState, useEffect } from "react";
 import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
 import { usePathname, useRouter } from "next/navigation";
@@ -165,7 +166,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <title>{bizName ? `${bizName} · FreBook | FreWork` : "FreBook — Accounting | FreWork"}</title>
+      <title>{financeTitle(pathname, search, bizName)}</title>
       <meta name="description" content="FreBook: chat bookkeeping, GST, reports and Tally sync for your business." />
       <style>{FINANCE_CSS}</style>
       <UpdatePrompt />

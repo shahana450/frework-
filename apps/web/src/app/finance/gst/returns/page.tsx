@@ -1,4 +1,5 @@
 "use client";
+import { dueChip } from "@/lib/dueText";
 // GST Returns centre — every GST return in one place: what's due next, and where to prepare each one.
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -82,7 +83,7 @@ export default function GstReturnsCentre() {
                 <Link key={d.form + d.due} href={d.href} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(217,181,111,0.3)", borderRadius: 14, padding: "12px 14px", color: "#FFFFFF", textDecoration: "none", display: "flex", flexDirection: "column", gap: 4 }}>
                   <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><b style={{ fontSize: 16 }}>{d.form}</b>{f
                     ? <span style={{ fontSize: 11.5, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: C.posSoft, color: C.pos }}>Filed ✓</span>
-                    : <span style={{ fontSize: 11.5, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: n <= 3 ? C.negSoft : n <= 10 ? C.amberSoft : C.posSoft, color: n <= 3 ? C.neg : n <= 10 ? C.amber : C.pos }}>{n === 0 ? "Today" : `${n} days`}</span>}</span>
+                    : <span style={{ fontSize: 11.5, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: n <= 3 ? C.negSoft : n <= 10 ? C.amberSoft : C.posSoft, color: n <= 3 ? C.neg : n <= 10 ? C.amber : C.pos }}>{dueChip(n)}</span>}</span>
                   <span style={{ fontSize: 13, color: "#C9D3CE" }}>{d.label} · {d.period}</span>
                   {f
                     ? <span style={{ fontSize: 12.5, color: "#9FE3C6", overflowWrap: "anywhere" }}>Filed ✓{f.on ? ` ${new Date(`${f.on}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" })}` : ""}{f.arn ? ` · ARN ${f.arn}` : ""}</span>
