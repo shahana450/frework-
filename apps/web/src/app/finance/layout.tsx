@@ -72,7 +72,7 @@ const TOP_ICONS = [
   { href: "/finance/payables", label: "Payables" },
   { href: "/finance/reports?tab=profit_loss", label: "P&L" },
   { href: "/finance/reports?tab=balance_sheet", label: "Balance Sheet" },
-  { href: "/finance/gst", label: "GST" },
+  { href: "/finance/gst/returns", label: "GST" },
   { href: "/finance/tally", label: "Tally" },
 ];
 

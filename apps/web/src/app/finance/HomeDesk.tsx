@@ -80,6 +80,26 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
 
       {dashErr && <div style={{ ...tile, flexDirection: "row", alignItems: "center", color: C.warn, background: C.warnSoft, borderColor: "#FFE2A8" }}>{dashErr}{onRetry && <button onClick={onRetry} style={{ marginLeft: "auto", border: `1px solid ${C.warn}`, background: "transparent", color: C.warn, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontWeight: 700 }}>Try again</button>}</div>}
 
+      {/* Today: the few things worth doing now */}
+      {dash && (() => {
+        const todo: { text: string; href: string; tone: "warn" | "info" | "go" }[] = [];
+        for (const al of dash.alerts.slice(0, 2)) todo.push({ text: al.text, href: al.href, tone: al.tone === "info" ? "info" : "warn" });
+        const nextDue = [...(dash.gst ?? [])].sort((x, y) => x.daysLeft - y.daysLeft)[0];
+        if (nextDue) todo.push({ text: `${nextDue.form} for ${nextDue.period} due in ${nextDue.daysLeft} day${nextDue.daysLeft === 1 ? "" : "s"}`, href: "/finance/gst/returns", tone: nextDue.daysLeft <= 5 ? "warn" : "info" });
+        todo.push({ text: "Drop bank statements & bills in Smart Inbox", href: "/finance/inbox", tone: "go" });
+        if (dash.recent.length < 5) todo.push({ text: "Finish setup — about 10 minutes", href: "/finance/start", tone: "go" });
+        else todo.push({ text: "This month's MIS report", href: "/finance/mis", tone: "go" });
+        return (
+          <section aria-label="To do today" style={{ ...tile, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, padding: "12px 14px" }}>
+            <span style={{ ...label, marginRight: 4 }}>Today</span>
+            {todo.map(t => (
+              <Link key={t.text} href={t.href} className="lift" style={{ fontSize: 13, fontWeight: 700, padding: "8px 12px", borderRadius: 999, textDecoration: "none", border: `1px solid ${C.line}`,
+                background: t.tone === "warn" ? C.warnSoft : t.tone === "go" ? "#FFFFFF" : C.navySoft, color: t.tone === "warn" ? C.warn : C.ink }}>{t.text} →</Link>
+            ))}
+          </section>
+        );
+      })()}
+
       <div className="bento">
         {/* Large entry tile */}
         <section className="b-entry" aria-labelledby="hero" style={{ ...tile, padding: 24, gap: 14 }}>
