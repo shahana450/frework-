@@ -152,8 +152,29 @@ export default function SmartInbox() {
     if (!res.ok) throw new Error(data.error ?? "Couldn't read this file.");
     if (data.parsed?.document_kind === "bank_statement") return readStatement(job, file);
     if (data.multi?.sentences?.length) {
-      addItems((data.multi.sentences as string[]).map(s => ({ id: uid("m"), fileId: job.id, date: "", narration: s, amount: 0, lines: [], state: "check" as const, reason: "Several vouchers in one file — open in FreBook", kind: "bill" as const })));
-      return `${data.multi.sentences.length} vouchers found`;
+      // Several invoices in one PDF: split them and draft each one on its own
+      const sentences = data.multi.sentences as string[];
+      let readyCount = 0;
+      for (let i = 0; i < sentences.length; i += 4) {
+        setJob(job.id, { note: `Splitting: invoice ${Math.min(i + 4, sentences.length)} of ${sentences.length}…` });
+        const parts = await Promise.all(sentences.slice(i, i + 4).map(async s => {
+          try {
+            const r = await fetch("/api/finance/chat-book/fast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: s, business_id: bizId, user_id: user?.id ?? "", history: [] }) });
+            const d = await r.json();
+            const p = d.parsed as { status: string; transaction_date: string; narrative: string; amount: number; confidence?: number; account_confidence?: number; lines: Line[]; needs_clarification?: string[] } | undefined;
+            if (!r.ok || !p) throw new Error();
+            const lines = (p.lines ?? []).map(l => ({ account: l.account, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0 }));
+            const sure = p.status === "complete" && lines.length >= 2 && (p.account_confidence ?? p.confidence ?? 1) >= 0.75;
+            if (sure) readyCount++;
+            return { id: uid("m"), fileId: job.id, date: p.transaction_date ?? "", narration: p.narrative || s.slice(0, 200), amount: Number(p.amount) || lines.reduce((t, l) => t + l.debit, 0), lines, kind: "bill" as const,
+              state: sure ? "ready" as const : "check" as const, reason: sure ? undefined : p.needs_clarification?.[0] ?? "Check the ledgers" };
+          } catch {
+            return { id: uid("m"), fileId: job.id, date: "", narration: s.slice(0, 200), amount: 0, lines: [], state: "check" as const, reason: "Couldn't draft this one — open in FreBook", kind: "bill" as const };
+          }
+        }));
+        addItems(parts);
+      }
+      return `${sentences.length} invoices split · ${readyCount} ready`;
     }
     const p = data.parsed as { status: string; transaction_date: string; narrative: string; amount: number; confidence?: number; account_confidence?: number; lines: Line[]; needs_clarification?: string[] } | undefined;
     if (!p) throw new Error("Nothing to book in this file.");

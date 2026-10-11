@@ -45,6 +45,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "🗓", label: "Monthly Recap", href: "/finance/recap" },
     { icon: "🔍", label: "Analysis & Audit", href: "/finance/audit", accountant: true },
     { icon: "🧮", label: "GST Returns", href: "/finance/gst" },
+    { icon: "🧾", label: "ITC Match & 3B Table 4", href: "/finance/gst/itc" },
     { icon: "🔄", label: "GST Reconciliation", href: "/finance/audit/gst-recon", accountant: true },
     { icon: "🔖", label: "TDS", href: "/finance/tds", accountant: true },
   ] },
