@@ -134,6 +134,8 @@ begin
     raise exception 'FW_ACCOUNT: not a postable account of this business: %', v_bad;
   end if;
 
+  -- Reversals mirror an existing entry line for line, so these rules apply to everything except reversals
+  if coalesce(p_header->>'source', '') <> 'reversal' then
   -- Phase 1: the same ledger can't be on both sides of one entry
   select a.name into v_bad from jsonb_array_elements(p_lines) d
     join jsonb_array_elements(p_lines) c on (d->>'account_id') = (c->>'account_id')
@@ -151,13 +153,14 @@ begin
        and ((v_type = 'receipt' and coalesce((l->>'dr')::numeric, 0) > 0) or (v_type = 'payment' and coalesce((l->>'cr')::numeric, 0) > 0))) then
     raise exception 'FW_INVALID: a % must % a cash or bank ledger', v_type, case when v_type = 'receipt' then 'debit' else 'credit' end;
   end if;
+  end if;
 
   select id, is_locked into v_fy from fw_fin_financial_years
   where business_id = p_business and v_date between start_date and end_date
   order by start_date desc limit 1;
   -- The date must fall in one of the business's financial years (when any are set up)
   select exists (select 1 from fw_fin_financial_years where business_id = p_business) into v_has_fy;
-  if v_has_fy and v_fy.id is null and coalesce(p_header->>'source', '') <> 'opening_balances' then
+  if v_has_fy and v_fy.id is null and coalesce(p_header->>'source', '') not in ('opening_balances', 'reversal') then
     raise exception 'FW_INVALID: % is outside your financial years', v_date;
   end if;
   if v_fy.is_locked and not coalesce((p_header->>'force')::boolean, false) then
