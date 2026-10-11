@@ -1,12 +1,12 @@
 # Round 2 (COWORK_PROMPT_2): report for review
 
-**Branch:** `fix/launch-blockers`, two new commits on top of `2d51052`. **Nothing was pushed, merged or deployed. No SQL was run. No secrets were touched.** The `wsg-hotfix` folder was only read, to copy wording.
+**Branch:** `fix/launch-blockers`, four new commits on top of `2d51052`. **Nothing was pushed, merged or deployed. No SQL was run. No secrets were touched.** The `wsg-hotfix` folder was only read, to copy wording.
 
-**Checks after every task:** `tsc --noEmit -p apps/web` is clean. `npm run test:accounting` (with `.test-dist` deleted first) gives **242 passed, 0 failed** (was 225).
+**Checks after every task:** `tsc --noEmit -p apps/web` is clean. `npm run test:accounting` (with `.test-dist` deleted first) gives **250 passed, 0 failed** (was 225).
 
 **Part A as answered by the owner (11 Oct 2026):**
 - Old Starter / Professional / Enterprise plans: **no**, only FreBook ₹1,499.
-- Income-tax portal provider: **sandbox**.
+- Income-tax portal provider: **sandbox** at first. Sandbox has no ITR-status API, so the owner then chose **Deepvue**.
 - Legal entity name, CIN, GSTIN, address, jurisdiction, grievance officer and email: **not given yet**, so Task 4 waits.
 
 ## R2.1 Status by task
@@ -14,7 +14,7 @@
 | Task | Status | Commit | What changed |
 |---|---|---|---|
 | 1. Pricing on the launch branch | Done | d7114ee | `/pricing` and `/finance/pricing` show only FreBook with **🎁 Claim 1 month free**. It calls `POST /api/finance/subscription/claim-trial`, shows the result and goes to `/finance/start`. Wording is from production: "Start with one month free" and "₹0 for the first month · then ₹1,499 + GST/month". Logged-out visitors go to `/register?plan=frebook`. Anyone with any subscription row (paid, trial or expired) sees Subscribe instead. The claim logic moved to `lib/claimTrial.ts`. **Bug fixed:** the route used `maybeSingle()`, which returns no row when a user has several rows, so the claim went through; it now uses `limit(1)`. Test `claimTrial`: a second claim returns 409, also after expiry, for old-plan accounts and in a race. The database is mocked. |
-| 2. Income tax through Sandbox | **Stopped: the API doesn't exist** | — | Per the prompt, no endpoints were guessed and no code was written. See R2.2. `ADAPTERS.sandbox` still uses Demo for `portal === "it"`. |
+| 2. Income tax | Done, **through Deepvue** (owner's choice) | 3c116ee | Sandbox has no ITR-status API (R2.2), so the owner chose Deepvue. `createDeepvueItProvider()` in `lib/portals/deepvue.ts`, registered as `ADAPTERS.deepvue` for `portal === "it"` (`ERI_PROVIDER=deepvue`). Shows ITR filed, e-verified and processed, with acknowledgement number and date, one row per assessment year (a revised return replaces the original), plus a refund row when the portal's status mentions a refund. **Deepvue links with the Income-tax portal password, not an OTP** (R2.2a). `ERI_PROVIDER=sandbox` now fails clearly instead of showing demo data. Test `deepvue.portal` uses Deepvue's documented sample reply. |
 | 3. Portal Connect data on the GST pages | Done | 93efc61 | When the GSTIN is linked through Sandbox: the GST Returns centre shows **Filed ✓** with date and ARN on each due card that is already filed; GSTR-3B and GSTR-9 show "Filed on … (ARN …)". Demo data never marks anything filed. **GSTR-2B:** Sandbox can fetch it with a taxpayer OTP session, so ITC Match has **Fetch 2B from portal** (shown only when `GSP_PROVIDER=sandbox`). Flow: GST portal username → OTP → verify and fetch. Upload still works. See R2.3. Test `portalGst`. |
 | 4. Legal pages | **Blocked: Part A legal values are blank** | — | Not started. `DRAFTS.md`, `/terms`, `/privacy` and `/refund-policy` are unchanged. When done: lawyer review before launch. |
 | 5. Hand-back | Done | (this commit) | This section, R2.4–R2.6. |
@@ -27,10 +27,22 @@ Sandbox's official docs (developer.sandbox.co.in, read 11 Oct 2026) offer, for i
 
 There is **no** endpoint to log in a PAN holder with an OTP, and none for ITR filed / e-verified / processed / refund status. So `createSandboxItProvider()` with `requestOtp`, `verifyOtp` and `fetchStatuses` can't be built without guessing.
 
-**Owner decides:**
-- ask Sandbox whether an ITR-status API is planned or available on request;
-- use another ERI for status; or
-- leave income tax in Demo for launch. `ERI_PROVIDER` should stay unset until then.
+**Owner decided (11 Oct):** use Deepvue for income tax and keep Sandbox for GST. A draft email asking Sandbox about an ITR-status API was also prepared, in case they add one later.
+
+## R2.2a Deepvue: what to know before launch
+
+- **Password, not OTP.** Deepvue's `create-client` takes the taxpayer's Income-tax portal username (the PAN) and password. FreWork:
+  - sends the password to Deepvue once, when linking;
+  - never stores it, logs it or writes it to the audit log (a test enforces this);
+  - keeps only Deepvue's `itr_client_id`, encrypted with `PORTAL_TOKEN_KEY`;
+  - asks for a consent tick ("I am the PAN holder or have their permission…") before the password field works.
+- **Legal and privacy review before launch:** the privacy policy must say that the Income-tax login is shared with Deepvue to read filing status. Have the lawyer check this together with Task 4, and check Deepvue's data-processing terms.
+- **Refunds:** Deepvue gives no refund amount or refund-status field; FreWork reads refunds from the portal's status lines ("Refund has been issued", "processed with refund due"). In Deepvue's sample, `no demand no refund` shows no refund row.
+- **To confirm on the first Deepvue test** (the docs don't show these):
+  - the exact wording of refund status lines;
+  - how long an `itr_client_id` stays valid. FreWork treats a link as good for a year and asks the user to reconnect when Deepvue answers `INACTIVE CLIENT`;
+  - that `username` is the PAN. The docs' example is just "John Doe", but the Income-tax portal user ID is the PAN.
+- The user's PAN password changes on the Income-tax portal will break the link; the user reconnects from Portal Connect.
 
 ## R2.3 Notes on the Sandbox GST work (Task 3)
 
@@ -63,7 +75,10 @@ Nothing new this round. Still outstanding from round 1 (files in `apps/web/src/a
 - `GSP_PROVIDER` = `sandbox`
 - `PORTAL_TOKEN_KEY`: 32 random bytes, base64. It encrypts the stored public-record link, not the 2B session.
 - Optional: `SANDBOX_API_BASE`, only to point at Sandbox's test host.
-- **Not** `ERI_PROVIDER`: Task 2 wasn't done.
+- `ERI_PROVIDER` = `deepvue`
+- `DEEPVUE_CLIENT_ID`
+- `DEEPVUE_CLIENT_SECRET`
+- Optional: `DEEPVUE_API_BASE`, only if Deepvue gives you a test host.
 
 ## R2.6 Plan for retiring `hotfix/tally-port`
 
@@ -76,7 +91,7 @@ Production runs `hotfix/tally-port` (`3992b47`), deployed from the `wsg-hotfix` 
 2. **Staging:**
    - Deploy `fix/launch-blockers` to a Vercel **preview** (not `--prod`) with the staging Supabase env.
    - Run R2.4 on staging.
-   - Run REPORT §3 (smoke test) plus: claim the free month twice (the second says it's used); link a GSTIN through Sandbox and see Filed ✓ on the Returns centre and 3B; Fetch 2B on ITC Match with a real OTP.
+   - Run REPORT §3 (smoke test) plus: claim the free month twice (the second says it's used); link a GSTIN through Sandbox and see Filed ✓ on the Returns centre and 3B; Fetch 2B on ITC Match with a real OTP; link a test PAN through Deepvue on Portal Connect and check the ITR rows and the Home reminder.
    - Run Playwright (§6).
 3. **Owner approves staging.**
 4. **Record the hotfix as merged.** The hotfix has commits made after round 1's `-s ours` merge, which was done on the old history before the rewrite. On the owner's "merge":
