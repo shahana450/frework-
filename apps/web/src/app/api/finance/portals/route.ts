@@ -69,6 +69,13 @@ export async function POST(req: NextRequest) {
       const otp = await provider.requestOtp(id);
       const { error } = await supabase.from("fw_fin_portal_links").upsert({ business_id: bizId, portal, identifier: id, provider: provider.id, status: "otp_pending", otp_ref: otp.otpRef, session_enc: null, last_error: null, created_by: gate.user.id }, { onConflict: "business_id,portal" });
       if (error) return missing(error.message) ? NextResponse.json({ error: NEEDS_SQL }, { status: 409 }) : serverError("portals start", error, "Couldn't start the link.");
+      if (provider.noOtp) {
+        const session = await provider.verifyOtp(id, otp.otpRef, "");
+        await supabase.from("fw_fin_portal_links").update({ status: "linked", session_enc: seal(session.token, provider.demo), expires_at: session.expiresAt, otp_ref: null }).eq("business_id", bizId).eq("portal", portal);
+        await logAudit(supabase, { businessId: bizId, actor: gate.user.id, action: "portal_link", source: "portals", detail: { portal, identifier: id, provider: provider.id } });
+        const n = await sync(bizId, portal);
+        return NextResponse.json({ ok: true, linked: true, synced: n, message: `${otp.message} ${n} filing statuses fetched.`, demo: false });
+      }
       return NextResponse.json({ ok: true, message: otp.message, demo: provider.demo });
     }
     if (b.action === "verify") {

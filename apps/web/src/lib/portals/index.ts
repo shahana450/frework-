@@ -3,9 +3,11 @@
 //   IT:   ERI_PROVIDER=<id> plus that provider's keys
 // Real providers plug in here once their API documentation and sandbox keys are available.
 import { createDemoProvider } from "./demo";
+import { createSandboxGstProvider } from "./sandbox";
 import { PortalError, type Portal, type PortalProvider } from "./types";
 
 const ADAPTERS: Record<string, (portal: Portal) => PortalProvider> = {
+  sandbox: portal => portal === "gst" ? createSandboxGstProvider() : createDemoProvider(portal),   // Sandbox: GST status now; income tax stays demo until its APIs are wired
   // "mastersindia": portal => createMastersIndiaProvider(...),   ← added when sandbox keys + API docs are in hand
 };
 

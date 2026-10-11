@@ -21,6 +21,8 @@ export interface PortalProvider {
   id: string;
   label: string;
   demo: boolean;
+  /** True when no taxpayer OTP is needed (status comes from a public record): linking happens in one step. */
+  noOtp?: boolean;
   /** Ask the portal to send an OTP to the taxpayer's registered contact. */
   requestOtp(identifier: string): Promise<OtpStart>;
   /** Exchange the OTP for a provider session. */

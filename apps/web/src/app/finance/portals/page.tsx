@@ -66,7 +66,7 @@ function PortalCard({ portal, data, bizId, reload }: { portal: "gst" | "it"; dat
               <input value={identifier} onChange={e => setIdentifier(e.target.value.toUpperCase())} placeholder={portal === "gst" ? "32ABCDE1234F1Z5" : "ABCDE1234F"} maxLength={portal === "gst" ? 15 : 10}
                 style={{ height: 42, width: 220, borderRadius: 11, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: MONO, fontSize: 14, color: C.ink }} />
             </label>
-            <button onClick={() => call("start", { identifier })} disabled={busy || !identifier} style={{ ...btn(!link || link.status !== "otp_pending"), alignSelf: "flex-end" }}>Send OTP</button>
+            <button onClick={() => call("start", { identifier })} disabled={busy || !identifier} style={{ ...btn(!link || link.status !== "otp_pending"), alignSelf: "flex-end" }}>Connect</button>
           </div>
           {link?.status === "otp_pending" && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
