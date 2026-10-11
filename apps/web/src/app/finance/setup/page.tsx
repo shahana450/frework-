@@ -86,7 +86,7 @@ export default function BusinessSetup() {
   const baseFy = isIN ? indianFyStart() : fyStartFor(+form.fy_start.slice(5, 7) || 1);
 
   async function handleSubmit() {
-    if (!userId) return;
+    if (!userId) { setError("Your session has expired. Please sign in again, then press Create Business."); return; }
     const gate = canCreate(step, form);
     if (!gate.ok) { setError(gate.error); setStep(gate.step as Step); return; }
     if (Date.now() - reviewSince < 800) return;          // a double-click on "Next" never creates the business
@@ -533,7 +533,7 @@ export default function BusinessSetup() {
           ) : (
             <button
               onClick={handleSubmit}
-              disabled={saving || Date.now() - reviewSince < 800}
+              disabled={saving}
               style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "10px 28px", borderRadius: 8, cursor: saving ? "wait" : "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: saving ? 0.7 : 1 }}
             >
               {saving ? "Creating…" : "Create Business →"}
