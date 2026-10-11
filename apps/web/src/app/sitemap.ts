@@ -7,6 +7,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: BASE_URL,                                       lastModified: now, changeFrequency: "weekly",  priority: 1.0  },
     { url: `${BASE_URL}/frebook`,                          lastModified: now, changeFrequency: "weekly",  priority: 0.98 },
+    { url: `${BASE_URL}/frebook/ai-accountant`,            lastModified: now, changeFrequency: "monthly", priority: 0.92 },
+    { url: `${BASE_URL}/frebook/tally-ai`,                 lastModified: now, changeFrequency: "monthly", priority: 0.92 },
     { url: `${BASE_URL}/services`,                         lastModified: now, changeFrequency: "weekly",  priority: 0.95 },
     { url: `${BASE_URL}/services/gst`,                    lastModified: now, changeFrequency: "monthly", priority: 0.9  },
     { url: `${BASE_URL}/services/income-tax`,             lastModified: now, changeFrequency: "monthly", priority: 0.9  },
