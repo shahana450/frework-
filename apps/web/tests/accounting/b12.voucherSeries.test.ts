@@ -5,13 +5,13 @@ import { seriesPrefix, formatVoucherNo, voucherKind, fyLabel } from "../../src/l
 
 test("B12: one series per voucher type, per financial year", () => {
   assert.equal(fyLabel("2026-04-01"), "2026-27");
-  assert.equal(formatVoucherNo(seriesPrefix("receipt", "2026-04-01"), 1), "RV/2026-27/0001");
-  assert.equal(seriesPrefix("payment", "2026-04-01"), "PV/2026-27");
-  assert.equal(seriesPrefix("sales", "2026-04-01"), "SV/2026-27");
-  assert.equal(seriesPrefix("purchase", "2026-04-01"), "PU/2026-27");
-  assert.equal(seriesPrefix("contra", "2026-04-01"), "CV/2026-27");
+  assert.equal(formatVoucherNo(seriesPrefix("receipt", "2026-04-01"), 1), "RCT/2026-27/0001");
+  assert.equal(seriesPrefix("payment", "2026-04-01"), "PMT/2026-27");
+  assert.equal(seriesPrefix("sales", "2026-04-01"), "INV/2026-27");
+  assert.equal(seriesPrefix("purchase", "2026-04-01"), "PUR/2026-27");
+  assert.equal(seriesPrefix("contra", "2026-04-01"), "CTR/2026-27");
   assert.equal(seriesPrefix("journal", "2026-04-01"), "JV/2026-27");
-  assert.equal(seriesPrefix("receipt", "2027-04-01"), "RV/2027-28", "new year, new series");
+  assert.equal(seriesPrefix("receipt", "2027-04-01"), "RCT/2027-28", "new year, new series");
   assert.equal(seriesPrefix("receipt", "2026-04-01", { receipt: "rct" }), "RCT/2026-27", "configurable per business");
 });
 

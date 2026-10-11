@@ -197,7 +197,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
       try {
         const res = await fetch("/api/finance/chat-book/confirm-batch", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: chunk.map(build), business_id: bizId, user_id: userId, account_heads: accountHeads }),
+          body: JSON.stringify({ items: chunk.map(build), business_id: bizId, user_id: userId, account_heads: accountHeads, source: "statement", bank_account_name: bankLedger.trim(), file_name: file.name }),
         });
         const data = await res.json();
         if (!res.ok || data.needs_heads) throw new Error(data.error ?? `Choose a group for ${data.needs_heads?.map((h: { account: string }) => h.account).join(", ")}`);

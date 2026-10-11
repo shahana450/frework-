@@ -1,7 +1,7 @@
 // Voucher numbering (B12): a separate series per voucher type, per financial year, configurable per business.
-// Mirrors fw_fin_series_prefix() in 2026-10-16_b12_voucher_series.sql — keep the two in step.
+// Mirrors fw_fin_series_prefix() in 2026-10-22_p1_journal_rules.sql (INV/RCT/PMT/PUR/JV/CTR/CN/DN) — keep the two in step.
 export const DEFAULT_SERIES: Record<string, string> = {
-  receipt: "RV", payment: "PV", sales: "SV", purchase: "PU", journal: "JV", contra: "CV", credit_note: "CN", debit_note: "DN",
+  receipt: "RCT", payment: "PMT", sales: "INV", purchase: "PUR", journal: "JV", contra: "CTR", credit_note: "CN", debit_note: "DN",
 };
 
 /** "2026-27" for a financial year starting 1 Apr 2026 (or any start date in 2026). */
