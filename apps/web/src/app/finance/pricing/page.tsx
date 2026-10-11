@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { FREBOOK_PLAN, isLegacyPlan, planLabel } from "@/lib/plans";
+import { FREBOOK_PLAN, FREBOOK_PRICE_LABEL, isLegacyPlan, planLabel } from "@/lib/plans";
 
 const PLANS = [{ ...FREBOOK_PLAN, badge: null as string | null, color: "#232A63", features: [...FREBOOK_PLAN.features], excluded: [] as string[] }];
 
@@ -19,6 +19,24 @@ export default function PricingPage() {
   const [currentSub, setCurrentSub] = useState<{ plan: string; status: string; ends_at: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState<string | null>(null);
+  const [claimMsg, setClaimMsg] = useState("");
+  const [trialUsed, setTrialUsed] = useState(false);   // any past subscription row means the free month is gone
+  const canClaim = !currentSub && !trialUsed;
+
+  // One free month, once per account: the server refuses a second claim with 409.
+  async function claimFreeMonth() {
+    setPaying(FREBOOK_PLAN.id); setClaimMsg("");
+    try {
+      const r = await fetch("/api/finance/subscription/claim-trial", { method: "POST" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { if (r.status === 409) setTrialUsed(true); setClaimMsg(d.error ?? "Couldn't start your free month."); return; }
+      setCurrentSub({ plan: FREBOOK_PLAN.id, status: "trial", ends_at: d.ends_at });
+      setClaimMsg(`✓ Your free month has started — FreBook is yours until ${new Date(d.ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}.`);
+      setTimeout(() => router.push("/finance/start"), 1800);
+    } catch {
+      setClaimMsg("Couldn't start your free month. Please try again.");
+    } finally { setPaying(null); }
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user: u } }) => {
@@ -33,6 +51,8 @@ export default function PricingPage() {
         .limit(1)
         .single();
       if (data) setCurrentSub({ plan: data.plan, status: data.status, ends_at: data.subscription_ends_at });
+      const { count } = await supabase.from("fw_fin_subscriptions").select("user_id", { count: "exact", head: true }).eq("user_id", u.id);
+      if ((count ?? 0) > 0) setTrialUsed(true);
       setLoading(false);
     });
     // Load Razorpay script
@@ -46,6 +66,7 @@ export default function PricingPage() {
 
   async function handleBuy(plan: typeof PLANS[0]) {
     if (!user) return;
+    if (plan.id === FREBOOK_PLAN.id && canClaim) { await claimFreeMonth(); return; }
     setPaying(plan.id);
     try {
       // Create order on backend
@@ -101,10 +122,10 @@ export default function PricingPage() {
         <div style={{ textAlign: "center", marginBottom: "3rem" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🛩️</div>
           <h1 style={{ fontSize: "2.2rem", fontWeight: 900, margin: "0 0 0.5rem", letterSpacing: "-0.03em" }}>
-            One plan. <span style={{ color: "#232A63" }}>Everything in FreBook.</span>
+            Start with <span style={{ color: "#0B7A55" }}>one month free</span>
           </h1>
           <p style={{ color: "rgba(20,26,58,0.75)", fontSize: "1rem", margin: 0 }}>
-            Full-stack accounting for Indian SMBs. GST, TDS, Journals, AI — all in one.
+            FreBook is {FREBOOK_PRICE_LABEL}/month + GST — your first month is on us. No card needed to claim it.
           </p>
         </div>
 
@@ -116,6 +137,8 @@ export default function PricingPage() {
             <Link href="/finance" style={{ color: "#232A63", marginLeft: "1rem", fontWeight: 700, textDecoration: "none" }}>Go to Dashboard →</Link>
           </div>
         )}
+
+        {claimMsg && <div role="status" style={{ background: claimMsg.startsWith("✓") ? "rgba(11,122,85,0.1)" : "rgba(194,50,31,0.08)", color: claimMsg.startsWith("✓") ? "#0B7A55" : "#C2321F", borderRadius: 10, padding: "0.85rem 1.25rem", marginBottom: "1.5rem", textAlign: "center", fontWeight: 700 }}>{claimMsg}</div>}
 
         {/* Plans grid */}
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,440px)", justifyContent: "center", gap: "1.5rem", marginBottom: "3rem" }}>
@@ -139,7 +162,7 @@ export default function PricingPage() {
                   <span style={{ fontSize: "2.6rem", fontWeight: 900, letterSpacing: "-0.04em", fontVariantNumeric: "tabular-nums" }}>{fmt(plan.price)}</span>
                   <span style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>/month</span>
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.55)", marginBottom: "1.5rem" }}>+ GST · billed monthly · cancel anytime</div>
+                <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.55)", marginBottom: "1.5rem" }}>{canClaim ? <b style={{ color: "#0B7A55" }}>₹0 for the first month · then {FREBOOK_PRICE_LABEL} + GST/month</b> : "+ GST · billed monthly · cancel anytime"}</div>
 
                 <div style={{ flex: 1 }}>
                   {plan.features.map(f => (
@@ -168,7 +191,7 @@ export default function PricingPage() {
                     border: isCurrent ? "1px solid rgba(11,122,85,0.3)" : "none",
                   }}
                 >
-                  {isCurrent ? "✓ Current Plan" : paying === plan.id ? "Opening payment…" : `Subscribe · ₹${fmt(plan.price)}/mo`}
+                  {isCurrent ? "✓ Current Plan" : canClaim ? (paying === plan.id ? "Starting your free month…" : "🎁 Claim 1 month free") : paying === plan.id ? "Opening payment…" : `Subscribe · ₹${fmt(plan.price)}/mo`}
                 </button>
               </div>
             );

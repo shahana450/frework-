@@ -68,20 +68,48 @@ const TRUST = [
 export default function PricingPage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [trialUsed, setTrialUsed] = useState(false);   // any subscription row (paid, trial or expired) means the free month is gone
+  const [claiming, setClaiming] = useState(false);
+  const [claimMsg, setClaimMsg] = useState("");
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setLoggedIn(!!session));
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setLoggedIn(!!session);
+      if (!session) return;
+      const { count } = await supabase.from("fw_fin_subscriptions").select("user_id", { count: "exact", head: true }).eq("user_id", session.user.id);
+      if ((count ?? 0) > 0) setTrialUsed(true);
+    });
   }, []);
+
+  // One free month, once per account. The server refuses a second claim with 409.
+  async function claimFreeMonth() {
+    setClaiming(true); setClaimMsg("");
+    try {
+      const r = await fetch("/api/finance/subscription/claim-trial", { method: "POST" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setClaimMsg(d.error ?? "Couldn't start your free month. Please try again.");
+        if (r.status === 409) { setTrialUsed(true); setTimeout(() => router.push("/finance/pricing"), 1800); }
+        return;
+      }
+      setClaimMsg(`✓ Your free month has started — FreBook is yours until ${new Date(d.ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}.`);
+      setTimeout(() => router.push("/finance/start"), 1800);
+    } catch {
+      setClaimMsg("Couldn't start your free month. Please try again.");
+    } finally { setClaiming(false); }
+  }
 
   const handlePlanClick = (plan: Plan) => {
     const key = plan.name.toLowerCase();
-    if (loggedIn) router.push(`/finance/pricing`);
-    else router.push(`/register?plan=${key}`);
+    if (!loggedIn) router.push(`/register?plan=${key}`);
+    else if (trialUsed) router.push(`/finance/pricing`);
+    else claimFreeMonth();
   };
 
   const ctaLabel = (plan: Plan) => {
-    return loggedIn ? "Subscribe Now" : plan.cta;
+    if (loggedIn && trialUsed) return "Subscribe Now";
+    return claiming ? "Starting your free month…" : "🎁 Claim 1 month free";
   };
 
   return (
@@ -103,7 +131,7 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="text-white/45 text-lg mb-10 leading-relaxed">
-            One FreBook plan at ₹1,499/month. Professional services<br className="hidden sm:block" /> are ordered separately when you need them.
+            Start with one month free. Then one FreBook plan at {FREBOOK_PRICE_LABEL}/month + GST.<br className="hidden sm:block" /> Professional services are ordered separately when you need them.
           </p>
 
           {/* Trust pills */}
@@ -185,10 +213,14 @@ export default function PricingPage() {
                       </div>
                     </div>
                     {price === 0 && <p className="text-[11px] text-white/20 mt-1.5">Free forever · No card required</p>}
+                    {price > 0 && !trialUsed && <p className="text-[11px] font-semibold text-emerald-400/80 mt-1.5">₹0 for the first month · then {FREBOOK_PRICE_LABEL} + GST/month</p>}
                   </div>
 
                   {/* CTA */}
-                  <button onClick={() => handlePlanClick(plan)}
+                  {claimMsg && (
+                    <div role="status" className={`mb-3 rounded-xl px-3 py-2 text-xs font-semibold text-center ${claimMsg.startsWith("✓") ? "bg-emerald-500/10 text-emerald-300" : "bg-red-500/10 text-red-300"}`}>{claimMsg}</div>
+                  )}
+                  <button onClick={() => handlePlanClick(plan)} disabled={claiming}
                     className={`w-full mb-7 py-3 px-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 group cursor-pointer transition-all active:scale-[0.98]
                       ${isPopular ? plan.color.cta : plan.color.cta}`}
                     style={plan.color.ctaStyle}>
