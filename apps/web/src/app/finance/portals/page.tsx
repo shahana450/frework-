@@ -6,7 +6,7 @@ import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Link = { portal: "gst" | "it"; identifier: string; provider: string; status: string; expires_at: string | null; last_sync_at: string | null; last_error: string | null };
 type Row = { portal: string; kind: string; form: string; period: string; status: string; arn: string | null; filed_on: string | null; amount: number | null; details: Record<string, unknown>; demo: boolean; fetched_at: string };
-type Data = { links: Link[]; statuses: Row[]; defaults?: { gstin: string; pan: string }; providers?: { gst: { id: string; demo: boolean }; it: { id: string; demo: boolean } }; setup_needed?: string };
+type Data = { links: Link[]; statuses: Row[]; defaults?: { gstin: string; pan: string }; providers?: { gst: { id: string; demo: boolean; credential?: "otp" | "password" }; it: { id: string; demo: boolean; credential?: "otp" | "password" } }; setup_needed?: string };
 
 const C = { ground: "#F2F3F6", tile: "#FFFFFF", grey: "#ECEEF3", line: "#E3E6EE", ink: "#141A3A", muted: "#5A6080", navy: "#232A63", navySoft: "#E6E8F4", orange: "#C2410C", orangeSoft: "#FFF0E8", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB" };
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
@@ -28,16 +28,19 @@ function PortalCard({ portal, data, bizId, reload }: { portal: "gst" | "it"; dat
   const prov = data.providers?.[portal];
   const [identifier, setIdentifier] = useState(link?.identifier ?? (portal === "gst" ? data.defaults?.gstin : data.defaults?.pan) ?? "");
   const [otp, setOtp] = useState("");
+  const [password, setPassword] = useState("");
+  const [consent, setConsent] = useState(false);
+  const usesPassword = prov?.credential === "password";
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const call = async (action: string, extra: Record<string, string> = {}) => {
     setBusy(true); setMsg(null);
     const r = await fetch("/api/finance/portals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, portal, action, ...extra }) });
     const d = await r.json().catch(() => ({}));
-    setBusy(false);
+    setBusy(false); setPassword("");
     if (!r.ok) { setMsg({ ok: false, text: d.error ?? "Something went wrong." }); return; }
     setMsg({ ok: true, text: action === "start" ? d.message : action === "verify" ? `Linked · ${d.synced} statuses fetched` : action === "sync" ? `Updated · ${d.synced} statuses` : "Unlinked." });
-    setOtp(""); reload();
+    setOtp(""); setPassword(""); setConsent(false); reload();
   };
   const title = portal === "gst" ? "GST portal" : "Income-tax portal";
   const idLabel = portal === "gst" ? "GSTIN" : "PAN";
@@ -59,7 +62,9 @@ function PortalCard({ portal, data, bizId, reload }: { portal: "gst" | "it"; dat
           <div style={{ fontSize: 13.5, color: C.muted, lineHeight: 1.55 }}>
             {portal === "gst"
               ? "Link once with an OTP sent by the GST portal to the registered mobile/email. FreWork then fetches GSTR-1 / 3B filing status, ARNs and ledger balances. Your portal password is never asked for or stored."
-              : "Approve once with an OTP from the Income-tax portal. FreWork then fetches ITR filing, e-verification and refund status. Your portal password is never asked for or stored."}
+              : usesPassword
+                ? "Link once with the Income-tax portal password for this PAN. It goes straight to our ERI partner (Deepvue) to connect the account — FreWork never stores or logs it. FreWork then fetches ITR filing, e-verification, processing and refund status."
+                : "Approve once with an OTP from the Income-tax portal. FreWork then fetches ITR filing, e-verification and refund status. Your portal password is never asked for or stored."}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: C.muted }}>{idLabel}
@@ -68,7 +73,22 @@ function PortalCard({ portal, data, bizId, reload }: { portal: "gst" | "it"; dat
             </label>
             <button onClick={() => call("start", { identifier })} disabled={busy || !identifier} style={{ ...btn(!link || link.status !== "otp_pending"), alignSelf: "flex-end" }}>Connect</button>
           </div>
-          {link?.status === "otp_pending" && (
+          {link?.status === "otp_pending" && usesPassword && (
+            <form onSubmit={e => { e.preventDefault(); call("verify", { password }); }} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: C.muted }}>Income-tax portal password
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="off" placeholder="Password for this PAN"
+                    style={{ height: 42, width: 240, maxWidth: "100%", borderRadius: 11, border: `1px solid ${C.line}`, padding: "0 12px", fontSize: 14, color: C.ink }} />
+                </label>
+                <button type="submit" disabled={busy || password.length < 8 || !consent} style={btn(true)}>Link &amp; fetch</button>
+              </div>
+              <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>
+                <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 3 }} />
+                I am the PAN holder or have their permission, and I agree to share this login with Deepvue only to read ITR filing and refund status. FreWork does not store the password.
+              </label>
+            </form>
+          )}
+          {link?.status === "otp_pending" && !usesPassword && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
               <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: C.muted }}>OTP
                 <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6 digits"
@@ -77,7 +97,7 @@ function PortalCard({ portal, data, bizId, reload }: { portal: "gst" | "it"; dat
               <button onClick={() => call("verify", { otp })} disabled={busy || otp.length !== 6} style={btn(true)}>Approve &amp; fetch</button>
             </div>
           )}
-          {link?.status === "expired" && <div style={{ fontSize: 13, color: C.neg }}>Access expired — send a new OTP to reconnect.</div>}
+          {link?.status === "expired" && <div style={{ fontSize: 13, color: C.neg }}>{usesPassword ? "Access expired — connect again with the portal password." : "Access expired — send a new OTP to reconnect."}</div>}
         </div>
       ) : (
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", fontSize: 13, color: C.muted }}>

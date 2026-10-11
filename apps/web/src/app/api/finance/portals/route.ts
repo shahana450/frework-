@@ -26,14 +26,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       links: links.data ?? [], statuses: rows.data ?? [],
       defaults: { gstin: b.gstin ?? "", pan: b.pan ?? (b.gstin && GSTIN_RE.test(b.gstin) ? b.gstin.slice(2, 12) : "") },
-      providers: { gst: { id: providerFor("gst").id, demo: providerFor("gst").demo }, it: { id: providerFor("it").id, demo: providerFor("it").demo } },
+      providers: Object.fromEntries((["gst", "it"] as const).map(p => { const v = providerFor(p); return [p, { id: v.id, demo: v.demo, credential: v.credential ?? "otp" }]; })),
     });
   } catch (e) {
     return serverError("portals", e, "Couldn't load portal connections.");
   }
 }
 
-type Body = { business_id?: string; action?: "start" | "verify" | "sync" | "unlink"; portal?: Portal; identifier?: string; otp?: string };
+// `password` is only for providers that link with the portal password (Deepvue). It is passed to the provider once and never stored or logged.
+type Body = { business_id?: string; action?: "start" | "verify" | "sync" | "unlink"; portal?: Portal; identifier?: string; otp?: string; password?: string };
 
 async function sync(bizId: string, portal: Portal) {
   const { data: link } = await supabase.from("fw_fin_portal_links").select("*").eq("business_id", bizId).eq("portal", portal).maybeSingle();
@@ -82,7 +83,8 @@ export async function POST(req: NextRequest) {
       const { data: link } = await supabase.from("fw_fin_portal_links").select("*").eq("business_id", bizId).eq("portal", portal).maybeSingle();
       if (!link?.otp_ref) return NextResponse.json({ error: "Request an OTP first." }, { status: 400 });
       const provider = providerFor(portal);
-      const session = await provider.verifyOtp(link.identifier, link.otp_ref, (b.otp ?? "").trim());
+      const secret = provider.credential === "password" ? String(b.password ?? "") : (b.otp ?? "").trim();
+      const session = await provider.verifyOtp(link.identifier, link.otp_ref, secret);
       await supabase.from("fw_fin_portal_links").update({ status: "linked", session_enc: seal(session.token, provider.demo), expires_at: session.expiresAt, otp_ref: null }).eq("id", link.id);
       await logAudit(supabase, { businessId: bizId, actor: gate.user.id, action: "portal_link", source: "portals", detail: { portal, identifier: link.identifier, provider: provider.id } });
       const n = await sync(bizId, portal);

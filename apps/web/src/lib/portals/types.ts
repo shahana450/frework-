@@ -1,5 +1,6 @@
-// One interface for every GST (GSP) and Income-tax (ERI) provider. Portal passwords never pass through FreWork:
-// the taxpayer approves access with an OTP sent by the portal to their registered mobile/email.
+// One interface for every GST (GSP) and Income-tax (ERI) provider. Portal passwords are never stored by FreWork:
+// the taxpayer approves access with an OTP from the portal, or — only where the provider requires it (Deepvue,
+// Income tax) — types the portal password once, which is passed straight to the provider and never stored or logged.
 
 export type Portal = "gst" | "it";
 
@@ -23,6 +24,8 @@ export interface PortalProvider {
   demo: boolean;
   /** True when no taxpayer OTP is needed (status comes from a public record): linking happens in one step. */
   noOtp?: boolean;
+  /** What the taxpayer types to link: an OTP from the portal (default) or, for providers that need it, the portal password (passed through once, never stored). */
+  credential?: "otp" | "password";
   /** Ask the portal to send an OTP to the taxpayer's registered contact. */
   requestOtp(identifier: string): Promise<OtpStart>;
   /** Exchange the OTP for a provider session. */
