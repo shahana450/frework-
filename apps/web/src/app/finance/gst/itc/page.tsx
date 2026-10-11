@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 import { parse2BJson, parse2BGrid, purchaseRegister, matchItc, table4, taxOf, type TwoBDoc, type BookDoc, type Tax, type ItcRow } from "@/lib/itcMatch";
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", pos: "#0B7A55", posSoft: "#E3F6EE", amber: "#8A5A00", amberSoft: "#FFF4DB", neg: "#C2321F", negSoft: "#FDECEA", blue: "#1F5EFF", blueSoft: "#E8F0FF" };
@@ -36,7 +37,7 @@ export default function ItcMatchPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
     });

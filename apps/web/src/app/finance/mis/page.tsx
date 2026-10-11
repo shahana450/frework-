@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 import type { Dashboard } from "@/lib/dashboard";
 
 const C = { ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", forest: "#0F2B25", gold: "#C99A4E", pos: "#0B7A55", neg: "#C2321F" };
@@ -20,7 +21,7 @@ export default function MisPack() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const id = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const id = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!id) { router.push("/finance/setup"); return; }
       const { data: b } = await supabase.from("fw_fin_businesses").select("name,gstin").eq("id", id).single();
       setBiz(b ? { name: b.name, gstin: b.gstin } : null);

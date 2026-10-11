@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 import { parseCashBankGrid, parseSimpleGrid, type SimpleLine } from "@/lib/simpleTemplate";
 import GroupChips, { guessGroup } from "@/components/GroupChips";
 import { useTally } from "@/lib/tallyConnection";
@@ -61,7 +62,7 @@ export default function SmartInbox() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const list: { name: string; sub_type: string | null }[] = [];

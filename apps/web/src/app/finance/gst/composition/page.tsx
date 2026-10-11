@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 import { cmp08, COMPOSITION_RATES } from "@/lib/gstReturns";
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F" };
@@ -35,7 +36,7 @@ export default function CompositionPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; } setBizId(saved);
     });
   }, [router]);

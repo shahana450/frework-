@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 import { dueDates, type Scheme } from "@/lib/gstReturns";
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", neg: "#C2321F", negSoft: "#FDECEA", amber: "#8A5A00", amberSoft: "#FFF4DB", pos: "#0B7A55", posSoft: "#E3F6EE" };
@@ -34,7 +35,7 @@ export default function GstReturnsCentre() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const saved = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       try { const s = localStorage.getItem(`fw_gst_scheme_${saved}`); if (s === "monthly" || s === "qrmp" || s === "composition") setScheme(s); } catch { /* */ }

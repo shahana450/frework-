@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { readActiveBusiness } from "@/lib/activeBusiness";
 import { useTally } from "@/lib/tallyConnection";
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", pos: "#0B7A55", posSoft: "#E3F6EE" };
@@ -20,7 +21,7 @@ export default function GuidedSetup() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
-      const biz = (localStorage.getItem(`fw_fin_biz_${user.id}`) ?? "").replace(/﻿/g, "").trim();
+      const biz = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!biz) { router.push("/finance/setup"); return; }
       const base = () => supabase.from("fw_fin_journals").select("id", { count: "exact", head: true }).eq("business_id", biz);
       const [{ data: b }, opening, statement, entries, invoice] = await Promise.all([
