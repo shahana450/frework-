@@ -236,6 +236,9 @@ export default function RegisterPage() {
                   )}
                   <span>Sign up with Google</span>
                 </button>
+                <p className="text-[11px] text-white/35 text-center -mt-2 mb-5 leading-relaxed">
+                  By creating an account you agree to the <Link href="/terms" className="text-[#C9A84C] hover:underline">Terms</Link>, <Link href="/dpa" className="text-[#C9A84C] hover:underline">DPA</Link> and <Link href="/ai-disclaimer" className="text-[#C9A84C] hover:underline">AI Disclaimer</Link>, and have read the <Link href="/privacy" className="text-[#C9A84C] hover:underline">Privacy Notice</Link>.
+                </p>
 
                 <div className="relative mb-5">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/8" /></div>

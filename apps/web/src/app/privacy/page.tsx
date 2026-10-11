@@ -1,96 +1,100 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import LegalDoc, { Section, List } from "@/components/legal/LegalDoc";
+import { LEGAL, SUBPROCESSORS, fill } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — FreWork",
-  description: "FreWork Privacy Policy — how we collect, use, and protect your personal data.",
+  title: "Privacy Notice",
+  description: "FreWork privacy notice under India's Digital Personal Data Protection Act, 2023: what we collect, why, who we share it with, and your rights.",
 };
 
-export default function PrivacyPolicyPage() {
+const a = "text-[#C9A84C] hover:underline";
+
+export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-[#060C18] text-white">
-      <div className="max-w-3xl mx-auto px-6 py-16">
-        <Link href="/" className="text-sm text-white/30 hover:text-white/60 transition-colors mb-8 inline-block">Back to FreWork</Link>
-        <h1 className="text-4xl font-bold mb-2">Privacy Policy</h1>
-        <p className="text-white/30 text-sm mb-12">Last updated: July 2026</p>
-        <div className="space-y-10 text-white/60 leading-relaxed text-[15px]">
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-3">1. Who We Are</h2>
-            <p>FreWork is a business services platform operated at frework.online. We provide company registration, GST filing, compliance, talent hiring, and coworking services to Indian businesses. This Privacy Policy explains how we collect, use, and protect your personal information.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-3">2. Information We Collect</h2>
-            <ul className="list-disc list-inside space-y-2 text-white/50">
-              <li>Account data: Name, email, phone number, Google profile.</li>
-              <li>Business data: Company name, PAN, GST number, uploaded documents.</li>
-              <li>Payment data: Transaction IDs and order amounts. Card/UPI data is handled by PhonePe.</li>
-              <li>Usage data: Pages visited, device type, browser info via analytics.</li>
-              <li>Communication data: WhatsApp messages, emails, and contact form submissions.</li>
-            </ul>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-3">3. How We Use Your Information</h2>
-            <ul className="list-disc list-inside space-y-2 text-white/50">
-              <li>To deliver purchased services</li>
-              <li>To process payments and issue receipts via PhonePe</li>
-              <li>To send order updates, compliance reminders, and notifications</li>
-              <li>To respond to queries via WhatsApp or email</li>
-              <li>To improve the FreWork platform</li>
-              <li>To comply with Indian law (GST Act, Income Tax Act, Companies Act)</li>
-            </ul>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-3">4. Sharing Your Information</h2>
-            <p className="mb-3">We do not sell your personal data. We share data only with:</p>
-            <ul className="list-disc list-inside space-y-2 text-white/50">
-              <li>Service professionals (CAs, lawyers) — only data needed for your order</li>
-              <li>PhonePe — for payment processing</li>
-              <li>Government authorities — for required filings (MCA, GSTN, Income Tax)</li>
-              <li>Cloud providers (Supabase, Vercel) — for secure storage and hosting</li>
-              <li>Legal authorities — if required by Indian law or court order</li>
-            </ul>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-3">5. Data Security</h2>
-            <p>We use HTTPS encryption, secure cloud storage, and role-based access controls. Contact us immediately if you suspect unauthorised access.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-3">6. Data Retention</h2>
-            <p>We retain account and order data for a minimum of 7 years as required under Indian law. Non-statutory data can be deleted on request within 30 days.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-3">7. Cookies</h2>
-            <p>frework.online uses essential cookies for authentication and analytics cookies to understand usage. You can disable cookies in your browser settings.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-3">8. Your Rights</h2>
-            <ul className="list-disc list-inside space-y-2 text-white/50">
-              <li>Access the personal data we hold about you</li>
-              <li>Correct inaccurate or incomplete data</li>
-              <li>Request deletion of non-statutory data</li>
-              <li>Opt out of marketing communications</li>
-              <li>Withdraw consent for data processing where applicable</li>
-            </ul>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-3">9. Changes to This Policy</h2>
-            <p>We may update this Privacy Policy from time to time. Changes will be posted on this page with a revised last-updated date.</p>
-          </section>
-          <section>
-            <h2 className="text-lg font-semibold text-white mb-3">10. Contact Us</h2>
-            <ul className="list-disc list-inside space-y-2 text-white/50">
-              <li>WhatsApp: +91 85908 74681</li>
-              <li>Email: support@frework.online</li>
-              <li>Website: frework.online</li>
-            </ul>
-          </section>
+    <LegalDoc title="Privacy Notice" path="/privacy" intro={<p>
+      This notice is given under section 5 of the Digital Personal Data Protection Act, 2023 (the &ldquo;DPDP Act&rdquo;) and the rules made under it.
+      {" "}{LEGAL.entity} (&ldquo;FreWork&rdquo;) is the <b className="text-white">Data Fiduciary</b> for the personal data of people who use frework.online.
+      For accounting data our customers upload about <i>their</i> customers, suppliers and employees, the customer is the Data Fiduciary and FreWork is its
+      Data Processor under the <Link href="/dpa" className={a}>Data Processing Agreement</Link>.</p>}>
+
+      <Section n="1" title="What we collect">
+        <List items={[
+          "Account: name, email, phone number, and your Google profile name and photo if you sign in with Google.",
+          "Business: business name, GSTIN, PAN, address, and the documents you upload.",
+          "Accounting data: entries, ledgers, invoices, bank statements, bills, Form 168 / 130 PDFs and the like.",
+          "Payments: order amounts and transaction IDs. Card and UPI details are handled by the payment gateway; we never see them.",
+          "Messages: WhatsApp messages and emails you send us or send through FreWork.",
+          "Usage: pages visited, device and browser, and error logs.",
+        ]} />
+        <p>We do <b className="text-white">not</b> collect or store passwords for the GST portal, the Income-tax portal or your bank.</p>
+      </Section>
+
+      <Section n="2" title="Why we use it, and on what basis">
+        <List items={[
+          "To provide the service you signed up for: keeping your books, preparing drafts and reports, reminders. Basis: your consent given at sign-up.",
+          "To take payment and issue GST invoices. Basis: consent and legal obligation.",
+          "To answer your questions and give support. Basis: consent.",
+          "To keep the service secure and fix errors. Basis: legitimate use under section 7 of the DPDP Act.",
+          "To meet legal duties, such as tax record-keeping or a lawful order. Basis: section 7.",
+          "To send product news. Only if you opt in, and you can opt out from any email.",
+        ]} />
+        <p>We do not sell personal data, use it for advertising profiles, or use your data to train AI models.</p>
+      </Section>
+
+      <Section n="3" title="AI processing">
+        <p>When you use FreBook chat or upload a document, the text or document and the ledger names needed for the draft are sent to an AI provider listed below to produce a draft. Providers are used under API terms that do not permit training on this data. See the <Link href="/ai-disclaimer" className={a}>AI Disclaimer</Link>.</p>
+      </Section>
+
+      <Section n="4" title="Who we share it with">
+        <p>Only with the processors that run the service, a professional you place an order with (only what that order needs), or an authority where the law requires it. Our processors:</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead><tr className="text-left text-white/80"><th className="py-2 pr-4 font-semibold">Processor</th><th className="py-2 pr-4 font-semibold">Purpose</th><th className="py-2 font-semibold">Location</th></tr></thead>
+            <tbody>{SUBPROCESSORS.map(s => (
+              <tr key={s.name} className="border-t border-white/10 align-top"><td className="py-2 pr-4 text-white/70">{s.name}</td><td className="py-2 pr-4">{s.purpose}</td><td className="py-2">{s.location}</td></tr>
+            ))}</tbody>
+          </table>
         </div>
-        <div className="mt-16 pt-8 border-t border-white/10 flex flex-wrap gap-6 text-xs text-white/25">
-          <Link href="/terms" className="hover:text-white/50 transition-colors">Terms of Service</Link>
-          <Link href="/refund-policy" className="hover:text-white/50 transition-colors">Refund Policy</Link>
-          <Link href="/" className="hover:text-white/50 transition-colors">frework.online</Link>
-        </div>
-      </div>
-    </div>
+        <p>Some processors store data outside India. We transfer data only to countries not restricted by the Government of India under section 16 of the DPDP Act.</p>
+      </Section>
+
+      <Section n="5" title="How long we keep it">
+        <List items={[
+          "Account and accounting data: while your account is active, then 30 days to let you export it, then deleted.",
+          "Invoices we issue to you and payment records: 8 years, as required by the CGST Act and the Income-tax Act.",
+          "Security and error logs: up to 1 year.",
+        ]} />
+      </Section>
+
+      <Section n="6" title="Security">
+        <p>Data is encrypted in transit (HTTPS) and at rest by our database provider. Each business&apos;s data is separated by row-level security, staff access is limited, and posted entries keep an audit trail. If a personal data breach happens, we will inform the Data Protection Board of India and affected people as the DPDP rules require.</p>
+      </Section>
+
+      <Section n="7" title="Your rights">
+        <List items={[
+          "Access a summary of your personal data and how it is processed, and who it was shared with.",
+          "Correct, complete or update it.",
+          "Erase it, unless we must keep it by law.",
+          "Withdraw consent at any time, as easily as you gave it. Processing done before withdrawal stays lawful; some features may stop working.",
+          "Nominate another person to exercise these rights if you die or become unable to.",
+          "Raise a grievance with us, and then with the Data Protection Board of India.",
+        ]} />
+        <p>To use a right, email <a href={`mailto:${LEGAL.grievanceEmail}`} className={a}>{LEGAL.grievanceEmail}</a> from your registered email. You can also download your reports and ledgers from the app at any time.</p>
+      </Section>
+
+      <Section n="8" title="Children">
+        <p>FreWork is for people aged 18 and over. We do not knowingly process children&apos;s data. If we learn we have, we delete it.</p>
+      </Section>
+
+      <Section n="9" title="Cookies">
+        <p>We use essential cookies to keep you signed in and remember your active business, and basic analytics to understand usage. No advertising cookies.</p>
+      </Section>
+
+      <Section n="10" title="Grievance Officer and contact">
+        <p>{fill(LEGAL.grievanceName)}, Grievance Officer, {LEGAL.entity}, {fill(LEGAL.address)}. Email <a href={`mailto:${LEGAL.grievanceEmail}`} className={a}>{LEGAL.grievanceEmail}</a>. We acknowledge within 48 hours and respond within 30 days. If you are not satisfied, you may complain to the Data Protection Board of India.</p>
+        <p>We will post changes here and email you about material ones before they apply.</p>
+      </Section>
+    </LegalDoc>
   );
 }
