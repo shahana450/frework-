@@ -1,4 +1,6 @@
 "use client";
+import { matchToTally, tallyGuidFor } from "@/lib/tallyMatch";
+import { verifyOpenCompany } from "@/lib/tallyPushRun";
 import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -50,7 +52,7 @@ export default function BooksPage() {
   const [ready, setReady] = useState(false);
   const [totalAll, setTotalAll] = useState(0);
   // Entries found in Tally itself: by [FW entry-no] tag, or same date + amount + a shared ledger
-  const [inTally, setInTally] = useState<Record<string, { vno: string; how: "tag" | "match" }>>({});
+  const [inTally, setInTally] = useState<Record<string, { vno: string; how: "guid" | "match" }>>({});
   const [checking, setChecking] = useState(false);
   const [checkMsg, setCheckMsg] = useState("");
   const [journals, setJournals] = useState<Journal[]>([]);
@@ -132,8 +134,7 @@ export default function BooksPage() {
     setChecking(true); setCheckMsg("Checking Tally for entries already there…");
     const dates = own.map(j => j.date.slice(0, 10)).sort();
     const months = monthsInRange(dates[0], dates[dates.length - 1]);
-    const tagged = new Map<string, string>();
-    const byKey = new Map<string, { vno: string; ledgers: Set<string> }[]>();
+    const seen: { date: string; amount: number; ledgers: string[]; remoteId?: string | null; guid?: string | null; voucherNumber?: string }[] = [];
     let read = 0, failedMonths = 0;
     for (let i = 0; i < months.length; i++) {
       setCheckMsg(`Reading Tally vouchers ${months[i].label} (${i + 1}/${months.length})…`);
@@ -143,27 +144,12 @@ export default function BooksPage() {
         const vouchers = parseTallyVouchers(await (await tallyFetch(`http://localhost:${port}`, xml, 30000)).text());
         for (const v of vouchers) {
           read++;
-          const narr = xmlDec(v.narration);
-          const tag = narr.match(/\[FW ([^\]]+)\]/)?.[1];
-          if (tag) tagged.set(tag.trim(), v.voucherNumber || v.voucherType);
-          const amt = Math.round(v.lines.filter(l => l.isDeemed).reduce((s, l) => s + l.amount, 0) || v.lines.reduce((s, l) => s + l.amount, 0) / 2);
-          const key = `${v.date}|${amt}`;
-          const list = byKey.get(key) ?? [];
-          list.push({ vno: v.voucherNumber || v.voucherType, ledgers: new Set(v.lines.map(l => xmlDec(l.ledgerName).toLowerCase())) });
-          byKey.set(key, list);
+          const amt = v.lines.filter(l => l.isDeemed).reduce((s, l) => s + l.amount, 0) || v.lines.reduce((s, l) => s + l.amount, 0) / 2;
+          seen.push({ date: v.date, amount: amt, ledgers: v.lines.map(l => xmlDec(l.ledgerName)), remoteId: v.remoteId ?? null, guid: v.guid ?? null, voucherNumber: v.voucherNumber || v.voucherType });
         }
       } catch { failedMonths++; }
     }
-    const found: Record<string, { vno: string; how: "tag" | "match" }> = {};
-    for (const j of own) {
-      const t = tagged.get(j.entry_no);
-      if (t) { found[j.id] = { vno: t, how: "tag" }; continue; }
-      const list = byKey.get(`${j.date.slice(0, 10)}|${Math.round(amountOf(j))}`);
-      if (!list?.length) continue;
-      const names = (j.fw_fin_journal_lines ?? []).map(l => (l.fw_fin_chart_of_accounts?.name ?? "").toLowerCase());
-      const idx = list.findIndex(c => names.some(n => n && c.ledgers.has(n)));
-      if (idx >= 0) { found[j.id] = { vno: list[idx].vno, how: "match" }; list.splice(idx, 1); }
-    }
+    const found = matchToTally(own.map(j => ({ id: j.id, date: j.date.slice(0, 10), amount: amountOf(j), ledgers: (j.fw_fin_journal_lines ?? []).map(l => l.fw_fin_chart_of_accounts?.name ?? ""), tallyGuid: (j as { tally_guid?: string | null }).tally_guid ?? null })), seen);
     setInTally(found);
     const n = Object.keys(found).length;
     // A "pushed" mark that Tally doesn't confirm (e.g. pushed to another company) is cleared, so Push all sends it again
@@ -212,7 +198,9 @@ export default function BooksPage() {
       setPushMsg(`Not sent: Tally is in Educational mode and only accepts entries dated the 1st, 2nd or 31st. ${blocked.length} selected entr${blocked.length === 1 ? "y is" : "ies are"} on other dates. Activate your TallyPrime licence (or open a licensed Tally) and push again.`);
       return;
     }
-    setPushing(true); setPushMsg("");
+    setPushing(true); setPushMsg("Checking the company open in Tally…");
+    const live = await verifyOpenCompany(port, company);
+    if (live) { setPushMsg(live); setPushing(false); return; }
     const tallyUrl = `http://localhost:${port}`;
     const next = { ...pushed };
     let ok = 0, failed = 0, newLedgers = 0;
@@ -260,7 +248,7 @@ export default function BooksPage() {
     }
     savePushed(next); setSelected(new Set()); setPushing(false);
     const results = ids.filter(id => next[id]).map(id => "at" in next[id]
-      ? { journal_id: id, status: "pushed" as const }
+      ? { journal_id: id, status: "pushed" as const, external_ref: tallyGuidFor(id) }
       : { journal_id: id, status: "failed" as const, error: (next[id] as { error: string }).error });
     if (results.length) fetch("/api/finance/integrations/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, provider: "tally", target: company, results }) }).catch(() => { /* kept locally */ });
   }
@@ -389,7 +377,7 @@ export default function BooksPage() {
                         </td>
                         <td style={{ padding: "0.5rem 0.75rem", whiteSpace: "nowrap" }}>
                           {src === "tally" ? <span style={{ fontSize: "0.7rem", color: MUTED }}>Came from Tally</span>
-                            : inTally[j.id] ? <span style={{ fontSize: "0.7rem", fontWeight: 700, color: GREEN }} title={inTally[j.id].how === "tag" ? "Found in Tally by its FreWork entry number" : "Tally has a voucher on the same date, same amount and a shared ledger"}>✓ In Tally{inTally[j.id].vno ? ` · Vch ${inTally[j.id].vno}` : ""}{inTally[j.id].how === "match" ? " (likely)" : ""}</span>
+                            : inTally[j.id] ? <span style={{ fontSize: "0.7rem", fontWeight: 700, color: GREEN }} title={inTally[j.id].how === "guid" ? "Found in Tally by the GUID FreWork gave it when pushing" : "Tally has a voucher on the same date, same amount and a shared ledger"}>✓ In Tally{inTally[j.id].vno ? ` · Vch ${inTally[j.id].vno}` : ""}{inTally[j.id].how === "match" ? " (likely)" : ""}</span>
                             : pv.kind === "pushed" ? <span style={{ fontSize: "0.7rem", fontWeight: 700, color: GREEN }} title={`${new Date(pv.at).toLocaleString("en-IN")}${pv.companyKnown ? "" : " · company not recorded — Check Tally confirms it"}`}>✓ Pushed {new Date(pv.at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</span>
                             : pv.kind === "elsewhere" ? <span style={{ display: "inline-flex", flexDirection: "column" }} title={`Pushed to Tally company "${pv.company}" on ${new Date(pv.at).toLocaleString("en-IN")}. Not pushed to the company open now.`}><span style={{ fontSize: "0.7rem", color: AMBER }}>Not pushed</span><span style={{ fontSize: "0.64rem", color: MUTED }}>Pushed to {pv.company}</span></span>
                             : p && "error" in p ? <span style={{ display: "inline-flex", flexDirection: "column", maxWidth: 260, whiteSpace: "normal" }} title={p.error}><span style={{ fontSize: "0.7rem", fontWeight: 700, color: RED }}>✗ Failed</span><span style={{ fontSize: "0.66rem", color: MUTED, lineHeight: 1.35 }}>{explainTallyError(p.error, eduMode)}</span></span>

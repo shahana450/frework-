@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       id: j.id, entry_no: j.entry_no, date: j.date, narration: j.narration, type: j.type,
       line_count: (j.fw_fin_journal_lines ?? []).length,
       xml: voucherXml({
-        entry_no: j.entry_no, date: j.date, narration: j.narration ?? "", type: j.type,
+        id: j.id, entry_no: j.entry_no, date: j.date, narration: j.narration ?? "", type: j.type,
         lines: (j.fw_fin_journal_lines ?? []).map(l => ({ dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0, account: l.fw_fin_chart_of_accounts })),
       }, company),
     }));

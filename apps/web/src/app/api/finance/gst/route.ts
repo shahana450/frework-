@@ -6,6 +6,7 @@ import { fileToShelf, fyOfDate } from "@/lib/shelf";
 import { docsFromJournals, type SrcJournal } from "@/lib/gstr1Source";
 import { gstSummary } from "@/lib/gstSummary";
 import { table3, type Tax } from "@/lib/gstReturns";
+import { gst3bByMonth } from "@/lib/gst3b";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -104,7 +105,18 @@ export async function GET(req: NextRequest) {
       const months = annual ? [...byMonth.keys()].sort().map(ym => ({ month: ym, ...table3(docsFromJournals(byMonth.get(ym)!.sales, contacts ?? []), home).a, itc: round(byMonth.get(ym)!.itc) })) : undefined;
       const b2b = all.filter(d => d.gstin && d.kind !== "credit_note"), b2c = all.filter(d => !d.gstin && d.kind !== "credit_note"), notes = all.filter(d => d.kind === "credit_note");
       const total = (ds: typeof all) => ds.reduce((s, d) => ({ taxable: r2(s.taxable + d.items.reduce((a, i) => a + i.taxable, 0)), tax: r2(s.tax + d.items.reduce((a, i) => a + i.igst + i.cgst + i.sgst + (i.cess ?? 0), 0)), count: s.count + 1 }), { taxable: 0, tax: 0, count: 0 });
-      return NextResponse.json({ period: annual ? `FY ${fyStart}-${String(Number(fyStart) + 1).slice(2)}` : month, gstin: (biz?.gstin ?? "").toUpperCase(), state: home,
+      let booksCash: number | null = null;
+      if (!annual && month) {
+        const fyY = Number(month.slice(5, 7)) >= 4 ? Number(month.slice(0, 4)) : Number(month.slice(0, 4)) - 1;
+        const yearRows = await monthJournals(bizId!, `${fyY}-04-01`, pTo);
+        const names = new Set<string>(), gl: { account_id: string; dr: number; cr: number; date: string }[] = [];
+        for (const j of yearRows) for (const l of j.fw_fin_journal_lines ?? []) {
+          const n = l.fw_fin_chart_of_accounts?.name ?? ""; names.add(n);
+          gl.push({ account_id: n, dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0, date: String(j.date).slice(0, 10) });
+        }
+        booksCash = gst3bByMonth([...names].map(n => ({ id: n, name: n })), gl).get(month)?.cash ?? 0;
+      }
+      return NextResponse.json({ books_cash: booksCash, period: annual ? `FY ${fyStart}-${String(Number(fyStart) + 1).slice(2)}` : month, gstin: (biz?.gstin ?? "").toUpperCase(), state: home,
         table3: t3, itc: round(itc), rcm: round(rcm), months, outward: { b2b: total(b2b), b2c: total(b2c), creditNotes: total(notes) }, derivedDocs: all.filter(d => d.derived).length });
     }
 
@@ -120,7 +132,11 @@ export async function GET(req: NextRequest) {
         lines: (j.fw_fin_journal_lines ?? []).map(l => ({ dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0, account: l.fw_fin_chart_of_accounts?.name ?? "" })),
       }));
       const gstin = (biz?.gstin ?? "").toUpperCase();
-      const result = buildGstr1(gstin, biz?.state ?? null, month, docsFromJournals(src, contacts ?? []));
+      // GSTR-1 reports invoices: only the INV series (and CN/DN notes). Old-format numbers are listed as issues.
+      const inSeries = (s: SrcJournal) => /^(INV|CN|DN)\//.test(s.entry_no ?? "");
+      const left = src.filter(s => !inSeries(s));
+      const result = buildGstr1(gstin, biz?.state ?? null, month, docsFromJournals(src.filter(inSeries), contacts ?? []));
+      if (left.length) result.issues.push({ level: "warn", text: `${left.length} sale entr${left.length === 1 ? "y is" : "ies are"} not in the INV invoice series (e.g. ${left.slice(0, 3).map(s => s.entry_no).join(", ")}) and ${left.length === 1 ? "was" : "were"} left out. Renumber them (Phase 2 repair) or raise proper invoices.` });
       if (report === "gstr1_json") {
         // File the exported return on the Shelf (GST rack); a newer export of the same month replaces the older copy
         const label = new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });

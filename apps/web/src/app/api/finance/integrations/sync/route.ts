@@ -45,6 +45,9 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase.from("fw_fin_integration_sync").upsert(rows, { onConflict: "journal_id,provider" });
     if (error) return missingTable(error.message) ? NextResponse.json({ ok: false, setup_needed: true }) : serverError("integrations/sync", error);
 
+    // The Tally GUID FreWork gave the voucher is kept on the journal (unique per business) for exact matching
+    for (const r of rows) if (provider === "tally" && r.status === "pushed" && r.external_ref)
+      await supabase.from("fw_fin_journals").update({ tally_guid: r.external_ref }).eq("id", r.journal_id).eq("business_id", business_id);
     const pushed = rows.filter(r => r.status === "pushed").length;
     if (pushed) await logAudit(supabase, { businessId: business_id, actor: gate.user.id, action: "tally_push", source: "integration", detail: { pushed, failed: rows.filter(r => r.status === "failed").length, target } });
     return NextResponse.json({ ok: true, saved: rows.length });

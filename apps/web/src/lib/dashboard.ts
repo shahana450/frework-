@@ -1,5 +1,6 @@
 // Dashboard figures and alerts, computed from posted entries with the same engine as the reports.
 import { buildTrialBalance, buildPL, groupOf, type Account } from "./books";
+import { gst3bByMonth, gst3bCash, gstRole } from "./gst3b";
 import { arAp } from "./partyBalances";
 import { monthPeriod, type QJournal, type Period } from "./bookQueries";
 import { formatMoney, DEFAULT_MONEY, type MoneyFormat } from "./money";
@@ -65,6 +66,15 @@ function compute(accounts: Account[], journals: QJournal[], today: string, fy: P
     const b = r2(byAcc.get(a.id) ?? 0);
     if (b < -0.5 && !/od|overdraft|cc\b|cash credit/i.test(a.name)) alerts.push({ tone: "bad", text: `${a.name} shows a credit balance of ${inr(b)} — a receipt or opening balance may be missing.`, href: `/finance/ledger?account=${a.id}`, action: "Open ledger" });
   }
+  const recvIds = accounts.filter(isDebtor).map(a => a.id), payIds = accounts.filter(isCreditor).map(a => a.id);
+  const sumOf = (ids: string[]) => r2(ids.reduce((s, id) => s + (byAcc.get(id) ?? 0), 0));
+  const debtorsNet = sumOf(recvIds), creditorsNet = sumOf(payIds);
+  if (debtorsNet < -0.5) alerts.push({ tone: "bad", text: `Debtors show a credit balance of ${inr(debtorsNet)} — receipts may have been posted without the matching sales, or to the wrong ledger.`, href: "/finance/receivables", action: "Check" });
+  if (creditorsNet > 0.5) alerts.push({ tone: "bad", text: `Creditors show a debit balance of ${inr(creditorsNet)} — payments may have been posted without the matching bills, or to the wrong ledger.`, href: "/finance/payables", action: "Check" });
+  for (const a of accounts.filter(x => gstRole(x.name)?.role === "input")) {
+    const b = r2(byAcc.get(a.id) ?? 0);
+    if (b < -0.5) alerts.push({ tone: "bad", text: `${a.name} (input tax credit) shows a credit balance of ${inr(b)} — input credit can't be negative.`, href: `/finance/ledger?account=${a.id}`, action: "Open ledger" });
+  }
   const suspense = accounts.filter(a => /suspense/i.test(a.name)).map(a => r2(byAcc.get(a.id) ?? 0)).reduce((s, b) => s + b, 0);
   if (Math.abs(suspense) >= 1) alerts.push({ tone: "warn", text: `${inr(suspense)} is sitting in Suspense — reclassify it to the right ledgers.`, href: "/finance/ledger", action: "Review" });
 
@@ -82,12 +92,13 @@ function compute(accounts: Account[], journals: QJournal[], today: string, fy: P
   const stale = [...parties.entries()].filter(([, p]) => p.bal >= 1 && days(p.last, today) >= 60).sort((a, b) => b[1].bal - a[1].bal);
   if (stale.length) alerts.push({ tone: "warn", text: `${stale[0][0]} owes ${inr(stale[0][1].bal)} with no activity for ${days(stale[0][1].last, today)} days${stale.length > 1 ? ` (+${stale.length - 1} more customer${stale.length > 2 ? "s" : ""})` : ""}.`, href: "/finance/receivables", action: "Follow up" });
 
-  // GST this month
-  const out = new Set(accounts.filter(a => /gst/i.test(a.name) && /output|payable/i.test(a.name)).map(a => a.id));
-  const inp = new Set(accounts.filter(a => /gst/i.test(a.name) && /input|itc/i.test(a.name)).map(a => a.id));
-  let gst = 0;
-  for (const l of lines) if (l.date >= month.from && l.date <= month.to) { if (out.has(l.account_id)) gst += l.cr - l.dr; if (inp.has(l.account_id)) gst -= l.dr - l.cr; }
-  if (gst >= 1) alerts.push({ tone: "info", text: `GST payable for ${month.label} so far: ${inr(gst)}.`, href: "/finance/audit/gst-recon", action: "GST recon" });
+  // GST: every figure comes from gst3bByMonth — the same function as the GSTR-3B page — for its own month
+  const hasGstin = !!(extra.business?.gstin ?? "").trim();
+  const gstMonths = gst3bByMonth(accounts, lines.filter(l => l.date <= asOf));
+  const gst = gst3bCash(gstMonths, month.from.slice(0, 7));
+  if (hasGstin && gst >= 1) alerts.push({ tone: "info", text: `GST payable for ${month.label} so far: ${inr(gst)}.`, href: "/finance/gst/3b", action: "GSTR-3B" });
+  if (!hasGstin && accounts.some(a => /\bgst\b/i.test(a.name) && lines.some(l => l.account_id === a.id)))
+    alerts.push({ tone: "info", text: "Add your GSTIN to see GST due dates and amounts.", href: "/finance/settings/business", action: "Add GSTIN" });
 
   if (lPL.netProfit > 0 && mPL.netProfit < lPL.netProfit * 0.8 && today.slice(8) >= "20") {
     alerts.push({ tone: "warn", text: `Profit for ${month.label} (${inr(mPL.netProfit)}) is ${Math.round((1 - mPL.netProfit / lPL.netProfit) * 100)}% below ${last.label}.`, href: "/finance/chat-book", action: "Ask why" });
@@ -129,7 +140,7 @@ function compute(accounts: Account[], journals: QJournal[], today: string, fy: P
 
   // GST return due dates (monthly filer): GSTR-1 on the 11th, GSTR-3B on the 20th, for last month
   const gstDue: Dashboard["gst"] = [];
-  for (const [form, day] of [["GSTR-1", 11], ["GSTR-3B", 20]] as const) {
+  for (const [form, day] of (hasGstin ? [["GSTR-1", 11], ["GSTR-3B", 20]] as const : [])) {
     const base = new Date(today + "T00:00:00Z");
     let due = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), day));
     if (due.toISOString().slice(0, 10) < today) due = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + 1, day));
@@ -144,7 +155,7 @@ function compute(accounts: Account[], journals: QJournal[], today: string, fy: P
   const pfOwed = owed(/\b(pf|epf|esi|esic|provident)\b/i, /expense|contribution exp|employer.*exp/i);
   const used = (re: RegExp) => accounts.some(a => re.test(a.name) && lines.some(l => l.account_id === a.id));
   const country = (extra.business?.country ?? "IN").toUpperCase();
-  const setup = { gst: !!extra.business?.gstin || used(/gst/i), tds: !!extra.business?.tan || used(/tds payable|tds on/i), payroll: used(/salar|wages|\b(pf|epf|esi|esic)\b/i), country };
+  const setup = { gst: hasGstin, tds: !!extra.business?.tan || used(/tds payable|tds on/i), payroll: used(/salar|wages|\b(pf|epf|esi|esic)\b/i), country };
   const compliance = country !== "IN" ? worldDueDates(today, {
     country, fyStart: extra.business?.fyStart ?? null,
     taxRegistered: !!extra.business?.gstin || used(/\bvat\b|\bgst\b/i),
@@ -152,13 +163,13 @@ function compute(accounts: Account[], journals: QJournal[], today: string, fy: P
     wht: used(/withholding|\bwht\b/i),
     amounts: { vat: gst > 0 ? r2(gst) : undefined },
   }) : dueDates(today, {
-    gst: !!extra.business?.gstin || used(/gst/i),
+    gst: hasGstin,
     tds: !!extra.business?.tan || used(/tds payable|tds on/i),
     payroll: used(/\b(pf|epf|esi|esic|provident)\b/i),
     audit: !!extra.business?.audit,
     pt: used(/salar|wages|professional tax|profession tax/i),
     state: extra.business?.state ?? null,
-    amounts: { gst: gst > 0 ? r2(gst) : undefined, tds: tdsOwed > 0 ? tdsOwed : undefined, pf: pfOwed > 0 ? pfOwed : undefined, pt: ptOwed > 0 ? ptOwed : undefined },
+    amounts: { gstByPeriod: Object.fromEntries([...gstMonths].map(([ym, m]) => [ym, m.cash])), tds: tdsOwed > 0 ? tdsOwed : undefined, pf: pfOwed > 0 ? pfOwed : undefined, pt: ptOwed > 0 ? ptOwed : undefined },
   });
 
   return {

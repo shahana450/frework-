@@ -10,7 +10,7 @@ export type ComplianceInput = {
   audit?: boolean;           // tax audit applies → ITR in October
   pt?: boolean;              // professional tax applies (salaries paid, or a PT ledger used)
   state?: string | null;     // business state — professional tax dates differ by state
-  amounts?: { gst?: number; tds?: number; pf?: number; pt?: number };
+  amounts?: { gst?: number; tds?: number; pf?: number; pt?: number; gstByPeriod?: Record<string, number> };   // gstByPeriod: "YYYY-MM" → GSTR-3B cash payable
 };
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -49,7 +49,10 @@ export function dueDates(today: string, inp: ComplianceInput, horizon = 75): Due
     const label = monthName(py, pm);
     if (inp.gst) {
       push({ key: `gstr1-${py}-${pm}`, kind: "gst", title: "GSTR-1", period: label, due: iso(D(py, pm + 1, 11)), amount: null, href: "/finance/gst" });
-      push({ key: `gstr3b-${py}-${pm}`, kind: "gst", title: "GSTR-3B & GST payment", period: label, due: iso(D(py, pm + 1, 20)), amount: inp.amounts?.gst ?? null, href: "/finance/gst" });
+      const ym = `${py}-${String(pm + 1).padStart(2, "0")}`;
+      // The amount is the tax of THIS return's period (0 when nothing is payable) — never another month's figure
+      const amt = inp.amounts?.gstByPeriod ? (inp.amounts.gstByPeriod[ym] ?? 0) : (inp.amounts?.gst ?? null);
+      push({ key: `gstr3b-${py}-${pm}`, kind: "gst", title: "GSTR-3B & GST payment", period: label, due: iso(D(py, pm + 1, 20)), amount: amt, href: "/finance/gst/3b" });
     }
     if (inp.tds) {
       // March TDS is due 30 April; other months the 7th of the next month

@@ -27,7 +27,7 @@ export function ledgerMastersXml(ledgers: { name: string; group: string }[], com
 
 // ── Pushing FreWork entries ─────────────────────────────────────────────────
 export type PushLine = { dr: number; cr: number; account: { name: string; type: string; sub_type: string | null } | null };
-export type PushEntry = { entry_no: string; date: string; narration: string; type: string; lines: PushLine[] };
+export type PushEntry = { id?: string; entry_no: string; date: string; narration: string; type: string; lines: PushLine[] };
 
 const VOUCHER_TYPE: Record<string, string> = {
   journal: "Journal", payment: "Payment", receipt: "Receipt", contra: "Contra",
@@ -48,7 +48,7 @@ export function voucherXml(e: PushEntry, company?: string | null): string {
     return out;
   }).join("");
   const narration = xmlEsc(`${(e.narration ?? "").replace(/[₹—]/g, "").slice(0, 80)} [FW ${e.entry_no}]`);
-  return `<?xml version="1.0" encoding="utf-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME>${company ? `<STATICVARIABLES>${companyVar(company)}</STATICVARIABLES>` : ""}</REQUESTDESC><REQUESTDATA><TALLYMESSAGE xmlns:UDF="TallyUDF"><VOUCHER VCHTYPE="${vtype}" ACTION="Create" OBJVIEW="Accounting Voucher View"><DATE>${tallyDate(e.date)}</DATE><EFFECTIVEDATE>${tallyDate(e.date)}</EFFECTIVEDATE><ISINVOICE>No</ISINVOICE><VOUCHERTYPENAME>${vtype}</VOUCHERTYPENAME><NARRATION>${narration}</NARRATION>${entries}</VOUCHER></TALLYMESSAGE></REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
+  return `<?xml version="1.0" encoding="utf-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME>${company ? `<STATICVARIABLES>${companyVar(company)}</STATICVARIABLES>` : ""}</REQUESTDESC><REQUESTDATA><TALLYMESSAGE xmlns:UDF="TallyUDF"><VOUCHER${e.id ? ` REMOTEID="frework-${e.id}"` : ""} VCHTYPE="${vtype}" ACTION="Create" OBJVIEW="Accounting Voucher View"><DATE>${tallyDate(e.date)}</DATE><EFFECTIVEDATE>${tallyDate(e.date)}</EFFECTIVEDATE><ISINVOICE>No</ISINVOICE><VOUCHERTYPENAME>${vtype}</VOUCHERTYPENAME><NARRATION>${narration}</NARRATION>${entries}</VOUCHER></TALLYMESSAGE></REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
 }
 
 /**

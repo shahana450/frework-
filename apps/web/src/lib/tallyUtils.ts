@@ -73,14 +73,18 @@ export type TallyVoucher = {
   voucherNumber: string;
   narration: string;
   lines: { ledgerName: string; amount: number; isDeemed: boolean }[];
+  remoteId?: string | null; guid?: string | null; masterId?: string | null;
 };
 
 export function parseTallyVouchers(xml: string): TallyVoucher[] {
   const results: TallyVoucher[] = [];
-  const vRe = /<VOUCHER[^>]*>([\s\S]*?)<\/VOUCHER>/gi;
+  const vRe = /<VOUCHER(\s[^>]*)?>([\s\S]*?)<\/VOUCHER>/gi;
   let vm;
   while ((vm = vRe.exec(xml)) !== null) {
-    const block = vm[1];
+    const attrs = vm[1] ?? "", block = vm[2];
+    const remoteId = (attrs.match(/REMOTEID="([^"]+)"/i) ?? block.match(/<REMOTEID[^>]*>([^<]+)<\/REMOTEID>/i) ?? [])[1]?.trim() ?? null;
+    const guid = (block.match(/<GUID[^>]*>([^<]+)<\/GUID>/i) ?? [])[1]?.trim() ?? null;
+    const masterId = (block.match(/<MASTERID[^>]*>([^<]+)<\/MASTERID>/i) ?? [])[1]?.trim() ?? null;
     const rawDate = (block.match(/<DATE[^>]*>([^<]+)<\/DATE>/i) ?? [])[1]?.trim() ?? "";
     let date = "";
     if (/^\d{8}$/.test(rawDate)) date = `${rawDate.slice(0,4)}-${rawDate.slice(4,6)}-${rawDate.slice(6,8)}`;
@@ -98,7 +102,7 @@ export function parseTallyVouchers(xml: string): TallyVoucher[] {
       const amount = Math.abs(parseFloat(amtStr) || 0);
       if (ledgerName && amount > 0) lines.push({ ledgerName, amount, isDeemed });
     }
-    if (date && lines.length >= 1) results.push({ date, voucherType, voucherNumber, narration, lines });
+    if (date && lines.length >= 1) results.push({ date, voucherType, voucherNumber, narration, lines, remoteId, guid, masterId });
   }
   return results;
 }

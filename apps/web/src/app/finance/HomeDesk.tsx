@@ -44,6 +44,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
   const go = (t: string) => { const v = t.trim(); if (v) router.push(`/finance/chat-book?q=${encodeURIComponent(v)}`); };
   const dues = dash?.compliance ?? [];
   const waiting = dash?.alerts.filter(a => a.href.includes("ai-review") || a.href.includes("draft")).length ?? 0;
+  const critical = dash?.alerts.filter(a => a.tone === "bad").length ?? 0;
   const income = dash?.revenue ?? 0, spent = dash?.expenses ?? 0, profit = dash?.profit ?? 0;
   const margin = income > 0 ? Math.round((profit / income) * 100) : null;
   const spark = dash?.insight?.spark ?? [];
@@ -104,8 +105,8 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         {/* Large entry tile */}
         <section className="b-entry" aria-labelledby="hero" style={{ ...tile, padding: 24, gap: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: C.muted }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: waiting ? C.orange : C.pos }} />
-            {greeting}{waiting ? ` — ${waiting} item${waiting > 1 ? "s" : ""} waiting for you` : " — books are up to date"}
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: critical ? "#C2321F" : waiting ? C.orange : C.pos }} />
+            {greeting}{critical ? ` — ${critical} balance problem${critical > 1 ? "s" : ""} need${critical > 1 ? "" : "s"} attention` : waiting ? ` — ${waiting} item${waiting > 1 ? "s" : ""} waiting for you` : " — books are up to date"}
             {dash && <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: C.navySoft, color: C.navy }}>Health {dash.health.score}{dash.streak > 0 ? ` · ${dash.streak}-day streak` : ""}</span>}
           </div>
           <h1 id="hero" style={{ margin: 0, fontFamily: SERIF, fontWeight: 700, fontSize: "clamp(26px, 3.2vw, 40px)", lineHeight: 1.1, textWrap: "balance" }}>
