@@ -128,8 +128,9 @@ export default function InvoicePage() {
         <Link href="/finance/journals" style={{ color: C.muted, textDecoration: "none", fontSize: 14 }}>← Journal entries</Link>
         <span style={{ fontSize: 13, color: C.muted }}>· from {entryNo}</span>
         <span style={{ flex: 1 }} />
+        {!canSave && !msg && <span style={{ fontSize: 12.5, color: C.warn }}>Saving edits may need a one-time database update — press Save to check.</span>}
         {msg && <span role="status" style={{ fontSize: 13, fontWeight: 600, color: msg.ok ? C.pos : C.warn }}>{msg.text}</span>}
-        <button onClick={save} disabled={!dirty || saving || !canSave} title={canSave ? "" : "Run 2026-10-08_invoices_logo.sql in Supabase to save edits"} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: `1px solid ${C.strong}`, background: "#FFFFFF", color: C.ink, fontWeight: 700, cursor: dirty ? "pointer" : "default", opacity: dirty && canSave ? 1 : 0.5 }}>{saving ? "Saving…" : "Save"}</button>
+        <button onClick={save} disabled={!dirty || saving} title={dirty ? "" : "Edit the invoice to enable Save"} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: `1px solid ${C.strong}`, background: "#FFFFFF", color: C.ink, fontWeight: 700, cursor: dirty ? "pointer" : "default", opacity: dirty ? 1 : 0.5 }}>{saving ? "Saving…" : "Save"}</button>
         <button onClick={() => window.print()} style={{ height: 40, padding: "0 18px", borderRadius: 10, border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Print / PDF</button>
       </div>
       {mismatch && <div className="no-print" style={{ maxWidth: 860, margin: "0 auto 14px", background: C.warnSoft, color: C.warn, borderRadius: 10, padding: "10px 14px", fontSize: 13.5, fontWeight: 600 }}>The invoice total (₹{money(tot!.total)}) differs from the posted entry (₹{money(bookTotal!)}). Your books aren&apos;t changed by edits here — post an adjustment if the sale amount was wrong.</div>}
