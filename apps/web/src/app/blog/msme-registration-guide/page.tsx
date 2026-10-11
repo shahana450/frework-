@@ -164,7 +164,7 @@ export default function MSMERegistrationGuidePage() {
             <h3 className="text-xl font-black mb-2" style={{ color: "#0F2044" }}>Get your MSME certificate with expert help</h3>
             <p className="text-gray-600 mb-4">FreWork handles your Udyam registration end-to-end — Aadhaar verification, NIC code selection, portal submission and certificate download. Done in 1 working day.</p>
             <Link href="/services/business-registration" className="inline-block font-bold px-6 py-3 rounded-xl text-white hover:opacity-90 transition-all" style={{ background: "linear-gradient(135deg, #EA580C, #C2410C)" }}>
-              Register MSME — ₹499 →
+              Register MSME →
             </Link>
           </div>
         </article>

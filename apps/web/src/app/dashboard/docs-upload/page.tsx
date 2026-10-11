@@ -28,7 +28,7 @@ const SERVICES = {
     label: "GST Filing",
     color: "#2563EB",
     icon: "📋",
-    price: "₹499/filing",
+    price: "Quoted per filing",
     desc: "GSTR-1, GSTR-3B, Annual Return",
     docs: [
       { id: "gstin", label: "GSTIN Certificate", required: true, hint: "Your existing GST certificate" },

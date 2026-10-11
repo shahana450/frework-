@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: { absolute: "GST Registration in India 2025: Complete Step-by-Step Guide | FreWork" },
   description:
-    "Complete guide to GST registration in India 2025. Who needs GST registration, documents required, how to apply online, fees, GSTIN process and timeline. Get expert CA help from ₹499.",
+    "Complete guide to GST registration in India 2025. Who needs GST registration, documents required, how to apply online, fees, GSTIN process and timeline. Get expert CA help.",
   keywords: [
     "how to register for GST in India",
     "GST registration process India",
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "GST Registration in India 2025: Complete Step-by-Step Guide",
-    description: "Learn who needs GST, documents required, online process, fees and timeline. Expert CA help from ₹499.",
+    description: "Learn who needs GST, documents required, online process, fees and timeline. Expert CA help.",
     url: "https://frework.online/blog/gst-registration-guide",
     type: "article",
   },
@@ -46,7 +46,7 @@ const faqJsonLd = {
     { "@type": "Question", "name": "Who needs to register for GST in India?", "acceptedAnswer": { "@type": "Answer", "text": "Any business with annual turnover above ₹40 lakhs (goods) or ₹20 lakhs (services) must register for GST. E-commerce sellers, inter-state suppliers, and reverse charge recipients must register regardless of turnover." } },
     { "@type": "Question", "name": "What documents are required for GST registration?", "acceptedAnswer": { "@type": "Answer", "text": "Documents needed: PAN card, Aadhaar card, business address proof, bank account details, photograph, and for companies — MOA/AOA and Certificate of Incorporation." } },
     { "@type": "Question", "name": "How long does GST registration take?", "acceptedAnswer": { "@type": "Answer", "text": "GST registration is typically completed in 3–7 working days after successful document submission on the GST portal." } },
-    { "@type": "Question", "name": "Is GST registration free?", "acceptedAnswer": { "@type": "Answer", "text": "Government GST registration has no government fee. However, professional CA assistance typically costs ₹499 to ₹2,000 depending on the service provider." } },
+    { "@type": "Question", "name": "Is GST registration free?", "acceptedAnswer": { "@type": "Answer", "text": "Government GST registration has no government fee. However, professional CA assistance typically costs a service fee that varies by provider." } },
   ],
 };
 
@@ -109,10 +109,10 @@ export default function Page() {
 
           <h2 className="text-2xl font-black mt-10 mb-4" style={{ color: "#1A1208" }}>GST Registration Fee in India</h2>
           <p className="text-gray-700 mb-4 leading-relaxed">
-            The Government does not charge any fee for GST registration. However, most businesses use a CA or tax consultant to avoid errors, which typically costs <strong>₹499 to ₹2,000</strong> depending on the business type and complexity.
+            The Government does not charge any fee for GST registration. However, most businesses use a CA or tax consultant to avoid errors, which typically costs a <strong>professional fee</strong> depending on the business type and complexity.
           </p>
           <p className="text-gray-700 mb-8 leading-relaxed">
-            <Link href="/services/gst" className="text-amber-600 font-bold hover:underline">FreWork offers CA-assisted GST registration from ₹499</Link> — including document review, portal filing, and follow-up with the GST officer.
+            <Link href="/services/gst" className="text-amber-600 font-bold hover:underline">FreWork offers CA-assisted GST registration for ₹999</Link> — including document review, portal filing, and follow-up with the GST officer.
           </p>
 
           <h2 className="text-2xl font-black mt-10 mb-4" style={{ color: "#1A1208" }}>After GST Registration — What's Next?</h2>
@@ -129,7 +129,7 @@ export default function Page() {
             <h3 className="text-xl font-black mb-2" style={{ color: "#1A1208" }}>Need help with GST registration?</h3>
             <p className="text-gray-600 mb-4">Our CA experts handle your GST registration end-to-end — documents, portal filing, and GSTIN delivery in 3–5 days.</p>
             <Link href="/services/gst" className="inline-block bg-amber-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-amber-700 transition-colors">
-              Get GST Registration — ₹499 →
+              Get GST Registration →
             </Link>
           </div>
         </article>

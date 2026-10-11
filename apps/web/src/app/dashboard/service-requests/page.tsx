@@ -15,7 +15,7 @@ const ADMIN_EMAILS = ["admin.frework@gmail.com", "admin.frework@gmail.com"];
 
 const PACKAGES = [
   { key: "gst-registration",    label: "GST Registration",        price: "₹999",         color: "#059669" },
-  { key: "gst-filing",          label: "GST Filing",              price: "₹499/filing",   color: "#2563EB" },
+  { key: "gst-filing",          label: "GST Filing",              price: "Quoted per filing",   color: "#2563EB" },
   { key: "accounting",          label: "Accounting & Bookkeeping", price: "₹1,499/mo",    color: "#D97706" },
   { key: "income-tax",          label: "Income Tax (ITR)",         price: "₹799",         color: "#7C3AED" },
   { key: "company-registration",label: "Company Registration",     price: "₹999",         color: "#DC2626" },

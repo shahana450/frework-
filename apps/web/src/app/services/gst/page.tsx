@@ -3,7 +3,7 @@ import { ServicePage } from "@/components/services/service-page";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: { absolute: "GST Registration & Filing Online India — Starting ₹499 | FreWork" },
+  title: { absolute: "GST Registration & Filing Online India | FreWork" },
   description:
     "Online GST registration and GST return filing (GSTR-1, GSTR-3B, GSTR-9) by expert CAs across India. Get your GSTIN in 3–5 days. Monthly GST filing from ₹999.",
   keywords: [
@@ -41,7 +41,7 @@ const jsonLd = {
       "areaServed": { "@type": "Country", "name": "India" },
       "description": "Online GST registration and GST return filing services by qualified Chartered Accountants across India.",
       "offers": [
-        { "@type": "Offer", "name": "GST Registration", "price": "499", "priceCurrency": "INR" },
+        { "@type": "Offer", "name": "GST Registration", "price": "999", "priceCurrency": "INR" },
         { "@type": "Offer", "name": "Monthly GST Filing", "price": "999", "priceCurrency": "INR" },
       ],
     },
@@ -50,7 +50,7 @@ const jsonLd = {
       "mainEntity": [
         { "@type": "Question", "name": "What documents are required for GST registration in India?", "acceptedAnswer": { "@type": "Answer", "text": "You need: PAN card, Aadhaar card, business address proof, bank account details, and a photograph of the proprietor/director. For companies, MOA/AOA is also required." } },
         { "@type": "Question", "name": "How long does GST registration take?", "acceptedAnswer": { "@type": "Answer", "text": "GST registration through FreWork is completed in 3–5 working days after document submission. In some states it may take up to 7 days." } },
-        { "@type": "Question", "name": "What is the GST registration fee?", "acceptedAnswer": { "@type": "Answer", "text": "Government GST registration is free. FreWork charges a service fee starting ₹499 for CA-assisted filing and follow-up." } },
+        { "@type": "Question", "name": "What is the GST registration fee?", "acceptedAnswer": { "@type": "Answer", "text": "Government GST registration is free. FreWork charges ₹999 for CA-assisted filing and follow-up." } },
         { "@type": "Question", "name": "Who needs to register for GST?", "acceptedAnswer": { "@type": "Answer", "text": "Any business with annual turnover above ₹40 lakhs (goods) or ₹20 lakhs (services) must register. E-commerce sellers and inter-state suppliers must register regardless of turnover." } },
         { "@type": "Question", "name": "What is GSTR-1 and GSTR-3B?", "acceptedAnswer": { "@type": "Answer", "text": "GSTR-1 is the monthly/quarterly return of outward supplies (sales). GSTR-3B is the monthly summary return where you pay GST liability. Both must be filed to stay GST compliant." } },
       ],
@@ -77,7 +77,7 @@ export default function Page() {
             "Composition scheme registration",
             "GST cancellation & amendments",
           ]}
-          price="₹499"
+          price="₹999"
           priceNote="Registration. Monthly filing from ₹999."
           color="blue"
           isPaid

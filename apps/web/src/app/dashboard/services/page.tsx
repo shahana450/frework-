@@ -390,7 +390,7 @@ export default function ServicesDashboardPage() {
             <div className="grid sm:grid-cols-2 gap-4 mb-6">
               {[
                 { key: "gst-registration",    label: "GST Registration",        price: "₹999",          icon: "🏛️", color: "#059669" },
-                { key: "gst-filing",          label: "GST Filing",              price: "₹499/filing",   icon: "📋", color: "#2563EB" },
+                { key: "gst-filing",          label: "GST Filing",              price: "Quoted per filing",   icon: "📋", color: "#2563EB" },
                 { key: "accounting",          label: "Accounting & Bookkeeping", price: "₹1,499/month",  icon: "📊", color: "#D97706" },
                 { key: "income-tax",          label: "Income Tax (ITR)",         price: "₹799",          icon: "💰", color: "#7C3AED" },
                 { key: "company-registration",label: "Company Registration",     price: "₹999",          icon: "🏢", color: "#DC2626" },

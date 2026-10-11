@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: { absolute: "ITR Filing for Salaried Employees India 2025 — Complete Guide | FreWork" },
   description:
-    "Complete guide to ITR filing for salaried employees in India 2025. Which ITR form to use, documents needed, how to file online, last date and tax saving tips. File from ₹499.",
+    "Complete guide to ITR filing for salaried employees in India 2025. Which ITR form to use, documents needed, how to file online, last date and tax saving tips. File with expert help.",
   keywords: [
     "ITR filing for salaried employees India 2025",
     "income tax return salaried person",
@@ -177,9 +177,9 @@ export default function ITRFilingSalariedPage() {
 
           <div className="mt-12 p-6 rounded-2xl border-2 border-green-200 bg-green-50">
             <h3 className="text-xl font-black mb-2" style={{ color: "#0F2044" }}>File your ITR with expert help</h3>
-            <p className="text-gray-600 mb-4">FreWork&apos;s expert tax professionals file your ITR accurately and on time. ITR-1 for salaried employees from ₹499. We handle Form 16 review, deduction optimization and e-verification.</p>
+            <p className="text-gray-600 mb-4">FreWork&apos;s expert tax professionals file your ITR accurately and on time. ITR-1 for salaried employees for ₹799. We handle Form 16 review, deduction optimization and e-verification.</p>
             <Link href="/services/compliance" className="inline-block font-bold px-6 py-3 rounded-xl text-white hover:opacity-90 transition-all" style={{ background: "linear-gradient(135deg, #059669, #065F46)" }}>
-              File My ITR — ₹499 →
+              File My ITR →
             </Link>
           </div>
         </article>

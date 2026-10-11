@@ -52,8 +52,8 @@ const orgJsonLd = {
       "@type": "OfferCatalog",
       "name": "FreWork Services",
       "itemListElement": [
-        { "@type": "Offer", "name": "GST Registration", "price": "499", "priceCurrency": "INR" },
-        { "@type": "Offer", "name": "ITR Filing", "price": "499", "priceCurrency": "INR" },
+        { "@type": "Offer", "name": "GST Registration", "price": "999", "priceCurrency": "INR" },
+        { "@type": "Offer", "name": "ITR Filing", "price": "799", "priceCurrency": "INR" },
         { "@type": "Offer", "name": "Company Registration", "price": "1499", "priceCurrency": "INR" },
         { "@type": "Offer", "name": "Coworking Space", "price": "350", "priceCurrency": "INR" },
       ]
@@ -76,12 +76,12 @@ const STATS = [
   { n: "8+", l: "Cities" },
   
   
-  { n: "₹499", l: "Services From" },
+  { n: "3–5 days", l: "GSTIN turnaround" },
 ];
 
 const SERVICES = [
-  { title: "GST Registration", desc: "Get your GSTIN in 3–5 working days. Online process, expert-guided.", href: "/services/compliance", price: "₹499" },
-  { title: "ITR Filing", desc: "Income tax return filing for individuals, salaried, business owners.", href: "/services/compliance", price: "₹499" },
+  { title: "GST Registration", desc: "Get your GSTIN in 3–5 working days. Online process, expert-guided.", href: "/services/compliance", price: "₹999" },
+  { title: "ITR Filing", desc: "Income tax return filing for individuals, salaried, business owners.", href: "/services/compliance", price: "₹799" },
   { title: "Company Registration", desc: "Pvt Ltd, LLP, OPC, Partnership — end-to-end incorporation.", href: "/services/business-registration", price: "₹1,499" },
   { title: "Virtual Accountant", desc: "Dedicated accountant for bookkeeping, invoicing, payroll.", href: "/services/accounting", price: "₹1,999/mo" },
   { title: "Coworking Spaces", desc: "Hot desks, private cabins, meeting rooms across 8 Indian cities.", href: "/coworking", price: "₹350/day" },
@@ -152,7 +152,7 @@ export default function AboutPage() {
             {[
               { t: "Everything in one place", d: "GST, ITR, accounting, coworking — stop switching between 10 different services." },
               { t: "Verified professionals", d: "Every tax consultant and accountant on FreWork is manually verified before listing." },
-              { t: "Transparent pricing", d: "No hidden fees. GST registration from ₹499. Company registration from ₹1,499." },
+              { t: "Transparent pricing", d: "No hidden fees. Every price is shown before you order." },
               { t: "Online and fast", d: "All services available 100% online. GST registration in 3–5 days, ITR filing in 24 hours." },
               { t: "Pan-India coverage", d: "Service across all Indian states. Coworking spaces in 8 major cities." },
             ].map(item => (

@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: { absolute: "GST Return Filing Guide India 2025 — GSTR-1, GSTR-3B, GSTR-9 | FreWork" },
   description:
-    "Complete guide to GST return filing in India 2025. How to file GSTR-1, GSTR-3B, GSTR-9, due dates, late fees and penalties. Expert help from ₹499/month.",
+    "Complete guide to GST return filing in India 2025. How to file GSTR-1, GSTR-3B, GSTR-9, due dates, late fees and penalties. Expert help from FreWork CAs.",
   keywords: [
     "GST return filing India",
     "GSTR-1 filing",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "GST Return Filing Guide India 2025 — GSTR-1, GSTR-3B, GSTR-9",
-    description: "How to file GST returns online, due dates, late fees, and expert filing help from ₹499/month.",
+    description: "How to file GST returns online, due dates, late fees, and expert filing help.",
     url: "https://frework.online/blog/gst-filing-guide",
     type: "article",
   },
@@ -175,7 +175,7 @@ export default function GSTFilingGuidePage() {
             <h3 className="text-xl font-black mb-2" style={{ color: "#0F2044" }}>Let FreWork handle your GST filing</h3>
             <p className="text-gray-600 mb-4">Never miss a GST due date. FreWork files GSTR-1, GSTR-3B and GSTR-9 for your business every month. Expert professionals, transparent pricing.</p>
             <Link href="/services/compliance" className="inline-block font-bold px-6 py-3 rounded-xl text-white hover:opacity-90 transition-all" style={{ background: "linear-gradient(135deg, #2563EB, #1E40AF)" }}>
-              Start GST Filing — ₹499/month →
+              Start GST Filing →
             </Link>
           </div>
         </article>
