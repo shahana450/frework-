@@ -63,6 +63,7 @@ const UNGUARDED = ["/finance/pricing", "/finance/setup", "/finance/admin"];
 const TOP_ICONS = [
   { href: "/finance", label: "Home" },
   { href: "/finance/chat-book", label: "FreBook" },
+  { href: "/finance/inbox", label: "Smart Inbox" },
   { href: "/finance/sales/new", label: "Invoice" },
   { href: "/finance/purchases/new", label: "Bill" },
   { href: "/finance/books", label: "Books" },
