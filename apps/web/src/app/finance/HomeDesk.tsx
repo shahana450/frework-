@@ -1,4 +1,5 @@
 "use client";
+import { activeMoney, cur } from "@/lib/money";
 import { dueText, dueChip } from "@/lib/dueText";
 // FreBook home — Bento grid. White and light-grey tiles, navy and orange accents. Every figure comes from /api/finance/dashboard.
 import { useState } from "react";
@@ -37,6 +38,7 @@ function Ring({ income, expenses, profit }: { income: number; expenses: number; 
 }
 
 export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, onRetry }: Props) {
+  const india = activeMoney().currency === "INR";   // examples in the business's own currency
   const router = useRouter();
   const [mode, setMode] = useState<"record" | "ask">("record");
   const [text, setText] = useState("");
@@ -124,7 +126,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
             <label htmlFor="cmd" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Describe a transaction or ask a question</label>
             <textarea id="cmd" rows={3} value={text} onChange={e => setText(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); go(text); } }}
-              placeholder={mode === "record" ? "Paid office rent ₹25,000 from the bank for October" : "Who owes me for more than 60 days?"}
+              placeholder={mode === "record" ? (india ? "Paid office rent ₹25,000 from the bank for October" : `Paid office rent ${cur()}2,500 from the bank for October`) : "Who owes me for more than 60 days?"}
               style={{ display: "block", width: "100%", boxSizing: "border-box", resize: "none", border: "none", outline: "none", background: "transparent", padding: "12px 12px 4px", fontSize: 17, lineHeight: 1.5, color: C.ink }} />
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px 6px" }}>
               <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill" style={{ width: 40, height: 40, borderRadius: 11, background: C.tile, display: "flex", alignItems: "center", justifyContent: "center", color: C.muted }}>
@@ -137,7 +139,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
             </div>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {(mode === "record" ? ["Received ₹1.2L from a customer", "Paid salaries for last month", "Bought stationery ₹1,800 in cash"] : ["Who owes me for more than 60 days?", "Profit this month vs last month", "GST collected last month"]).map(c => (
+            {(mode === "record" ? (india ? ["Received ₹1.2L from a customer", "Paid salaries for last month", "Bought stationery ₹1,800 in cash"] : [`Received ${cur()}12,000 from a customer`, "Paid salaries for last month", `Bought stationery ${cur()}180 in cash`]) : ["Who owes me for more than 60 days?", "Profit this month vs last month", "GST collected last month"]).map(c => (
               <button key={c} className="chip" onClick={() => mode === "ask" ? go(c) : setText(c)} style={{ height: 34, padding: "0 13px", borderRadius: 17, border: `1px solid ${C.line}`, background: C.tile, color: C.muted, fontSize: 12.5, cursor: "pointer" }}>{c}</button>
             ))}
           </div>
