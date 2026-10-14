@@ -51,7 +51,11 @@ const RED = "#C2321F", BLUE = "#1F5EFF", PURPLE = "#5B4BC4", AMBER = "#8A5A00";
 const TEXT = "#141A3A", MUTED = "rgba(20,26,58,0.70)";
 const MONO = "'IBM Plex Mono', 'Fira Code', monospace";
 
-const fmt = (n: number) => "₹" + (n ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// The business's own currency (set once the business loads); examples below are written in rupees and converted
+let CUR = { code: "INR", locale: "en-IN" };
+const sym = () => new Intl.NumberFormat(CUR.locale, { style: "currency", currency: CUR.code }).formatToParts(0).find(p => p.type === "currency")?.value ?? "₹";
+const fmt = (n: number) => new Intl.NumberFormat(CUR.locale, { style: "currency", currency: CUR.code, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n ?? 0);
+const ex = (s: string) => CUR.code === "INR" ? s : s.replace(/₹([\d,]+)/g, (_m, d: string) => sym() + Number(d.replace(/,/g, "")).toLocaleString(CUR.locale));
 
 const TXN_LABELS: Record<string, string> = {
   expense_payment:"Expense Payment", bank_receipt:"Bank Receipt", credit_purchase:"Credit Purchase",
@@ -133,7 +137,7 @@ async function downloadCashBankTemplate() {
     ["• Receipt/Payment: write Receipt (money came in) or Payment (money went out)."],
     ["• Cash/Bank: write Cash, or your bank ledger name exactly as in your books (e.g. HDFC Bank)."],
     ["• Party / Ledger: who paid you or whom you paid (customer, supplier), or the expense/income head (Rent, Salary, Sales)."],
-    ["• Amount: the full amount, no ₹ sign needed."],
+    ["• Amount: the full amount, no currency sign needed."],
     ["• Narration: optional."],
     ["• Receipt posts Dr Cash/Bank, Cr Party. Payment posts Dr Party, Cr Cash/Bank."],
     ["• Delete the sample rows, then upload the file in FreBook with the 📎 button. You review every entry before anything is posted."],
@@ -177,7 +181,7 @@ async function parseTemplate(file: File): Promise<string[] | null> {
       col(r, "Party") && `party ${col(r, "Party")}`,
       col(r, "Invoice") && `invoice/bill no ${col(r, "Invoice")}`,
       col(r, "Description") && `for ${col(r, "Description")}`,
-      col(r, "Amount") && `amount ₹${col(r, "Amount")}${rate ? ` ${incl ? "including" : "plus"} ${rate}% GST` : " (no GST)"}`,
+      col(r, "Amount") && `amount ${col(r, "Amount")}${rate ? ` ${incl ? "including" : "plus"} ${rate}% GST` : " (no GST)"}`,
       col(r, "Payment Mode") && `payment mode ${col(r, "Payment Mode")}`,
       col(r, "Bank Account") && `via ${col(r, "Bank Account")}`,
       col(r, "TDS") && `TDS section ${col(r, "TDS")}`,
@@ -232,8 +236,12 @@ export default function FreBookPage() {
       const saved = (readActiveBusiness(user.id) ?? "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved); bizIdRef.current = saved;
-      const { data: biz } = await supabase.from("fw_fin_businesses").select("name").eq("id", saved).single();
-      if (biz) setBizName(biz.name);
+      const { data: biz } = await supabase.from("fw_fin_businesses").select("name,currency,country").eq("id", saved).single();
+      if (biz) {
+        const code = String(biz.currency ?? "INR").toUpperCase();
+        CUR = { code, locale: code === "INR" || biz.country === "IN" ? "en-IN" : "en-US" };
+        setBizName(biz.name);
+      }
       loadSessions(user.id, saved);
     });
   }, []);
@@ -249,7 +257,7 @@ export default function FreBookPage() {
   function newChat() {
     setCurrentSession(null);
     // Unposted drafts carry over to the new chat — they leave only when posted or cancelled (B17)
-    setMessages(prev => [{ id: "welcome", role: "system", text: `Hello! I'm FreBook, your chat bookkeeper for **${bizName}**. Tell me any transaction in plain language and I'll convert it into a proper journal entry.\n\n**Examples:**\n• "Paid office rent ₹25,000 from the bank"\n• "Sold goods to ABC Ltd for ₹1,18,000 including 18% GST on credit"\n• "Received ₹50,000 from customer Rahul against INV-101"\n• "Paid salary ₹75,000 through bank"\n\n**Or ask your books:**\n• "How much am I owed?" · "Show expenses above ₹10,000 this month" · "Why did profit fall?" · "GST collected last month"`, timestamp: Date.now() }, ...(pickDrafts(prev as unknown as StoredMsg[]) as unknown as ChatMessage[])]);
+    setMessages(prev => [{ id: "welcome", role: "system", text: ex(`Hello! I'm FreBook, your chat bookkeeper for **${bizName}**. Tell me any transaction in plain language and I'll convert it into a proper journal entry.\n\n**Examples:**\n• "Paid office rent ₹25,000 from the bank"\n• "Sold goods to ABC Ltd for ₹1,18,000 including 18% GST on credit"\n• "Received ₹50,000 from customer Rahul against INV-101"\n• "Paid salary ₹75,000 through bank"\n\n**Or ask your books:**\n• "How much am I owed?" · "Show expenses above ₹10,000 this month" · "Why did profit fall?" · "GST collected last month"`), timestamp: Date.now() }, ...(pickDrafts(prev as unknown as StoredMsg[]) as unknown as ChatMessage[])]);
   }
 
   const restoredRef = useRef(false);
@@ -650,7 +658,7 @@ export default function FreBookPage() {
                       onKeyDown={handleKey}
                       autoFocus
                       aria-label="Describe a transaction or ask a question"
-                      placeholder="e.g. Paid office rent ₹25,000 from the bank — or ask: how much do customers owe me?"
+                      placeholder={ex("e.g. Paid office rent ₹25,000 from the bank — or ask: how much do customers owe me?")}
                       rows={4}
                       style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: "none", borderBottom: "1px solid #EAE3D3", padding: "18px 6px 14px", color: "#10241F", fontSize: "1.05rem", fontFamily: "inherit", outline: "none", resize: "none", lineHeight: 1.55 }}
                     />
@@ -675,7 +683,7 @@ export default function FreBookPage() {
                   {voiceBar && <div style={{ padding: "10px 14px 0" }}>{voiceBar}</div>}
                   <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, padding: "12px 14px 14px" }}>
                     <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.12em", color: "#8A6420", marginRight: 4 }}>TRY</span>
-                    {["Paid salary ₹42,000 to Anu", "Sold goods ₹85,000 + GST to Kumar Traders", "What's my cash today?"].map(t => (
+                    {["Paid salary ₹42,000 to Anu", "Sold goods ₹85,000 + GST to Kumar Traders", "What's my cash today?"].map(ex).map(t => (
                       <button key={t} onClick={() => { setInput(t); inputRef.current?.focus(); }} style={{ height: 34, padding: "0 13px", borderRadius: 999, border: "1px solid #E0D6C1", background: "#FFFFFF", color: "#2E3B36", fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>{t}</button>
                     ))}
                   </div>
@@ -786,7 +794,7 @@ export default function FreBookPage() {
                           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8A6420" }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>{title}
                           </div>
-                          {items.map(t => (
+                          {items.map(ex).map(t => (
                             <button key={t} onClick={() => { setInput(t); inputRef.current?.focus(); }} className="fb-ex" style={{ textAlign: "left", background: "#FBF8F1", border: "1px solid #EFE8D9", borderRadius: 12, padding: "9px 12px", fontSize: "0.86rem", color: "#10241F", cursor: "pointer", fontFamily: "inherit", lineHeight: 1.4 }}>{t}</button>
                           ))}
                         </div>
@@ -914,7 +922,7 @@ export default function FreBookPage() {
               <button onClick={downloadCashBankTemplate} className="fb-chip" style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #0F2B25", background: "#0F2B25", color: "#FFFFFF", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg> Receipts &amp; payments template
               </button>
-              {["Paid rent ₹25,000 by bank", "Received ₹10,000 cash from customer", "How much am I owed?", "Biggest expenses this year", "Profit this month vs last"].map(chip => (
+              {["Paid rent ₹25,000 by bank", "Received ₹10,000 cash from customer", "How much am I owed?", "Biggest expenses this year", "Profit this month vs last"].map(ex).map(chip => (
                 <button key={chip} onClick={() => { setInput(chip); inputRef.current?.focus(); }} className="fb-chip" style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #E0D6C1", background: "#FFFFFF", color: "#2E3B36", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
                   {chip}
                 </button>
@@ -928,7 +936,7 @@ export default function FreBookPage() {
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
                 aria-label="Describe a transaction or ask a question"
-                placeholder={messages[messages.length - 1]?.transaction?.status === "needs_clarification" ? "Type your answer…" : "Tell FreBook what happened — e.g. Paid office rent ₹25,000 from the bank"}
+                placeholder={messages[messages.length - 1]?.transaction?.status === "needs_clarification" ? "Type your answer…" : ex("Tell FreBook what happened — e.g. Paid office rent ₹25,000 from the bank")}
                 rows={2}
                 style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: "none", color: "#10241F", padding: "10px 2px 6px", fontSize: "1rem", fontFamily: "inherit", outline: "none", resize: "none", lineHeight: 1.5 }}
               />
@@ -975,12 +983,12 @@ export default function FreBookPage() {
       {simpleBulk && bizId && (
         <SimpleTemplateModal fileName={simpleBulk.fileName} fileKey={simpleBulk.fileKey} entries={simpleBulk.entries} bizId={bizId}
           onClose={() => setSimpleBulk(null)}
-          onPosted={(count, total) => setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} entr${count > 1 ? "ies" : "y"} (₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}) from ${simpleBulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }])} />
+          onPosted={(count, total) => setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} entr${count > 1 ? "ies" : "y"} (${fmt(total)}) from ${simpleBulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }])} />
       )}
       {bulk && bizId && userId && (
         <BulkTemplateModal fileName={bulk.fileName} fileKey={bulk.fileKey} sentences={bulk.sentences} bizId={bizId} userId={userId}
           onClose={() => setBulk(null)}
-          onPosted={(count, total) => setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} template entr${count > 1 ? "ies" : "y"} (₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}) from ${bulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }])}
+          onPosted={(count, total) => setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} template entr${count > 1 ? "ies" : "y"} (${fmt(total)}) from ${bulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }])}
           onSendToChat={list => { setBatchTotal(list.length); setRowQueue(list); setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `📊 ${list.length} rows need more detail — answering them here one by one.`, timestamp: Date.now() }]); }} />
       )}
 
@@ -988,7 +996,7 @@ export default function FreBookPage() {
         <StatementModal
           file={statementFile} bizId={bizId} userId={userId}
           onClose={() => setStatementFile(null)}
-          onPosted={(count, total) => setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} bank transaction${count > 1 ? "s" : ""} (₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}) from ${statementFile.name}. See them in 📚 Books.`, timestamp: Date.now() }])}
+          onPosted={(count, total) => setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} bank transaction${count > 1 ? "s" : ""} (${fmt(total)}) from ${statementFile.name}. See them in 📚 Books.`, timestamp: Date.now() }])}
         />
       )}
 
@@ -1088,7 +1096,6 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
   const label = TXN_LABELS[tx.transaction_type] ?? tx.transaction_type;
   const isPosted = msg.status === "posted";
   const isCancelled = msg.status === "cancelled";
-  const fmt = (n: number) => "₹" + (n ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const TEXT = "#141A3A", MUTED = "rgba(20,26,58,0.70)", GOLD = "#232A63", GREEN = "#0B7A55", RED = "#C2321F", AMBER = "#8A5A00", PURPLE = "#5B4BC4", BLUE = "#1F5EFF";
   const inputS: React.CSSProperties = { background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "5px 8px", borderRadius: 6, fontSize: "0.78rem", fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" };
 

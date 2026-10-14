@@ -184,6 +184,8 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
 
   let paymentAccount = canon(ai.payment_account);
   if (!paymentAccount && ai.payment_mode === "bank" && banks.length === 1) paymentAccount = banks[0].name;
+  // "From bank" in a business with no bank ledger yet: open one rather than asking the same question forever
+  if (!paymentAccount && ai.payment_mode === "bank" && banks.length === 0) paymentAccount = "Bank Account";
   if (!paymentAccount && ai.payment_mode === "cash") paymentAccount = cashLedger;
 
   const action = (ACTIONS as string[]).includes(ai.action ?? "") ? ai.action as Intent["action"] : "journal_adjustment";
@@ -230,7 +232,11 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
     ...base, status: missing.length ? "needs_clarification" : "complete", transaction_type: action,
     amount: Math.round(lines.reduce((s, l) => s + l.debit, 0) * 100) / 100 || intent.amount,
     payment_mode: intent.payment_mode, bank_account_name: intent.payment_account,
-    gst: rr.gst, tds: rr.tds, lines, needs_clarification: missing.length ? [questionFor(missing[0], intent)] : [],
+    gst: rr.gst, tds: rr.tds, lines,
+    // Bank was said but there are several: name them, so a short reply ("HDFC") settles it
+    needs_clarification: !missing.length ? [] : missing[0] === "payment_account" && intent.payment_mode === "bank" && banks.length > 1
+      ? [`Which bank — ${banks.slice(0, 5).map(b => b.name).join(", ")}?`]
+      : [questionFor(missing[0], intent)],
     warnings: [...rr.warnings, ...lines.filter(l => l.is_new_account).map(l => `New ledger "${l.account}" will be created.`)],
     rule: rr.rule, counter_account: intent.counter_account, history_evidence, fx: rr.fx ?? null,
   };

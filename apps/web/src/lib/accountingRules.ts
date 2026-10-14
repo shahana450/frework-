@@ -255,8 +255,8 @@ export function questionFor(missing: string, intent: Intent): string {
   switch (missing) {
     case "amount": return "What was the amount?";
     case "payment_account": return intent.action === "sale" || intent.action.includes("income") || intent.action.includes("receipt") || intent.action === "capital_introduced"
-      ? "Was this received in cash, into which bank, or is it still to be received (credit)?"
-      : "Was this paid in cash, from which bank, or is it unpaid (on credit)?";
+      ? "How was it received? Reply cash, bank (or the bank's name), or credit if it's still to be received."
+      : "How was it paid? Reply cash, bank (or the bank's name), or credit if it's not paid yet.";
     case "expense_account": return "What was this expense for (e.g. rent, travel, office supplies)?";
     case "customer": return "Which customer is this? (Name them so it goes to their own account.)";
     case "supplier": return "Which supplier is this? (Name them so it goes to their own account.)";
