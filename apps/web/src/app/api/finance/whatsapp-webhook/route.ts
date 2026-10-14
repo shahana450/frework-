@@ -6,10 +6,10 @@ import { handleWhatsApp, type Incoming } from "@/lib/whatsapp/bot";
 export const maxDuration = 120;
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const GRAPH = "https://graph.facebook.com/v21.0";
-const token = () => process.env.WHATSAPP_ACCESS_TOKEN ?? "";
+const token = () => (process.env.WHATSAPP_ACCESS_TOKEN ?? "").trim();
 
 async function send(to: string, body: string) {
-  const r: Response = await fetch(`${GRAPH}/${process.env.WHATSAPP_PHONE_ID}/messages`, {
+  const r: Response = await fetch(`${GRAPH}/${(process.env.WHATSAPP_PHONE_ID ?? "").trim()}/messages`, {
     method: "POST", headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json" },
     body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: body.slice(0, 4000), preview_url: false } }),
   });
@@ -17,7 +17,7 @@ async function send(to: string, body: string) {
 }
 
 async function markRead(id: string) {
-  await fetch(`${GRAPH}/${process.env.WHATSAPP_PHONE_ID}/messages`, {
+  await fetch(`${GRAPH}/${(process.env.WHATSAPP_PHONE_ID ?? "").trim()}/messages`, {
     method: "POST", headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json" },
     body: JSON.stringify({ messaging_product: "whatsapp", status: "read", message_id: id }),
   }).catch(() => null);
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 // POST: incoming messages. Only requests signed by Meta with our app secret are accepted.
 export async function POST(req: NextRequest) {
   const raw = await req.text();
-  const secret = process.env.WHATSAPP_APP_SECRET;
+  const secret = process.env.WHATSAPP_APP_SECRET?.trim();   // a pasted secret often carries a trailing space or newline
   const sig = req.headers.get("x-hub-signature-256") ?? "";
   const expected = secret ? "sha256=" + createHmac("sha256", secret).update(raw).digest("hex") : "";
   if (!secret || sig.length !== expected.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
