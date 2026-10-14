@@ -1,5 +1,5 @@
 "use client";
-import { activeMoney, cur } from "@/lib/money";
+import { activeCountry, cur } from "@/lib/money";
 import { dueText, dueChip } from "@/lib/dueText";
 // FreBook home — Bento grid. White and light-grey tiles, navy and orange accents. Every figure comes from /api/finance/dashboard.
 import { useState } from "react";
@@ -38,7 +38,7 @@ function Ring({ income, expenses, profit }: { income: number; expenses: number; 
 }
 
 export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, onRetry }: Props) {
-  const india = activeMoney().currency === "INR";   // examples in the business's own currency
+  const india = activeCountry() === "IN";   // examples in the business's own currency
   const router = useRouter();
   const [mode, setMode] = useState<"record" | "ask">("record");
   const [text, setText] = useState("");
@@ -200,7 +200,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         </section>
 
         {/* Tax desk: GST filings, Income-tax filing, notices */}
-        {dash && (() => {
+        {dash && india && (() => {
           const td = dash.taxDesk ?? { links: [], statuses: [], notices: [] };
           const st = (s: string): [string, string, string] => ({ filed: [C.posSoft, C.pos, "Filed"], e_verified: [C.posSoft, C.pos, "E-verified"], processed: [C.posSoft, C.pos, "Processed"], issued: [C.posSoft, C.pos, "Issued"], not_filed: [C.warnSoft, C.warn, "Not filed"] } as Record<string, [string, string, string]>)[s] ?? [C.tileGrey, C.muted, s.replace(/_/g, " ")];
           const fmtD = (d: string | null) => d ? new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "";
