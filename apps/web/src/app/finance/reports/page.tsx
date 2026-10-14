@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -39,7 +40,7 @@ type BSData = {
 
 type TBData = { accounts: AccRow[]; total_dr: number; total_cr: number };
 
-const fmt = (n: number) => Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2 });
+const fmt = (n: number) => Math.abs(n).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 const sign = (n: number) => n < 0 ? "-" : "";
 
 function SectionTable({ title, rows, drLabel = "Debit", crLabel = "Credit", netLabel, netValue, netColor }: {
@@ -59,7 +60,7 @@ function SectionTable({ title, rows, drLabel = "Debit", crLabel = "Credit", netL
       {netLabel && netValue !== undefined && (
         <div style={{ display: "flex", justifyContent: "space-between", padding: "0.6rem 1rem", borderTop: "2px solid rgba(20,26,58,0.17)", fontWeight: 700, color: netColor ?? "#232A63" }}>
           <span>{netLabel}</span>
-          <span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(Math.abs(netValue))}</span>
+          <span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(Math.abs(netValue))}</span>
         </div>
       )}
     </div>
@@ -277,8 +278,8 @@ export default function ReportsPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#FFFFFF" }}>
-                      {["Code", "Account Name", "Debit (₹)", "Credit (₹)"].map(h => (
-                        <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h.includes("₹") ? "right" : "left", fontSize: "0.7rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
+                      {["Code", "Account Name", "Debit (" + cur() + ")", "Credit (" + cur() + ")"].map(h => (
+                        <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h.includes(cur()) ? "right" : "left", fontSize: "0.7rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -299,12 +300,12 @@ export default function ReportsPage() {
                   <tfoot>
                     <tr style={{ borderTop: "2px solid rgba(35,42,99,0.3)", background: "rgba(35,42,99,0.06)" }}>
                       <td colSpan={2} style={{ padding: "0.75rem 1rem", fontWeight: 800, fontSize: "0.9rem" }}>Grand Total</td>
-                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#232A63" }}>₹{fmt(tbData.total_dr)}</td>
-                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#232A63" }}>₹{fmt(tbData.total_cr)}</td>
+                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#232A63" }}>{cur()}{fmt(tbData.total_dr)}</td>
+                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#232A63" }}>{cur()}{fmt(tbData.total_cr)}</td>
                     </tr>
                     <tr>
                       <td colSpan={4} style={{ padding: "0.5rem 1rem", textAlign: "right", fontSize: "0.78rem", color: Math.abs(tbData.total_dr - tbData.total_cr) < 0.01 ? "#0B7A55" : "#C2321F" }}>
-                        {Math.abs(tbData.total_dr - tbData.total_cr) < 0.01 ? "✓ Trial Balance is balanced" : `⚠ Difference: ₹${fmt(Math.abs(tbData.total_dr - tbData.total_cr))}`}
+                        {Math.abs(tbData.total_dr - tbData.total_cr) < 0.01 ? "✓ Trial Balance is balanced" : `⚠ Difference: ${cur()}${fmt(Math.abs(tbData.total_dr - tbData.total_cr))}`}
                       </td>
                     </tr>
                   </tfoot>
@@ -344,7 +345,7 @@ function CashFlowStatement({ bizId, from, to }: { bizId: string | null; from: st
   if (err) return <div style={{ padding: "2rem", color: "#C2321F" }}>{err}</div>;
   if (!cf) return <div style={{ padding: "3rem", textAlign: "center", color: "rgba(20,26,58,0.55)" }}>Calculating…</div>;
 
-  const money = (n: number) => `${n < 0 ? "−" : ""}₹${fmt(Math.abs(n))}`;
+  const money = (n: number) => `${n < 0 ? "−" : ""}${cur()}${fmt(Math.abs(n))}`;
   const row = (label: string, value: number, opts: { indent?: boolean; bold?: boolean; key?: string } = {}) => (
     <tr key={opts.key ?? label} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
       <td style={{ padding: `0.5rem ${opts.indent ? "2rem" : "1rem"}`, fontSize: "0.85rem", fontWeight: opts.bold ? 800 : 400, color: opts.bold ? "#141A3A" : "rgba(20,26,58,0.97)" }}>{label}</td>

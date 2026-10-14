@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -146,7 +147,7 @@ export default function ContactsPage() {
                     <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", color: "rgba(20,26,58,0.85)" }}>{c.phone ?? "—"}</td>
                     <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem" }}>{c.credit_days} days</td>
                     <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>
-                      {c.opening_balance > 0 ? `₹${c.opening_balance.toLocaleString("en-IN")} ${c.opening_balance_type.toUpperCase()}` : "—"}
+                      {c.opening_balance > 0 ? `${cur()}${c.opening_balance.toLocaleString(activeMoney().locale)} ${c.opening_balance_type.toUpperCase()}` : "—"}
                     </td>
                     <td style={{ padding: "0.7rem 1rem" }}>
                       <button onClick={() => startEdit(c)} style={{ background: "none", border: "none", color: "#232A63", cursor: "pointer", fontSize: "0.78rem" }}>Edit</button>

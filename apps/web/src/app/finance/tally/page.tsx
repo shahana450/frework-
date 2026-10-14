@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { findTallyPort } from "@/lib/tallyUtils";
 import { tallyProblem } from "@/lib/integrations/tally";
@@ -479,7 +480,7 @@ export default function TallyPage() {
         const y = cur.getFullYear(), m = cur.getMonth();
         const mFrom = `${y}-${String(m + 1).padStart(2,"0")}-01`;
         const mTo = new Date(y, m + 1, 0).toISOString().slice(0,10);
-        months.push({ from: mFrom, to: mTo < endIso ? mTo : endIso, label: cur.toLocaleString("en-IN", { month: "short", year: "2-digit" }) });
+        months.push({ from: mFrom, to: mTo < endIso ? mTo : endIso, label: cur.toLocaleString(activeMoney().locale, { month: "short", year: "2-digit" }) });
         cur = new Date(y, m + 1, 1);
       }
       return months;
@@ -1065,7 +1066,7 @@ export default function TallyPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
                   <thead>
                     <tr style={{ background: "#FFFFFF" }}>
-                      {["Entry", "Date", "Type", "Narration", "DR (₹)", "CR (₹)"].map(h => (
+                      {["Entry", "Date", "Type", "Narration", "DR (" + cur() + ")", "CR (" + cur() + ")"].map(h => (
                         <th key={h} style={{ textAlign: "left", color: "#5E6B66", fontWeight: 600, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.07em", padding: "0.625rem 0.875rem", whiteSpace: "nowrap", borderBottom: "1px solid #E6DFD0" }}>{h}</th>
                       ))}
                     </tr>
@@ -1081,8 +1082,8 @@ export default function TallyPage() {
                             <span style={{ fontSize: "0.65rem", fontWeight: 600, color: tc, background: tbg, padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap" }}>{j.type}</span>
                           </td>
                           <td style={{ color: "#5E6B66", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>{j.narration}</td>
-                          <td className="tb-mono" style={{ textAlign: "right", color: "#0B7A55", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>₹{Number(j.total_debit).toLocaleString("en-IN")}</td>
-                          <td className="tb-mono" style={{ textAlign: "right", color: "#0F2B25", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>₹{Number(j.total_credit).toLocaleString("en-IN")}</td>
+                          <td className="tb-mono" style={{ textAlign: "right", color: "#0B7A55", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>{cur()}{Number(j.total_debit).toLocaleString(activeMoney().locale)}</td>
+                          <td className="tb-mono" style={{ textAlign: "right", color: "#0F2B25", whiteSpace: "nowrap", padding: "0.5rem 0.875rem" }}>{cur()}{Number(j.total_credit).toLocaleString(activeMoney().locale)}</td>
                         </tr>
                       );
                     })}
@@ -1090,8 +1091,8 @@ export default function TallyPage() {
                   <tfoot>
                     <tr style={{ borderTop: "1px solid #E6DFD0", background: "#FFFFFF" }}>
                       <td colSpan={4} style={{ fontWeight: 600, fontSize: "0.72rem", color: "#5E6B66", padding: "0.5rem 0.875rem" }}>{journals.length} journal{journals.length !== 1 ? "s" : ""} ready to push</td>
-                      <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#0B7A55", padding: "0.5rem 0.875rem" }}>₹{journals.reduce((s, j) => s + Number(j.total_debit), 0).toLocaleString("en-IN")}</td>
-                      <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#0F2B25", padding: "0.5rem 0.875rem" }}>₹{journals.reduce((s, j) => s + Number(j.total_credit), 0).toLocaleString("en-IN")}</td>
+                      <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#0B7A55", padding: "0.5rem 0.875rem" }}>{cur()}{journals.reduce((s, j) => s + Number(j.total_debit), 0).toLocaleString(activeMoney().locale)}</td>
+                      <td className="tb-mono" style={{ textAlign: "right", fontWeight: 700, color: "#0F2B25", padding: "0.5rem 0.875rem" }}>{cur()}{journals.reduce((s, j) => s + Number(j.total_credit), 0).toLocaleString(activeMoney().locale)}</td>
                     </tr>
                   </tfoot>
                 </table>

@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -57,7 +58,7 @@ export default function PayablesPage() {
     setLoading(false);
   }
 
-  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   function agingBucket(days: number) {
     if (days <= 30) return { label: "0–30 days", color: "#0B7A55" };
@@ -92,7 +93,7 @@ export default function PayablesPage() {
             <div key={k.label} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 10, padding: "1rem" }}>
               <div style={{ fontSize: "1.2rem", marginBottom: "0.4rem" }}>{k.icon}</div>
               <div style={{ fontSize: "1.3rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>
-                {k.isCount ? k.value : `₹${fmt(k.value)}`}
+                {k.isCount ? k.value : `${cur()}${fmt(k.value)}`}
               </div>
               <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.60)", marginTop: "0.2rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>{k.label}</div>
             </div>
@@ -109,7 +110,7 @@ export default function PayablesPage() {
               { label: "90+ days", amount: entries.filter(e => e.days_pending > 90).reduce((s, e) => s + e.outstanding, 0), color: "#C2321F" },
             ].map(bucket => (
               <div key={bucket.label} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "1rem", fontWeight: 800, color: bucket.color, fontVariantNumeric: "tabular-nums" }}>₹{fmt(bucket.amount)}</div>
+                <div style={{ fontSize: "1rem", fontWeight: 800, color: bucket.color, fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(bucket.amount)}</div>
                 <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>{bucket.label}</div>
                 <div style={{ height: 3, background: bucket.amount > 0 ? bucket.color : "rgba(20,26,58,0.11)", borderRadius: 2, marginTop: "0.4rem", opacity: 0.6 }} />
               </div>
@@ -142,9 +143,9 @@ export default function PayablesPage() {
                     <tr key={i} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
                       <td style={{ padding: "0.75rem 0.85rem", fontWeight: 600, fontSize: "0.85rem" }}>{e.contact_name}</td>
                       <td style={{ padding: "0.75rem 0.85rem", fontSize: "0.82rem", color: "rgba(20,26,58,0.75)" }}>{e.bill_count}</td>
-                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>₹{fmt(e.total_billed)}</td>
-                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "#0B7A55" }}>₹{fmt(e.total_paid)}</td>
-                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontWeight: 800, fontSize: "0.9rem", fontVariantNumeric: "tabular-nums", color: e.outstanding < 0 ? "#0B7A55" : aging.color }}>{e.outstanding < 0 ? "−" : ""}₹{fmt(Math.abs(e.outstanding))}</td>
+                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(e.total_billed)}</td>
+                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "#0B7A55" }}>{cur()}{fmt(e.total_paid)}</td>
+                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", fontWeight: 800, fontSize: "0.9rem", fontVariantNumeric: "tabular-nums", color: e.outstanding < 0 ? "#0B7A55" : aging.color }}>{e.outstanding < 0 ? "−" : ""}{cur()}{fmt(Math.abs(e.outstanding))}</td>
                       <td style={{ padding: "0.75rem 0.85rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>
                         {e.oldest_bill ? new Date(e.oldest_bill).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" }) : "—"}
                       </td>
@@ -165,7 +166,7 @@ export default function PayablesPage() {
               <tfoot>
                 <tr style={{ borderTop: "2px solid rgba(35,42,99,0.3)", background: "rgba(35,42,99,0.05)" }}>
                   <td colSpan={4} style={{ padding: "0.7rem 0.85rem", fontWeight: 800, fontSize: "0.85rem" }}>Total Payable</td>
-                  <td style={{ padding: "0.7rem 0.85rem", textAlign: "right", fontWeight: 900, fontSize: "1rem", color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalOutstanding)}</td>
+                  <td style={{ padding: "0.7rem 0.85rem", textAlign: "right", fontWeight: 900, fontSize: "1rem", color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(totalOutstanding)}</td>
                   <td colSpan={3} />
                 </tr>
               </tfoot>

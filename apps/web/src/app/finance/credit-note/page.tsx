@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -98,7 +99,7 @@ export default function CreditNotePage() {
       });
       entryNo = r.entry_no;
     } catch (e) { setError(e instanceof Error ? e.message : "Failed"); setSaving(false); return; }
-    setSuccess(`Posted: ${entryNo} — ₹${totalAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`);
+    setSuccess(`Posted: ${entryNo} — ${cur()}${totalAmt.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}`);
     setAmount(""); setNarration(""); setRefInvoice(""); setContactId("");
     setSaving(false);
 
@@ -108,7 +109,7 @@ export default function CreditNotePage() {
 
   const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
   const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
-  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   return (
     <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
@@ -177,14 +178,14 @@ export default function CreditNotePage() {
             {/* Amount breakdown */}
             {amt > 0 && (
               <div style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Base Amount</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(amt)}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Base Amount</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(amt)}</span></div>
                 {!isInterState && cgst > 0 && <>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>CGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(cgst)}</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>SGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(sgst)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>CGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(cgst)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>SGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(sgst)}</span></div>
                 </>}
-                {isInterState && igst > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>IGST @ {gstRate}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(igst)}</span></div>}
+                {isInterState && igst > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>IGST @ {gstRate}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(igst)}</span></div>}
                 <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, borderTop: "1px solid rgba(20,26,58,0.11)", paddingTop: 6, marginTop: 6, color: "#C2321F" }}>
-                  <span>Total Credit Note Value</span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(totalAmt)}</span>
+                  <span>Total Credit Note Value</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(totalAmt)}</span>
                 </div>
               </div>
             )}
@@ -211,7 +212,7 @@ export default function CreditNotePage() {
                   <span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.55)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                 </div>
                 <div style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration}</div>
-                <div style={{ textAlign: "right", marginTop: "0.25rem", fontSize: "0.82rem", fontWeight: 700, color: "#C2321F" }}>₹{fmt(r.total_debit)}</div>
+                <div style={{ textAlign: "right", marginTop: "0.25rem", fontSize: "0.82rem", fontWeight: 700, color: "#C2321F" }}>{cur()}{fmt(r.total_debit)}</div>
               </div>
             ))}
             {recent.length === 0 && <div style={{ color: "rgba(20,26,58,0.35)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No credit notes yet</div>}

@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -23,7 +24,7 @@ type CoaAccount = { id: string; name: string; type: string; code: string | null 
 
 /* ─── Helpers ────────────────────────────────────────────── */
 function uid() { return Math.random().toString(36).slice(2, 10); }
-function fmt(n: number) { return n ? n.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : ""; }
+function fmt(n: number) { return n ? n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : ""; }
 function fmtDate(d: string) {
   try { return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }); }
   catch { return d; }
@@ -538,13 +539,13 @@ export default function BankingPage() {
                               {row.description || <span style={{ color: "#E1E4EE" }}>—</span>}
                             </td>
                             <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.debit ? "#C2321F" : "#E1E4EE", fontWeight: row.debit ? 600 : 400 }}>
-                              {row.debit ? `₹${fmt(row.debit)}` : ""}
+                              {row.debit ? `${cur()}${fmt(row.debit)}` : ""}
                             </td>
                             <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.credit ? "#0B7A55" : "#E1E4EE", fontWeight: row.credit ? 600 : 400 }}>
-                              {row.credit ? `₹${fmt(row.credit)}` : ""}
+                              {row.credit ? `${cur()}${fmt(row.credit)}` : ""}
                             </td>
                             <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: "#5A6080", fontSize: "0.7rem" }}>
-                              {row.balance ? `₹${fmt(row.balance)}` : ""}
+                              {row.balance ? `${cur()}${fmt(row.balance)}` : ""}
                             </td>
                             <td style={{ padding: "0.5rem 0.75rem" }}>
                               {row.pushed ? (
@@ -596,10 +597,10 @@ export default function BankingPage() {
                           Total ({rows.length} transactions)
                         </td>
                         <td style={{ padding: "0.55rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, color: "#C2321F", fontSize: "0.78rem" }}>
-                          ₹{fmt(totalDebit)}
+                          {cur()}{fmt(totalDebit)}
                         </td>
                         <td style={{ padding: "0.55rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, color: "#0B7A55", fontSize: "0.78rem" }}>
-                          ₹{fmt(totalCredit)}
+                          {cur()}{fmt(totalCredit)}
                         </td>
                         <td colSpan={3} />
                       </tr>
@@ -646,11 +647,11 @@ export default function BankingPage() {
                 <div style={{ height: 1, background: "#FFFFFF", margin: "0.6rem 0" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.3rem" }}>
                   <span style={{ fontSize: "0.76rem", color: "#5A6080" }}>Total Payments</span>
-                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#C2321F", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(totalDebit)}</span>
+                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#C2321F", fontFamily: "'IBM Plex Mono',monospace" }}>{cur()}{fmt(totalDebit)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontSize: "0.76rem", color: "#5A6080" }}>Total Receipts</span>
-                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#0B7A55", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(totalCredit)}</span>
+                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#0B7A55", fontFamily: "'IBM Plex Mono',monospace" }}>{cur()}{fmt(totalCredit)}</span>
                 </div>
               </div>
 

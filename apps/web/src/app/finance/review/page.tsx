@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 // Entries held for review — e.g. a sale or purchase of a GST-registered business with no GST line. Check, then post anyway or discard.
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -8,7 +9,7 @@ import { readActiveBusiness } from "@/lib/activeBusiness";
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", pos: "#0B7A55", posSoft: "#E3F6EE", amber: "#8A5A00", amberSoft: "#FFF4DB", neg: "#C2321F", negSoft: "#FDECEA" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
-const inr = (x: number) => "₹" + (x || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+const inr = (x: number) => cur() + (x || 0).toLocaleString(activeMoney().locale, { maximumFractionDigits: 2 });
 type Entry = { id: string; date: string; type: string; narration: string | null; party_name: string | null; amount: number; reasons: string[]; lines: { account: string; dr: number; cr: number }[] };
 
 export default function ReviewQueue() {

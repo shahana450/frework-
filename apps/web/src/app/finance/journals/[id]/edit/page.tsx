@@ -1,4 +1,5 @@
 "use client";
+import { cur } from "@/lib/money";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -97,7 +98,7 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
 
   async function save() {
     if (!bizId || !date) { setError("Date is required"); return; }
-    if (!balanced) { setError(`Not balanced: DR ₹${totalDr.toFixed(2)} ≠ CR ₹${totalCr.toFixed(2)}`); return; }
+    if (!balanced) { setError(`Not balanced: DR ${cur()}${totalDr.toFixed(2)} ≠ CR ${cur()}${totalCr.toFixed(2)}`); return; }
     if (lines.some(l => !l.account_id)) { setError("All lines must have an account selected"); return; }
     setSaving(true); setError("");
 
@@ -188,7 +189,7 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
             <thead>
               <tr style={{ background: "#FFFFFF" }}>
-                {["Account / Ledger", "DR (₹)", "CR (₹)", "Narration", ""].map(h => (
+                {["Account / Ledger", "DR (" + cur() + ")", "CR (" + cur() + ")", "Narration", ""].map(h => (
                   <th key={h} style={{ padding: "0.6rem 0.75rem", textAlign: "left", fontSize: "0.65rem", color: "rgba(20,26,58,0.60)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
                 ))}
               </tr>
@@ -237,10 +238,10 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
                 <td style={{ padding: "0.5rem 0.75rem", fontWeight: 700, fontSize: "0.75rem", color: "rgba(20,26,58,0.65)" }}>
                   <button onClick={addLine} style={{ background: "none", border: "1px solid rgba(20,26,58,0.28)", color: "#141A3A", padding: "3px 12px", borderRadius: 5, cursor: "pointer", fontSize: "0.75rem" }}>+ Add Line</button>
                 </td>
-                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 800, color: "#0B7A55", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>₹{totalDr.toFixed(2)}</td>
-                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 800, color: "#1F5EFF", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>₹{totalCr.toFixed(2)}</td>
+                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 800, color: "#0B7A55", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{totalDr.toFixed(2)}</td>
+                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 800, color: "#1F5EFF", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{totalCr.toFixed(2)}</td>
                 <td colSpan={2} style={{ padding: "0.5rem 0.75rem", fontSize: "0.75rem", color: balanced ? "#0B7A55" : "#C2321F", fontWeight: 700 }}>
-                  {balanced ? "✓ Balanced" : `⚠ Difference: ₹${Math.abs(totalDr - totalCr).toFixed(2)}`}
+                  {balanced ? "✓ Balanced" : `⚠ Difference: ${cur()}${Math.abs(totalDr - totalCr).toFixed(2)}`}
                 </td>
               </tr>
             </tfoot>

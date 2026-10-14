@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { LEDGER_HEADS, inferHead, headFromType } from "@/lib/ledgerHeads";
@@ -16,7 +17,7 @@ type SortKey = "date" | "description" | "debit" | "credit" | "ledger";
 const BG = "#FFFFFF", BORDER = "rgba(20,26,58,0.12)", GOLD = "#232A63", GREEN = "#0B7A55", RED = "#C2321F";
 const BLUE = "#1F5EFF", AMBER = "#8A5A00", PURPLE = "#5B4BC4", TEXT = "#141A3A", MUTED = "rgba(20,26,58,0.75)";
 const MONO = "'IBM Plex Mono', 'Fira Code', monospace";
-const fmt = (n: number) => n ? n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+const fmt = (n: number) => n ? n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
 const inputStyle: React.CSSProperties = { background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 9px", borderRadius: 7, fontSize: "0.8rem", fontFamily: "inherit", outline: "none" };
 
 export default function StatementModal({ file, bizId, userId, onClose, onPosted }: {
@@ -234,7 +235,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
         <div style={{ padding: "0.9rem 1.2rem", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: "1rem" }}>🏦 Book bank statement</div>
-            <div style={{ fontSize: "0.74rem", color: MUTED }}>{file.name}{rows.length ? ` · ${rows.length} transactions · Withdrawals ₹${fmt(totals.dr)} · Deposits ₹${fmt(totals.cr)}` : ""}</div>
+            <div style={{ fontSize: "0.74rem", color: MUTED }}>{file.name}{rows.length ? ` · ${rows.length} transactions · Withdrawals ${cur()}${fmt(totals.dr)} · Deposits ${cur()}${fmt(totals.cr)}` : ""}</div>
           </div>
           <div style={{ flex: 1 }} />
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem" }}>
@@ -299,7 +300,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
                           {" · "}<button onClick={() => { setGroupFilter({ label: g.label, ids: new Set(g.rowIds) }); setView("rows"); setFilter("all"); }} style={{ background: "none", border: "none", color: BLUE, padding: 0, cursor: "pointer", fontSize: "inherit", fontFamily: "inherit" }}>see rows</button>
                         </div>
                       </div>
-                      <div style={{ textAlign: "right", fontFamily: MONO, fontWeight: 700, color: g.dir === "out" ? RED : GREEN }}>₹{fmt(g.total)}</div>
+                      <div style={{ textAlign: "right", fontFamily: MONO, fontWeight: 700, color: g.dir === "out" ? RED : GREEN }}>{cur()}{fmt(g.total)}</div>
                       <div style={{ minWidth: 0 }}>
                         <input list="sm-ledgers" value={ledger} onChange={e => setGroupLedger(m => ({ ...m, [g.key]: e.target.value }))} placeholder="Choose or type ledger" style={{ ...inputStyle, width: "100%", borderColor: !ledger.trim() ? "rgba(184,120,0,0.4)" : isNew(ledger) ? "rgba(91,75,196,0.5)" : BORDER }} />
                         <div style={{ fontSize: "0.68rem", color: MUTED, marginTop: 3 }}>
@@ -383,7 +384,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
               )}
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "0.78rem", color: progress.startsWith("✓") ? GREEN : MUTED }}>
-                  {progress || (sel.length ? `${sel.length} to post · ₹${fmt(sel.reduce((s, r) => s + r.debit + r.credit, 0))}` : "Tick the transactions to post. Click a column header to sort.")}
+                  {progress || (sel.length ? `${sel.length} to post · ${cur()}${fmt(sel.reduce((s, r) => s + r.debit + r.credit, 0))}` : "Tick the transactions to post. Click a column header to sort.")}
                   {selMissing > 0 && <span style={{ color: AMBER }}> · {selMissing} selected without a ledger</span>}
                   {!bankLedger.trim() && <span style={{ color: AMBER }}> · choose the bank ledger at the top</span>}
                 </span>

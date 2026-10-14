@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 // Monthly MIS pack — one printable page for the owner, partners or the bank. Print → Save as PDF.
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,7 @@ import type { Dashboard } from "@/lib/dashboard";
 const C = { ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", forest: "#0F2B25", gold: "#C99A4E", pos: "#0B7A55", neg: "#C2321F" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
-const inr = (n: number) => (n < 0 ? "−" : "") + "₹" + Math.abs(Math.round(n || 0)).toLocaleString("en-IN");
+const inr = (n: number) => (n < 0 ? "−" : "") + cur() + Math.abs(Math.round(n || 0)).toLocaleString(activeMoney().locale);
 const pct = (a: number, b: number) => b ? `${a >= b ? "▲" : "▼"} ${Math.abs(Math.round(((a - b) / Math.abs(b)) * 100))}%` : "";
 
 export default function MisPack() {

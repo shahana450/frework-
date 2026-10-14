@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -115,7 +116,7 @@ function LedgerContent() {
   const totalCr = entries.reduce((s, e) => s + e.cr, 0);
   const closingBalance = Math.abs(totalDr - totalCr);
   const closingType: "Dr" | "Cr" = totalDr >= totalCr ? "Dr" : "Cr";
-  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   const filteredAccounts = search
     ? accounts.filter(a => a.name.toLowerCase().includes(search.toLowerCase()) || a.code.includes(search))
@@ -190,7 +191,7 @@ function LedgerContent() {
                 ].map(k => (
                   <div key={k.label} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 10, padding: "0.85rem 1rem" }}>
                     <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.35rem" }}>{k.label}</div>
-                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>₹{fmt(k.value)}</div>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(k.value)}</div>
                   </div>
                 ))}
               </div>
@@ -204,8 +205,8 @@ function LedgerContent() {
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr style={{ background: "#FFFFFF" }}>
-                        {["Date", "Entry No", "Narration", "Debit (₹)", "Credit (₹)", "Balance"].map(h => (
-                          <th key={h} style={{ padding: "0.55rem 0.85rem", textAlign: ["Debit (₹)", "Credit (₹)", "Balance"].includes(h) ? "right" : "left", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
+                        {["Date", "Entry No", "Narration", "Debit (" + cur() + ")", "Credit (" + cur() + ")", "Balance"].map(h => (
+                          <th key={h} style={{ padding: "0.55rem 0.85rem", textAlign: ["Debit (" + cur() + ")", "Credit (" + cur() + ")", "Balance"].includes(h) ? "right" : "left", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>

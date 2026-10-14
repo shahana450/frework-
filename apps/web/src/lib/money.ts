@@ -11,3 +11,17 @@ export function formatMoney(n: number, f: MoneyFormat = DEFAULT_MONEY, opts: { d
     return `${v < 0 ? "−" : ""}${f.currency} ${Math.abs(v).toFixed(decimals ? 2 : 0)}`;
   }
 }
+
+// The open business's currency in the browser. The finance layout sets it when the business loads,
+// so every page can show $ / AED / € for a non-Indian business instead of a hard-coded ₹.
+let active: MoneyFormat = DEFAULT_MONEY;
+export function setActiveCurrency(currency?: string | null, country?: string | null) {
+  const code = String(currency || "INR").toUpperCase();
+  active = { currency: code, locale: code === "INR" || country === "IN" ? "en-IN" : "en-US" };
+}
+export const activeMoney = (): MoneyFormat => active;
+/** The currency sign for the open business, e.g. "₹", "$", "AED". */
+export function cur(): string {
+  try { return new Intl.NumberFormat(active.locale, { style: "currency", currency: active.currency }).formatToParts(0).find(p => p.type === "currency")?.value ?? "₹"; }
+  catch { return active.currency; }
+}

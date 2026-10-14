@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useEffect, useState } from "react";
 import type { ReviewResult } from "@/lib/reviewChecks";
 
@@ -35,7 +36,7 @@ export default function ReviewChecks({ bizId, date, lines, onResult }: { bizId: 
   }, [badKey, seen]);
 
   if (!res || (!res.checks.length && !res.impact.length)) return null;
-  const fmt = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  const fmt = (n: number) => cur() + n.toLocaleString(activeMoney().locale, { maximumFractionDigits: 0 });
 
   const bad = res.checks.filter(c => c.tone === "bad");
   return (

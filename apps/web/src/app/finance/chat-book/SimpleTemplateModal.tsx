@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 // Review and post the simple Date | Particulars | Debit | Credit | Narration template. Exact — no AI involved.
 import { useEffect, useMemo, useState } from "react";
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
@@ -22,7 +23,7 @@ import { voucherOf, type SimpleEntry } from "@/lib/simpleTemplate";
 
 const C = { ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", soft: "#FBF8F1", forest: "#0F2B25", gold: "#C99A4E", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA" };
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
-const inr = (n: number) => n ? n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+const inr = (n: number) => n ? n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
 
 export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId, onClose, onPosted }: { fileName: string; fileKey: string; entries: SimpleEntry[]; bizId: string; onClose: () => void; onPosted: (count: number, total: number) => void }) {
   const [sel, setSel] = useState<Set<number>>(() => new Set(entries.filter(e => !e.error).map(e => e.row)));
@@ -145,7 +146,7 @@ export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId,
                   <span style={{ fontFamily: MONO, color: C.muted }}>{e.date}</span>
                   <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: "#EFE8D9", color: C.ink, textTransform: "capitalize" }}>{voucherOf(e.lines)}</span>
                   <b style={{ flex: 1, minWidth: 160 }}>{e.narration}</b>
-                  <span style={{ fontFamily: MONO, fontWeight: 600 }}>₹{inr(e.debit)}</span>
+                  <span style={{ fontFamily: MONO, fontWeight: 600 }}>{cur()}{inr(e.debit)}</span>
                   <span style={{ fontSize: 12, color: C.muted }}>row {e.row}</span>
                   {posted && <span style={{ fontSize: 12, fontWeight: 800, color: C.pos, background: C.posSoft, padding: "2px 8px", borderRadius: 6 }}>✓ {posted}</span>}
                 </div>
@@ -166,7 +167,7 @@ export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId,
 
         <div style={{ borderTop: `1px solid ${C.line}`, background: "#FFFFFF", padding: "12px 20px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <button onClick={() => setSel(new Set(chosen.length === ok.filter(e => !done[e.row]).length ? [] : ok.map(e => e.row)))} style={btn(false)}>{chosen.length === ok.filter(e => !done[e.row]).length ? "Clear" : "Select all"}</button>
-          <span role="status" style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: msg.startsWith("✓") ? C.pos : C.muted }}>{msg || `${chosen.length} selected · ₹${inr(chosen.reduce((s, e) => s + e.debit, 0)) || "0.00"}`}</span>
+          <span role="status" style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: msg.startsWith("✓") ? C.pos : C.muted }}>{msg || `${chosen.length} selected · ${cur()}${inr(chosen.reduce((s, e) => s + e.debit, 0)) || "0.00"}`}</span>
           <button onClick={onClose} style={btn(false)}>Close</button>
           <button onClick={post} disabled={busy || !chosen.length} style={{ ...btn(true), opacity: busy || !chosen.length ? 0.55 : 1 }}>{busy ? "Posting…" : `Post ${chosen.length} entr${chosen.length === 1 ? "y" : "ies"}`}</button>
         </div>

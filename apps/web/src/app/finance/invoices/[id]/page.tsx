@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -10,7 +11,7 @@ import { readActiveBusiness } from "@/lib/activeBusiness";
 const C = { bg: "#F5F6FA", line: "#E1E4EE", strong: "#C9CEDF", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", soft: "#E6E8F4", pos: "#0B7A55", neg: "#C2321F", warn: "#8A5A00", warnSoft: "#FFF4DB" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
-const money = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const nice = (d: string) => d ? new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
 
 /** Text that looks printed but can be edited in place. */
@@ -133,7 +134,7 @@ export default function InvoicePage() {
         <button onClick={save} disabled={!dirty || saving} title={dirty ? "" : "Edit the invoice to enable Save"} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: `1px solid ${C.strong}`, background: "#FFFFFF", color: C.ink, fontWeight: 700, cursor: dirty ? "pointer" : "default", opacity: dirty ? 1 : 0.5 }}>{saving ? "Saving…" : "Save"}</button>
         <button onClick={() => window.print()} style={{ height: 40, padding: "0 18px", borderRadius: 10, border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Print / PDF</button>
       </div>
-      {mismatch && <div className="no-print" style={{ maxWidth: 860, margin: "0 auto 14px", background: C.warnSoft, color: C.warn, borderRadius: 10, padding: "10px 14px", fontSize: 13.5, fontWeight: 600 }}>The invoice total (₹{money(tot!.total)}) differs from the posted entry (₹{money(bookTotal!)}). Your books aren&apos;t changed by edits here — post an adjustment if the sale amount was wrong.</div>}
+      {mismatch && <div className="no-print" style={{ maxWidth: 860, margin: "0 auto 14px", background: C.warnSoft, color: C.warn, borderRadius: 10, padding: "10px 14px", fontSize: 13.5, fontWeight: 600 }}>The invoice total ({cur()}{money(tot!.total)}) differs from the posted entry ({cur()}{money(bookTotal!)}). Your books aren&apos;t changed by edits here — post an adjustment if the sale amount was wrong.</div>}
       <div className="no-print" style={{ maxWidth: 860, margin: "0 auto 10px", fontSize: 12.5, color: C.muted }}>Click any text on the invoice to edit it. Hover to see editable fields.</div>
 
       <div className="inv-wrap" style={{ display: "flex", justifyContent: "center" }}>
@@ -221,7 +222,7 @@ export default function InvoicePage() {
                 : <><span style={{ color: C.muted }}>CGST</span><span style={{ fontFamily: MONO, textAlign: "right" }}>{money(tot!.cgst)}</span><span style={{ color: C.muted }}>SGST</span><span style={{ fontFamily: MONO, textAlign: "right" }}>{money(tot!.sgst)}</span></>}
               {tot!.roundOff !== 0 && <><span style={{ color: C.muted }}>Round off</span><span style={{ fontFamily: MONO, textAlign: "right" }}>{tot!.roundOff > 0 ? "+" : ""}{money(tot!.roundOff)}</span></>}
               <span style={{ borderTop: `1.5px solid ${C.ink}`, paddingTop: 8, fontWeight: 800, fontSize: 15 }}>Total</span>
-              <span style={{ borderTop: `1.5px solid ${C.ink}`, paddingTop: 8, fontWeight: 800, fontSize: 18, fontFamily: MONO, textAlign: "right" }}>₹{money(tot!.total)}</span>
+              <span style={{ borderTop: `1.5px solid ${C.ink}`, paddingTop: 8, fontWeight: 800, fontSize: 18, fontFamily: MONO, textAlign: "right" }}>{cur()}{money(tot!.total)}</span>
             </div>
           </section>
 

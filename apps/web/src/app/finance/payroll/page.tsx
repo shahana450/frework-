@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -34,8 +35,8 @@ type PayrollLine = {
 };
 
 const MONTHS = ["April","May","June","July","August","September","October","November","December","January","February","March"];
-const fmt = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 0 })}`;
-const fmtD = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+const fmt = (n: number) => `${cur()}${n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 0 })}`;
+const fmtD = (n: number) => `${cur()}${n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}`;
 
 function calcPayroll(emp: Employee): PayrollLine {
   const ctc = emp.monthly_ctc;

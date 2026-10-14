@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -91,7 +92,7 @@ export default function NewJournalPage() {
   async function save(status: "draft" | "posted") {
     if (!bizId) return;
     if (lines.some(l => !l.account_id)) { setError("All lines must have an account selected"); return; }
-    if (!balanced) { setError(`Entry is unbalanced by ₹${Math.abs(diff).toFixed(2)}. Debit must equal Credit.`); return; }
+    if (!balanced) { setError(`Entry is unbalanced by ${cur()}${Math.abs(diff).toFixed(2)}. Debit must equal Credit.`); return; }
     setSaving(true); setError("");
 
     try {
@@ -212,10 +213,10 @@ export default function NewJournalPage() {
             <tfoot>
               <tr style={{ borderTop: "2px solid rgba(20,26,58,0.14)", background: "#FFFFFF" }}>
                 <td style={{ padding: "0.6rem 1rem", fontWeight: 700, fontSize: "0.85rem" }}>Total</td>
-                <td style={{ padding: "0.6rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#141A3A" }}>{totalDr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-                <td style={{ padding: "0.6rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#141A3A" }}>{totalCr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: "0.6rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#141A3A" }}>{totalDr.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: "0.6rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#141A3A" }}>{totalCr.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</td>
                 <td colSpan={2} style={{ padding: "0.6rem 1rem", fontSize: "0.78rem", color: balanced ? "#0B7A55" : "#C2321F", fontWeight: 600, textAlign: "right" }}>
-                  {balanced ? "✓ Balanced" : `⚠ Difference: ₹${Math.abs(diff).toFixed(2)}`}
+                  {balanced ? "✓ Balanced" : `⚠ Difference: ${cur()}${Math.abs(diff).toFixed(2)}`}
                 </td>
               </tr>
             </tfoot>

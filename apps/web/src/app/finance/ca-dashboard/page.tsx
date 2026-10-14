@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -18,10 +19,10 @@ type Client = {
 };
 
 const fmt = (n: number) => n >= 1e7
-  ? `₹${(n / 1e7).toFixed(1)}Cr`
+  ? `${cur()}${(n / 1e7).toFixed(1)}Cr`
   : n >= 1e5
-  ? `₹${(n / 1e5).toFixed(1)}L`
-  : `₹${n.toLocaleString("en-IN")}`;
+  ? `${cur()}${(n / 1e5).toFixed(1)}L`
+  : `${cur()}${n.toLocaleString(activeMoney().locale)}`;
 
 const STATUS_COLORS: Record<string, string> = {
   Regular: "#0B7A55", Composition: "#1F5EFF", Unregistered: "#6B7280",

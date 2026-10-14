@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { matchToTally, tallyGuidFor } from "@/lib/tallyMatch";
 import { verifyOpenCompany } from "@/lib/tallyPushRun";
 import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
@@ -25,7 +26,7 @@ const BG = "#F5F6FA", CARD = "#FFFFFF", BORDER = "rgba(20,26,58,0.12)";
 const GOLD = "#232A63", GREEN = "#0B7A55", RED = "#C2321F", BLUE = "#1F5EFF", PURPLE = "#5B4BC4", AMBER = "#8A5A00";
 const TEXT = "#141A3A", MUTED = "rgba(20,26,58,0.75)";
 const MONO = "'IBM Plex Mono', 'Fira Code', monospace";
-const fmt = (n: number) => "₹" + (n ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n: number) => cur() + (n ?? 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const TYPE_LABEL: Record<string, string> = {
   journal: "Journal", payment: "Payment", receipt: "Receipt", sales: "Sales", purchase: "Purchase",
@@ -378,8 +379,8 @@ export default function BooksPage() {
                         <td style={{ padding: "0.5rem 0.75rem", whiteSpace: "nowrap" }}>
                           {src === "tally" ? <span style={{ fontSize: "0.7rem", color: MUTED }}>Came from Tally</span>
                             : inTally[j.id] ? <span style={{ fontSize: "0.7rem", fontWeight: 700, color: GREEN }} title={inTally[j.id].how === "guid" ? "Found in Tally by the GUID FreWork gave it when pushing" : "Tally has a voucher on the same date, same amount and a shared ledger"}>✓ In Tally{inTally[j.id].vno ? ` · Vch ${inTally[j.id].vno}` : ""}{inTally[j.id].how === "match" ? " (likely)" : ""}</span>
-                            : pv.kind === "pushed" ? <span style={{ fontSize: "0.7rem", fontWeight: 700, color: GREEN }} title={`${new Date(pv.at).toLocaleString("en-IN")}${pv.companyKnown ? "" : " · company not recorded — Check Tally confirms it"}`}>✓ Pushed {new Date(pv.at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</span>
-                            : pv.kind === "elsewhere" ? <span style={{ display: "inline-flex", flexDirection: "column" }} title={`Pushed to Tally company "${pv.company}" on ${new Date(pv.at).toLocaleString("en-IN")}. Not pushed to the company open now.`}><span style={{ fontSize: "0.7rem", color: AMBER }}>Not pushed</span><span style={{ fontSize: "0.64rem", color: MUTED }}>Pushed to {pv.company}</span></span>
+                            : pv.kind === "pushed" ? <span style={{ fontSize: "0.7rem", fontWeight: 700, color: GREEN }} title={`${new Date(pv.at).toLocaleString(activeMoney().locale)}${pv.companyKnown ? "" : " · company not recorded — Check Tally confirms it"}`}>✓ Pushed {new Date(pv.at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</span>
+                            : pv.kind === "elsewhere" ? <span style={{ display: "inline-flex", flexDirection: "column" }} title={`Pushed to Tally company "${pv.company}" on ${new Date(pv.at).toLocaleString(activeMoney().locale)}. Not pushed to the company open now.`}><span style={{ fontSize: "0.7rem", color: AMBER }}>Not pushed</span><span style={{ fontSize: "0.64rem", color: MUTED }}>Pushed to {pv.company}</span></span>
                             : p && "error" in p ? <span style={{ display: "inline-flex", flexDirection: "column", maxWidth: 260, whiteSpace: "normal" }} title={p.error}><span style={{ fontSize: "0.7rem", fontWeight: 700, color: RED }}>✗ Failed</span><span style={{ fontSize: "0.66rem", color: MUTED, lineHeight: 1.35 }}>{explainTallyError(p.error, eduMode)}</span></span>
                             : <span style={{ fontSize: "0.7rem", color: AMBER }}>Not pushed</span>}
                         </td>

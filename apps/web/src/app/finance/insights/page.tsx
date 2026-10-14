@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -115,8 +116,8 @@ export default function InsightsPage() {
     setLoading(false);
   }
 
-  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
-  const fmtShort = (n: number) => n >= 100000 ? `₹${(n / 100000).toFixed(1)}L` : n >= 1000 ? `₹${(n / 1000).toFixed(1)}K` : `₹${Math.round(n)}`;
+  const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
+  const fmtShort = (n: number) => n >= 100000 ? `${cur()}${(n / 100000).toFixed(1)}L` : n >= 1000 ? `${cur()}${(n / 1000).toFixed(1)}K` : `${cur()}${Math.round(n)}`;
 
   const maxMonthValue = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expenses)), 1);
   const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : "0.0";
@@ -197,8 +198,8 @@ export default function InsightsPage() {
                         <div key={m.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
                           <div style={{ fontSize: "0.62rem", color: "rgba(20,26,58,0.55)", marginBottom: 4, fontVariantNumeric: "tabular-nums" }}>{fmtShort(m.profit)}</div>
                           <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 140 }}>
-                            <div title={`Revenue: ₹${fmt(m.revenue)}`} style={{ width: 14, height: revH, background: "linear-gradient(180deg,#0B7A55,#0B7A55)", borderRadius: "3px 3px 0 0", transition: "height 0.4s" }} />
-                            <div title={`Expenses: ₹${fmt(m.expenses)}`} style={{ width: 14, height: expH, background: "linear-gradient(180deg,#C2321F,#C2321F)", borderRadius: "3px 3px 0 0", transition: "height 0.4s" }} />
+                            <div title={`Revenue: ${cur()}${fmt(m.revenue)}`} style={{ width: 14, height: revH, background: "linear-gradient(180deg,#0B7A55,#0B7A55)", borderRadius: "3px 3px 0 0", transition: "height 0.4s" }} />
+                            <div title={`Expenses: ${cur()}${fmt(m.expenses)}`} style={{ width: 14, height: expH, background: "linear-gradient(180deg,#C2321F,#C2321F)", borderRadius: "3px 3px 0 0", transition: "height 0.4s" }} />
                           </div>
                           <div style={{ fontSize: "0.62rem", color: "rgba(20,26,58,0.65)", marginTop: 4 }}>{label}</div>
                         </div>
@@ -264,7 +265,7 @@ export default function InsightsPage() {
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
                             <span style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "65%" }}>{d.name}</span>
                             <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
-                              <span style={{ fontSize: "0.75rem", fontVariantNumeric: "tabular-nums" }}>₹{fmt(d.amount)}</span>
+                              <span style={{ fontSize: "0.75rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(d.amount)}</span>
                               <span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.55)" }}>{total > 0 ? `${((d.amount / total) * 100).toFixed(0)}%` : ""}</span>
                             </div>
                           </div>
@@ -284,7 +285,7 @@ export default function InsightsPage() {
               <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "1rem" }}>Smart Alerts & Recommendations</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
                 {[
-                  gstPayable > 0 && { icon: "🏛️", text: `GST payable estimated at ₹${fmt(gstPayable)}. File GSTR-3B before the 20th.`, color: "#1F5EFF", href: "/finance/gst" },
+                  gstPayable > 0 && { icon: "🏛️", text: `GST payable estimated at ${cur()}${fmt(gstPayable)}. File GSTR-3B before the 20th.`, color: "#1F5EFF", href: "/finance/gst" },
                   netProfit < 0 && { icon: "⚠️", text: "Business is operating at a loss this year. Review your top expenses and pricing.", color: "#C2321F", href: "/finance/virtual-ca" },
                   totalRevenue === 0 && { icon: "📈", text: "No sales recorded yet. Create your first sales invoice to start tracking revenue.", color: "#232A63", href: "/finance/sales/new" },
                   totalExpenses > totalRevenue * 0.8 && totalRevenue > 0 && { icon: "📊", text: `Expenses are ${((totalExpenses / totalRevenue) * 100).toFixed(0)}% of revenue. Industry benchmark is typically 60–70%.`, color: "#B4561E", href: "/finance/reports" },

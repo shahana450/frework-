@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -54,7 +55,7 @@ export default function SalesListPage() {
     return true;
   });
 
-  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
   const statusColor = (s: string) => s === "posted" ? "#0B7A55" : s === "draft" ? "#232A63" : "rgba(20,26,58,0.65)";
 
   return (
@@ -76,8 +77,8 @@ export default function SalesListPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
           {[
             { label: "Total Invoices", value: totals.count, color: "#1F5EFF", prefix: "" },
-            { label: "Total Billed", value: totals.total, color: "#232A63", prefix: "₹" },
-            { label: "Total Posted", value: totals.posted, color: "#0B7A55", prefix: "₹" },
+            { label: "Total Billed", value: totals.total, color: "#232A63", prefix: cur() },
+            { label: "Total Posted", value: totals.posted, color: "#0B7A55", prefix: cur() },
           ].map(k => (
             <div key={k.label} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 10, padding: "0.85rem 1rem" }}>
               <div style={{ fontSize: "1.2rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>
@@ -129,7 +130,7 @@ export default function SalesListPage() {
                     </td>
                     <td style={{ padding: "0.65rem 1rem", fontSize: "0.82rem", color: "rgba(20,26,58,0.95)" }}>{contacts[inv.contact_id ?? ""] ?? "—"}</td>
                     <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(20,26,58,0.80)" }}>{inv.narration}</td>
-                    <td style={{ padding: "0.65rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>₹{fmt(inv.total_credit)}</td>
+                    <td style={{ padding: "0.65rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(inv.total_credit)}</td>
                     <td style={{ padding: "0.65rem 1rem" }}>
                       <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: 8, background: `${statusColor(inv.status)}18`, color: statusColor(inv.status), fontWeight: 600, textTransform: "capitalize" }}>
                         {inv.status}
@@ -142,7 +143,7 @@ export default function SalesListPage() {
                 <tr style={{ borderTop: "2px solid rgba(35,42,99,0.25)", background: "rgba(35,42,99,0.04)" }}>
                   <td colSpan={4} style={{ padding: "0.7rem 1rem", fontWeight: 800 }}>Total ({filtered.length} invoices)</td>
                   <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 900, color: "#232A63", fontVariantNumeric: "tabular-nums" }}>
-                    ₹{fmt(filtered.reduce((s, i) => s + i.total_credit, 0))}
+                    {cur()}{fmt(filtered.reduce((s, i) => s + i.total_credit, 0))}
                   </td>
                   <td />
                 </tr>

@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -30,7 +31,7 @@ type Suggestion = {
 const BG = "#F5F6FA", CARD = "#FFFFFF", BORDER = "rgba(20,26,58,0.11)";
 const TEXT = "#141A3A", MUTED = "rgba(20,26,58,0.75)", GOLD = "#232A63", GREEN = "#0B7A55", RED = "#C2321F", AMBER = "#8A5A00", BLUE = "#1F5EFF", PURPLE = "#5B4BC4";
 const MONO = "'IBM Plex Mono', 'Fira Code', monospace";
-const money = (n: number) => "₹" + (n ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = (n: number) => cur() + (n ?? 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const TYPE_LABEL: Record<string, string> = { sales: "Sale", purchase: "Purchase", payment: "Payment / Expense", receipt: "Receipt", journal: "Journal", contra: "Transfer", credit_note: "Credit Note", debit_note: "Debit Note" };
 
 const detailsOf = (s: Suggestion): Details => s.details ?? (s.fw_fin_documents?.doc_type !== "bank_statement" ? s.fw_fin_documents?.ai_summary?.review : undefined) ?? {};

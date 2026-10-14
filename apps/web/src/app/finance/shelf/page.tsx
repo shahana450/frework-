@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -182,7 +183,7 @@ export default function ShelfPage() {
                       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 4, fontSize: 13 }}>
                         <span style={{ fontWeight: 700, color: overdue ? C.neg : C.warn }}>{it.reply_due ? `Reply by ${day(it.reply_due)}${overdue ? " — overdue" : ""}` : "No reply date"}</span>
                         <input type="date" aria-label="Reply-by date" value={it.reply_due ?? ""} onChange={e => patch(it.id, { reply_due: e.target.value || null })} style={{ border: `1px solid ${C.line}`, borderRadius: 7, padding: "2px 6px", fontSize: 12.5 }} />
-                        {it.amount ? <span>· Demand ₹{Number(it.amount).toLocaleString("en-IN")}</span> : null}
+                        {it.amount ? <span>· Demand {cur()}{Number(it.amount).toLocaleString(activeMoney().locale)}</span> : null}
                         <select value={it.status} onChange={e => patch(it.id, { status: e.target.value })} aria-label="Notice status" style={{ border: `1px solid ${C.line}`, borderRadius: 7, padding: "2px 6px", fontSize: 12.5 }}>
                           <option value="open">Open</option><option value="replied">Replied</option><option value="closed">Closed</option>
                         </select>

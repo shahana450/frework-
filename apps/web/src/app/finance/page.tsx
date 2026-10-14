@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import type { Dashboard } from "@/lib/dashboard";
 import { readTallyLedgerGroups, importTallyVouchers, summaryText } from "@/lib/integrations/tallyClient";
 import type { TallyVoucher } from "@/lib/tallyUtils";
-import { formatMoney } from "@/lib/money";
+import { formatMoney , cur, activeMoney } from "@/lib/money";
 import Link from "next/link";
 import HomeDesk from "./HomeDesk";
 import { readActiveBusiness, setActiveBusiness } from "@/lib/activeBusiness";
@@ -528,7 +528,7 @@ export default function FinanceDashboard() {
       const mFrom = `${y}-${String(mo+1).padStart(2,"0")}-01`;
       const mTo = new Date(y, mo+1, 0).toISOString().slice(0,10);
       const mKey = `${y}-${String(mo+1).padStart(2,"0")}`;
-      months.push({ from: mFrom, to: mTo < toDate ? mTo : toDate, label: cur.toLocaleString("en-IN", { month: "short", year: "2-digit" }), key: mKey });
+      months.push({ from: mFrom, to: mTo < toDate ? mTo : toDate, label: cur.toLocaleString(activeMoney().locale, { month: "short", year: "2-digit" }), key: mKey });
       cur = new Date(y, mo+1, 1);
     }
 
@@ -610,7 +610,7 @@ export default function FinanceDashboard() {
       .catch(e => { if (!cancelled && !cached) setDashErr(e instanceof Error ? e.message : "We couldn't load your dashboard right now."); });
     return () => { cancelled = true; };
   }, [activeBiz, fyId, dashTick, periodKey, custom]);
-  const fmt = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const fmt = (n: number) => cur() + Math.abs(n).toLocaleString(activeMoney().locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   if (!loading && businesses.length === 0) {
     return (

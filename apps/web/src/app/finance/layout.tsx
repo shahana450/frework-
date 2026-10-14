@@ -1,4 +1,5 @@
 "use client";
+import { setActiveCurrency } from "@/lib/money";
 import { financeTitle } from "@/lib/dueText";
 import { useState, useEffect } from "react";
 import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
@@ -156,6 +157,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       }
       pick = pick ?? owned?.[0];
       if (pick) { setActiveBusiness(user.id, pick.id, pick.name); setBizName(pick.name); setTallyBusiness(pick.id); }
+      // Money on every page follows this business's currency (set before any page mounts)
+      if (pick) { const { data: m } = await supabase.from("fw_fin_businesses").select("currency,country").eq("id", pick.id).maybeSingle(); setActiveCurrency(m?.currency, m?.country); }
       setSubChecked(true);
     });
   }, [pathname]);

@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -137,7 +138,7 @@ export default function EInvoicePage() {
   };
 
   const jsonStr = JSON.stringify(buildJSON(), null, 2);
-  const fmtR = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+  const fmtR = (n: number) => `${cur()}${n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}`;
 
   return (
     <div style={S.page}>

@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTally, tallyCompanyNow } from "@/lib/tallyConnection";
 import { useRouter } from "next/navigation";
@@ -48,8 +49,8 @@ const CAT_META: Record<FlagCategory, { label: string; icon: string; color: strin
   review:        { label: "Review",         icon: "🔍", color: "#0B7A55", bg: "rgba(11,122,85,0.07)",  border: "rgba(11,122,85,0.25)"  },
 };
 
-const fmt = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-const fmtDec = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2 });
+const fmt = (n: number) => cur() + Math.abs(n).toLocaleString(activeMoney().locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const fmtDec = (n: number) => cur() + Math.abs(n).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
 function isRoundNumber(n: number) { return n >= 10000 && n % 1000 === 0; }
 function isWeekend(d: string) { const day = new Date(d).getDay(); return day === 0 || day === 6; }
@@ -132,7 +133,7 @@ function buildFlags(journals: Journal[], lines: JournalLine[], accounts: Account
     if (Math.abs(j.total_debit - j.total_credit) > 1)
       flags.push({ ...j, amount: amt, category: "critical", severity: "high",
         reason: "DR/CR mismatch — double-entry is broken",
-        detail: `Debit ₹${j.total_debit.toFixed(2)} ≠ Credit ₹${j.total_credit.toFixed(2)}. Violates fundamental accounting equation (AS-1 / Ind AS 1).`,
+        detail: `Debit ${cur()}${j.total_debit.toFixed(2)} ≠ Credit ${cur()}${j.total_credit.toFixed(2)}. Violates fundamental accounting equation (AS-1 / Ind AS 1).`,
         action: "View Entry", actionHref: `/finance/journals?id=${j.id}&from=audit` });
 
     if (j.total_debit === 0 && j.total_credit === 0)
@@ -357,7 +358,7 @@ export default function AuditPage() {
   const [lastSync, setLastSync] = useState<string>("");
   useEffect(() => {
     const lastImport = localStorage.getItem("fw_tally_last_import");
-    if (lastImport) setLastSync(new Date(parseInt(lastImport)).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }));
+    if (lastImport) setLastSync(new Date(parseInt(lastImport)).toLocaleString(activeMoney().locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }));
   }, []);
 
   useEffect(() => {
@@ -482,7 +483,7 @@ export default function AuditPage() {
       if (sum.imported > 0) setImportDone(true);
       // Reload audit data
       await loadDataByRange(bid, fyFrom, fyTo);
-      const d = new Date(); setLastSync(d.toLocaleString("en-IN", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }));
+      const d = new Date(); setLastSync(d.toLocaleString(activeMoney().locale, { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }));
     } catch (e) {
       setImportMsg(`Error: ${e instanceof Error ? e.message : "Unknown error"}`);
     }
@@ -1239,18 +1240,18 @@ export default function AuditPage() {
                         {l.accountType && <div style={{ fontSize: "0.65rem", color: "rgba(20,26,58,0.55)", marginTop: 1 }}>{l.accountType}</div>}
                       </div>
                       <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.dr > 0 ? "#C2321F" : "rgba(20,26,58,0.28)", fontWeight: l.dr > 0 ? 600 : 400 }}>
-                        {l.dr > 0 ? l.dr.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
+                        {l.dr > 0 ? l.dr.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
                       </div>
                       <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.cr > 0 ? "#0B7A55" : "rgba(20,26,58,0.28)", fontWeight: l.cr > 0 ? 600 : 400 }}>
-                        {l.cr > 0 ? l.cr.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
+                        {l.cr > 0 ? l.cr.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
                       </div>
                     </div>
                   ))}
                   {/* Totals footer */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.55rem 0 0", borderTop: "1px solid rgba(20,26,58,0.15)", marginTop: "0.2rem" }}>
                     <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(20,26,58,0.70)" }}>Total</span>
-                    <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#C2321F" }}>{modalJournal.modalLines.reduce((s,l) => s+l.dr, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-                    <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#0B7A55" }}>{modalJournal.modalLines.reduce((s,l) => s+l.cr, 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                    <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#C2321F" }}>{modalJournal.modalLines.reduce((s,l) => s+l.dr, 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span>
+                    <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#0B7A55" }}>{modalJournal.modalLines.reduce((s,l) => s+l.cr, 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               )}

@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 // Sales invoice — a quick billing screen: pick or add a customer, type items, see the total, post.
 // The journal entry (Dr customer/bank, Cr sales, Cr output GST, round-off) and GSTR-1 item detail are built underneath.
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -17,7 +18,7 @@ type Paid = "credit" | "cash" | "bank";
 const GST_RATES = ["0", "5", "12", "18", "28"];
 const C = { ink: "#141A3A", muted: "rgba(20,26,58,0.62)", line: "rgba(20,26,58,0.12)", navy: "#232A63", navySoft: "rgba(35,42,99,0.07)", ground: "#F5F6FA", card: "#FFFFFF", good: "#0B7A55", goodSoft: "#E3F6EE", bad: "#C2321F", badSoft: "#FDECEA" };
 const blankLine = (gst = "18"): BillLine => ({ description: "", hsn: "", qty: "1", rate: "", gst, priceIncludesGst: false });
-const money = (n: number) => "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = (n: number) => cur() + n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function NewSalesInvoicePage() {
   const router = useRouter();

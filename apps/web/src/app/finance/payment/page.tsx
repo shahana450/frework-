@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -98,7 +99,7 @@ export default function PaymentPage() {
       entryNo = r.entry_no;
     } catch (e) { setError(e instanceof Error ? e.message : "Failed"); setSaving(false); return; }
 
-    setSuccess(`${mode === "post" ? "Posted" : "Saved"}: ${entryNo} — ₹${parseFloat(amount).toLocaleString("en-IN")}`);
+    setSuccess(`${mode === "post" ? "Posted" : "Saved"}: ${entryNo} — ${cur()}${parseFloat(amount).toLocaleString(activeMoney().locale)}`);
     setAmount(""); setNarration(""); setRefNo(""); setChequeNo(""); setContactId("");
     setSaving(false);
 
@@ -108,7 +109,7 @@ export default function PaymentPage() {
 
   const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
   const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
-  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   return (
     <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
@@ -209,13 +210,13 @@ export default function PaymentPage() {
                 <div style={{ fontWeight: 700, marginBottom: "0.5rem", color: "rgba(20,26,58,0.75)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Journal Preview</div>
                 {paymentType === "receipt" ? (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Bank / Cash</span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Debtors (AR)</span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Bank / Cash</span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>{cur()}{parseFloat(amount).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Debtors (AR)</span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>{cur()}{parseFloat(amount).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span></div>
                   </>
                 ) : (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Creditors (AP)</span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Bank / Cash</span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>₹{parseFloat(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Creditors (AP)</span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>{cur()}{parseFloat(amount).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Bank / Cash</span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>{cur()}{parseFloat(amount).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span></div>
                   </>
                 )}
               </div>
@@ -243,7 +244,7 @@ export default function PaymentPage() {
                 <div style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.25rem" }}>
                   <span style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.55)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                  <span style={{ fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: r.type === "receipt" ? "#0B7A55" : "#C2321F" }}>₹{fmt(r.type === "receipt" ? r.total_credit : r.total_debit)}</span>
+                  <span style={{ fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: r.type === "receipt" ? "#0B7A55" : "#C2321F" }}>{cur()}{fmt(r.type === "receipt" ? r.total_credit : r.total_debit)}</span>
                 </div>
               </div>
             ))}

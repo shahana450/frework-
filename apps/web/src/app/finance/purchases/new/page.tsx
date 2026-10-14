@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -93,7 +94,7 @@ export default function NewPurchaseBillPage() {
   const totalIGST = lines.reduce((s, l) => s + l.igst, 0);
   const totalGST = totalCGST + totalSGST + totalIGST;
   const grandTotal = subtotal + totalGST;
-  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   async function handleSubmit(mode: "draft" | "post") {
     if (!bizId || !purchaseAccountId) { setError("Select purchase account"); return; }
@@ -199,8 +200,8 @@ export default function NewPurchaseBillPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#FFFFFF" }}>
-                  {["Description", "HSN/SAC", "Qty", "Rate (₹)", "GST %", "Base (₹)", isIGST ? "IGST (₹)" : "CGST+SGST (₹)", ""].map(h => (
-                    <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: h.includes("₹") || h.includes("%") ? "right" : "left", fontSize: "0.65rem", color: "rgba(20,26,58,0.60)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>{h}</th>
+                  {["Description", "HSN/SAC", "Qty", "Rate (" + cur() + ")", "GST %", "Base (" + cur() + ")", isIGST ? "IGST (" + cur() + ")" : "CGST+SGST (" + cur() + ")", ""].map(h => (
+                    <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: h.includes(cur()) || h.includes("%") ? "right" : "left", fontSize: "0.65rem", color: "rgba(20,26,58,0.60)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -248,15 +249,15 @@ export default function NewPurchaseBillPage() {
             ].map(r => (
               <div key={r.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                 <span style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.70)" }}>{r.label}</span>
-                <span style={{ fontSize: "0.8rem", fontVariantNumeric: "tabular-nums" }}>₹{fmt(r.value)}</span>
+                <span style={{ fontSize: "0.8rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(r.value)}</span>
               </div>
             ))}
             <div style={{ height: 1, background: "rgba(35,42,99,0.2)", margin: "0.75rem 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ fontWeight: 800 }}>Total Payable</span>
-              <span style={{ fontWeight: 900, fontSize: "1.2rem", color: "#232A63", fontVariantNumeric: "tabular-nums" }}>₹{fmt(grandTotal)}</span>
+              <span style={{ fontWeight: 900, fontSize: "1.2rem", color: "#232A63", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(grandTotal)}</span>
             </div>
-            {totalGST > 0 && <div style={{ fontSize: "0.7rem", color: "#0B7A55", marginTop: "0.35rem", textAlign: "right" }}>ITC: ₹{fmt(totalGST)}</div>}
+            {totalGST > 0 && <div style={{ fontSize: "0.7rem", color: "#0B7A55", marginTop: "0.35rem", textAlign: "right" }}>ITC: {cur()}{fmt(totalGST)}</div>}
           </div>
         </div>
       </div>

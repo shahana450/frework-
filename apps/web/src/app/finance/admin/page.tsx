@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -162,7 +163,7 @@ export default function AdminPortal() {
                         <span style={{ fontSize: "0.72rem", fontWeight: 700, color: statusColor(s.status), background: `${statusColor(s.status)}18`, padding: "2px 8px", borderRadius: 20 }}>{s.status}</span>
                       </td>
                       <td style={{ padding: "0.65rem 1rem", fontVariantNumeric: "tabular-nums" }}>
-                        {s.amount ? `₹${s.amount.toLocaleString("en-IN")}` : <span style={{ color: "rgba(20,26,58,0.55)" }}>—</span>}
+                        {s.amount ? `${cur()}${s.amount.toLocaleString(activeMoney().locale)}` : <span style={{ color: "rgba(20,26,58,0.55)" }}>—</span>}
                       </td>
                       <td style={{ padding: "0.65rem 1rem", whiteSpace: "nowrap", color: "rgba(20,26,58,0.75)", fontSize: "0.78rem" }}>
                         {s.subscription_ends_at ? new Date(s.subscription_ends_at).toLocaleDateString("en-IN") : "—"}

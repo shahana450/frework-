@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 // Smart Inbox — drop every statement, bill, invoice and Excel at once. FreWork reads each file,
 // drafts the entries, marks each "Ready" or "Needs a look", posts the ready ones in one click
 // and sends them to Tally. Nothing is posted until the user presses Approve.
@@ -26,7 +27,7 @@ type FileJob = { id: string; name: string; size: number; kind: string; status: "
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", amber: "#8A5A00", amberSoft: "#FFF4DB", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
-const inr = (n: number) => "₹" + (n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+const inr = (n: number) => cur() + (n || 0).toLocaleString(activeMoney().locale, { maximumFractionDigits: 2 });
 const isCashBank = (s: string) => /\b(cash|bank|hdfc|icici|sbi|axis|kotak|federal|canara|pnb|idfc|indusind|yes bank|credit card|card)\b/i.test(s);
 const STATEMENT_NAME = /statement|stmt|passbook|e-?statement|account\s*summary/i;
 const CARD_NAME = /credit\s*card|card\s*statement|\bcc\b|amex|visa|mastercard|rupay/i;
@@ -135,7 +136,7 @@ export default function SmartInbox() {
       if (m) {
         other = m.doc.ledger; matchedTo = `${m.doc.kind === "sale" ? "Sale" : "Bill"} ${m.doc.entryNo} · ${m.doc.date}`;
         if (m.sure) { usedDocs.current.add(m.doc.id); sure = true; reason = undefined; matched++; matchedId = m.doc.id; }
-        else { sure = false; reason = `Possible match: ${m.doc.ledger} — ${matchedTo} (open ₹${m.doc.open.toLocaleString("en-IN")})`; }
+        else { sure = false; reason = `Possible match: ${m.doc.ledger} — ${matchedTo} (open ${cur()}${m.doc.open.toLocaleString(activeMoney().locale)})`; }
       }
       return {
         id: uid("s"), fileId: job.id, date: r.date, narration: r.description.slice(0, 200), amount, kind: "statement" as const, matched: matchedTo, matchedId, party: matchedId ? other : undefined, bank, card,

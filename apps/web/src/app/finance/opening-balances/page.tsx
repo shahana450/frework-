@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 // Upload last year's trial balance → AI lists every ledger → review → one opening entry on day 1 of the year.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -14,7 +15,7 @@ type Posted = { id: string; entry_no: string; date: string; total: number; fy_id
 
 const C = { ground: "#F2F3F6", tile: "#FFFFFF", grey: "#ECEEF3", line: "#E3E6EE", ink: "#141A3A", muted: "#5A6080", navy: "#232A63", orange: "#C2410C", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB" };
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
-const inr = (n: number) => "₹" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+const inr = (n: number) => cur() + Number(n || 0).toLocaleString(activeMoney().locale, { maximumFractionDigits: 2 });
 const cell: React.CSSProperties = { height: 34, border: `1px solid ${C.line}`, borderRadius: 8, padding: "0 8px", fontSize: 13, color: C.ink, background: C.tile, width: "100%", boxSizing: "border-box" };
 
 export default function OpeningBalancesPage() {

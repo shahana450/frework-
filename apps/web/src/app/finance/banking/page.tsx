@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -63,7 +64,7 @@ export default function BankingLanding() {
     });
   }, []);
 
-  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
@@ -151,11 +152,11 @@ export default function BankingLanding() {
                     <div style={{ flex: 1, fontWeight: 600, fontSize: "0.85rem" }}>{s.name}</div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: "0.68rem", color: "#5A6080" }}>Total In</div>
-                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0B7A55", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(s.totalIn)}</div>
+                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0B7A55", fontFamily: "'IBM Plex Mono',monospace" }}>{cur()}{fmt(s.totalIn)}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: "0.68rem", color: "#5A6080" }}>Total Out</div>
-                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#C2321F", fontFamily: "'IBM Plex Mono',monospace" }}>₹{fmt(s.totalOut)}</div>
+                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#C2321F", fontFamily: "'IBM Plex Mono',monospace" }}>{cur()}{fmt(s.totalOut)}</div>
                     </div>
                     <Link href="/finance/banking/import" style={{ background: "#232A63", color: "#fff", padding: "6px 14px", borderRadius: 7, fontWeight: 700, fontSize: "0.75rem", textDecoration: "none", flexShrink: 0 }}>
                       Import →

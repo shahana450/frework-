@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 // Bulk review for the Excel entry template: every row is drafted by the same rules as chat,
 // shown in one table, and the ticked rows are posted together. Each row posts at most once.
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -14,7 +15,7 @@ type BRow = {
 
 const C = { bg: "#F5F6FA", line: "#E1E4EE", strong: "#C9CEDF", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", soft: "#E6E8F4", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB", purple: "#5B4BC4" };
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
-const fmt = (n: number) => (n ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n: number) => (n ?? 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const MAX_ROWS = 200;
 
 export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId, userId, onClose, onPosted, onSendToChat }: {
@@ -113,7 +114,7 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
       }
       setSelected(new Set());
       setNeedHeads([]);
-      setMsg({ ok: true, text: `Posted ${posted} entr${posted === 1 ? "y" : "ies"} · ₹${fmt(total)}` });
+      setMsg({ ok: true, text: `Posted ${posted} entr${posted === 1 ? "y" : "ies"} · ${cur()}${fmt(total)}` });
       if (posted) onPosted(posted, total);
     } catch (e) {
       setRows(prev => prev.map(r => r.state === "posting" ? { ...r, state: "ready" } : r));
@@ -223,7 +224,7 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
               </button>
             )}
             <button onClick={postSelected} disabled={!chosen.length || posting || counts.reading > 0 && !chosen.length} style={{ height: 42, padding: "0 20px", borderRadius: 10, border: "none", background: C.pos, color: "#FFFFFF", fontWeight: 800, fontSize: 14.5, cursor: chosen.length && !posting ? "pointer" : "default", opacity: chosen.length && !posting ? 1 : 0.5 }}>
-              {posting ? "Posting…" : confirmFlagged ? `Post anyway (${chosen.length})` : `✓ Post ${chosen.length} entr${chosen.length === 1 ? "y" : "ies"} · ₹${fmt(chosenTotal)}`}
+              {posting ? "Posting…" : confirmFlagged ? `Post anyway (${chosen.length})` : `✓ Post ${chosen.length} entr${chosen.length === 1 ? "y" : "ies"} · ${cur()}${fmt(chosenTotal)}`}
             </button>
           </div>
         </footer>

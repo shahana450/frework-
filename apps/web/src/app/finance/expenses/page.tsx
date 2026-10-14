@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -123,7 +124,7 @@ export default function ExpensesPage() {
 
   const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
   const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
-  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   return (
     <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
@@ -225,10 +226,10 @@ export default function ExpensesPage() {
             {baseAmount > 0 && (
               <div style={{ background: "rgba(35,42,99,0.05)", border: "1px solid rgba(35,42,99,0.15)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
                 <div style={{ display: "flex", gap: "2rem", fontSize: "0.82rem" }}>
-                  <div><span style={{ color: "rgba(20,26,58,0.65)" }}>Base: </span><span style={{ fontVariantNumeric: "tabular-nums" }}>₹{fmt(baseAmount)}</span></div>
-                  {gstAmt > 0 && <div><span style={{ color: "rgba(20,26,58,0.65)" }}>GST ITC: </span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>₹{fmt(gstAmt)}</span></div>}
-                  {tdsAmt > 0 && <div><span style={{ color: "rgba(20,26,58,0.65)" }}>TDS: </span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>₹{fmt(tdsAmt)}</span></div>}
-                  <div style={{ marginLeft: "auto", fontWeight: 800 }}><span style={{ color: "rgba(20,26,58,0.65)" }}>Net Payable: </span><span style={{ color: "#232A63", fontSize: "1rem", fontVariantNumeric: "tabular-nums" }}>₹{fmt(netPayable)}</span></div>
+                  <div><span style={{ color: "rgba(20,26,58,0.65)" }}>Base: </span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(baseAmount)}</span></div>
+                  {gstAmt > 0 && <div><span style={{ color: "rgba(20,26,58,0.65)" }}>GST ITC: </span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(gstAmt)}</span></div>}
+                  {tdsAmt > 0 && <div><span style={{ color: "rgba(20,26,58,0.65)" }}>TDS: </span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(tdsAmt)}</span></div>}
+                  <div style={{ marginLeft: "auto", fontWeight: 800 }}><span style={{ color: "rgba(20,26,58,0.65)" }}>Net Payable: </span><span style={{ color: "#232A63", fontSize: "1rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(netPayable)}</span></div>
                 </div>
               </div>
             )}
@@ -253,7 +254,7 @@ export default function ExpensesPage() {
                   <span style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.55)" }}>{new Date(e.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                 </div>
                 <div style={{ fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.narration}</div>
-                <div style={{ fontSize: "0.82rem", color: "#C2321F", fontVariantNumeric: "tabular-nums", marginTop: "0.2rem" }}>₹{fmt(e.total_debit)}</div>
+                <div style={{ fontSize: "0.82rem", color: "#C2321F", fontVariantNumeric: "tabular-nums", marginTop: "0.2rem" }}>{cur()}{fmt(e.total_debit)}</div>
               </div>
             ))}
             {recentExpenses.length === 0 && (

@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -58,7 +59,7 @@ export default function BankHistoryPage() {
 
   const totalIn = journals.filter(j => j.type === "receipt").reduce((s, j) => s + Number(j.total_credit), 0);
   const totalOut = journals.filter(j => j.type === "payment").reduce((s, j) => s + Number(j.total_debit), 0);
-  const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   const inp: React.CSSProperties = { background: "#FFFFFF", border: "1px solid #FFFFFF", color: "#141A3A", padding: "7px 10px", borderRadius: 7, fontSize: "0.82rem", outline: "none", fontFamily: "'DM Sans',system-ui,sans-serif" };
 
@@ -92,8 +93,8 @@ export default function BankHistoryPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1.25rem" }}>
           {[
             { label: "Total Transactions", value: journals.length, color: "#141A3A", sub: "payment + receipt" },
-            { label: "Total Receipts (In)", value: `₹${fmt(totalIn)}`, color: "#0B7A55", sub: `${journals.filter(j => j.type === "receipt").length} entries` },
-            { label: "Total Payments (Out)", value: `₹${fmt(totalOut)}`, color: "#C2321F", sub: `${journals.filter(j => j.type === "payment").length} entries` },
+            { label: "Total Receipts (In)", value: `${cur()}${fmt(totalIn)}`, color: "#0B7A55", sub: `${journals.filter(j => j.type === "receipt").length} entries` },
+            { label: "Total Payments (Out)", value: `${cur()}${fmt(totalOut)}`, color: "#C2321F", sub: `${journals.filter(j => j.type === "payment").length} entries` },
           ].map(s => (
             <div key={s.label} style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1rem 1.25rem" }}>
               <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#5A6080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.4rem" }}>{s.label}</div>
@@ -132,8 +133,8 @@ export default function BankHistoryPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
                 <thead>
                   <tr style={{ background: "#FFFFFF", borderBottom: "1px solid #FFFFFF" }}>
-                    {["Entry No", "Date", "Narration", "Type", "Debit (₹)", "Credit (₹)", ""].map(h => (
-                      <th key={h} style={{ padding: "0.6rem 0.85rem", textAlign: h.includes("₹") ? "right" : "left", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>{h}</th>
+                    {["Entry No", "Date", "Narration", "Type", "Debit (" + cur() + ")", "Credit (" + cur() + ")", ""].map(h => (
+                      <th key={h} style={{ padding: "0.6rem 0.85rem", textAlign: h.includes(cur()) ? "right" : "left", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -151,10 +152,10 @@ export default function BankHistoryPage() {
                         </span>
                       </td>
                       <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: j.total_debit ? "#C2321F" : "#E1E4EE", fontWeight: j.total_debit ? 600 : 400 }}>
-                        {j.total_debit ? `₹${fmt(Number(j.total_debit))}` : ""}
+                        {j.total_debit ? `${cur()}${fmt(Number(j.total_debit))}` : ""}
                       </td>
                       <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: j.total_credit ? "#0B7A55" : "#E1E4EE", fontWeight: j.total_credit ? 600 : 400 }}>
-                        {j.total_credit ? `₹${fmt(Number(j.total_credit))}` : ""}
+                        {j.total_credit ? `${cur()}${fmt(Number(j.total_credit))}` : ""}
                       </td>
                       <td style={{ padding: "0.55rem 0.75rem" }}>
                         <Link href={`/finance/journals/${j.id}/edit`} style={{ fontSize: "0.7rem", color: "#5A6080", textDecoration: "none", fontWeight: 600 }}>✏</Link>

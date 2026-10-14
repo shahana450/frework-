@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -24,7 +25,7 @@ const SOURCES: Record<string, string> = {
 
 function describe(r: Row): string {
   const d = r.detail ?? {};
-  if (r.action === "post") return `${d.entry_no ?? r.fw_fin_journals?.entry_no ?? ""} · ₹${Number(d.total ?? 0).toLocaleString("en-IN")}${r.fw_fin_journals?.narration ? ` · ${r.fw_fin_journals.narration}` : ""}`;
+  if (r.action === "post") return `${d.entry_no ?? r.fw_fin_journals?.entry_no ?? ""} · ${cur()}${Number(d.total ?? 0).toLocaleString(activeMoney().locale)}${r.fw_fin_journals?.narration ? ` · ${r.fw_fin_journals.narration}` : ""}`;
   if (r.action === "reverse") return `${r.fw_fin_journals?.entry_no ?? "Entry"} reversed by ${d.reversal_entry ?? "a reversing entry"}`;
   if (r.action === "lock_year" || r.action === "unlock_year") return `FY ${d.fy ?? ""}`;
   if (r.action === "tally_push") return `${d.pushed ?? 0} pushed, ${d.failed ?? 0} failed${d.target ? ` → ${d.target}` : ""}`;
@@ -92,7 +93,7 @@ export default function AuditLogPage() {
                 const a = ACTIONS[r.action] ?? { label: r.action, color: TEXT };
                 return (
                   <tr key={r.id} style={{ borderTop: `1px solid ${BORDER}` }}>
-                    <td style={{ padding: "0.5rem 0.8rem", whiteSpace: "nowrap", color: MUTED }}>{new Date(r.at).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+                    <td style={{ padding: "0.5rem 0.8rem", whiteSpace: "nowrap", color: MUTED }}>{new Date(r.at).toLocaleString(activeMoney().locale, { day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
                     <td style={{ padding: "0.5rem 0.8rem", whiteSpace: "nowrap" }}>{r.actor_name}</td>
                     <td style={{ padding: "0.5rem 0.8rem", whiteSpace: "nowrap", color: a.color, fontWeight: 700 }}>{a.label}</td>
                     <td style={{ padding: "0.5rem 0.8rem", whiteSpace: "nowrap", color: MUTED }}>{SOURCES[r.source ?? ""] ?? r.source ?? "—"}</td>

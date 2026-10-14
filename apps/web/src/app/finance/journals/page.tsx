@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -56,7 +57,7 @@ const TYPE_TITLES: Record<string, string> = {
   contra: "Contra Entries", debit_note: "Debit Notes", credit_note: "Credit Notes",
 };
 
-const fmt = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2 });
+const fmt = (n: number) => cur() + Math.abs(n).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
 export default function JournalsPage() {
   const router = useRouter();
@@ -237,7 +238,7 @@ export default function JournalsPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
               <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>{pageTitle}</h1>
-              <div style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.65)" }}>{filtered.length} entries · Total: ₹{totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
+              <div style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.65)" }}>{filtered.length} entries · Total: {cur()}{totalDebit.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</div>
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               {(["all", "draft", "posted", "ai"] as const).map(f => (
@@ -292,8 +293,8 @@ export default function JournalsPage() {
                         <input type="checkbox" aria-label="Select all entries that can be pushed" checked={allSelected} disabled={!selectableHere.length}
                           onChange={() => setSelected(allSelected ? new Set() : new Set(selectableHere.map(j => j.id)))} />
                       </th>
-                      {["Entry No", "Date", "Type", "Narration", "Debit (₹)", "Credit (₹)", "Status", "Tally", ""].map(h => (
-                        <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h === "Debit (₹)" || h === "Credit (₹)" ? "right" : "left", fontSize: "0.68rem", color: "rgba(20,26,58,0.60)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
+                      {["Entry No", "Date", "Type", "Narration", "Debit (" + cur() + ")", "Credit (" + cur() + ")", "Status", "Tally", ""].map(h => (
+                        <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h === "Debit (" + cur() + ")" || h === "Credit (" + cur() + ")" ? "right" : "left", fontSize: "0.68rem", color: "rgba(20,26,58,0.60)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -323,10 +324,10 @@ export default function JournalsPage() {
                           </td>
                           <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", maxWidth: selectedJournal ? 160 : 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
                           <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", fontFamily: "'IBM Plex Mono',monospace", textAlign: "right", color: "#C2321F" }}>
-                            {j.total_debit ? j.total_debit.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
+                            {j.total_debit ? j.total_debit.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
                           </td>
                           <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", fontFamily: "'IBM Plex Mono',monospace", textAlign: "right", color: "#0B7A55" }}>
-                            {j.total_credit ? j.total_credit.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
+                            {j.total_credit ? j.total_credit.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
                           </td>
                           <td style={{ padding: "0.65rem 1rem" }}>
                             <span style={{ color: STATUS_COLOR[j.status] ?? "#141A3A", background: `${STATUS_COLOR[j.status] ?? "#141A3A"}18`, padding: "2px 8px", borderRadius: 4, fontSize: "0.7rem", fontWeight: 700 }}>
@@ -357,7 +358,7 @@ export default function JournalsPage() {
                 {filtered.length > visible.length && (
                   <div style={{ padding: "0.9rem", textAlign: "center", borderTop: "1px solid rgba(20,26,58,0.08)" }}>
                     <button onClick={() => setShown(n => n + 200)} style={{ background: "#232A63", color: "#FFFFFF", border: "none", borderRadius: 8, padding: "8px 18px", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>
-                      Show 200 more ({(filtered.length - visible.length).toLocaleString("en-IN")} left)
+                      Show 200 more ({(filtered.length - visible.length).toLocaleString(activeMoney().locale)} left)
                     </button>
                   </div>
                 )}
@@ -439,10 +440,10 @@ export default function JournalsPage() {
                           )}
                         </div>
                         <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem", color: l.dr_amount > 0 ? "#C2321F" : "rgba(20,26,58,0.28)", fontWeight: l.dr_amount > 0 ? 600 : 400 }}>
-                          {l.dr_amount > 0 ? l.dr_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
+                          {l.dr_amount > 0 ? l.dr_amount.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
                         </div>
                         <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem", color: l.cr_amount > 0 ? "#0B7A55" : "rgba(20,26,58,0.28)", fontWeight: l.cr_amount > 0 ? 600 : 400 }}>
-                          {l.cr_amount > 0 ? l.cr_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
+                          {l.cr_amount > 0 ? l.cr_amount.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
                         </div>
                       </div>
                     ))}
@@ -450,10 +451,10 @@ export default function JournalsPage() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px", gap: "0.5rem", padding: "0.5rem 0 0.25rem", borderTop: "1px solid rgba(20,26,58,0.15)", marginTop: "0.25rem" }}>
                       <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "rgba(20,26,58,0.75)" }}>Total</span>
                       <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem", fontWeight: 700, color: "#C2321F" }}>
-                        {drawerLines.reduce((s, l) => s + (l.dr_amount || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {drawerLines.reduce((s, l) => s + (l.dr_amount || 0), 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}
                       </span>
                       <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.78rem", fontWeight: 700, color: "#0B7A55" }}>
-                        {drawerLines.reduce((s, l) => s + (l.cr_amount || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {drawerLines.reduce((s, l) => s + (l.cr_amount || 0), 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>

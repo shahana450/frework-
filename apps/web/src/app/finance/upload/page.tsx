@@ -1,4 +1,5 @@
 "use client";
+import { cur, activeMoney } from "@/lib/money";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -226,7 +227,7 @@ export default function UploadPage() {
     const date = new Date(Date.now() - Math.random() * 30 * 86400000).toISOString().split("T")[0];
     return {
       vendor, amount, gst, date,
-      narration: `${DOC_TYPES.find(d => d.value === docType)?.label ?? "Document"} from ${vendor} — ₹${amount.toLocaleString("en-IN")}`,
+      narration: `${DOC_TYPES.find(d => d.value === docType)?.label ?? "Document"} from ${vendor} — ${cur()}${amount.toLocaleString(activeMoney().locale)}`,
       confidence: 0.78 + Math.random() * 0.2,
       type: docType,
     };
@@ -372,8 +373,8 @@ export default function UploadPage() {
                           </div>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
                             {doc.aiResult.vendor && <div><span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" }}>Vendor</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{doc.aiResult.vendor}</span></div>}
-                            {doc.aiResult.amount && <div><span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" }}>Amount</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>₹{doc.aiResult.amount.toLocaleString("en-IN")}</span></div>}
-                            {doc.aiResult.gst && <div><span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" }}>GST</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>₹{doc.aiResult.gst.toLocaleString("en-IN")}</span></div>}
+                            {doc.aiResult.amount && <div><span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" }}>Amount</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{cur()}{doc.aiResult.amount.toLocaleString(activeMoney().locale)}</span></div>}
+                            {doc.aiResult.gst && <div><span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" }}>GST</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{cur()}{doc.aiResult.gst.toLocaleString(activeMoney().locale)}</span></div>}
                             {doc.aiResult.date && <div><span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" }}>Date</span><br /><span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{doc.aiResult.date}</span></div>}
                           </div>
                           <div style={{ marginTop: "0.5rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.75)" }}>{doc.aiResult.narration}</div>
@@ -458,7 +459,7 @@ export default function UploadPage() {
                           {doc.ai_summary ? (
                             <div>
                               {doc.ai_summary.vendor && <div style={{ fontSize: "0.8rem", fontWeight: 600 }}>{doc.ai_summary.vendor}</div>}
-                              {doc.ai_summary.amount && <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.75)" }}>₹{doc.ai_summary.amount.toLocaleString("en-IN")}</div>}
+                              {doc.ai_summary.amount && <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.75)" }}>{cur()}{doc.ai_summary.amount.toLocaleString(activeMoney().locale)}</div>}
                             </div>
                           ) : <span style={{ color: "rgba(20,26,58,0.28)", fontSize: "0.78rem" }}>—</span>}
                         </td>
