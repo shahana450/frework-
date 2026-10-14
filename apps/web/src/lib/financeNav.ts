@@ -1,5 +1,5 @@
 // The one finance menu. `accountant: true` items are hidden in Simple view, never removed.
-export type NavItem = { icon: string; label: string; href: string; accountant?: boolean; badge?: "review" };
+export type NavItem = { icon: string; label: string; href: string; accountant?: boolean; badge?: "review"; india?: boolean };   // india: Indian tax only (GST, TDS, Income-tax)
 export type NavGroup = { label: string; items: NavItem[] };
 
 export const FINANCE_NAV: NavGroup[] = [
@@ -45,16 +45,16 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "💧", label: "Cash Flow", href: "/finance/reports?tab=cash_flow" },
     { icon: "🗓", label: "Monthly Recap", href: "/finance/recap" },
     { icon: "🔍", label: "Analysis & Audit", href: "/finance/audit", accountant: true },
-    { icon: "🧮", label: "GST Returns", href: "/finance/gst/returns" },
-    { icon: "📄", label: "GSTR-1", href: "/finance/gst" },
-    { icon: "📄", label: "GSTR-3B", href: "/finance/gst/3b" },
-    { icon: "📄", label: "GSTR-9 Annual", href: "/finance/gst/annual", accountant: true },
-    { icon: "📄", label: "Composition (CMP-08)", href: "/finance/gst/composition", accountant: true },
+    { icon: "🧮", label: "GST Returns", href: "/finance/gst/returns", india: true },
+    { icon: "📄", label: "GSTR-1", href: "/finance/gst", india: true },
+    { icon: "📄", label: "GSTR-3B", href: "/finance/gst/3b", india: true },
+    { icon: "📄", label: "GSTR-9 Annual", href: "/finance/gst/annual", india: true, accountant: true },
+    { icon: "📄", label: "Composition (CMP-08)", href: "/finance/gst/composition", india: true, accountant: true },
     { icon: "📑", label: "MIS Report", href: "/finance/mis" },
-    { icon: "🧾", label: "ITC Match & 3B Table 4", href: "/finance/gst/itc" },
-    { icon: "🔄", label: "GST Reconciliation", href: "/finance/audit/gst-recon", accountant: true },
-    { icon: "🔖", label: "TDS", href: "/finance/tds", accountant: true },
-    { icon: "📄", label: "Form 168 / 130 (26AS / 16)", href: "/finance/tax-docs" },
+    { icon: "🧾", label: "ITC Match & 3B Table 4", href: "/finance/gst/itc", india: true },
+    { icon: "🔄", label: "GST Reconciliation", href: "/finance/audit/gst-recon", india: true, accountant: true },
+    { icon: "🔖", label: "TDS", href: "/finance/tds", india: true, accountant: true },
+    { icon: "📄", label: "Form 168 / 130 (26AS / 16)", href: "/finance/tax-docs", india: true },
   ] },
   { label: "AI", items: [
     { icon: "🤖", label: "Review Queue", href: "/finance/ai-review", badge: "review" },
@@ -67,7 +67,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "🏢", label: "Business Details", href: "/finance/settings/business" },
     { icon: "🌍", label: "Region & Currency", href: "/finance/settings/region" },
     { icon: "🔗", label: "Integrations", href: "/finance/integrations" },
-    { icon: "🏛", label: "Portal Connect", href: "/finance/portals" },
+    { icon: "🏛", label: "Portal Connect", href: "/finance/portals", india: true },
     { icon: "💬", label: "WhatsApp", href: "/finance/whatsapp" },
     { icon: "📅", label: "Financial Years", href: "/finance/fy", accountant: true },
     { icon: "🫂", label: "Team & Access", href: "/finance/team" },

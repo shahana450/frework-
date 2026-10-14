@@ -83,6 +83,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const router = useRouter();
   const [bizName, setBizName] = useState("");
+  const [india, setIndia] = useState(true);   // GST / TDS / Income-tax menus only for Indian businesses
   const [bizCount, setBizCount] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
   const [tip, setTip] = useState<{ label: string; top: number } | null>(null);
@@ -158,7 +159,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       pick = pick ?? owned?.[0];
       if (pick) { setActiveBusiness(user.id, pick.id, pick.name); setBizName(pick.name); setTallyBusiness(pick.id); }
       // Money on every page follows this business's currency (set before any page mounts)
-      if (pick) { const { data: m } = await supabase.from("fw_fin_businesses").select("currency,country").eq("id", pick.id).maybeSingle(); setActiveCurrency(m?.currency, m?.country); }
+      if (pick) { const { data: m } = await supabase.from("fw_fin_businesses").select("currency,country").eq("id", pick.id).maybeSingle(); setActiveCurrency(m?.currency, m?.country); setIndia(!m?.country || m.country === "IN"); }
       setSubChecked(true);
     });
   }, [pathname]);
@@ -272,7 +273,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         {/* Nav groups */}
         <nav style={{ flex: 1, padding: "8px 0" }}>
           {FINANCE_NAV.map(group => {
-            const items = group.items.filter(i => accountant || !i.accountant);
+            const items = group.items.filter(i => (accountant || !i.accountant) && (india || !i.india));
             if (!items.length) return null;
             return (
               <div key={group.label || "top"} style={{ marginBottom: 4 }}>
@@ -338,7 +339,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         {/* Main icons along the top (FreBook has its own top bar) */}
         {!pathname.startsWith("/finance/chat-book") && (
           <nav className="fw-topicons" aria-label="Main sections">
-            {TOP_ICONS.map(t => {
+            {TOP_ICONS.filter(t => india || !t.href.startsWith("/finance/gst")).map(t => {
               const on = t.href.includes("?") ? pathname + search === t.href : t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
               return (
                 <Link key={t.href} href={t.href} className={on ? "on" : ""} title={t.label}>
