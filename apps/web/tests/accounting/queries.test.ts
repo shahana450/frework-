@@ -110,3 +110,15 @@ test("cash and bank balances", () => {
   const one = balances(accounts, journals, "2026-09-30", "hdfc");
   assert.match(one.summary, /HDFC Bank: ₹96,550 Dr/);
 });
+
+test("asking about a ledger ('TDS payable for Oct') gives the ledger's figures, not entry totals", () => {
+  const accs = [...accounts, { id: "tds", name: "TDS Payable", type: "liability", sub_type: "current_liability" }];
+  const js: QJournal[] = [J("2026-10-14", "Paid office rent of 50,000 to Arun from bank with 10% TDS", null, [["rent", 50000, 0], ["tds", 0, 5000], ["hdfc", 0, 45000]], "payment")];
+  const oct = monthPeriod("2026-10-20");
+  const a = search(accs, js, oct, { text: "TDS" });
+  assert.match(a.summary, /TDS Payable: added ₹5,000/);
+  assert.match(a.summary, /balance ₹5,000(\.00)? Cr/);
+  assert.doesNotMatch(a.summary, /50,000/);
+  // plain words that are not a ledger still search narrations
+  assert.match(search(accs, js, oct, { text: "arun" }).summary, /1 matching "arun"/);
+});

@@ -150,6 +150,33 @@ export function search(accounts: Account[], journals: QJournal[], p: Period, q: 
     if (q.kind && !["expense", "income"].includes(q.kind) && j.type !== q.kind) return false;
     return true;
   }).sort((a, b) => b.date.localeCompare(a.date));
+  // The words name a ledger ("TDS payable for Oct") → answer with that ledger's own figures, not the totals of the entries that touch it
+  const ledgerWord = acct || text;
+  const ledgers = ledgerWord && !party && !q.kind ? accounts.filter(a => !(a as { is_group?: boolean }).is_group && a.name.toLowerCase().includes(ledgerWord)) : [];
+  if (ledgers.length) {
+    const ids = new Set(ledgers.map(a => a.id));
+    const credit = (a: Account) => ["current_liability", "loan", "capital", "duties", "sales", "indirect_income"].includes(groupOf(a));
+    const rows = ledgers.map(a => {
+      let moved = 0, closing = 0;
+      for (const j of journals) for (const l of j.lines) if (l.account_id === a.id) {
+        if (j.date <= p.to) closing += l.dr - l.cr;
+        if (j.date >= p.from && j.date <= p.to) moved += l.dr - l.cr;
+      }
+      return { a, moved: r2(moved), closing: r2(closing) };
+    }).filter(r => r.moved || r.closing);
+    const side = (v: number) => (v ? ` ${v > 0 ? "Dr" : "Cr"}` : "");
+    const touched = hits.filter(j => j.lines.some(l => ids.has(l.account_id)));
+    return {
+      title: `${ledgers.length === 1 ? ledgers[0].name : "Ledgers"} · ${p.label}`,
+      summary: rows.length
+        ? rows.map(r => `${r.a.name}: ${credit(r.a) ? (r.moved <= 0 ? "added" : "reduced by") : (r.moved >= 0 ? "added" : "reduced by")} ${inr(Math.abs(r.moved))} in ${p.label}; balance ${inr(Math.abs(r.closing))}${side(r.closing)} on ${p.to}`).join(". ") + "."
+        : `No movement on ${ledgers.map(a => a.name).join(", ")} in ${p.label}.`,
+      metrics: rows.length === 1 ? [{ label: `Movement in ${p.label}`, value: Math.abs(rows[0].moved) }, { label: "Balance", value: Math.abs(rows[0].closing) }] : [],
+      table: rows.length > 1 ? { columns: ["Ledger", "Movement", "Balance"], rows: rows.map(r => [r.a.name, Math.abs(r.moved), `${inr(Math.abs(r.closing))}${side(r.closing)}`]) } : undefined,
+      transactions: touched.slice(0, 50).map(j => txRow(j, names)),
+      links: [{ label: "Open Ledger", href: "/finance/ledger" }], period: p,
+    };
+  }
   const total = r2(hits.reduce((s, j) => s + j.lines.reduce((x, l) => x + l.dr, 0), 0));
   const what = [q.kind && `${q.kind} entries`, party && `with ${q.party}`, acct && `in ${q.account}`, text && `matching "${q.text}"`, q.min_amount != null && `above ${inr(q.min_amount)}`, q.max_amount != null && `below ${inr(q.max_amount)}`].filter(Boolean).join(" ") || "entries";
   return {
