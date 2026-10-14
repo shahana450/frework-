@@ -122,3 +122,11 @@ test("asking about a ledger ('TDS payable for Oct') gives the ledger's figures, 
   // plain words that are not a ledger still search narrations
   assert.match(search(accs, js, oct, { text: "arun" }).summary, /1 matching "arun"/);
 });
+
+test("balance of one ledger ignores a same-named group and never shows a bare minus", () => {
+  const accs = [...accounts, { id: "tds", name: "TDS Payable", type: "liability", sub_type: "current_liability" }, { id: "tdsg", name: "TDS Payable", type: "liability", sub_type: "current_liability", is_group: true }];
+  const js: QJournal[] = [J("2026-10-14", "Rent with TDS", null, [["rent", 50000, 0], ["tds", 0, 5000], ["hdfc", 0, 45000]], "payment")];
+  const a = balances(accs, js, "2026-10-31", "TDS Payable");
+  assert.equal(a.summary, "TDS Payable: ₹5,000 Cr.");
+  assert.equal(a.table, undefined);
+});

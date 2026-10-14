@@ -94,7 +94,7 @@ export type ParsedTransaction = {
 export async function loadQueryBooks(sb: SupabaseClient, businessId: string, until: string): Promise<{ accounts: { id: string; name: string; type: string; sub_type: string | null }[]; journals: QJournal[]; error?: unknown }> {
   const accounts: { id: string; name: string; type: string; sub_type: string | null }[] = [];
   for (let from = 0; ; from += 1000) {
-    const { data, error } = await sb.from("fw_fin_chart_of_accounts").select("id,name,type,sub_type").eq("business_id", businessId).range(from, from + 999);
+    const { data, error } = await sb.from("fw_fin_chart_of_accounts").select("id,name,type,sub_type,is_group").eq("business_id", businessId).range(from, from + 999);
     if (error) return { accounts, journals: [], error };
     accounts.push(...(data ?? []));
     if (!data || data.length < 1000) break;

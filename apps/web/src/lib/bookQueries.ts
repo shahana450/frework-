@@ -229,18 +229,25 @@ export function gstSummary(accounts: Account[], journals: QJournal[], p: Period)
 }
 
 export function balances(accounts: Account[], journals: QJournal[], asOf: string, accountName?: string | null): Answer {
-  const pick = accountName ? accounts.filter(a => a.name.toLowerCase().includes(accountName.toLowerCase())) : accounts.filter(isCashBank);
+  // Ledgers only (a group of the same name is not a second balance); an exact name match wins over partial ones
+  const want = accountName?.toLowerCase().trim() ?? "";
+  const ledgers = accounts.filter(a => !(a as { is_group?: boolean }).is_group);
+  const exact = want ? ledgers.filter(a => a.name.toLowerCase().trim() === want) : [];
+  const pick = want ? (exact.length ? exact : ledgers.filter(a => a.name.toLowerCase().includes(want))) : accounts.filter(isCashBank);
   const ids = new Set(pick.map(a => a.id));
   const bal = new Map<string, number>();
   for (const j of journals) if (j.date <= asOf) for (const l of j.lines) if (ids.has(l.account_id)) bal.set(l.account_id, (bal.get(l.account_id) ?? 0) + l.dr - l.cr);
-  const rows = pick.map(a => ({ n: a.name, v: r2(bal.get(a.id) ?? 0), credit: ["current_liability", "loan", "capital", "duties", "sales", "indirect_income"].includes(groupOf(a)) }))
-    .filter(r => r.v !== 0 || accountName).sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
+  let rows = pick.map(a => ({ n: a.name, v: r2(bal.get(a.id) ?? 0), credit: ["current_liability", "loan", "capital", "duties", "sales", "indirect_income"].includes(groupOf(a)) }))
+    .sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
+  // Asked about one ledger: zero-balance namesakes are noise once a real balance exists
+  rows = want ? (rows.some(r => r.v !== 0) ? rows.filter(r => r.v !== 0) : rows.slice(0, 1)) : rows.filter(r => r.v !== 0);
   const total = r2(rows.reduce((s, r) => s + r.v, 0));
   return {
     title: accountName ? `Balance · ${accountName}` : "Cash & bank balances",
-    summary: rows.length ? (accountName ? rows.map(r => `${r.n}: ${inr(r.credit ? -r.v : r.v)}${r.v ? (r.v > 0 ? " Dr" : " Cr") : ""}`).join("; ") + "." : `You have ${inr(total)} across ${rows.length} cash/bank account${rows.length > 1 ? "s" : ""}.`) : `No ${accountName ? `account matching "${accountName}"` : "cash or bank accounts"} with a balance.`,
+    summary: rows.length ? (accountName ? rows.map(r => `${r.n}: ${inr(Math.abs(r.v))}${r.v ? (r.v > 0 ? " Dr" : " Cr") : ""}`).join("; ") + "." : `You have ${inr(total)} across ${rows.length} cash/bank account${rows.length > 1 ? "s" : ""}.`) : `No ${accountName ? `account matching "${accountName}"` : "cash or bank accounts"} with a balance.`,
     metrics: accountName ? [] : [{ label: "Cash + bank", value: total, tone: total >= 0 ? "good" : "bad" }],
-    table: rows.length ? { columns: ["Account", "Balance"], rows: rows.map(r => [r.n, r.v]) } : undefined,
+    // One ledger: the summary says it all. Several: show each as "₹5,000 Cr", never a bare minus sign
+    table: rows.length > 1 || !accountName ? (rows.length ? { columns: ["Account", "Balance"], rows: rows.map(r => [r.n, accountName ? `${inr(Math.abs(r.v))}${r.v ? (r.v > 0 ? " Dr" : " Cr") : ""}` : r.v]) } : undefined) : undefined,
     links: [{ label: "Open Ledger", href: "/finance/ledger" }],
   };
 }
