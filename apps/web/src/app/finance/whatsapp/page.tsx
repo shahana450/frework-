@@ -18,6 +18,8 @@ export default function WhatsAppPage() {
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [sent, setSent] = useState<Record<string, { ok: boolean; note?: string }>>({});   // phone → was a code sent to WhatsApp
+  const [typed, setTyped] = useState<Record<string, string>>({});
   const load = useCallback(async (b: string) => {
     const r = await fetch(`/api/finance/whatsapp-link?business_id=${b}`);
     setData(await r.json().catch(() => ({ links: [], setup_needed: "Couldn't load." })));
@@ -43,6 +45,7 @@ export default function WhatsAppPage() {
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setErr(d.error ?? "Something went wrong."); return; }
+    if (d.phone) setSent(s => ({ ...s, [d.phone]: { ok: !!d.sent, note: d.send_error ?? undefined } }));
     setPhone(""); load(bizId);
   };
   const bot = data?.bot_number;
@@ -63,7 +66,18 @@ export default function WhatsAppPage() {
             <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: C.grey, borderRadius: 14, padding: "12px 14px" }}>
               <b style={{ fontFamily: MONO }}>{pretty(l.phone)}</b>
               {l.verified ? <span style={{ fontSize: 12, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: C.posSoft, color: C.pos }}>Linked ✓</span>
-                : <span style={{ fontSize: 13, color: C.warn }}>Waiting — from this phone send <b style={{ fontFamily: MONO, fontSize: 15 }}>LINK {l.code}</b>{bot ? <> to <a href={`https://wa.me/${bot}?text=${encodeURIComponent(`LINK ${l.code}`)}`} target="_blank" rel="noreferrer" style={{ color: C.wa, fontWeight: 800 }}>{pretty(bot)} ↗</a></> : null}{l.code_expires ? ` (valid till ${new Date(l.code_expires).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })})` : ""}</span>}
+                : <span style={{ display: "flex", flexDirection: "column", gap: 8, flexBasis: "100%" }}>
+                  {sent[l.phone]?.ok && (
+                    <form onSubmit={e => { e.preventDefault(); post({ action: "verify", phone: l.phone, code: typed[l.phone] ?? "" }); }} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <span style={{ fontSize: 14, color: C.pos, fontWeight: 700 }}>We sent a 6-digit code to this WhatsApp. Type it here:</span>
+                      <input value={typed[l.phone] ?? ""} onChange={e => setTyped(t => ({ ...t, [l.phone]: e.target.value.replace(/D/g, "").slice(0, 6) }))} inputMode="numeric" autoComplete="one-time-code" autoFocus aria-label="Code from WhatsApp" placeholder="••••••"
+                        style={{ height: 40, width: 130, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: MONO, fontSize: 18, letterSpacing: "0.25em", color: C.ink }} />
+                      <button type="submit" disabled={busy || (typed[l.phone] ?? "").length !== 6} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "none", background: C.navy, color: "#FFFFFF", fontWeight: 800, cursor: "pointer", opacity: (typed[l.phone] ?? "").length === 6 ? 1 : 0.5 }}>Link</button>
+                      <button type="button" disabled={busy} onClick={() => post({ phone: l.phone })} style={{ height: 40, padding: "0 12px", borderRadius: 10, border: `1px solid ${C.line}`, background: C.tile, cursor: "pointer" }}>Send again</button>
+                    </form>
+                  )}
+                  {sent[l.phone] && !sent[l.phone].ok && sent[l.phone].note && <span style={{ fontSize: 13, color: C.neg }}>{sent[l.phone].note}</span>}
+                  <span style={{ fontSize: 13, color: C.warn }}>{sent[l.phone]?.ok ? "Or" : "Waiting —"} from this phone send <b style={{ fontFamily: MONO, fontSize: 15 }}>LINK {l.code}</b>{bot ? <> to <a href={`https://wa.me/${bot}?text=${encodeURIComponent(`LINK ${l.code}`)}`} target="_blank" rel="noreferrer" style={{ color: C.wa, fontWeight: 800 }}>{pretty(bot)} ↗</a></> : null}{l.code_expires ? ` (valid till ${new Date(l.code_expires).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })})` : ""}</span></span>}
               <span style={{ flex: 1 }} />
               <button disabled={busy} onClick={() => { if (window.confirm(`Unlink ${pretty(l.phone)}? It will stop posting to this business.`)) post({ action: "remove", id: l.id }); }} style={{ border: "1px solid #C9CEDF", background: C.tile, color: C.neg, borderRadius: 9, height: 34, padding: "0 12px", fontWeight: 700, cursor: "pointer" }}>Unlink</button>
             </div>
@@ -72,10 +86,10 @@ export default function WhatsAppPage() {
             <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: C.muted, flex: 1, minWidth: 220 }}>Add a WhatsApp number
               <input value={phone} onChange={e => setPhone(e.target.value)} inputMode="tel" placeholder="98765 43210  or  +974 5555 1234" style={{ height: 44, borderRadius: 11, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: MONO, fontSize: 15, color: C.ink }} />
             </label>
-            <button disabled={busy || phone.replace(/\D/g, "").length < 10} onClick={() => post({ phone })} style={{ height: 44, padding: "0 18px", borderRadius: 11, border: "none", background: C.navy, color: "#FFFFFF", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>Get link code</button>
+            <button disabled={busy || phone.replace(/\D/g, "").length < 10} onClick={() => post({ phone })} style={{ height: 44, padding: "0 18px", borderRadius: 11, border: "none", background: C.navy, color: "#FFFFFF", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>Send code</button>
           </div>
           {err && <div role="alert" style={{ color: C.neg, fontSize: 13.5, fontWeight: 600 }}>{err}</div>}
-          <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>Sending the code from the phone proves it&apos;s yours. Each team member links their own number — entries show who posted them, and view-only roles can ask questions but not post.</div>
+          <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>FreBook sends a code to that WhatsApp number — typing it here proves the number is yours. Each team member links their own number — entries show who posted them, and view-only roles can ask questions but not post.</div>
         </section>
 
         <section style={{ background: C.tile, border: `1px solid ${C.line}`, borderRadius: 22, padding: 22, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, fontSize: 14, lineHeight: 1.6 }}>
