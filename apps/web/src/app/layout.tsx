@@ -87,6 +87,8 @@ export const metadata: Metadata = {
   },
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    // Meta Business domain verification for frework.online (business portfolio "FreWork")
+    other: { "facebook-domain-verification": "06d023lra2u8suan8esp5vm1narqco" },
   },
 };
 
