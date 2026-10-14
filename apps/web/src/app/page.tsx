@@ -3,9 +3,9 @@ import { TaxNewsSection } from "@/components/landing/tax-news-section";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "FreWork — GST Registration, ITR Filing & Business Services Online India",
+  title: { absolute: "FreWork — GST, ITR & AI Bookkeeping (FreBook) | Business Platform India" },
   description:
-    "FreWork: India's all-in-one business platform. GST registration, ITR filing, company registration, coworking spaces and expert professionals — all online.",
+    "FreWork: India's all-in-one business platform. GST registration, ITR filing, company registration, FreBook AI accountant with Tally, coworking spaces and expert professionals — all online.",
   keywords: [
     "FreWork",
     "frework.online",
@@ -18,6 +18,10 @@ export const metadata: Metadata = {
     "company registration India",
     "accounting services India",
     "virtual accountant India",
+    "AI accountant India",
+    "AI bookkeeping software",
+    "Tally AI",
+    "FreBook",
     "coworking space India",
     "freelance professionals India",
   ],

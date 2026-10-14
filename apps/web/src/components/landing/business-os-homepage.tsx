@@ -1089,7 +1089,7 @@ export function BusinessOSHomepage() {
       <section className="py-20 px-4" style={{ background: L.bg, borderTop: `1px solid ${L.borderLight}` }}>
         <div className="container max-w-5xl mx-auto">
           <p className="text-center text-[10px] font-black tracking-[0.35em] uppercase mb-10" style={{ color: L.textMuted }}>Popular on FreWork</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
               { icon: Building2, label: "Company Registration", href: "/services/business-registration" },
               { icon: MapPin, label: "Find Coworking Space", href: "/coworking" },
@@ -1099,6 +1099,7 @@ export function BusinessOSHomepage() {
               { icon: FileText, label: "GST Registration", href: "/services/compliance" },
               { icon: Briefcase, label: "Income Tax (ITR)", href: "/services/compliance" },
               { icon: BarChart3, label: "Virtual Accountant", href: "/services/accounting" },
+              { icon: FileText, label: "AI Accountant – FreBook", href: "/frebook" },
             ].map(s => {
               const Icon = s.icon;
               return (
