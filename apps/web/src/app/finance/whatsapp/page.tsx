@@ -78,7 +78,7 @@ export default function WhatsAppPage() {
                   {sent[l.phone]?.ok && (
                     <form onSubmit={e => { e.preventDefault(); post({ action: "verify", phone: l.phone, code: typed[l.phone] ?? "" }); }} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                       <span style={{ fontSize: 14, color: C.pos, fontWeight: 700 }}>We sent a 6-digit code to this WhatsApp. Type it here:</span>
-                      <input value={typed[l.phone] ?? ""} onChange={e => setTyped(t => ({ ...t, [l.phone]: e.target.value.replace(/D/g, "").slice(0, 6) }))} inputMode="numeric" autoComplete="one-time-code" autoFocus aria-label="Code from WhatsApp" placeholder="••••••"
+                      <input value={typed[l.phone] ?? ""} onChange={e => setTyped(t => ({ ...t, [l.phone]: e.target.value.replace(/\D/g, "").slice(0, 6) }))} inputMode="numeric" autoComplete="one-time-code" autoFocus aria-label="Code from WhatsApp" placeholder="••••••"
                         style={{ height: 40, width: 130, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: MONO, fontSize: 18, letterSpacing: "0.25em", color: C.ink }} />
                       <button type="submit" disabled={busy || (typed[l.phone] ?? "").length !== 6} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "none", background: C.navy, color: "#FFFFFF", fontWeight: 800, cursor: "pointer", opacity: (typed[l.phone] ?? "").length === 6 ? 1 : 0.5 }}>Link</button>
                       <button type="button" disabled={busy} onClick={() => post({ phone: l.phone })} style={{ height: 40, padding: "0 12px", borderRadius: 10, border: `1px solid ${C.line}`, background: C.tile, cursor: "pointer" }}>Send again</button>

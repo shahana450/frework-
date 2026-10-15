@@ -10,6 +10,57 @@ import { supabase } from "@/lib/supabase";
 
 type Step = "auth" | "mobile" | "done";
 
+// Sign in with a WhatsApp number already linked to FreWork: FreBook sends a code on WhatsApp, typed here
+function WhatsAppSignIn() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const call = async (body: Record<string, string>) => {
+    setBusy(true); setMsg(null);
+    const r = await fetch("/api/auth/whatsapp-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    return { r, d };
+  };
+  const send = async () => {
+    const { r, d } = await call({ action: "send", phone });
+    if (!r.ok) { setMsg({ ok: false, text: d.error ?? "Couldn't send the code." }); return; }
+    setSent(true);
+    setMsg(d.sent ? { ok: true, text: "Code sent on WhatsApp from FreBook. It works for 10 minutes." } : { ok: false, text: d.note ?? "Couldn't send the code." });
+  };
+  const verify = async () => {
+    const { r, d } = await call({ action: "verify", phone, code });
+    if (!r.ok || !d.token) { setMsg({ ok: false, text: d.error ?? "That code didn't work." }); return; }
+    router.push(`/auth/wa?t=${encodeURIComponent(d.token)}`);
+  };
+  const field = "w-full border border-white/10 rounded-2xl px-4 py-3 bg-white/4 text-white outline-none focus:border-[#25D366]/60 text-sm transition-all placeholder:text-white/25";
+  if (!open) return (
+    <button type="button" onClick={() => setOpen(true)}
+      className="w-full flex items-center justify-center gap-3 py-3.5 border border-white/12 rounded-2xl hover:border-[#25D366]/50 hover:bg-white/4 transition-all font-medium text-white/80 hover:text-white mb-5">
+      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black" style={{ background: "#25D366", color: "#0B1120" }}>W</span>
+      <span>Continue with WhatsApp</span>
+    </button>
+  );
+  return (
+    <div className="border border-white/12 rounded-2xl p-4 mb-5 space-y-3">
+      <p className="text-sm text-white/70">Use the WhatsApp number you linked in FreWork. FreBook sends you a code.</p>
+      <input value={phone} onChange={e => setPhone(e.target.value)} inputMode="tel" placeholder="98765 43210" aria-label="WhatsApp number" className={field} disabled={sent} />
+      {sent && <input value={code} onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" aria-label="Code from WhatsApp" className={field + " tracking-[0.3em]"} autoFocus />}
+      {msg && <p className={"text-xs " + (msg.ok ? "text-emerald-400" : "text-amber-300")}>{msg.text}</p>}
+      <div className="flex gap-2">
+        {!sent
+          ? <button type="button" onClick={send} disabled={busy || phone.replace(/\D/g, "").length < 10} className="flex-1 h-11 rounded-2xl font-semibold text-[#0B1120] disabled:opacity-50" style={{ background: "#25D366" }}>{busy ? "Sending…" : "Send code"}</button>
+          : <button type="button" onClick={verify} disabled={busy || code.length !== 6} className="flex-1 h-11 rounded-2xl font-semibold text-[#0B1120] disabled:opacity-50" style={{ background: "#25D366" }}>{busy ? "Checking…" : "Sign in"}</button>}
+        <button type="button" onClick={() => { setOpen(false); setSent(false); setCode(""); setMsg(null); }} className="px-4 h-11 rounded-2xl border border-white/12 text-white/60 text-sm">Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -171,6 +222,8 @@ function LoginForm() {
                   )}
                   <span>Continue with Google</span>
                 </button>
+
+                <WhatsAppSignIn />
 
                 <div className="relative mb-5">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/8" /></div>

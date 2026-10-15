@@ -3,7 +3,7 @@ import type { ParsedTransaction } from "../intentEngine";
 
 export type Command =
   | { type: "link"; code: string } | { type: "yes" } | { type: "post_anyway" } | { type: "no" } | { type: "help" }
-  | { type: "switch" } | { type: "pick"; n: number } | { type: "text"; text: string };
+  | { type: "switch" } | { type: "pick"; n: number } | { type: "login" } | { type: "text"; text: string };
 
 export function parseCommand(raw: string): Command {
   const t = raw.trim(), up = t.toUpperCase().replace(/[.!]+$/, "");
@@ -14,6 +14,7 @@ export function parseCommand(raw: string): Command {
   if (["NO", "N", "CANCEL", "NAHI", "NAI", "VENDA"].includes(up)) return { type: "no" };
   if (["HELP", "HI", "HELLO", "MENU", "START", "?"].includes(up)) return { type: "help" };
   if (["SWITCH", "BUSINESS", "CHANGE BUSINESS"].includes(up)) return { type: "switch" };
+  if (["LOGIN", "LOG IN", "SIGN IN", "DASHBOARD", "OPEN APP", "OPEN DASHBOARD", "APP"].includes(up)) return { type: "login" };
   if (/^[1-9]$/.test(up)) return { type: "pick", n: Number(up) };
   return { type: "text", text: t };
 }
@@ -43,6 +44,7 @@ export function helpText(bizName: string): string {
     "• GST collected last month",
     "",
     "Reply *YES* to post a draft, *NO* to drop it. *SWITCH* to change business.",
+    "*LOGIN* — a one-tap link to open your FreBook dashboard.",
   ].join("\n");
 }
 

@@ -12,6 +12,7 @@ import { postJournal, voucherTypeFor, postingErrorMessage } from "../posting";
 import { readAttachmentBuffer, type Attachment } from "../attachments";
 import { fileToShelf, fyOfDate } from "../shelf";
 import { parseCommand, helpText, draftText, answerText } from "./format";
+import { loginToken, loginUrl } from "./loginLink";
 
 type Link = { business_id: string; user_id: string; name: string };
 type Session = { phone: string; business_id: string | null; pending: { parsed?: ParsedTransaction; key?: string; original?: string; picking?: boolean } | null; history: { role: "user" | "assistant"; content: string }[]; picking?: boolean };
@@ -60,6 +61,16 @@ export async function handleWhatsApp(sb: SupabaseClient, m: Incoming): Promise<s
   if (!role) return `❌ Your FreWork account no longer has access to ${link.name}. Ask the owner, or unlink in the app.`;
 
   if (cmd.type === "help") return helpText(link.name);
+  // One-tap sign-in: this number was proved by the LINK code, so it may open its own FreWork account
+  if (cmd.type === "login") {
+    const token = await loginToken(sb, link.user_id);
+    if (!token) return "❌ Couldn't make a sign-in link for your account. Sign in at frework.online/login instead.";
+    await sb.from("fw_fin_audit_log").insert({ business_id: link.business_id, actor: link.user_id, action: "whatsapp_login_link", source: "whatsapp", detail: { phone: `${m.from.slice(0, 4)}…${m.from.slice(-2)}` } }).then(() => null, () => null);
+    return `🔐 Open your FreBook dashboard:
+${loginUrl(token)}
+
+Works once and expires soon. Don't forward it — it signs in as you.`;
+  }
   if (cmd.type === "no") { await save({ pending: null }); return sess.pending ? "❌ Draft dropped. Nothing was posted." : "Nothing pending."; }
 
   if (cmd.type === "yes" || cmd.type === "post_anyway") {
