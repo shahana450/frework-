@@ -15,6 +15,7 @@ const QUICK: { key: string; label: string }[] = [
 /** Best first guess for a new ledger from its name and which side of cash/bank it sits on. */
 export function guessGroup(name: string, side?: "in" | "out" | null): string {
   const n = name.toLowerCase();
+  if (/accumulated depreciation|acc\.? ?dep|provision for depreciation|depreciation (reserve|fund)/.test(n)) return "fixed_asset";
   if (/credit\s*card/.test(n)) return "current_liability";
   if (/\b(bank|hdfc|icici|sbi|axis|kotak|federal|canara|pnb|yes bank|idfc|indusind)\b/.test(n)) return "bank";
   if (/\b(gst|cgst|sgst|igst|tds|tcs|cess)\b/.test(n)) return "duties";

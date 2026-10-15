@@ -22,6 +22,7 @@ export const LEDGER_HEADS: LedgerHead[] = [
 export const headByKey = (k: string) => LEDGER_HEADS.find(h => h.key === k);
 
 const RULES: [RegExp, string][] = [
+  [/accumulated depreciation|acc\.? ?dep|provision for depreciation|depreciation (reserve|fund)/, "fixed_asset"],
   [/\b(cgst|sgst|igst|utgst|gst|cess|tds|tcs)\b|duties|tax payable|professional tax/, "duties"],
   [/bank (charges|commission|fees?)|sms charges|processing (fee|charges)|interest (paid|on loan)/, "indirect_expense"],
   [/interest (received|credited|earned)|interest on (fd|deposit)|indirect income|other income|misc(ellaneous)? income/, "indirect_income"],
