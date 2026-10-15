@@ -29,7 +29,8 @@ export type Intent = {
   currency?: string | null;                        // transaction currency when not the base currency
   exchange_rate?: number | null;                   // base units per 1 unit of `currency` — never guessed
 };
-export type RuleContext = { tax?: TaxModule; baseCurrency?: string };
+// taxRegistered: false for an Indian business with no GSTIN — it can neither claim input GST nor charge GST
+export type RuleContext = { tax?: TaxModule; baseCurrency?: string; taxRegistered?: boolean };
 
 export type RuleLine = { account: string; debit: number; credit: number; role: string; suggested_type: string | null; fc_debit?: number; fc_credit?: number };
 export type RuleResult = {
@@ -66,7 +67,7 @@ const CR = (account: string, amount: number, role: string, suggested_type: strin
 export function buildEntry(intent: Intent, ctx: RuleContext = {}): RuleResult {
   const base = (ctx.baseCurrency ?? "INR").toUpperCase();
   const cur = intent.currency?.toUpperCase().trim() || null;
-  const r = buildLocal(intent, ctx.tax ?? IN_GST);
+  const r = buildLocal(intent, ctx.tax ?? IN_GST, ctx.taxRegistered !== false);
   if (!cur || cur === base) return { ...r, fx: null };
   const rate = Number(intent.exchange_rate) || 0;
   if (!(rate > 0)) return { ...r, missing: [...r.missing, "exchange_rate"], fx: null };
@@ -84,10 +85,20 @@ export function buildEntry(intent: Intent, ctx: RuleContext = {}): RuleResult {
   };
 }
 
-function buildLocal(intent: Intent, tax: TaxModule): RuleResult {
+function buildLocal(intent: Intent, tax: TaxModule, registered = true): RuleResult {
   const missing: string[] = [];
   const warnings: string[] = [];
-  const stated = r2(intent.amount);
+  let stated = r2(intent.amount);
+  // Not GST-registered: no input credit and no GST charged. A purchase or expense is booked at the full amount
+  // paid (GST becomes part of the cost); a sale is booked at the amount received, with no output GST.
+  if (!registered && intent.gst?.applicable && (intent.gst.rate ?? 0) > 0 && tax.taxName && stated > 0) {
+    const g0 = intent.gst;
+    const full = tax.split(stated, g0.rate ?? 0, g0.inclusive ?? true, g0.supply ?? "intra").gross;
+    const selling = intent.action === "sale" || intent.action === "receipt_from_customer";
+    if (!selling) { warnings.push(`Not GST-registered: the ${tax.taxName} of ₹${r2(full - (g0.inclusive ?? true ? tax.split(stated, g0.rate ?? 0, true, g0.supply ?? "intra").taxable : stated))} is part of the cost — no input credit.`); stated = r2(full); }
+    else warnings.push(`Not GST-registered: no ${tax.taxName} is charged on this sale.${g0.inclusive === false ? " Recorded at the amount without GST." : ""}`);
+    intent = { ...intent, gst: { ...g0, applicable: false } };
+  }
   if (!(stated > 0)) missing.push("amount");
 
   const credit = intent.payment_mode === "credit";

@@ -143,7 +143,7 @@ export type AiIntent = {
   currency?: string | null; exchange_rate?: number | null;
 };
 
-export type BusinessContext = { country: string; baseCurrency: string; tax: TaxModule; state?: string | null };
+export type BusinessContext = { country: string; baseCurrency: string; tax: TaxModule; state?: string | null; gstin?: string | null };
 
 /** The AI instructions with this business's country, currency and tax rules added. */
 export function intentSystemFor(ctx: BusinessContext): string {
@@ -224,7 +224,8 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
     gst: ai.gst ?? null, tds: ai.tds ?? null, manual_lines: ai.manual_lines?.map(l => ({ ...l, account: canon(l.account) ?? l.account })) ?? null,
     currency: ai.currency ?? null, exchange_rate: ai.exchange_rate ?? null,
   };
-  const rr = buildEntry(intent, { tax: ctx?.tax, baseCurrency: ctx?.baseCurrency });
+  // An Indian business without a GSTIN is not GST-registered: GST goes into the cost, none is charged
+  const rr = buildEntry(intent, { tax: ctx?.tax, baseCurrency: ctx?.baseCurrency, taxRegistered: !ctx || ctx.country !== "IN" || !!ctx.gstin?.trim() });
 
   // How this party / ledger was booked before — real data, not the model's guess
   let history_evidence: string | null = null;
