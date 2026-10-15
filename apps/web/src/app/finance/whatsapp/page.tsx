@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import QRCode from "qrcode";
 
 type LinkRow = { id: string; phone: string; verified: boolean; code: string | null; code_expires: string | null };
 type Data = { links: LinkRow[]; bot_number?: string | null; live?: boolean; setup_needed?: string };
@@ -49,6 +50,13 @@ export default function WhatsAppPage() {
     setPhone(""); load(bizId);
   };
   const bot = data?.bot_number;
+  // Scan-to-chat: opens the FreBook chat directly (WhatsApp search only finds saved contacts, so it shows "Invite")
+  const chatUrl = bot ? `https://wa.me/${bot}?text=${encodeURIComponent("Hi FreBook")}` : "";
+  const [qr, setQr] = useState("");
+  useEffect(() => {
+    if (!chatUrl) return;
+    QRCode.toDataURL(chatUrl, { width: 480, margin: 1, color: { dark: "#141A3A", light: "#FFFFFF" } }).then(setQr).catch(() => setQr(""));
+  }, [chatUrl]);
 
   return (
     <div style={{ minHeight: "100vh", background: C.ground, color: C.ink }}>
@@ -91,6 +99,22 @@ export default function WhatsAppPage() {
           {err && <div role="alert" style={{ color: C.neg, fontSize: 13.5, fontWeight: 600 }}>{err}</div>}
           <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>FreBook sends a code to that WhatsApp number — typing it here proves the number is yours. Each team member links their own number — entries show who posted them, and view-only roles can ask questions but not post.</div>
         </section>
+
+        {bot && (
+          <section style={{ background: C.tile, border: `1px solid ${C.line}`, borderRadius: 22, padding: 22, display: "flex", gap: 22, flexWrap: "wrap", alignItems: "center" }}>
+            {qr ? <img src={qr} alt={`QR code that opens a WhatsApp chat with FreBook, ${pretty(bot)}`} width={176} height={176} style={{ borderRadius: 14, border: `1px solid ${C.line}`, flexShrink: 0 }} />
+              : <div style={{ width: 176, height: 176, borderRadius: 14, background: C.grey }} />}
+            <div style={{ flex: 1, minWidth: 220, display: "flex", flexDirection: "column", gap: 10 }}>
+              <h2 style={{ margin: 0, fontSize: 19 }}>Open FreBook on your phone</h2>
+              <p style={{ margin: 0, color: C.muted, fontSize: 14, lineHeight: 1.55 }}>Scan with your phone camera — the FreBook chat opens in WhatsApp. Then save <b style={{ fontFamily: MONO, color: C.ink }}>{pretty(bot)}</b> as <b style={{ color: C.ink }}>FreBook</b> so it shows by name. (Searching the number in WhatsApp shows &ldquo;Invite&rdquo; until it&apos;s saved.)</p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <a href={chatUrl} target="_blank" rel="noreferrer" style={{ height: 42, padding: "0 16px", borderRadius: 11, background: C.wa, color: "#FFFFFF", fontWeight: 800, fontSize: 14, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open FreBook on WhatsApp</a>
+                {qr && <a href={qr} download="FreBook-WhatsApp-QR.png" style={{ height: 42, padding: "0 14px", borderRadius: 11, border: `1px solid ${C.line}`, color: C.ink, fontWeight: 700, fontSize: 14, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Download QR</a>}
+                <button onClick={() => navigator.clipboard?.writeText(chatUrl)} style={{ height: 42, padding: "0 14px", borderRadius: 11, border: `1px solid ${C.line}`, background: C.tile, color: C.ink, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Copy link</button>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section style={{ background: C.tile, border: `1px solid ${C.line}`, borderRadius: 22, padding: 22, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, fontSize: 14, lineHeight: 1.6 }}>
           <div><b>Record</b><div style={{ color: C.muted }}>Paid rent 25000 from bank<br />Sold to Asha 11800 incl GST on credit<br />200 ka petrol cash mein<br />📷 a bill photo or PDF</div></div>
