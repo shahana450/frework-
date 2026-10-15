@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { getAI } from "@/lib/ai";
 import { requireBusiness, serverError } from "@/lib/apiAuth";
-import { intentSystemFor, loadBusinessContext, interpret as interpretWith, loadQueryBooks as loadBooksWith, type AiIntent } from "@/lib/intentEngine";
+import { intentSystemFor, loadBusinessContext, interpret as interpretWith, loadQueryBooks as loadBooksWith, accountListForAI, type AiIntent } from "@/lib/intentEngine";
 import { TOOLS, runTool, resolvePeriod, monthPeriod, type Tool, type Period } from "@/lib/bookQueries";
 
 const supabase = createClient(
@@ -97,7 +97,7 @@ export async function handleChatBook(req: NextRequest, deps: { readAttachment?: 
         .slice(-12);
     }
 
-    const accountList = (accounts ?? []).map(a => `${a.name} (${a.type}${a.sub_type ? "/" + a.sub_type : ""})`).join(" | ");
+    const accountList = accountListForAI(accounts ?? []);
 
     const today = new Date().toLocaleDateString("en-CA");
     const contextHeader = [

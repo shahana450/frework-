@@ -164,6 +164,18 @@ export async function loadBusinessContext(sb: SupabaseClient, businessId: string
 const BALANCE_SHEET_PLUMBING = /bank|cash|debtor|creditor|receivable|payable|cgst|sgst|igst|gst|tds|capital/i;
 
 // Turns the AI's description into a rule-built entry, with real evidence from earlier entries
+/** Supplier or customer ledgers: parties to a transaction, not what was bought or sold. */
+export const isPartyLedger = (a: { name: string; sub_type?: string | null }) =>
+  a.sub_type === "trade_payables" || a.sub_type === "trade_receivables";
+const SPEND_ACTIONS = new Set<string>(["expense_payment", "asset_purchase", "purchase"]);
+
+/** The ledger list given to the AI, with suppliers and customers marked so they are not used as expense or asset accounts. */
+export function accountListForAI(accounts: { name: string; type: string; sub_type?: string | null }[]): string {
+  return accounts.map(a => a.sub_type === "trade_payables" ? `${a.name} (supplier — a party, not an expense or asset)`
+    : a.sub_type === "trade_receivables" ? `${a.name} (customer — a party, not income)`
+    : `${a.name} (${a.type}${a.sub_type ? "/" + a.sub_type : ""})`).join(" | ");
+}
+
 export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { name: string; type: string; sub_type: string | null }[], businessId: string, today: string, ctx?: BusinessContext): Promise<ParsedTransaction> {
   const base = {
     transaction_date: /^\d{4}-\d{2}-\d{2}$/.test(ai.transaction_date ?? "") ? ai.transaction_date! : today,
@@ -189,9 +201,13 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
   if (!paymentAccount && ai.payment_mode === "cash") paymentAccount = cashLedger;
 
   const action = (ACTIONS as string[]).includes(ai.action ?? "") ? ai.action as Intent["action"] : "journal_adjustment";
+  // A supplier/customer ledger is a party, never the expense or asset itself ("office table" ≠ "XYZ Furniture House")
+  let counter = canon(ai.counter_account), partyName = ai.party_name ?? null;
+  const counterAcc = counter ? accounts.find(a => a.name === counter) : undefined;
+  if (counterAcc && isPartyLedger(counterAcc) && SPEND_ACTIONS.has(action)) { partyName = partyName ?? counterAcc.name; counter = null; }
   const intent: Intent = {
     action, amount: Number(ai.amount) || 0, payment_mode: ai.payment_mode ?? (paymentAccount ? "bank" : null),
-    payment_account: paymentAccount, counter_account: canon(ai.counter_account), party_name: ai.party_name ?? null,
+    payment_account: paymentAccount, counter_account: counter, party_name: partyName,
     gst: ai.gst ?? null, tds: ai.tds ?? null, manual_lines: ai.manual_lines?.map(l => ({ ...l, account: canon(l.account) ?? l.account })) ?? null,
     currency: ai.currency ?? null, exchange_rate: ai.exchange_rate ?? null,
   };

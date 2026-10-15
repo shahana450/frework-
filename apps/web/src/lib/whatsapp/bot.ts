@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAI } from "../ai";
 import { roleOf } from "../apiAuth";
 import { can } from "../permissions";
-import { intentSystemFor, loadBusinessContext, interpret, loadQueryBooks, type AiIntent, type ParsedTransaction } from "../intentEngine";
+import { intentSystemFor, loadBusinessContext, interpret, loadQueryBooks, accountListForAI, type AiIntent, type ParsedTransaction } from "../intentEngine";
 import { TOOLS, runTool, resolvePeriod, monthPeriod, type Tool, type Period } from "../bookQueries";
 import { reviewChecks } from "../reviewChecks";
 import { resolveLedgers } from "../ledgerResolve";
@@ -102,7 +102,7 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
   const header = [
     `Today: ${today}.`, `Business: ${biz.name}, Country: ${biz.country}, State: ${biz.state ?? "not set"}, Tax ID: ${biz.gstin ?? "not set"}, Base currency: ${biz.baseCurrency}.`,
     `Financial Year: ${fy?.label ?? "unknown"} (${fy?.start_date} to ${fy?.end_date}).`,
-    `Available Accounts: ${(accounts ?? []).map(a => `${a.name} (${a.type})`).join(" | ")}.`,
+    `Available Accounts: ${accountListForAI(accounts ?? [])}.`,
     attachment ? `Attached file: ${attachment.name}.${attachment.text ? `\nFile contents:\n${attachment.text}` : " (see attached document)"}` : "",
   ].join(" ");
   const userTurn = `${header}\n\nUser message: ${message || "Book this transaction from the attached document."}`;
@@ -144,23 +144,33 @@ async function postPending(sb: SupabaseClient, link: Link, actorId: string, p: {
   const t = p.parsed;
   if (t.warnings.some(w => /locked/i.test(w))) return "🔒 This period is locked — the owner or an admin can post it from the app.";
   // Posted once only, however many times YES is sent
-  const { data: prior } = await sb.from("fw_fin_journals").select("entry_no").eq("business_id", link.business_id).eq("metadata->>client_key", p.key).neq("status", "voided").limit(1).maybeSingle();
+  // (a draft held for review carries the same key but is not in the books — only a posted entry counts)
+  const { data: prior } = await sb.from("fw_fin_journals").select("entry_no").eq("business_id", link.business_id).eq("metadata->>client_key", p.key).eq("status", "posted").limit(1).maybeSingle();
   if (prior) { await save({ pending: null }); return `✅ Already posted as *${prior.entry_no}*.`; }
   const resolved = await resolveLedgers(sb, link.business_id, t.lines.map(l => ({ name: l.account, suggestedType: l.suggested_type })), {}, "WhatsApp");
   if (!resolved.ok) return `I need to know which group these new ledgers belong to: ${resolved.needHeads.map(h => h.account).join(", ")}.\nPlease post this one from FreBook in the app (it will ask you).`;
   try {
     const posted = await postJournal(sb, {
       businessId: link.business_id, actorId, date: t.transaction_date, type: voucherTypeFor(t.transaction_type), narration: t.narrative || p.original,
-      referenceNo: t.invoice_number, partyName: t.party_name, source: "whatsapp", aiGenerated: true, checkDuplicate: !dupOk,
+      // POST ANYWAY also confirms a held entry (e.g. a purchase with no GST from an unregistered seller)
+      referenceNo: t.invoice_number, partyName: t.party_name, source: "whatsapp", aiGenerated: true, checkDuplicate: !dupOk, reviewed: dupOk,
       lines: t.lines.map(l => ({ accountId: resolved.ids.get(l.account.trim())!.id, dr: l.debit, cr: l.credit, fcDr: l.fc_debit, fcCr: l.fc_credit })),
       currency: t.fx?.currency ?? null, exchangeRate: t.fx?.rate ?? null,
       metadata: { client_key: p.key, original_message: p.original, channel: "whatsapp", gst: t.gst, tds: t.tds, warnings: t.warnings, confirmed_by: actorId },
     });
+    // The draft kept for review earlier is replaced by the posted entry
+    const { data: held } = await sb.from("fw_fin_journals").select("id").eq("business_id", link.business_id).eq("status", "draft").eq("metadata->>client_key", p.key);
+    const heldIds = ((held ?? []) as { id: string }[]).map(h => h.id);
+    if (heldIds.length) {
+      await sb.from("fw_fin_journal_lines").delete().in("journal_id", heldIds);
+      await sb.from("fw_fin_journals").delete().in("id", heldIds).eq("status", "draft");
+    }
     await save({ pending: null });
     return `✅ Posted as *${posted.entryNo}* · ${link.name}${resolved.created.length ? `\nNew ledger${resolved.created.length > 1 ? "s" : ""}: ${resolved.created.map(c => c.name).join(", ")}` : ""}` + DASH_HINT;
   } catch (e) {
     const err = postingErrorMessage(e);
     if (err.code === "POSSIBLE_DUPLICATE") return `⚠️ ${err.message}\n\nReply *POST ANYWAY* if this is a separate transaction, or *NO* to drop it.`;
+    if (err.code === "NEEDS_REVIEW") return `🔎 ${err.message.replace(/^Saved as a draft for review, not posted:\s*/i, "Please check: ")}\n\nIf that's right (e.g. bought from a seller without GST), reply *POST ANYWAY*. Otherwise reply *NO* and send it again with the GST.`;
     return `⚠️ Couldn't post: ${err.message}`;
   }
 }
