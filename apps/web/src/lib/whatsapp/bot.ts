@@ -97,7 +97,7 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
   if (m.media) {
     attachment = readAttachmentBuffer(m.media.bytes, m.media.name, m.media.mime);
     const media = m.media;
-    await fileToShelf(sb, { businessId: link.business_id, actorId: link.user_id, rack: "bills", title: media.name, fileName: media.name, mime: media.mime, bytes: new Uint8Array(media.bytes), source: "upload", fy: fyOfDate(today), notes: message || null }).catch(() => null);
+    void fileToShelf(sb, { businessId: link.business_id, actorId: link.user_id, rack: "bills", title: media.name, fileName: media.name, mime: media.mime, bytes: new Uint8Array(media.bytes), source: "upload", fy: fyOfDate(today), notes: message || null }).catch(() => null);
   }
   const header = [
     `Today: ${today}.`, `Business: ${biz.name}, Country: ${biz.country}, State: ${biz.state ?? "not set"}, Tax ID: ${biz.gstin ?? "not set"}, Base currency: ${biz.baseCurrency}.`,
@@ -107,6 +107,9 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
   ].join(" ");
   const userTurn = `${header}\n\nUser message: ${message || "Book this transaction from the attached document."}`;
   const msgs = [...sess.history.slice(-6).map(h => ({ role: h.role, content: h.content })), { role: "user" as const, content: attachment ? [...attachment.blocks, { type: "text" as const, text: userTurn }] : userTurn }];
+  // Load the books while the AI reads the message (used for answers and the smart checks)
+  const booksToday = loadQueryBooks(sb, link.business_id, today);
+  booksToday.catch(() => null);
   const res = await getAI().messages.create({ model: "claude-sonnet-4-6", max_tokens: 1500, system: intentSystemFor(biz), messages: msgs as never });
   const raw = res.content[0]?.type === "text" ? res.content[0].text.trim() : "";
   let ai: AiIntent;
@@ -118,7 +121,8 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
     const fyP: Period = fy ? { from: fy.start_date, to: fy.end_date, label: `FY ${fy.label}` } : { from: "2000-01-01", to: today, label: "all time" };
     const p = resolvePeriod(ai.period, tool === "compare" ? monthPeriod(today, 0) : fyP);
     const p2 = resolvePeriod(ai.period2, tool === "compare" ? monthPeriod(p.from, -1) : fyP);
-    const books = await loadQueryBooks(sb, link.business_id, [p.to, p2.to, today].sort().pop()!);
+    const upto = [p.to, p2.to, today].sort().pop()!;
+    const books = upto === today ? await booksToday : await loadQueryBooks(sb, link.business_id, upto);
     if (books.error) return "⚠️ I couldn't read your books right now. Please try again.";
     const ans = runTool(tool, books.accounts, books.journals, ai.params ?? {}, { p, p2, today }, { currency: biz.baseCurrency, locale: biz.country === "IN" ? "en-IN" : "en-US" });
     await save({ history: hist(JSON.stringify({ kind: "answer", tool, summary: ans.summary })) });
@@ -133,7 +137,7 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
     return `❓ ${parsed.needs_clarification[0]}`;
   }
   // Same smart checks as the app (TDS, cash limits, negative balances)
-  const books = await loadQueryBooks(sb, link.business_id, [today, parsed.transaction_date].sort().pop()!);
+  const books = parsed.transaction_date <= today ? await booksToday : await loadQueryBooks(sb, link.business_id, parsed.transaction_date);
   const checks = books.error ? { checks: [] } : reviewChecks(books.accounts, books.journals, today, { date: parsed.transaction_date, lines: parsed.lines.map(l => ({ account: l.account, debit: l.debit, credit: l.credit })) });
   const bad = checks.checks.filter(c => c.tone === "bad");
   await save({ pending: { parsed, key: `wa:${m.id}`, original: message.slice(0, 300) }, history: hist(raw) });

@@ -19,7 +19,8 @@ async function send(to: string, body: string) {
 async function markRead(id: string) {
   await fetch(`${GRAPH}/${(process.env.WHATSAPP_PHONE_ID ?? "").trim()}/messages`, {
     method: "POST", headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ messaging_product: "whatsapp", status: "read", message_id: id }),
+    // Blue ticks + "typing…" until the reply arrives (or 25 s)
+    body: JSON.stringify({ messaging_product: "whatsapp", status: "read", message_id: id, typing_indicator: { type: "text" } }),
   }).catch(() => null);
 }
 
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
     try {
       const { count } = await supabase.from("fw_fin_wa_seen").select("message_id", { count: "exact", head: true }).eq("phone", msg.from).gte("seen_at", new Date(Date.now() - 3600000).toISOString());
       if ((count ?? 0) > 60) { await send(msg.from, "⏳ Limit reached: 60 messages an hour. Please try again a little later."); return; }
-      await markRead(msg.id);
+      void markRead(msg.id);
       let text = "", media: Incoming["media"];
       if (msg.type === "text") text = msg.text?.body ?? "";
       else if (msg.type === "button") text = msg.button?.text ?? "";
