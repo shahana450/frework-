@@ -39,8 +39,10 @@ export const tallyUrl = () => `http://localhost:${state.port}`;
 export const tallyManuallyOff = () => read(key(OFF), "") === "1";
 // Auto-push: every entry posted in FreBook is sent to Tally straight away (per business, on this computer)
 const AUTO = "fw_tally_autopush";
-export const tallyAutoPushOn = () => read(key(AUTO), "") === "1";
-export const setTallyAutoPush = (on: boolean) => write(key(AUTO), on ? "1" : null);
+export const tallyAutoPushOn = () => read(key(AUTO), "") !== "";
+export const setTallyAutoPush = (on: boolean) => write(key(AUTO), on ? new Date().toISOString() : null);
+/** When auto-push was switched on — entries posted after this (e.g. from WhatsApp) are caught up. */
+export const tallyAutoPushSince = () => { const v = read(key(AUTO), ""); return v === "1" ? new Date(Date.now() - 86400000).toISOString() : v; };
 
 function restore() {
   try {

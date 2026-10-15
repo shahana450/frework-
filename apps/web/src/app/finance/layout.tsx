@@ -3,6 +3,7 @@ import { setActiveCurrency } from "@/lib/money";
 import { financeTitle } from "@/lib/dueText";
 import { useState, useEffect } from "react";
 import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
+import { useTallyAutoCatchUp } from "@/lib/tallyAutoCatchUp";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -96,6 +97,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const [search, setSearch] = useState("");
   // The one active business (Task 6): resolved here, shown in the header, provided to every page
   const active = useActiveBusinessStore();
+  useTallyAutoCatchUp(active.businessId, tallyState);   // pushes WhatsApp/other-device entries when Auto-push is on
 
   useEffect(() => { try { setAccountant(localStorage.getItem("fw_nav_mode") === "accountant"); } catch { /* */ } }, []);
   useEffect(() => { setSearch(window.location.search); }, [pathname]);
