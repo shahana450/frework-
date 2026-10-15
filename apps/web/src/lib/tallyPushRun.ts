@@ -42,11 +42,16 @@ export async function verifyOpenCompany(port: string, company: string): Promise<
   }
 }
 
+/** Entries being pushed right now (in any part of this tab) — never sent twice at once. */
+const inFlight = new Set<string>();
+export const PUSHED_EVENT = "fw:tally-pushed";   // detail: { bizId, results }
+
 export async function pushToTally(opts: {
   bizId: string; ids: string[]; dates: Record<string, string>; company: string; port: string; educational: boolean;
   onProgress?: (msg: string) => void;
 }): Promise<{ results: Record<string, PushState>; ok: number; failed: number; blocked: number; message: string }> {
   const { bizId, company, port, educational, onProgress } = opts;
+  opts = { ...opts, ids: opts.ids.filter(id => !inFlight.has(id)) };
   const blockedIds = educational ? opts.ids.filter(id => !eduDateOk(opts.dates[id] ?? "")) : [];
   const ids = opts.ids.filter(id => !blockedIds.includes(id));
   const results: Record<string, PushState> = {};
@@ -57,6 +62,7 @@ export async function pushToTally(opts: {
   const live = await verifyOpenCompany(port, company);
   if (live) return { results, ok: 0, failed: 0, blocked: 0, message: live };
   let ok = 0, failed = 0, newLedgers = 0;
+  ids.forEach(id => inFlight.add(id));
   try {
     for (let b = 0; b < ids.length; b += 50) {
       const batch = ids.slice(b, b + 50);
@@ -88,6 +94,8 @@ export async function pushToTally(opts: {
   } catch (e) {
     return { results, ok, failed, blocked: blockedIds.length, message: e instanceof Error ? e.message : "Push failed" };
   } finally {
+    ids.forEach(id => inFlight.delete(id));
+    try { window.dispatchEvent(new CustomEvent(PUSHED_EVENT, { detail: { bizId, results } })); } catch { /* */ }
     // Save: browser copy + server copy (same status on every device)
     try {
       const key = `fw_tally_pushed_${bizId}`;

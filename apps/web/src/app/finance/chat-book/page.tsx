@@ -295,13 +295,13 @@ export default function FreBookPage() {
   const tally = useTally();
   const tallyRef = useRef(tally); tallyRef.current = tally;
   const [autoPush, setAutoPush] = useState(false);
-  useEffect(() => { setAutoPush(tallyAutoPushOn()); }, [tally.company]);
-  const toggleAutoPush = () => { const on = !autoPush; setTallyAutoPush(on); setAutoPush(on); };
+  useEffect(() => { setAutoPush(tallyAutoPushOn(bizId ?? "")); }, [tally.company, bizId]);
+  const toggleAutoPush = () => { const b = bizIdRef.current; if (!b) return; const on = !autoPush; setTallyAutoPush(b, on); setAutoPush(on); };
 
   // Auto-push: send just-posted entries to the linked Tally company
   async function autoPushToTally(journals: { id: string; date: string; entryNo: string }[]) {
     const t = tallyRef.current, bid = bizIdRef.current;
-    if (!bid || !journals.length || !tallyAutoPushOn()) return;
+    if (!bid || !journals.length || !tallyAutoPushOn(bid)) return;
     const say = (text: string) => setMessages(prev => [...prev, { id: `tp-${Date.now()}-${Math.random()}`, role: "system", text, timestamp: Date.now() }]);
     const what = journals.length === 1 ? journals[0].entryNo : `${journals.length} entries`;
     if (t.status !== "connected" || !t.company) { say(`⚠ Auto-push is on, but Tally isn't connected right now, so ${what} wasn't sent. Open Tally, reconnect on the Tally page, then push from Books.`); return; }

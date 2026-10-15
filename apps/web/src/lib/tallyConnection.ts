@@ -39,10 +39,12 @@ export const tallyUrl = () => `http://localhost:${state.port}`;
 export const tallyManuallyOff = () => read(key(OFF), "") === "1";
 // Auto-push: every entry posted in FreBook is sent to Tally straight away (per business, on this computer)
 const AUTO = "fw_tally_autopush";
-export const tallyAutoPushOn = () => read(key(AUTO), "") !== "";
-export const setTallyAutoPush = (on: boolean) => write(key(AUTO), on ? new Date().toISOString() : null);
-/** When auto-push was switched on — entries posted after this (e.g. from WhatsApp) are caught up. */
-export const tallyAutoPushSince = () => { const v = read(key(AUTO), ""); return v === "1" ? new Date(Date.now() - 86400000).toISOString() : v; };
+// Keyed by the business explicitly (the shared `biz` may not be set yet when a page first renders)
+const autoRaw = (bizId: string) => read(`${AUTO}:${bizId}`, "") || read(AUTO, "");
+export const tallyAutoPushOn = (bizId: string) => !!bizId && autoRaw(bizId) !== "";
+export const setTallyAutoPush = (bizId: string, on: boolean) => { write(`${AUTO}:${bizId}`, on ? new Date().toISOString() : null); write(AUTO, null); };
+/** When auto-push was switched on — entries posted after this (e.g. from WhatsApp) are caught up. Older flags: last 24 h. */
+export const tallyAutoPushSince = (bizId: string) => { const v = autoRaw(bizId); return !v || v === "1" ? new Date(Date.now() - 86400000).toISOString() : v; };
 
 function restore() {
   try {

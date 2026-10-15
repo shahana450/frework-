@@ -1,7 +1,7 @@
 "use client";
 import { cur, activeMoney } from "@/lib/money";
 import { matchToTally, tallyGuidFor } from "@/lib/tallyMatch";
-import { verifyOpenCompany } from "@/lib/tallyPushRun";
+import { verifyOpenCompany, PUSHED_EVENT } from "@/lib/tallyPushRun";
 import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -119,6 +119,11 @@ export default function BooksPage() {
   }, [bizId, fy, allYears, ready]);
 
   useEffect(() => { load(); }, [load]);
+  // Pushes done elsewhere in this tab (Auto-push) show here straight away
+  useEffect(() => {
+    const on = (e: Event) => { const d = (e as CustomEvent).detail as { bizId: string; results: Record<string, PushState> }; if (d?.bizId === bizId) setPushed(prev => ({ ...prev, ...d.results })); };
+    window.addEventListener(PUSHED_EVENT, on); return () => window.removeEventListener(PUSHED_EVENT, on);
+  }, [bizId]);
 
   function savePushed(next: Record<string, PushState>) {
     setPushed(next);

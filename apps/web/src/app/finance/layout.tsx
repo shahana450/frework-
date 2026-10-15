@@ -3,7 +3,7 @@ import { setActiveCurrency } from "@/lib/money";
 import { financeTitle } from "@/lib/dueText";
 import { useState, useEffect } from "react";
 import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
-import { useTallyAutoCatchUp } from "@/lib/tallyAutoCatchUp";
+import { useTallyAutoCatchUp, AUTO_PUSH_EVENT } from "@/lib/tallyAutoCatchUp";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -97,7 +97,13 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const [search, setSearch] = useState("");
   // The one active business (Task 6): resolved here, shown in the header, provided to every page
   const active = useActiveBusinessStore();
-  useTallyAutoCatchUp(active.businessId, tallyState);   // pushes WhatsApp/other-device entries when Auto-push is on
+  useTallyAutoCatchUp(active.businessId, tallyState);
+  const [autoToast, setAutoToast] = useState<{ text: string; ok: boolean } | null>(null);
+  useEffect(() => {
+    let tm: ReturnType<typeof setTimeout>;
+    const on = (e: Event) => { setAutoToast((e as CustomEvent).detail); clearTimeout(tm); tm = setTimeout(() => setAutoToast(null), 8000); };
+    window.addEventListener(AUTO_PUSH_EVENT, on); return () => { window.removeEventListener(AUTO_PUSH_EVENT, on); clearTimeout(tm); };
+  }, []);   // pushes WhatsApp/other-device entries when Auto-push is on
 
   useEffect(() => { try { setAccountant(localStorage.getItem("fw_nav_mode") === "accountant"); } catch { /* */ } }, []);
   useEffect(() => { setSearch(window.location.search); }, [pathname]);
@@ -337,6 +343,11 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
       {/* Main content */}
       {/* Keyed by business: switching business remounts the page, so it can't keep reading or posting to the old one */}
+      {autoToast && (
+        <div role="status" aria-live="polite" onClick={() => setAutoToast(null)} style={{ position: "fixed", right: 16, bottom: 16, zIndex: 200, maxWidth: 380, padding: "12px 16px", borderRadius: 12, background: autoToast.ok ? "#0F2B25" : "#FFF4E5", color: autoToast.ok ? "#E9F7F0" : "#8A5A00", border: autoToast.ok ? "1px solid rgba(61,220,151,0.4)" : "1px solid #F2D29B", boxShadow: "0 12px 30px rgba(15,43,37,0.25)", fontSize: "0.85rem", fontWeight: 600, lineHeight: 1.45, cursor: "pointer" }}>
+          {autoToast.ok ? "✓ " : "⚠ "}{autoToast.text}
+        </div>
+      )}
       <main key={active.businessId ?? "none"} className="fw-main" style={{ flex: 1, marginLeft: sidebarW, minWidth: 0, transition: "margin-left 0.2s" }}>
         {/* Main icons along the top (FreBook has its own top bar) */}
         {!pathname.startsWith("/finance/chat-book") && (

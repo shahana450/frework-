@@ -7,24 +7,31 @@ import { tallyAutoPushOn, tallyAutoPushSince, type TallyState } from "@/lib/tall
 import { pushToTally, loadPushStatus } from "@/lib/tallyPushRun";
 
 let running = false;
+export const AUTO_PUSH_EVENT = "fw:tally-autopush";   // detail: { text: string; ok: boolean }
 
 async function catchUp(bizId: string, t: TallyState) {
-  if (running || !tallyAutoPushOn() || t.status !== "connected" || !t.company) return;
+  if (running || !tallyAutoPushOn(bizId) || t.status !== "connected" || !t.company) return;
   running = true;
   try {
-    // Two minutes' grace so an entry FreBook is pushing right now isn't sent twice
-    const before = new Date(Date.now() - 120000).toISOString();
-    const { data } = await supabase.from("fw_fin_journals").select("id,date,source,created_at")
-      .eq("business_id", bizId).eq("status", "posted").gte("created_at", tallyAutoPushSince()).lte("created_at", before)
+    // A short grace so an entry FreBook is pushing right now isn't picked up as well
+    const before = new Date(Date.now() - 30000).toISOString();
+    const { data, error } = await supabase.from("fw_fin_journals").select("id,date,entry_no,source")
+      .eq("business_id", bizId).eq("status", "posted").gte("created_at", tallyAutoPushSince(bizId)).lte("created_at", before)
       .order("created_at").limit(50);
-    const rows = ((data ?? []) as { id: string; date: string; source: string | null }[])
+    if (error) { console.warn("auto-push: couldn't read entries", error.message); return; }
+    const rows = ((data ?? []) as { id: string; date: string; entry_no: string; source: string | null }[])
       .filter(r => r.source !== "tally_import" && r.source !== "opening_balances");
     if (!rows.length) return;
     const status = await loadPushStatus(bizId);
     const todo = rows.filter(r => !status[r.id]);   // never pushed (failed ones wait for a manual push)
     if (!todo.length) return;
-    await pushToTally({ bizId, ids: todo.map(r => r.id), dates: Object.fromEntries(todo.map(r => [r.id, r.date])), company: t.company, port: t.port, educational: t.educational });
-  } catch { /* tries again next minute */ } finally { running = false; }
+    const r = await pushToTally({ bizId, ids: todo.map(x => x.id), dates: Object.fromEntries(todo.map(x => [x.id, x.date])), company: t.company, port: t.port, educational: t.educational });
+    const what = todo.length === 1 ? todo[0].entry_no : `${todo.length} entries`;
+    window.dispatchEvent(new CustomEvent(AUTO_PUSH_EVENT, { detail: {
+      ok: r.ok > 0 && !r.failed,
+      text: r.ok && !r.failed ? `Auto-push: ${what} sent to Tally (${t.company}).` : `Auto-push: ${r.message}`,
+    } }));
+  } catch (e) { console.warn("auto-push catch-up", e); } finally { running = false; }
 }
 
 export function useTallyAutoCatchUp(bizId: string | null | undefined, t: TallyState) {
@@ -32,7 +39,7 @@ export function useTallyAutoCatchUp(bizId: string | null | undefined, t: TallySt
   useEffect(() => {
     if (!bizId || t.status !== "connected" || !t.company) return;
     void catchUp(bizId, ref.current);
-    const id = setInterval(() => void catchUp(bizId, ref.current), 60000);
+    const id = setInterval(() => void catchUp(bizId, ref.current), 45000);
     return () => clearInterval(id);
   }, [bizId, t.status, t.company]);
 }
