@@ -25,14 +25,18 @@ type Props = { dash: (Dashboard & { taxDesk?: TaxDesk }) | null; bizName: string
 
 /** Donut: expenses (orange) vs profit (mint) as shares of income. */
 function Ring({ income, expenses, profit }: { income: number; expenses: number; profit: number }) {
-  const R = 52, L = 2 * Math.PI * R;
+  const R = 70, L = 2 * Math.PI * R;
   const exp = income > 0 ? Math.min(1, Math.max(0, expenses / income)) : profit < 0 ? 1 : 0;
   const pro = income > 0 ? Math.max(0, profit / income) : 0;
   return (
-    <svg width="132" height="132" viewBox="0 0 132 132" role="img" aria-label={`Expenses ${Math.round(exp * 100)}% of income, profit ${Math.round(pro * 100)}%`}>
-      <circle cx="66" cy="66" r={R} fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="14" />
-      <circle cx="66" cy="66" r={R} fill="none" stroke={C.orange} strokeWidth="14" strokeDasharray={`${exp * L} ${L}`} transform="rotate(-90 66 66)" strokeLinecap="butt" />
-      {pro > 0 && <circle cx="66" cy="66" r={R} fill="none" stroke="#7FE0B4" strokeWidth="14" strokeDasharray={`${pro * L} ${L}`} strokeDashoffset={-exp * L} transform="rotate(-90 66 66)" />}
+    <svg width="176" height="176" viewBox="0 0 176 176" role="img" aria-label={`Expenses ${Math.round(exp * 100)}% of income, profit ${Math.round(pro * 100)}%`}>
+      <defs>
+        <linearGradient id="ringGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#E8C27A" /><stop offset="1" stopColor="#B07E33" /></linearGradient>
+        <linearGradient id="ringMint" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#A8F0CF" /><stop offset="1" stopColor="#3DBE8B" /></linearGradient>
+      </defs>
+      <circle cx="88" cy="88" r={R} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="12" />
+      <circle cx="88" cy="88" r={R} fill="none" stroke="url(#ringGold)" strokeWidth="12" strokeDasharray={`${exp * L} ${L}`} transform="rotate(-90 88 88)" strokeLinecap="round" className="ring-arc" />
+      {pro > 0 && <circle cx="88" cy="88" r={R} fill="none" stroke="url(#ringMint)" strokeWidth="12" strokeDasharray={`${pro * L} ${L}`} strokeDashoffset={-exp * L} transform="rotate(-90 88 88)" strokeLinecap="round" />}
     </svg>
   );
 }
@@ -71,7 +75,17 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         @media (max-width: 640px) { .bento { grid-template-columns: minmax(0,1fr); grid-template-areas: "entry" "quick" "profit" "dues" "cash" "recv" "pay" "tax" "insight" "recent"; } }
         .bento a.lift, .bento button.lift { transition: transform .15s, box-shadow .15s, border-color .15s; }
         .bento a.lift:hover, .bento button.lift:hover { transform: translateY(-2px); box-shadow: 0 12px 26px -16px rgba(15,43,37,0.4); border-color: #C99A4E; }
-        .bento .chip:hover { border-color: ${C.navy}; color: ${C.navy}; }
+        .bento .chip:hover { border-color: ${C.navy}; color: ${C.navy}; background: #FFFFFF; }
+        .today-pill { transition: transform .15s, box-shadow .15s; }
+        .today-pill:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -12px rgba(15,43,37,0.45); }
+        .qa { transition: transform .15s, border-color .15s, background .15s; }
+        .qa:hover { transform: translateY(-2px); border-color: #C99A4E; background: #FFFDF8; }
+        .due-row { transition: transform .15s, box-shadow .15s; }
+        .due-row:hover { transform: translateX(2px); box-shadow: 0 6px 16px -12px rgba(15,43,37,0.5); }
+        @keyframes ringIn { from { stroke-dasharray: 0 999; } }
+        .ring-arc { animation: ringIn .9s ease-out both; }
+        @keyframes glow { 0%,100% { opacity: .55 } 50% { opacity: .9 } }
+        @media (prefers-reduced-motion: reduce) { .ring-arc, .glow { animation: none !important } .lift, .qa, .due-row, .today-pill { transition: none !important } }
       `}</style>
 
       {/* Top bar */}
@@ -94,11 +108,19 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         if (dash.recent.length < 5) todo.push({ text: "Finish setup — about 10 minutes", href: "/finance/start", tone: "go" });
         else todo.push({ text: "This month's MIS report", href: "/finance/mis", tone: "go" });
         return (
-          <section aria-label="To do today" style={{ ...tile, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, padding: "12px 14px" }}>
-            <span style={{ ...label, marginRight: 4 }}>Today</span>
+          <section aria-label="To do today" style={{ ...tile, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, padding: "12px 14px", background: "linear-gradient(90deg,#FFFFFF 0%,#FFFDF8 100%)" }}>
+            <span style={{ display: "flex", flexDirection: "column", marginRight: 8, paddingRight: 14, borderRight: `1px solid ${C.line}` }}>
+              <span style={{ ...label, color: C.orange }}>Today</span>
+              <span style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 700 }}>{new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
+            </span>
             {todo.map(t => (
-              <Link key={t.text} href={t.href} className="lift" style={{ fontSize: 13, fontWeight: 700, padding: "8px 12px", borderRadius: 999, textDecoration: "none", border: `1px solid ${C.line}`,
-                background: t.tone === "warn" ? C.warnSoft : t.tone === "go" ? "#FFFFFF" : C.navySoft, color: t.tone === "warn" ? C.warn : C.ink }}>{t.text} →</Link>
+              <Link key={t.text} href={t.href} className="today-pill" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, padding: "8px 14px 8px 10px", borderRadius: 999, textDecoration: "none",
+                border: `1px solid ${t.tone === "warn" ? "#F2D29B" : t.tone === "info" ? "#CFE0D8" : C.line}`,
+                background: t.tone === "warn" ? C.warnSoft : t.tone === "go" ? "#FFFFFF" : C.navySoft, color: t.tone === "warn" ? C.warn : C.ink }}>
+                <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: 999, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 900, flexShrink: 0,
+                  background: t.tone === "warn" ? "#F6C66B" : t.tone === "info" ? C.navy : C.orangeSoft, color: t.tone === "warn" ? "#5A3A00" : t.tone === "info" ? "#FFFFFF" : C.orangeInk }}>{t.tone === "warn" ? "!" : t.tone === "info" ? "i" : "→"}</span>
+                {t.text}
+              </Link>
             ))}
           </section>
         );
@@ -106,19 +128,20 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
 
       <div className="bento">
         {/* Large entry tile */}
-        <section className="b-entry" aria-labelledby="hero" style={{ ...tile, padding: 24, gap: 14 }}>
+        <section className="b-entry" aria-labelledby="hero" style={{ ...tile, padding: 26, gap: 16, position: "relative", overflow: "hidden", background: "linear-gradient(155deg,#FFFFFF 0%,#FFFCF5 55%,#FBF3E2 100%)" }}>
+          <div aria-hidden="true" className="glow" style={{ position: "absolute", right: -90, top: -90, width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle,rgba(201,154,78,0.22),transparent 70%)", animation: "glow 6s ease-in-out infinite", pointerEvents: "none" }} />
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: C.muted }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: critical ? "#C2321F" : waiting ? C.orange : C.pos }} />
             {greeting}{critical ? ` — ${critical} balance problem${critical > 1 ? "s" : ""} need${critical > 1 ? "" : "s"} attention` : waiting ? ` — ${waiting} item${waiting > 1 ? "s" : ""} waiting for you` : " — books are up to date"}
             {dash && <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: C.navySoft, color: C.navy }}>Health {dash.health.score}{dash.streak > 0 ? ` · ${dash.streak}-day streak` : ""}</span>}
           </div>
           <h1 id="hero" style={{ margin: 0, fontFamily: SERIF, fontWeight: 700, fontSize: "clamp(26px, 3.2vw, 40px)", lineHeight: 1.1, textWrap: "balance" }}>
-            What happened in the <span style={{ fontStyle: "italic", fontWeight: 400, color: C.orange }}>business</span> today?
+            What happened in the <span style={{ fontStyle: "italic", fontWeight: 400, color: C.orange, backgroundImage: "linear-gradient(transparent 70%, rgba(201,154,78,0.22) 70%)" }}>business</span> today?
           </h1>
-          <div style={{ background: C.tileGrey, borderRadius: 18, padding: 6, display: "flex", flexDirection: "column" }}>
+          <div style={{ background: "#FFFFFF", border: `1.5px solid ${text.trim() ? "#C99A4E" : C.line}`, boxShadow: "0 14px 30px -22px rgba(15,43,37,0.45)", borderRadius: 18, padding: 6, display: "flex", flexDirection: "column", position: "relative", transition: "border-color .15s" }}>
             <div role="tablist" style={{ display: "flex", gap: 4, padding: "4px 4px 0" }}>
               {(["record", "ask"] as const).map(m => (
-                <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} style={{ height: 32, padding: "0 14px", borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, background: mode === m ? C.tile : "transparent", color: mode === m ? C.navy : C.muted, boxShadow: mode === m ? "0 1px 3px rgba(20,26,58,0.12)" : "none" }}>
+                <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} style={{ height: 32, padding: "0 14px", borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, background: mode === m ? C.navy : "transparent", color: mode === m ? "#FFFFFF" : C.muted, boxShadow: "none" }}>
                   {m === "record" ? "Record" : "Ask your books"}
                 </button>
               ))}
@@ -129,34 +152,56 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
               placeholder={mode === "record" ? (india ? "Paid office rent ₹25,000 from the bank for October" : `Paid office rent ${cur()}2,500 from the bank for October`) : "Who owes me for more than 60 days?"}
               style={{ display: "block", width: "100%", boxSizing: "border-box", resize: "none", border: "none", outline: "none", background: "transparent", padding: "12px 12px 4px", fontSize: 17, lineHeight: 1.5, color: C.ink }} />
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px 6px" }}>
-              <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill" style={{ width: 40, height: 40, borderRadius: 11, background: C.tile, display: "flex", alignItems: "center", justifyContent: "center", color: C.muted }}>
+              <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill" style={{ width: 40, height: 40, borderRadius: 11, background: C.tileGrey, display: "flex", alignItems: "center", justifyContent: "center", color: C.muted }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
               </Link>
               <span style={{ fontSize: 12, color: C.muted }}>Enter to {mode === "record" ? "draft" : "ask"}</span>
-              <button onClick={() => go(text)} disabled={!text.trim()} style={{ marginLeft: "auto", height: 42, padding: "0 20px", borderRadius: 12, border: "none", background: C.navy, color: "#FFFFFF", fontWeight: 800, fontSize: 14.5, cursor: text.trim() ? "pointer" : "default", opacity: text.trim() ? 1 : 0.55 }}>
+              <button onClick={() => go(text)} disabled={!text.trim()} style={{ marginLeft: "auto", height: 42, padding: "0 20px", borderRadius: 12, border: "none", background: text.trim() ? "linear-gradient(135deg,#1B4237,#0F2B25)" : C.navy, color: "#FFFFFF", fontWeight: 800, fontSize: 14.5, cursor: text.trim() ? "pointer" : "default", opacity: text.trim() ? 1 : 0.55, boxShadow: text.trim() ? "0 10px 20px -12px rgba(15,43,37,0.7)" : "none" }}>
                 {mode === "record" ? "Draft entry →" : "Ask →"}
               </button>
             </div>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {(mode === "record" ? (india ? ["Received ₹1.2L from a customer", "Paid salaries for last month", "Bought stationery ₹1,800 in cash"] : [`Received ${cur()}12,000 from a customer`, "Paid salaries for last month", `Bought stationery ${cur()}180 in cash`]) : ["Who owes me for more than 60 days?", "Profit this month vs last month", "GST collected last month"]).map(c => (
-              <button key={c} className="chip" onClick={() => mode === "ask" ? go(c) : setText(c)} style={{ height: 34, padding: "0 13px", borderRadius: 17, border: `1px solid ${C.line}`, background: C.tile, color: C.muted, fontSize: 12.5, cursor: "pointer" }}>{c}</button>
+              <button key={c} className="chip" onClick={() => mode === "ask" ? go(c) : setText(c)} style={{ height: 34, padding: "0 13px", borderRadius: 17, border: `1px solid ${C.line}`, background: "rgba(255,255,255,0.7)", color: C.muted, fontSize: 12.5, cursor: "pointer" }}>{mode === "ask" ? "? " : "+ "}{c}</button>
+            ))}
+          </div>
+          <div style={{ marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 10, position: "relative" }}>
+            {[
+              { href: "/finance/sales/new", t: "New invoice", s: "Bill a customer", d: "M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5" },
+              { href: "/finance/purchases/new", t: "Add a bill", s: "Supplier bill", d: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6" },
+              { href: "/finance/inbox", t: "Smart Inbox", s: "Statements & PDFs", d: "M4 13l2-8h12l2 8M4 13v6h16v-6M4 13h5l1 2h4l1-2h5" },
+              { href: "/finance/reports?tab=profit_loss", t: "Reports", s: "P&L · BS · TB", d: "M5 20V10M12 20V4M19 20v-7" },
+            ].map(a => (
+              <Link key={a.t} href={a.href} className="qa" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 14, border: `1px solid ${C.line}`, background: "rgba(255,255,255,0.75)", textDecoration: "none", color: C.ink }}>
+                <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: C.navySoft, color: C.navy, flexShrink: 0 }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={a.d} /></svg>
+                </span>
+                <span style={{ minWidth: 0 }}><span style={{ display: "block", fontSize: 13, fontWeight: 800 }}>{a.t}</span><span style={{ display: "block", fontSize: 11.5, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.s}</span></span>
+              </Link>
             ))}
           </div>
         </section>
 
         {/* Navy net-profit tile with ring chart */}
-        <Link href="/finance/reports?tab=profit_loss" className="b-profit lift" style={{ ...tile, background: "linear-gradient(160deg, #1B4237 0%, #0F2B25 60%, #0B211C 100%)", border: "none", color: "#FFFFFF", textDecoration: "none", justifyContent: "space-between" }}>
+        <Link href="/finance/reports?tab=profit_loss" className="b-profit lift" style={{ ...tile, background: "radial-gradient(120% 80% at 50% 0%, #24564A 0%, #133A31 45%, #0B211C 100%)", border: "none", color: "#FFFFFF", textDecoration: "none", justifyContent: "space-between", position: "relative", overflow: "hidden" }}>
+          <div aria-hidden="true" style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "16px 16px", maskImage: "linear-gradient(180deg,#000,transparent 70%)", pointerEvents: "none" }} />
           <div style={{ ...label, color: "#D9B56F" }}>{profit < 0 ? "Net loss" : "Net profit"} · {dash?.period.label ?? "this period"}</div>
           <div style={{ display: "flex", justifyContent: "center", position: "relative" }}>
             <Ring income={income} expenses={spent} profit={profit} />
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontFamily: MONO, fontSize: 22, fontWeight: 600 }}>{margin == null ? "—" : `${margin}%`}</span>
+              <span style={{ fontFamily: MONO, fontSize: margin != null && Math.abs(margin) >= 100 ? 24 : 30, fontWeight: 600, color: profit < 0 ? "#F6C66B" : "#A8F0CF" }}>{margin == null ? "—" : `${margin > 0 ? "+" : ""}${margin}%`}</span>
               <span style={{ fontSize: 11, color: "#C9D3CE" }}>margin</span>
             </div>
           </div>
           <div>
-            <div style={{ ...figure, color: "#FFFFFF" }}>{money(profit)}</div>
+            <div style={{ ...figure, fontSize: 30, color: "#FFFFFF" }}>{money(profit)}</div>
+            {income + spent > 0 && (
+              <div aria-hidden="true" style={{ display: "flex", height: 8, borderRadius: 999, overflow: "hidden", marginTop: 10, background: "rgba(255,255,255,0.1)" }}>
+                <span style={{ width: `${(income / (income + spent)) * 100}%`, background: "linear-gradient(90deg,#A8F0CF,#3DBE8B)" }} />
+                <span style={{ width: `${(spent / (income + spent)) * 100}%`, background: "linear-gradient(90deg,#E8C27A,#B07E33)" }} />
+              </div>
+            )}
             <div style={{ display: "flex", gap: 14, fontSize: 12.5, marginTop: 6, color: "#E7ECE9", flexWrap: "wrap" }}>
               <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "#7FE0B4", marginRight: 6 }} />Income {money(income)}</span>
               <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: C.orange, marginRight: 6 }} />Spent {money(spent)}</span>
@@ -165,7 +210,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         </Link>
 
         {/* Tall due-dates tile */}
-        <section className="b-dues" style={{ ...tile, background: C.tileGrey, border: "none" }}>
+        <section className="b-dues" style={{ ...tile, background: "linear-gradient(180deg,#EFE8D9 0%,#F4EEE2 100%)", border: "none" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={label}>Due dates</span>
             {dues.some(d => d.daysLeft < 0) && <span style={{ fontSize: 11.5, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: C.negSoft, color: C.neg }}>{dues.filter(d => d.daysLeft < 0).length} overdue</span>}
@@ -175,7 +220,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
             : (showAllDues ? dues : dues.slice(0, 6)).map(d => {
               const t = d.filed ? [C.posSoft, C.pos, "Filed ✓"] : d.daysLeft < 0 ? [C.negSoft, C.neg, dueChip(d.daysLeft)] : d.daysLeft <= 3 ? [C.negSoft, C.neg, dueChip(d.daysLeft)] : d.daysLeft <= 10 ? [C.orangeSoft, C.orangeInk, `${d.daysLeft}d`] : [C.tile, C.navy, `${d.daysLeft}d`];
               return (
-                <Link key={d.key} href={d.href} title={d.filed ? `Filed${d.filed.on ? " on " + d.filed.on : ""}${d.filed.arn ? " · ARN " + d.filed.arn : ""}${d.filed.demo ? " (demo data)" : ""}` : d.note} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 14, background: C.tile, opacity: d.filed ? 0.75 : 1, textDecoration: "none", color: C.ink }}>
+                <Link key={d.key} href={d.href} title={d.filed ? `Filed${d.filed.on ? " on " + d.filed.on : ""}${d.filed.arn ? " · ARN " + d.filed.arn : ""}${d.filed.demo ? " (demo data)" : ""}` : d.note} className="due-row" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 14, background: C.tile, opacity: d.filed ? 0.75 : 1, textDecoration: "none", color: C.ink, borderLeft: `4px solid ${t[1] === C.navy ? "#CFE0D8" : t[1]}` }}>
                   <span style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 38, flexShrink: 0 }}>
                     <span style={{ fontSize: 10.5, fontWeight: 800, color: C.orange, textTransform: "uppercase" }}>{new Date(d.due + "T00:00:00").toLocaleDateString("en-IN", { month: "short" })}</span>
                     <span style={{ fontFamily: MONO, fontSize: 18, fontWeight: 600, lineHeight: 1 }}>{d.due.slice(8)}</span>
