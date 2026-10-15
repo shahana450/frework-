@@ -316,11 +316,6 @@ export function BusinessOSHomepage() {
                   style={{ background:"linear-gradient(180deg,#2C3478,#1E2459)", color:"#fff", boxShadow:"0 12px 28px rgba(35,42,99,0.32), inset 0 1px 0 rgba(255,255,255,0.15)", border:"none", cursor:"pointer" }}>
                   {loggedIn ? "Open FreBook" : "Start your free month"} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                 </button>
-                <a href={`https://wa.me/${SUPPORT_WA}?text=${encodeURIComponent("Hi FreBook")}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-5 py-3.5 rounded-2xl text-[15px] font-bold transition-all hover:-translate-y-0.5"
-                  style={{ background:"#FFFFFF", color:"#141A3A", border:"1px solid rgba(20,26,58,0.10)", boxShadow:"0 6px 18px rgba(20,26,58,0.06)" }}>
-                  <MessageCircle className="w-4 h-4" style={{ color:"#16A34A" }} /> Try it on WhatsApp
-                </a>
               </div>
               <p className="mt-4 text-[13.5px] font-medium" style={{ color:"#5A6080" }}>
                 <b style={{ color:"#0B7A55" }}>1 month free</b> · then ₹1,499/month + GST · cancel anytime · no card to start
@@ -348,9 +343,9 @@ export function BusinessOSHomepage() {
                   <span className="text-[10.5px] font-bold px-2.5 py-1 rounded-full" style={{ background:"rgba(255,255,255,0.12)", color:"#FFD9C7" }}>LIVE DEMO</span>
                 </div>
                 {/* Scene tabs — the demo plays through these like a short video; tap one to jump */}
-                <div role="tablist" aria-label="FreBook demo" className="grid grid-cols-4 gap-1 p-1.5" style={{ background:"#1B2156" }}>
-                  {["Chat", "Bill / PDF", "Bulk upload", "Tally push"].map((t, i) => {
-                    const on = demoRun % 4 === i;
+                <div role="tablist" aria-label="FreBook demo" className="grid grid-cols-5 gap-1 p-1.5" style={{ background:"#1B2156" }}>
+                  {["Chat", "WhatsApp", "Bill / PDF", "Bulk", "Tally"].map((t, i) => {
+                    const on = demoRun % 5 === i;
                     return (
                       <button key={t} role="tab" aria-selected={on} onClick={() => setDemoRun(i)}
                         className="relative h-8 rounded-lg text-[12px] font-bold overflow-hidden transition-colors"
@@ -364,7 +359,7 @@ export function BusinessOSHomepage() {
                 </div>
 
                 <div key={demoRun} className="relative p-5 flex flex-col gap-3 min-h-[340px]" style={{ background:"linear-gradient(180deg,#F7F8FC,#F1F3FA)" }}>
-                  {demoRun % 4 === 0 && <>
+                  {demoRun % 5 === 0 && <>
                     <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
                       className="self-end max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-md text-[14px] font-medium" style={{ background:"#232A63", color:"#fff" }}>
                       Paid office rent ₹25,000 from HDFC
@@ -390,7 +385,46 @@ export function BusinessOSHomepage() {
                     </motion.div>
                   </>}
 
-                  {demoRun % 4 === 1 && <>
+                  {demoRun % 5 === 1 && (
+                    /* The same entry on WhatsApp — looks like the real app */
+                    <div className="-m-5 flex flex-col min-h-[340px]" style={{ background:"#EFE7DD" }}>
+                      <div className="flex items-center gap-2.5 px-4 py-2.5" style={{ background:"#075E54" }}>
+                        <div className="w-8 h-8 rounded-full grid place-items-center text-[13px] font-black" style={{ background:"#FFFFFF", color:"#232A63" }}>F</div>
+                        <div className="flex-1">
+                          <p className="text-[13.5px] font-bold text-white leading-none flex items-center gap-1">FreBook <span className="w-3.5 h-3.5 rounded-full grid place-items-center text-[8px]" style={{ background:"#25D366", color:"#fff" }}>✓</span></p>
+                          <p className="text-[11px] mt-0.5" style={{ color:"#CDE8E2" }}>Business account</p>
+                        </div>
+                      </div>
+                      <div className="flex-1 flex flex-col gap-2 p-3.5" style={{ backgroundImage:"radial-gradient(rgba(0,0,0,0.035) 1px, transparent 1px)", backgroundSize:"14px 14px" }}>
+                        <motion.div initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
+                          className="self-end max-w-[78%] px-3 py-1.5 rounded-lg rounded-tr-none text-[13.5px]" style={{ background:"#D9FDD3", color:"#111B21", boxShadow:"0 1px 0.5px rgba(0,0,0,0.13)" }}>
+                          200 ka petrol cash mein
+                          <span className="ml-2 text-[10px] align-bottom" style={{ color:"#667781" }}>10:42 <motion.span initial={{ color:"#8696A0" }} animate={{ color:"#53BDEB" }} transition={{ delay:1 }}>✓✓</motion.span></span>
+                        </motion.div>
+                        <motion.div initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:1.4 }}
+                          className="self-start max-w-[86%] px-3 py-2 rounded-lg rounded-tl-none text-[13px]" style={{ background:"#FFFFFF", color:"#111B21", boxShadow:"0 1px 0.5px rgba(0,0,0,0.13)" }}>
+                          <p className="font-bold">📝 Draft · today</p>
+                          <p className="italic" style={{ color:"#3B4A54" }}>Petrol ₹200 paid in cash</p>
+                          <div className="mt-1.5" style={{ fontVariantNumeric:"tabular-nums" }}>
+                            <div className="flex justify-between gap-6"><span>Dr Petrol &amp; Fuel</span><span>₹200</span></div>
+                            <div className="flex justify-between gap-6 pl-3"><span>Cr Cash</span><span>₹200</span></div>
+                          </div>
+                          <p className="mt-1.5">Reply <b>YES</b> to post · <b>NO</b> to cancel</p>
+                        </motion.div>
+                        <motion.div initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:2.8 }}
+                          className="self-end px-3 py-1.5 rounded-lg rounded-tr-none text-[13.5px]" style={{ background:"#D9FDD3", color:"#111B21", boxShadow:"0 1px 0.5px rgba(0,0,0,0.13)" }}>
+                          YES <span className="ml-2 text-[10px]" style={{ color:"#667781" }}>10:43 <motion.span initial={{ color:"#8696A0" }} animate={{ color:"#53BDEB" }} transition={{ delay:3.4 }}>✓✓</motion.span></span>
+                        </motion.div>
+                        <motion.div initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ delay:3.8 }}
+                          className="self-start max-w-[86%] px-3 py-2 rounded-lg rounded-tl-none text-[13px]" style={{ background:"#FFFFFF", color:"#111B21", boxShadow:"0 1px 0.5px rgba(0,0,0,0.13)" }}>
+                          ✅ Posted as <b>PMT/2026-27/0043</b><br />
+                          <span style={{ color:"#3B4A54" }}>Say <b>YES</b> if you need the dashboard view.</span>
+                        </motion.div>
+                      </div>
+                    </div>
+                  )}
+
+                  {demoRun % 5 === 2 && <>
                     {/* A bill photo arrives and is read */}
                     <motion.div initial={{ opacity:0, y:-14, rotate:-4 }} animate={{ opacity:1, y:0, rotate:-2 }} transition={{ delay:0.3, type:"spring", stiffness:180, damping:16 }}
                       className="self-end relative w-[62%] rounded-xl overflow-hidden p-3.5" style={{ background:"#FFFDF7", border:"1px solid #E9E1CC", boxShadow:"0 10px 24px rgba(20,26,58,0.12)", fontFamily:"ui-monospace,monospace" }}>
@@ -420,7 +454,7 @@ export function BusinessOSHomepage() {
                     </motion.div>
                   </>}
 
-                  {demoRun % 4 === 2 && <>
+                  {demoRun % 5 === 3 && <>
                     {/* A statement / Excel with many rows */}
                     <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
                       className="flex items-center gap-3 p-3.5 rounded-2xl" style={{ background:"#fff", border:"1.5px dashed rgba(35,42,99,0.25)" }}>
@@ -450,7 +484,7 @@ export function BusinessOSHomepage() {
                     </div>
                   </>}
 
-                  {demoRun % 4 === 3 && <>
+                  {demoRun % 5 === 4 && <>
                     {/* Push to Tally */}
                     <motion.div initial={{ opacity:0, y:-8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
                       className="flex items-center gap-3 p-3.5 rounded-2xl" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.07)" }}>
