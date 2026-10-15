@@ -18,6 +18,9 @@ type Link = { business_id: string; user_id: string; name: string };
 type Session = { phone: string; business_id: string | null; pending: { parsed?: ParsedTransaction; key?: string; original?: string; picking?: boolean } | null; history: { role: "user" | "assistant"; content: string }[]; picking?: boolean };
 export type Incoming = { from: string; id: string; text: string; media?: { bytes: Buffer; mime: string; name: string } };
 
+// Offered only when no draft is waiting, so YES can never post something by accident
+const DASH_HINT = "\n\nSay *YES* if you need the dashboard view.";
+
 const NOT_LINKED = "👋 This number isn't linked to FreWork yet.\n\nIn the FreWork app open *Settings → WhatsApp*, add this number and send the code shown there, e.g. *LINK 123456*.";
 
 export async function handleWhatsApp(sb: SupabaseClient, m: Incoming): Promise<string> {
@@ -62,7 +65,7 @@ export async function handleWhatsApp(sb: SupabaseClient, m: Incoming): Promise<s
 
   if (cmd.type === "help") return helpText(link.name);
   // One-tap sign-in: this number was proved by the LINK code, so it may open its own FreWork account
-  if (cmd.type === "login") {
+  const signInLink = async () => {
     const token = await loginToken(sb, link.user_id);
     if (!token) return "❌ Couldn't make a sign-in link for your account. Sign in at frework.online/login instead.";
     await sb.from("fw_fin_audit_log").insert({ business_id: link.business_id, actor: link.user_id, action: "whatsapp_login_link", source: "whatsapp", detail: { phone: `${m.from.slice(0, 4)}…${m.from.slice(-2)}` } }).then(() => null, () => null);
@@ -70,12 +73,14 @@ export async function handleWhatsApp(sb: SupabaseClient, m: Incoming): Promise<s
 ${loginUrl(token)}
 
 Works once and expires soon. Don't forward it — it signs in as you.`;
-  }
+  };
+  if (cmd.type === "login") return signInLink();
   if (cmd.type === "no") { await save({ pending: null }); return sess.pending ? "❌ Draft dropped. Nothing was posted." : "Nothing pending."; }
 
   if (cmd.type === "yes" || cmd.type === "post_anyway") {
     const p = sess.pending;
-    if (!p?.parsed) return "Nothing to post. Type a transaction first.";
+    // No draft waiting: YES means "open the dashboard" (the offer made after answers and posted entries)
+    if (!p?.parsed) return cmd.type === "yes" ? signInLink() : "Nothing to post. Type a transaction first.";
     if (!can(role, "post")) return "Your role can view but not post. Ask the owner for posting access.";
     return postPending(sb, link, au!.user!.id, { parsed: p.parsed, key: p.key ?? `wa:${m.id}`, original: p.original ?? "" }, cmd.type === "post_anyway", save);
   }
@@ -117,7 +122,7 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
     if (books.error) return "⚠️ I couldn't read your books right now. Please try again.";
     const ans = runTool(tool, books.accounts, books.journals, ai.params ?? {}, { p, p2, today }, { currency: biz.baseCurrency, locale: biz.country === "IN" ? "en-IN" : "en-US" });
     await save({ history: hist(JSON.stringify({ kind: "answer", tool, summary: ans.summary })) });
-    return answerText(ans, biz.baseCurrency);
+    return answerText(ans, biz.baseCurrency) + (sess.pending?.parsed ? "" : DASH_HINT);
   }
 
   if (!can(role, "post")) return "Your role can view but not post. Ask a question instead, e.g. *Profit this month*.";
@@ -152,7 +157,7 @@ async function postPending(sb: SupabaseClient, link: Link, actorId: string, p: {
       metadata: { client_key: p.key, original_message: p.original, channel: "whatsapp", gst: t.gst, tds: t.tds, warnings: t.warnings, confirmed_by: actorId },
     });
     await save({ pending: null });
-    return `✅ Posted as *${posted.entryNo}* · ${link.name}${resolved.created.length ? `\nNew ledger${resolved.created.length > 1 ? "s" : ""}: ${resolved.created.map(c => c.name).join(", ")}` : ""}`;
+    return `✅ Posted as *${posted.entryNo}* · ${link.name}${resolved.created.length ? `\nNew ledger${resolved.created.length > 1 ? "s" : ""}: ${resolved.created.map(c => c.name).join(", ")}` : ""}` + DASH_HINT;
   } catch (e) {
     const err = postingErrorMessage(e);
     if (err.code === "POSSIBLE_DUPLICATE") return `⚠️ ${err.message}\n\nReply *POST ANYWAY* if this is a separate transaction, or *NO* to drop it.`;
