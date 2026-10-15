@@ -347,32 +347,138 @@ export function BusinessOSHomepage() {
                   </div>
                   <span className="text-[10.5px] font-bold px-2.5 py-1 rounded-full" style={{ background:"rgba(255,255,255,0.12)", color:"#FFD9C7" }}>LIVE DEMO</span>
                 </div>
-                <div key={demoRun} className="relative p-5 flex flex-col gap-3 min-h-[330px]" style={{ background:"linear-gradient(180deg,#F7F8FC,#F1F3FA)" }}>
-                  <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.4 }}
-                    className="self-end max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-md text-[14px] font-medium" style={{ background:"#232A63", color:"#fff" }}>
-                    Paid office rent ₹25,000 from HDFC
-                  </motion.div>
-                  <motion.div initial={{ opacity:0 }} animate={{ opacity:[0,1,1,0] }} transition={{ delay:0.9, duration:0.9, times:[0,0.1,0.8,1] }}
-                    className="absolute left-5 top-[76px] flex gap-1 px-3.5 py-3 rounded-2xl" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.06)" }} aria-hidden="true">
-                    {[0,1,2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background:"#9AA0BE", animationDelay:`${i*0.12}s` }} />)}
-                  </motion.div>
-                  <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:1.8 }}
-                    className="self-start w-[92%] rounded-2xl rounded-bl-md p-4" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.07)", boxShadow:"0 6px 16px rgba(20,26,58,0.05)" }}>
-                    <p className="text-[11px] font-extrabold tracking-[0.14em] uppercase" style={{ color:"#E2541B" }}>Draft entry</p>
-                    <div className="mt-2.5 text-[14px] font-semibold" style={{ color:"#141A3A", fontVariantNumeric:"tabular-nums" }}>
-                      <div className="flex justify-between"><span>Dr Rent</span><span>₹25,000</span></div>
-                      <div className="flex justify-between pl-5 mt-1" style={{ color:"#4A5070" }}><span>Cr HDFC Bank</span><span>₹25,000</span></div>
+                {/* Scene tabs — the demo plays through these like a short video; tap one to jump */}
+                <div role="tablist" aria-label="FreBook demo" className="grid grid-cols-4 gap-1 p-1.5" style={{ background:"#1B2156" }}>
+                  {["Chat", "Bill / PDF", "Bulk upload", "Tally push"].map((t, i) => {
+                    const on = demoRun % 4 === i;
+                    return (
+                      <button key={t} role="tab" aria-selected={on} onClick={() => setDemoRun(i)}
+                        className="relative h-8 rounded-lg text-[12px] font-bold overflow-hidden transition-colors"
+                        style={{ background: on ? "rgba(255,255,255,0.14)" : "transparent", color: on ? "#FFFFFF" : "#9AA3D4", border:"none", cursor:"pointer" }}>
+                        {t}
+                        {on && <motion.span key={demoRun} initial={{ width:"0%" }} animate={{ width:"100%" }} transition={{ duration:7, ease:"linear" }}
+                          className="absolute left-0 bottom-0 h-[2px]" style={{ background:"#F0662B" }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div key={demoRun} className="relative p-5 flex flex-col gap-3 min-h-[340px]" style={{ background:"linear-gradient(180deg,#F7F8FC,#F1F3FA)" }}>
+                  {demoRun % 4 === 0 && <>
+                    <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
+                      className="self-end max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-md text-[14px] font-medium" style={{ background:"#232A63", color:"#fff" }}>
+                      Paid office rent ₹25,000 from HDFC
+                    </motion.div>
+                    <motion.div initial={{ opacity:0 }} animate={{ opacity:[0,1,1,0] }} transition={{ delay:0.8, duration:0.9, times:[0,0.1,0.8,1] }}
+                      className="absolute left-5 top-[76px] flex gap-1 px-3.5 py-3 rounded-2xl" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.06)" }} aria-hidden="true">
+                      {[0,1,2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background:"#9AA0BE", animationDelay:`${i*0.12}s` }} />)}
+                    </motion.div>
+                    <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:1.7 }}
+                      className="self-start w-[92%] rounded-2xl rounded-bl-md p-4" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.07)", boxShadow:"0 6px 16px rgba(20,26,58,0.05)" }}>
+                      <p className="text-[11px] font-extrabold tracking-[0.14em] uppercase" style={{ color:"#E2541B" }}>Draft entry</p>
+                      <div className="mt-2.5 text-[14px] font-semibold" style={{ color:"#141A3A", fontVariantNumeric:"tabular-nums" }}>
+                        <div className="flex justify-between"><span>Dr Rent</span><span>₹25,000</span></div>
+                        <div className="flex justify-between pl-5 mt-1" style={{ color:"#4A5070" }}><span>Cr HDFC Bank</span><span>₹25,000</span></div>
+                      </div>
+                      <p className="mt-2.5 text-[12px]" style={{ color:"#6B7194" }}>Same ledger you used for rent last month.</p>
+                    </motion.div>
+                    <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:2.6 }}
+                      className="self-end px-4 py-2 rounded-2xl rounded-br-md text-[14px] font-bold" style={{ background:"#232A63", color:"#fff" }}>YES</motion.div>
+                    <motion.div initial={{ opacity:0, scale:0.94 }} animate={{ opacity:1, scale:1 }} transition={{ delay:3.2, type:"spring", stiffness:260, damping:18 }}
+                      className="self-start flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[13.5px] font-bold" style={{ background:"#E3F6EE", color:"#0B7A55" }}>
+                      <Check className="w-4 h-4" /> Posted · PMT/2026-27/0042
+                    </motion.div>
+                  </>}
+
+                  {demoRun % 4 === 1 && <>
+                    {/* A bill photo arrives and is read */}
+                    <motion.div initial={{ opacity:0, y:-14, rotate:-4 }} animate={{ opacity:1, y:0, rotate:-2 }} transition={{ delay:0.3, type:"spring", stiffness:180, damping:16 }}
+                      className="self-end relative w-[62%] rounded-xl overflow-hidden p-3.5" style={{ background:"#FFFDF7", border:"1px solid #E9E1CC", boxShadow:"0 10px 24px rgba(20,26,58,0.12)", fontFamily:"ui-monospace,monospace" }}>
+                      <p className="text-[11px] font-bold" style={{ color:"#3B3B3B" }}>SHREE OFFICE MART</p>
+                      <p className="text-[9.5px]" style={{ color:"#7A7A7A" }}>GSTIN 32ABCDE1234F1Z5 · Inv 1187</p>
+                      <div className="mt-2 text-[10px] space-y-0.5" style={{ color:"#444" }}>
+                        <div className="flex justify-between"><span>Printer paper ×10</span><span>2,500</span></div>
+                        <div className="flex justify-between"><span>CGST 9% / SGST 9%</span><span>450</span></div>
+                        <div className="flex justify-between font-bold"><span>TOTAL</span><span>2,950</span></div>
+                      </div>
+                      <motion.div initial={{ top:"0%" }} animate={{ top:["0%","100%","0%"] }} transition={{ delay:0.9, duration:1.6, ease:"easeInOut" }}
+                        className="absolute left-0 right-0 h-[3px]" style={{ background:"linear-gradient(90deg,transparent,#F0662B,transparent)", boxShadow:"0 0 12px #F0662B" }} aria-hidden="true" />
+                    </motion.div>
+                    <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1.1 }} className="self-end text-[11.5px] font-semibold" style={{ color:"#6B7194" }}>bill-1187.jpg · reading…</motion.p>
+                    <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:2.6 }}
+                      className="self-start w-[92%] rounded-2xl rounded-bl-md p-4" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.07)" }}>
+                      <p className="text-[11px] font-extrabold tracking-[0.14em] uppercase" style={{ color:"#E2541B" }}>Read from the bill</p>
+                      <div className="mt-2 text-[13.5px] font-semibold" style={{ color:"#141A3A", fontVariantNumeric:"tabular-nums" }}>
+                        <div className="flex justify-between"><span>Dr Office Supplies</span><span>₹2,500</span></div>
+                        <div className="flex justify-between"><span>Dr Input CGST + SGST</span><span>₹450</span></div>
+                        <div className="flex justify-between pl-5" style={{ color:"#4A5070" }}><span>Cr Shree Office Mart</span><span>₹2,950</span></div>
+                      </div>
+                    </motion.div>
+                    <motion.div initial={{ opacity:0, scale:0.94 }} animate={{ opacity:1, scale:1 }} transition={{ delay:3.8, type:"spring", stiffness:260, damping:18 }}
+                      className="self-start flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[13px] font-bold" style={{ background:"#E3F6EE", color:"#0B7A55" }}>
+                      <Check className="w-4 h-4" /> Supplier, GSTIN & GST split filled in
+                    </motion.div>
+                  </>}
+
+                  {demoRun % 4 === 2 && <>
+                    {/* A statement / Excel with many rows */}
+                    <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
+                      className="flex items-center gap-3 p-3.5 rounded-2xl" style={{ background:"#fff", border:"1.5px dashed rgba(35,42,99,0.25)" }}>
+                      <span className="w-10 h-10 rounded-xl grid place-items-center text-[11px] font-black" style={{ background:"#E7F6EC", color:"#137A3B" }}>XLS</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13.5px] font-bold truncate" style={{ color:"#141A3A" }}>HDFC-statement-Sep.xlsx</p>
+                        <p className="text-[11.5px]" style={{ color:"#6B7194" }}>42 transactions · also PDF, CSV, receipts template</p>
+                      </div>
+                    </motion.div>
+                    <div className="flex flex-col gap-1.5">
+                      {[["02 Sep","Rent — Vijay Properties","−25,000","Rent"],["05 Sep","UPI from Asha Traders","+18,000","Asha Traders"],["09 Sep","KSEB electricity","−3,450","Electricity"],["12 Sep","Amazon Business","−1,180","Office Supplies"]].map((r, i) => (
+                        <motion.div key={r[1]} initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.9 + i * 0.35 }}
+                          className="grid grid-cols-[46px_1fr_auto] items-center gap-2 px-3 py-2 rounded-xl text-[12px]" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.06)" }}>
+                          <span style={{ color:"#8A90AE", fontVariantNumeric:"tabular-nums" }}>{r[0]}</span>
+                          <span className="truncate" style={{ color:"#141A3A" }}>{r[1]} <span style={{ color:"#E2541B" }}>→ {r[3]}</span></span>
+                          <span className="font-bold" style={{ color: r[2].startsWith("+") ? "#0B7A55" : "#141A3A", fontVariantNumeric:"tabular-nums" }}>{r[2]}</span>
+                        </motion.div>
+                      ))}
                     </div>
-                    <p className="mt-2.5 text-[12px]" style={{ color:"#6B7194" }}>Same ledger you used for rent last month.</p>
-                  </motion.div>
-                  <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:2.7 }}
-                    className="self-end px-4 py-2 rounded-2xl rounded-br-md text-[14px] font-bold" style={{ background:"#232A63", color:"#fff" }}>
-                    YES
-                  </motion.div>
-                  <motion.div initial={{ opacity:0, scale:0.94 }} animate={{ opacity:1, scale:1 }} transition={{ delay:3.3, type:"spring", stiffness:260, damping:18 }}
-                    className="self-start flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[13.5px] font-bold" style={{ background:"#E3F6EE", color:"#0B7A55" }}>
-                    <Check className="w-4 h-4" /> Posted · PMT/2026-27/0042 · sent to Tally
-                  </motion.div>
+                    <div className="mt-1">
+                      <div className="h-2 rounded-full overflow-hidden" style={{ background:"rgba(35,42,99,0.10)" }}>
+                        <motion.div initial={{ width:"0%" }} animate={{ width:"100%" }} transition={{ delay:2.4, duration:2.2, ease:"easeOut" }} className="h-full rounded-full" style={{ background:"linear-gradient(90deg,#3A438E,#F0662B)" }} />
+                      </div>
+                      <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:4.6 }} className="mt-2 text-[13px] font-bold" style={{ color:"#0B7A55" }}>
+                        ✓ 38 posted · 4 need a quick look · duplicates skipped
+                      </motion.p>
+                    </div>
+                  </>}
+
+                  {demoRun % 4 === 3 && <>
+                    {/* Push to Tally */}
+                    <motion.div initial={{ opacity:0, y:-8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
+                      className="flex items-center gap-3 p-3.5 rounded-2xl" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.07)" }}>
+                      <span className="w-10 h-10 rounded-xl grid place-items-center text-[12px] font-black" style={{ background:"#EAF2FF", color:"#1F5EFF" }}>T</span>
+                      <div className="flex-1">
+                        <p className="text-[13.5px] font-bold" style={{ color:"#141A3A" }}>TallyPrime · Kumar Traders</p>
+                        <p className="text-[11.5px] flex items-center gap-1.5" style={{ color:"#0B7A55" }}><span className="w-1.5 h-1.5 rounded-full" style={{ background:"#22C55E" }} /> connected on this computer</p>
+                      </div>
+                      <span className="px-3 py-1.5 rounded-lg text-[12px] font-bold" style={{ background:"#232A63", color:"#fff" }}>Push 42</span>
+                    </motion.div>
+                    <div className="flex flex-col gap-1.5">
+                      {["PMT/2026-27/0042 · Rent", "RCT/2026-27/0019 · Asha Traders", "PUR/2026-27/0031 · Shree Office Mart", "JV/2026-27/0007 · Depreciation"].map((v, i) => (
+                        <motion.div key={v} initial={{ opacity:0.35 }} animate={{ opacity:1 }} transition={{ delay:1.1 + i * 0.55 }}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12.5px]" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.06)", color:"#141A3A" }}>
+                          <motion.span initial={{ scale:0 }} animate={{ scale:1 }} transition={{ delay:1.3 + i * 0.55, type:"spring", stiffness:300, damping:15 }}
+                            className="w-5 h-5 rounded-full grid place-items-center" style={{ background:"#E3F6EE", color:"#0B7A55" }}><Check className="w-3 h-3" /></motion.span>
+                          <span className="font-semibold" style={{ fontVariantNumeric:"tabular-nums" }}>{v}</span>
+                        </motion.div>
+                      ))}
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background:"rgba(35,42,99,0.10)" }}>
+                      <motion.div initial={{ width:"0%" }} animate={{ width:"100%" }} transition={{ delay:1, duration:3.4, ease:"easeInOut" }} className="h-full rounded-full" style={{ background:"#1F5EFF" }} />
+                    </div>
+                    <motion.div initial={{ opacity:0, scale:0.94 }} animate={{ opacity:1, scale:1 }} transition={{ delay:4.6, type:"spring", stiffness:260, damping:18 }}
+                      className="self-start flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[13.5px] font-bold" style={{ background:"#E3F6EE", color:"#0B7A55" }}>
+                      <Check className="w-4 h-4" /> 42 vouchers in Tally · nothing typed twice
+                    </motion.div>
+                  </>}
                 </div>
                 <div className="grid grid-cols-3 text-center" style={{ borderTop:"1px solid rgba(20,26,58,0.07)" }}>
                   {[["Bills & statements","read for you"],["P&L, Balance Sheet","always live"],["GSTR-1 / 3B","prepared"]].map(([a,b],i) => (
@@ -383,17 +489,6 @@ export function BusinessOSHomepage() {
                   ))}
                 </div>
               </div>
-              {/* Floating proof badges */}
-              <motion.div initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.9 }}
-                className="hidden md:flex absolute -left-6 -top-5 z-20 items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[12.5px] font-bold"
-                style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.08)", boxShadow:"0 14px 30px rgba(20,26,58,0.14)", color:"#141A3A" }}>
-                <span className="w-7 h-7 rounded-lg grid place-items-center" style={{ background:"#FFF1E8", color:"#E2541B" }}>%</span> GST split · CGST + SGST
-              </motion.div>
-              <motion.div initial={{ opacity:0, x:10 }} animate={{ opacity:1, x:0 }} transition={{ delay:1.1 }}
-                className="hidden md:flex absolute -right-5 -bottom-5 z-20 items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[12.5px] font-bold"
-                style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.08)", boxShadow:"0 14px 30px rgba(20,26,58,0.14)", color:"#141A3A" }}>
-                <span className="w-7 h-7 rounded-lg grid place-items-center" style={{ background:"#E3F6EE", color:"#0B7A55" }}><Check className="w-4 h-4" /></span> Synced to Tally
-              </motion.div>
             </motion.div>
           </div>
 
