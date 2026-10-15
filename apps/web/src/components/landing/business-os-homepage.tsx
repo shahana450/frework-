@@ -217,6 +217,12 @@ export function BusinessOSHomepage() {
   const [activeStep, setActiveStep] = useState(0);
   const [billingYearly, setBillingYearly] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [demoRun, setDemoRun] = useState(0);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const t = setInterval(() => setDemoRun(n => n + 1), 7000);
+    return () => clearInterval(t);
+  }, []);
   const [userName, setUserName] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
@@ -276,162 +282,142 @@ export function BusinessOSHomepage() {
     <div className="min-h-screen overflow-x-hidden" style={{ background: L.bg, color: L.text }}>
       <AnnouncementTicker />
 
-      {/* --- HERO: TWO PILLARS --- */}
-      <section className="relative min-h-screen flex flex-col justify-center overflow-hidden" style={{ background:"#F2F3F6", paddingTop:"68px" }}>
-        {/* Background: subtle blue glow */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div style={{ position:"absolute", left:"10%", top:"5%", width:800, height:500, borderRadius:"50%", background:"radial-gradient(ellipse, rgba(35,42,99,0.08) 0%, transparent 65%)", filter:"blur(80px)" }} />
-          <div style={{ position:"absolute", right:"5%", bottom:"10%", width:500, height:400, borderRadius:"50%", background:"radial-gradient(ellipse, rgba(35,42,99,0.06) 0%, transparent 65%)", filter:"blur(70px)" }} />
+      {/* --- HERO: FreBook first --- */}
+      <section className="relative overflow-hidden" style={{ background:"#F4F5FA", paddingTop:"92px", fontFamily:"var(--font-plus-jakarta),var(--font-inter),system-ui,sans-serif" }}>
+        {/* Atmosphere: warm glow behind the headline, cool glow behind the demo, faint grid */}
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <div style={{ position:"absolute", left:"-8%", top:"6%", width:620, height:520, borderRadius:"50%", background:"radial-gradient(closest-side, rgba(240,102,43,0.16), transparent)", filter:"blur(30px)" }} />
+          <div style={{ position:"absolute", right:"-6%", top:"0%", width:760, height:640, borderRadius:"50%", background:"radial-gradient(closest-side, rgba(58,67,142,0.20), transparent)", filter:"blur(30px)" }} />
+          <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(35,42,99,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(35,42,99,0.05) 1px, transparent 1px)", backgroundSize:"44px 44px", maskImage:"radial-gradient(ellipse 70% 60% at 70% 40%, #000 30%, transparent 75%)", WebkitMaskImage:"radial-gradient(ellipse 70% 60% at 70% 40%, #000 30%, transparent 75%)" }} />
         </div>
 
-        {/* Services nav strip */}
-        <div className="absolute top-[68px] inset-x-0 z-20 overflow-x-auto" style={{ background:"#ffffff", borderBottom:"1px solid rgba(35,42,99,0.15)", boxShadow:"0 2px 12px rgba(35,42,99,0.08)" }}>
-          <div className="flex items-center justify-center gap-0 px-6 min-w-max mx-auto">
-            {[
-              { label:"GST Registration", href:"/services/gst" },
-              { label:"Income Tax Return", href:"/services/income-tax" },
-              { label:"Company Registration", href:"/services/business-registration" },
-              { label:"ROC Compliance", href:"/services/roc-compliance" },
-              { label:"TDS Filing", href:"/services/compliance" },
-              { label:"Find Professionals", href:"/freelancers" },
-              { label:"Coworking Spaces", href:"/coworking" },
-              { label:"Virtual CFO", href:"/services/virtual-cfo" },
-              { label:"Pitch Deck & DPR", href:"/services/dpr" },
-              { label:"Business Audit", href:"/services/audit" },
-              { label:"MSME Registration", href:"/services/business-registration" },
-            ].map((s, i, arr) => (
-              <span key={s.label} className="flex items-center">
-                <Link href={s.href}
-                  className="text-[11px] font-semibold px-3.5 py-2.5 whitespace-nowrap block transition-all duration-150 rounded"
-                  style={{ color:"#1A1F4E", letterSpacing:"0.01em" }}
-                  onMouseEnter={e => {
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.color = "#ffffff";
-                    el.style.background = "#232A63";
-                    el.style.borderRadius = "4px";
-                  }}
-                  onMouseLeave={e => {
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.color = "#1A1F4E";
-                    el.style.background = "transparent";
-                  }}>
-                  {s.label}
-                </Link>
-                {i < arr.length - 1 && <span style={{ color:"rgba(35,42,99,0.2)", fontSize:"14px", lineHeight:1 }}>│</span>}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Main hero content — FreBook first */}
-        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-32 md:pt-36 pb-14">
-          <div className="grid lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-14 items-center">
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-14 md:pt-20 pb-16">
+          <div className="grid lg:grid-cols-[1.02fr_1fr] gap-12 lg:gap-14 items-center">
 
             {/* Left: the promise */}
-            <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}>
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold tracking-[0.16em] uppercase rounded-full"
-                style={{ background:"rgba(240,102,43,0.10)", color:"#C2410C", border:"1px solid rgba(240,102,43,0.25)" }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background:"#F0662B" }} /> FreBook · AI accountant
+            <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.05 }}>
+              <span className="inline-flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 text-[12px] font-bold rounded-full"
+                style={{ background:"#FFFFFF", color:"#232A63", border:"1px solid rgba(35,42,99,0.12)", boxShadow:"0 4px 14px rgba(20,26,58,0.06)" }}>
+                <span className="px-2 py-0.5 rounded-full text-[10.5px] font-extrabold tracking-wide" style={{ background:"#F0662B", color:"#fff" }}>NEW</span>
+                FreBook — the AI accountant for Indian businesses
               </span>
-              <h1 className="font-bold leading-[1.02] tracking-tight mt-5"
-                style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.3rem,4.3vw,3.75rem)", color:"#141A3A", letterSpacing:"-0.03em" }}>
+              <h1 className="font-extrabold mt-6"
+                style={{ fontSize:"clamp(2.4rem,4.6vw,4rem)", color:"#141A3A", letterSpacing:"-0.035em", lineHeight:1.02 }}>
                 Your AI accountant.
                 <br />
-                <span style={{ color:"#F0662B" }}>Chat in. Books out.</span>
+                <span style={{ background:"linear-gradient(100deg,#F0662B 10%,#FF8A4C 55%,#E2541B 90%)", WebkitBackgroundClip:"text", backgroundClip:"text", color:"transparent" }}>Chat in. Books out.</span>
               </h1>
-              <p className="mt-5 max-w-xl" style={{ color:"#4A5070", fontSize:"1.08rem", lineHeight:1.7 }}>
-                Tell FreBook what happened — on the web or WhatsApp, in English or Hinglish. It drafts the journal entry, you approve it, and it lands in your books and in Tally. GST-ready invoices, bank import and live P&amp;L included.
+              <p className="mt-5 max-w-[34rem]" style={{ color:"#4A5070", fontSize:"1.075rem", lineHeight:1.7 }}>
+                Tell FreBook what happened — on the web or WhatsApp, in English or Hinglish. It drafts the entry, you approve it, and it lands in your books <b style={{ color:"#141A3A" }}>and in Tally</b>. Invoices, bank import, GST and live P&amp;L included.
               </p>
-              <div className="flex flex-wrap gap-3 mt-7">
+              <div className="flex flex-wrap gap-3 mt-8">
                 <button onClick={handleFreBookClick}
-                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[15px] font-bold transition-all hover:opacity-90"
-                  style={{ background:"#232A63", color:"#fff", boxShadow:"0 8px 24px rgba(35,42,99,0.28)", border:"none", cursor:"pointer" }}>
-                  {loggedIn ? "Open FreBook" : "Start your free month"} <ArrowRight className="w-4 h-4" />
+                  className="group flex items-center gap-2 px-6 py-3.5 rounded-2xl text-[15px] font-bold transition-all hover:-translate-y-0.5"
+                  style={{ background:"linear-gradient(180deg,#2C3478,#1E2459)", color:"#fff", boxShadow:"0 12px 28px rgba(35,42,99,0.32), inset 0 1px 0 rgba(255,255,255,0.15)", border:"none", cursor:"pointer" }}>
+                  {loggedIn ? "Open FreBook" : "Start your free month"} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                 </button>
                 <a href={`https://wa.me/${SUPPORT_WA}?text=${encodeURIComponent("Hi FreBook")}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-5 py-3.5 rounded-xl text-[15px] font-semibold border transition-all hover:bg-white"
-                  style={{ borderColor:"rgba(20,26,58,0.14)", color:"#141A3A", background:"rgba(255,255,255,0.6)" }}>
-                  <MessageCircle className="w-4 h-4" style={{ color:"#128C4B" }} /> See it on WhatsApp
+                  className="flex items-center gap-2 px-5 py-3.5 rounded-2xl text-[15px] font-bold transition-all hover:-translate-y-0.5"
+                  style={{ background:"#FFFFFF", color:"#141A3A", border:"1px solid rgba(20,26,58,0.10)", boxShadow:"0 6px 18px rgba(20,26,58,0.06)" }}>
+                  <MessageCircle className="w-4 h-4" style={{ color:"#16A34A" }} /> Try it on WhatsApp
                 </a>
               </div>
-              <p className="mt-4 text-sm" style={{ color:"#5A6080" }}>
-                1 month free · then ₹1,499/month + GST · cancel anytime
+              <p className="mt-4 text-[13.5px] font-medium" style={{ color:"#5A6080" }}>
+                <b style={{ color:"#0B7A55" }}>1 month free</b> · then ₹1,499/month + GST · cancel anytime · no card to start
               </p>
-              <div className="flex flex-wrap gap-x-5 gap-y-2 mt-7">
-                {["Works on WhatsApp", "Two-way Tally sync", "GST-ready books", "You approve every entry"].map(s => (
-                  <span key={s} className="flex items-center gap-1.5 text-[13px] font-semibold" style={{ color:"#232A63" }}>
-                    <Check className="w-4 h-4" style={{ color:"#0B7A55" }} /> {s}
-                  </span>
-                ))}
+              <div className="mt-9">
+                <p className="text-[11px] font-bold tracking-[0.18em] uppercase mb-3" style={{ color:"#8A90AE" }}>Works with what you already use</p>
+                <div className="flex flex-wrap gap-2">
+                  {["Tally Prime", "WhatsApp", "Excel", "Bank PDFs & CSV", "GST portal", "Razorpay"].map(t => (
+                    <span key={t} className="px-3 py-1.5 rounded-lg text-[12.5px] font-semibold" style={{ background:"rgba(255,255,255,0.75)", border:"1px solid rgba(20,26,58,0.08)", color:"#232A63" }}>{t}</span>
+                  ))}
+                </div>
               </div>
             </motion.div>
 
-            {/* Right: what it feels like — a chat that turns into a posted entry */}
-            <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.5 }}
-              className="rounded-[22px] overflow-hidden" style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.10)", boxShadow:"0 24px 60px rgba(20,26,58,0.14)" }}>
-              <div className="flex items-center gap-3 px-5 py-3.5" style={{ background:"#232A63" }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black" style={{ background:"#FFFFFF", color:"#232A63" }}>F</div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-white leading-none">FreBook</p>
-                  <p className="text-[11px] mt-1" style={{ color:"#C8D2F2" }}>Your books · always up to date</p>
+            {/* Right: a demo that plays on a loop, like a short screen recording */}
+            <motion.div initial={{ opacity:0, y:24 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.15, duration:0.55 }} className="relative">
+              <div className="absolute -inset-4 rounded-[34px] pointer-events-none" aria-hidden="true" style={{ background:"linear-gradient(140deg,rgba(240,102,43,0.22),rgba(58,67,142,0.22))", filter:"blur(28px)" }} />
+              <div className="relative rounded-[26px] overflow-hidden" style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.08)", boxShadow:"0 30px 70px rgba(20,26,58,0.18)" }}>
+                <div className="flex items-center gap-3 px-5 py-4" style={{ background:"linear-gradient(180deg,#2A3172,#20265C)" }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[15px] font-black" style={{ background:"#FFFFFF", color:"#232A63" }}>F</div>
+                  <div className="flex-1">
+                    <p className="text-[14px] font-bold text-white leading-none">FreBook</p>
+                    <p className="text-[11.5px] mt-1 flex items-center gap-1.5" style={{ color:"#C8D2F2" }}><span className="w-1.5 h-1.5 rounded-full" style={{ background:"#4ADE80" }} /> online · replies in seconds</p>
+                  </div>
+                  <span className="text-[10.5px] font-bold px-2.5 py-1 rounded-full" style={{ background:"rgba(255,255,255,0.12)", color:"#FFD9C7" }}>LIVE DEMO</span>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background:"rgba(255,255,255,0.14)", color:"#FFD9C7" }}>HOW IT WORKS</span>
+                <div key={demoRun} className="p-5 flex flex-col gap-3 min-h-[330px]" style={{ background:"linear-gradient(180deg,#F7F8FC,#F1F3FA)" }}>
+                  <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.4 }}
+                    className="self-end max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-md text-[14px] font-medium" style={{ background:"#232A63", color:"#fff" }}>
+                    Paid office rent ₹25,000 from HDFC
+                  </motion.div>
+                  <motion.div initial={{ opacity:0 }} animate={{ opacity:[0,1,1,0] }} transition={{ delay:0.9, duration:0.9, times:[0,0.1,0.8,1] }}
+                    className="self-start flex gap-1 px-3.5 py-3 rounded-2xl" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.06)" }} aria-hidden="true">
+                    {[0,1,2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background:"#9AA0BE", animationDelay:`${i*0.12}s` }} />)}
+                  </motion.div>
+                  <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:1.8 }}
+                    className="self-start w-[92%] rounded-2xl rounded-bl-md p-4" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.07)", boxShadow:"0 6px 16px rgba(20,26,58,0.05)" }}>
+                    <p className="text-[11px] font-extrabold tracking-[0.14em] uppercase" style={{ color:"#E2541B" }}>Draft entry</p>
+                    <div className="mt-2.5 text-[14px] font-semibold" style={{ color:"#141A3A", fontVariantNumeric:"tabular-nums" }}>
+                      <div className="flex justify-between"><span>Dr Rent</span><span>₹25,000</span></div>
+                      <div className="flex justify-between pl-5 mt-1" style={{ color:"#4A5070" }}><span>Cr HDFC Bank</span><span>₹25,000</span></div>
+                    </div>
+                    <p className="mt-2.5 text-[12px]" style={{ color:"#6B7194" }}>Same ledger you used for rent last month.</p>
+                  </motion.div>
+                  <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:2.7 }}
+                    className="self-end px-4 py-2 rounded-2xl rounded-br-md text-[14px] font-bold" style={{ background:"#232A63", color:"#fff" }}>
+                    YES
+                  </motion.div>
+                  <motion.div initial={{ opacity:0, scale:0.94 }} animate={{ opacity:1, scale:1 }} transition={{ delay:3.3, type:"spring", stiffness:260, damping:18 }}
+                    className="self-start flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[13.5px] font-bold" style={{ background:"#E3F6EE", color:"#0B7A55" }}>
+                    <Check className="w-4 h-4" /> Posted · PMT/2026-27/0042 · sent to Tally
+                  </motion.div>
+                </div>
+                <div className="grid grid-cols-3 text-center" style={{ borderTop:"1px solid rgba(20,26,58,0.07)" }}>
+                  {[["Bills & statements","read for you"],["P&L, Balance Sheet","always live"],["GSTR-1 / 3B","prepared"]].map(([a,b],i) => (
+                    <div key={a} className="py-3.5 px-2" style={{ borderRight: i < 2 ? "1px solid rgba(20,26,58,0.07)" : "none" }}>
+                      <p className="text-[12.5px] font-bold" style={{ color:"#141A3A" }}>{a}</p>
+                      <p className="text-[11.5px]" style={{ color:"#6B7194" }}>{b}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="p-5 flex flex-col gap-3" style={{ background:"#F5F6FA" }}>
-                <motion.div initial={{ opacity:0, x:12 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.6 }}
-                  className="self-end max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-md text-[14px]" style={{ background:"#232A63", color:"#fff" }}>
-                  Paid office rent ₹25,000 from HDFC
-                </motion.div>
-                <motion.div initial={{ opacity:0, x:-12 }} animate={{ opacity:1, x:0 }} transition={{ delay:1.1 }}
-                  className="self-start w-[92%] rounded-2xl rounded-bl-md p-4" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.08)" }}>
-                  <p className="text-[11px] font-bold tracking-[0.14em] uppercase" style={{ color:"#C2410C" }}>Draft entry</p>
-                  <div className="mt-2 text-[13.5px] font-mono" style={{ color:"#141A3A", fontVariantNumeric:"tabular-nums" }}>
-                    <div className="flex justify-between"><span>Dr Rent</span><span>₹25,000</span></div>
-                    <div className="flex justify-between pl-4" style={{ color:"#4A5070" }}><span>Cr HDFC Bank</span><span>₹25,000</span></div>
-                  </div>
-                  <p className="mt-2 text-[12px]" style={{ color:"#5A6080" }}>Same ledger you used for rent last month.</p>
-                </motion.div>
-                <motion.div initial={{ opacity:0, x:12 }} animate={{ opacity:1, x:0 }} transition={{ delay:1.6 }}
-                  className="self-end px-4 py-2 rounded-2xl rounded-br-md text-[14px] font-semibold" style={{ background:"#232A63", color:"#fff" }}>
-                  YES
-                </motion.div>
-                <motion.div initial={{ opacity:0, scale:0.96 }} animate={{ opacity:1, scale:1 }} transition={{ delay:2.1 }}
-                  className="self-start flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[13.5px] font-semibold" style={{ background:"#E3F6EE", color:"#0B7A55" }}>
-                  <Check className="w-4 h-4" /> Posted as PMT/2026-27/0042 · sent to Tally
-                </motion.div>
-              </div>
-              <div className="grid grid-cols-3 text-center" style={{ borderTop:"1px solid rgba(20,26,58,0.08)" }}>
-                {[["Bills & statements","read for you"],["P&L, Balance Sheet","always live"],["GSTR-1 / 3B","prepared"]].map(([a,b],i) => (
-                  <div key={a} className="py-3 px-2" style={{ borderRight: i < 2 ? "1px solid rgba(20,26,58,0.08)" : "none" }}>
-                    <p className="text-[12.5px] font-bold" style={{ color:"#141A3A" }}>{a}</p>
-                    <p className="text-[11px]" style={{ color:"#5A6080" }}>{b}</p>
-                  </div>
-                ))}
-              </div>
+              {/* Floating proof badges */}
+              <motion.div initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.9 }}
+                className="hidden md:flex absolute -left-8 top-[38%] items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[12.5px] font-bold"
+                style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.08)", boxShadow:"0 14px 30px rgba(20,26,58,0.14)", color:"#141A3A" }}>
+                <span className="w-7 h-7 rounded-lg grid place-items-center" style={{ background:"#FFF1E8", color:"#E2541B" }}>%</span> GST split · CGST + SGST
+              </motion.div>
+              <motion.div initial={{ opacity:0, x:10 }} animate={{ opacity:1, x:0 }} transition={{ delay:1.1 }}
+                className="hidden md:flex absolute -right-6 bottom-[18%] items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[12.5px] font-bold"
+                style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.08)", boxShadow:"0 14px 30px rgba(20,26,58,0.14)", color:"#141A3A" }}>
+                <span className="w-7 h-7 rounded-lg grid place-items-center" style={{ background:"#E3F6EE", color:"#0B7A55" }}><Check className="w-4 h-4" /></span> Synced to Tally
+              </motion.div>
             </motion.div>
           </div>
 
-          {/* Secondary: CA services and coworking, one quiet row */}
+          {/* Secondary: CA services and coworking */}
           <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35 }}
-            className="mt-14 grid md:grid-cols-[1.6fr_1fr] gap-4">
-            <div className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4" style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.09)" }}>
+            className="mt-16 grid md:grid-cols-[1.6fr_1fr] gap-4">
+            <div className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4" style={{ background:"rgba(255,255,255,0.85)", border:"1px solid rgba(20,26,58,0.08)" }}>
               <div className="flex-1">
                 <p className="text-[11px] font-bold tracking-[0.16em] uppercase" style={{ color:"#C2410C" }}>Need a CA too?</p>
-                <p className="mt-1 text-[15px] font-semibold" style={{ color:"#141A3A" }}>GST registration ₹999 · ITR filing ₹799 · Company registration · ROC</p>
+                <p className="mt-1 text-[15px] font-bold" style={{ color:"#141A3A" }}>GST registration ₹999 · ITR filing ₹799 · Company registration · ROC</p>
                 <p className="text-[13px]" style={{ color:"#5A6080" }}>Done end-to-end by verified Chartered Accountants.</p>
               </div>
-              <Link href="/services/compliance" className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap"
+              <Link href="/services/compliance" className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap"
                 style={{ background:"rgba(35,42,99,0.08)", color:"#232A63" }}>
                 Explore services <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
-            <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.09)" }}>
+            <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background:"rgba(255,255,255,0.85)", border:"1px solid rgba(20,26,58,0.08)" }}>
               <MapPin className="w-5 h-5 flex-shrink-0" style={{ color:"#C2410C" }} />
               <div className="flex-1">
-                <p className="text-[15px] font-semibold" style={{ color:"#141A3A" }}>Coworking in 8 cities</p>
+                <p className="text-[15px] font-bold" style={{ color:"#141A3A" }}>Coworking in 8 cities</p>
                 <p className="text-[13px]" style={{ color:"#5A6080" }}>Hot desks from ₹350/day</p>
               </div>
-              <Link href="/coworking" className="text-sm font-semibold whitespace-nowrap" style={{ color:"#232A63" }}>Find a space →</Link>
+              <Link href="/coworking" className="text-sm font-bold whitespace-nowrap" style={{ color:"#232A63" }}>Find a space →</Link>
             </div>
           </motion.div>
         </div>
