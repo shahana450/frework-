@@ -37,6 +37,10 @@ const set = (patch: Partial<TallyState>, persist = true) => {
 };
 export const tallyUrl = () => `http://localhost:${state.port}`;
 export const tallyManuallyOff = () => read(key(OFF), "") === "1";
+// Auto-push: every entry posted in FreBook is sent to Tally straight away (per business, on this computer)
+const AUTO = "fw_tally_autopush";
+export const tallyAutoPushOn = () => read(key(AUTO), "") === "1";
+export const setTallyAutoPush = (on: boolean) => write(key(AUTO), on ? "1" : null);
 
 function restore() {
   try {

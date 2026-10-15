@@ -20,6 +20,8 @@ import InstallApp from "./InstallApp";
 import AnswerCard from "./AnswerCard";
 import type { Answer } from "@/lib/bookQueries";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import { useTally, tallyAutoPushOn, setTallyAutoPush } from "@/lib/tallyConnection";
+import { pushToTally } from "@/lib/tallyPushRun";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Role = "user" | "ai" | "system";
@@ -290,6 +292,22 @@ export default function FreBookPage() {
   const [confirmPost, setConfirmPost] = useState<{ msgId: string; warnings: string[]; run: () => void } | null>(null);
   const [simpleBulk, setSimpleBulk] = useState<{ fileName: string; fileKey: string; entries: SimpleEntry[] } | null>(null);
   const postingRef = useRef(new Set<string>());
+  const tally = useTally();
+  const tallyRef = useRef(tally); tallyRef.current = tally;
+  const [autoPush, setAutoPush] = useState(false);
+  useEffect(() => { setAutoPush(tallyAutoPushOn()); }, [tally.company]);
+  const toggleAutoPush = () => { const on = !autoPush; setTallyAutoPush(on); setAutoPush(on); };
+
+  // Auto-push: send a just-posted entry to the linked Tally company
+  async function autoPushToTally(journalId: string, date: string, entryNo: string) {
+    const t = tallyRef.current, bid = bizIdRef.current;
+    if (!bid || !tallyAutoPushOn() || t.status !== "connected" || !t.company) return;
+    const r = await pushToTally({ bizId: bid, ids: [journalId], dates: { [journalId]: date }, company: t.company, port: t.port, educational: t.educational });
+    const res = r.results[journalId];
+    const text = res && "at" in res ? `✓ ${entryNo} pushed to Tally (${t.company}).`
+      : `⚠ ${entryNo} posted in FreBook but not pushed to Tally: ${res && "error" in res ? res.error : r.message} You can push it later from Books.`;
+    setMessages(prev => [...prev, { id: `tp-${Date.now()}`, role: "system", text, timestamp: Date.now() }]);
+  }
   const messagesRef = useRef<ChatMessage[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => {
@@ -529,6 +547,7 @@ export default function FreBookPage() {
         return;
       }
       setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: "posted", needsHeads: undefined, entryNo: data.entry_no, journalId: data.journal_id, transaction, createdLedgers: data.created_ledgers, ledgerAccountIds: ((data.lines ?? []) as { account_id: string; account_name: string }[]).map(l => ({ id: l.account_id, name: l.account_name })) } : m));
+      if (data.journal_id) void autoPushToTally(data.journal_id, transaction.transaction_date, data.entry_no ?? "Entry");
     } catch (e) {
       setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: "pending" } : m));
       setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: "system", text: `⚠ Post failed: ${e instanceof Error ? e.message : "Error"}`, timestamp: Date.now() }]);
@@ -934,6 +953,16 @@ export default function FreBookPage() {
                 <button onClick={() => setBulk(lastBulk)} className="fb-chip" title={`Reopen the review of ${lastBulk.fileName}`}
                   style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #C2410C", background: "#FFF1E8", color: "#C2410C", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 800 }}>
                   ↩ Back to bulk review · {lastBulk.fileName.length > 22 ? lastBulk.fileName.slice(0, 20) + "…" : lastBulk.fileName}
+                </button>
+              )}
+              {tally.status === "connected" && tally.company && (
+                <button onClick={toggleAutoPush} className="fb-chip" role="switch" aria-checked={autoPush}
+                  title={autoPush ? `Every entry you post is sent to Tally (${tally.company}) straight away. Click to turn off.` : `Turn on to send every posted entry to Tally (${tally.company}) straight away.`}
+                  style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: `1px solid ${autoPush ? "#0B7A55" : "#E0D6C1"}`, background: autoPush ? "#E9F7F0" : "#FFFFFF", color: autoPush ? "#0B7A55" : "#2E3B36", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 800, display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                  <span aria-hidden="true" style={{ width: 26, height: 15, borderRadius: 999, background: autoPush ? "#0B7A55" : "#C9C2B3", position: "relative", transition: "background .15s" }}>
+                    <span style={{ position: "absolute", top: 2, left: autoPush ? 13 : 2, width: 11, height: 11, borderRadius: 999, background: "#FFFFFF", transition: "left .15s" }} />
+                  </span>
+                  Auto-push to Tally {autoPush ? "on" : "off"}
                 </button>
               )}
               <button onClick={downloadTemplate} className="fb-chip" style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #0F2B25", background: "#0F2B25", color: "#FFFFFF", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
