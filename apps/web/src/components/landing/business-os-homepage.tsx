@@ -334,7 +334,7 @@ export function BusinessOSHomepage() {
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background:"#F0662B" }} /> FreBook · AI accountant
               </span>
               <h1 className="font-bold leading-[1.02] tracking-tight mt-5"
-                style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.5rem,5.6vw,4.6rem)", color:"#141A3A", letterSpacing:"-0.03em" }}>
+                style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.3rem,4.3vw,3.75rem)", color:"#141A3A", letterSpacing:"-0.03em" }}>
                 Your AI accountant.
                 <br />
                 <span style={{ color:"#F0662B" }}>Chat in. Books out.</span>
