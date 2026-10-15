@@ -17,6 +17,15 @@ export const FREBOOK_PLAN = {
 
 export const PLAN_PRICES: Record<string, number> = { [FREBOOK_PLAN.id]: FREBOOK_PLAN.price };
 
+/** GST charged on the FreBook subscription (SAC 9983, 18%). Prices are shown "+ GST", so GST is added at checkout. */
+export const SUBSCRIPTION_GST_RATE = 18;
+
+/** What the customer pays for one month, in paise: plan price + GST, rounded to the paisa. ₹1,499 → 176882 (₹1,768.82). */
+export function chargePaise(plan: string): number | null {
+  const price = PLAN_PRICES[plan];
+  return price ? Math.round(price * 100 * (1 + SUBSCRIPTION_GST_RATE / 100)) : null;
+}
+
 // Plan ids sold before the single FreBook plan. Subscription rows may still carry them; they display, they are never sold.
 export const LEGACY_PLAN_IDS = ["starter", "professional", "growth", "business", "enterprise", "basic", "pro"] as const;
 

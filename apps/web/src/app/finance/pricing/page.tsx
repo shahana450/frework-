@@ -75,30 +75,35 @@ export default function PricingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: plan.id, amount: plan.price, user_id: user.id, email: user.email }),
       });
-      const { order_id, key_id } = await res.json();
-      if (!order_id) throw new Error("Order creation failed");
+      const started = await res.json();
+      if (!res.ok || !(started.order_id || started.subscription_id)) throw new Error(started.error ?? "Couldn't start the payment.");
+      const auto = started.mode === "subscription";
+      const total = (started.amount_paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
       const rzp = new window.Razorpay({
-        key: key_id,
-        amount: plan.price * 100,
-        currency: "INR",
+        key: started.key_id,
         name: "FreWork",
-        description: `${plan.name} Plan — ₹${plan.price.toLocaleString("en-IN")}/month`,
-        order_id,
+        description: `${plan.name} — ₹${plan.price.toLocaleString("en-IN")} + 18% GST = ₹${total}/month${auto ? " · renews automatically" : ""}`,
+        ...(auto ? { subscription_id: started.subscription_id } : { order_id: started.order_id, amount: started.amount_paise, currency: "INR" }),
         prefill: { name: user.name, email: user.email },
         theme: { color: "#232A63" },
-        handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
-          await fetch("/api/finance/subscription/verify", {
+        handler: async (response: Record<string, string>) => {
+          const v = await fetch("/api/finance/subscription/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...response, plan: plan.id, user_id: user.id, amount: plan.price }),
+            body: JSON.stringify(response),
           });
+          if (!v.ok) {
+            const d = await v.json().catch(() => ({}));
+            alert(`${d.error ?? "We couldn't confirm the payment."} If money was deducted, it will be refunded or activated within a day — contact support with payment id ${response.razorpay_payment_id}.`);
+            return;
+          }
           router.push("/finance?subscribed=1");
         },
       });
       rzp.open();
     } catch (e) {
-      alert("Payment failed. Please try again.");
+      alert(e instanceof Error && e.message ? e.message : "Payment failed. Please try again.");
     } finally {
       setPaying(null);
     }
