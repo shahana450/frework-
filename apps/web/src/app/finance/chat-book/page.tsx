@@ -284,6 +284,8 @@ export default function FreBookPage() {
   const [snapHint, setSnapHint] = useState(false);
   const [violations, setViolations] = useState<Record<string, string[]>>({});
   const [bulk, setBulk] = useState<{ fileName: string; fileKey: string; sentences: string[] } | null>(null);
+  // The last bulk review left this session — reopened from the "Back to bulk review" chip (its progress is kept per file)
+  const [lastBulk, setLastBulk] = useState<{ fileName: string; fileKey: string; sentences: string[] } | null>(null);
   // B14 — one in-app confirmation listing every warning, instead of stacked browser pop-ups
   const [confirmPost, setConfirmPost] = useState<{ msgId: string; warnings: string[]; run: () => void } | null>(null);
   const [simpleBulk, setSimpleBulk] = useState<{ fileName: string; fileKey: string; entries: SimpleEntry[] } | null>(null);
@@ -928,6 +930,12 @@ export default function FreBookPage() {
             )}
             {/* Suggestions */}
             <div className="fb-chips" style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }}>
+              {lastBulk && !bulk && (
+                <button onClick={() => setBulk(lastBulk)} className="fb-chip" title={`Reopen the review of ${lastBulk.fileName}`}
+                  style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #C2410C", background: "#FFF1E8", color: "#C2410C", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 800 }}>
+                  ↩ Back to bulk review · {lastBulk.fileName.length > 22 ? lastBulk.fileName.slice(0, 20) + "…" : lastBulk.fileName}
+                </button>
+              )}
               <button onClick={downloadTemplate} className="fb-chip" style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #0F2B25", background: "#0F2B25", color: "#FFFFFF", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg> Journal template
               </button>
@@ -999,7 +1007,7 @@ export default function FreBookPage() {
       )}
       {bulk && bizId && userId && (
         <BulkTemplateModal fileName={bulk.fileName} fileKey={bulk.fileKey} sentences={bulk.sentences} bizId={bizId} userId={userId}
-          onClose={() => setBulk(null)}
+          onClose={() => { setLastBulk(bulk); setBulk(null); }}
           onPosted={(count, total) => setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} template entr${count > 1 ? "ies" : "y"} (${fmt(total)}) from ${bulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }])}
           onSendToChat={list => { setBatchTotal(list.length); setRowQueue(list); setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `📊 ${list.length} rows need more detail — answering them here one by one.`, timestamp: Date.now() }]); }} />
       )}
