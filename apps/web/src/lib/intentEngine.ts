@@ -204,7 +204,20 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
   // A supplier/customer ledger is a party, never the expense or asset itself ("office table" ≠ "XYZ Furniture House")
   let counter = canon(ai.counter_account), partyName = ai.party_name ?? null;
   const counterAcc = counter ? accounts.find(a => a.name === counter) : undefined;
-  if (counterAcc && isPartyLedger(counterAcc) && SPEND_ACTIONS.has(action)) { partyName = partyName ?? counterAcc.name; counter = null; }
+  if (counter && SPEND_ACTIONS.has(action)) {
+    // Also a party when the name is a saved contact or was the party on an earlier entry —
+    // e.g. a supplier's name that was once opened as a Fixed Assets ledger by mistake
+    let party = !!counterAcc && isPartyLedger(counterAcc);
+    if (!party && counter !== partyName) {
+      const name = counter.replace(/[%_]/g, "");
+      const [{ count: asContact }, { count: asParty }] = await Promise.all([
+        sb.from("fw_fin_contacts").select("id", { count: "exact", head: true }).eq("business_id", businessId).ilike("name", name),
+        sb.from("fw_fin_journals").select("id", { count: "exact", head: true }).eq("business_id", businessId).ilike("party_name", name),
+      ]);
+      party = (asContact ?? 0) > 0 || (asParty ?? 0) > 0;
+    }
+    if (party) { partyName = partyName ?? counter; counter = null; }
+  }
   const intent: Intent = {
     action, amount: Number(ai.amount) || 0, payment_mode: ai.payment_mode ?? (paymentAccount ? "bank" : null),
     payment_account: paymentAccount, counter_account: counter, party_name: partyName,
