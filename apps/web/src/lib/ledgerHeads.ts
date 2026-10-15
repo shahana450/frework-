@@ -36,7 +36,7 @@ const RULES: [RegExp, string][] = [
   [/\bloan\b.*(taken|from|payable)|borrowing|term loan|unsecured loan/, "loan"],
   [/advance (to|paid)|deposit|prepaid|loan (given|to)|staff advance/, "advances"],
   [/furniture|computer|laptop|machinery|plant|vehicle|equipment|building|land|fixed asset|printer|mobile phone/, "fixed_asset"],
-  [/^sales?\b|\bsales?\b (a\/c|account)|revenue|service income|turnover/, "sales"],
+  [/^sales?\b|\bb2[bc] ?sales?\b|^(cash|credit|local|interstate|export) ?sales?$|\bsales?\b (a\/c|account)|revenue|service income|turnover/, "sales"],
   [/interest (income|received)|discount received|commission received|rent received|other income|dividend/, "indirect_income"],
   [/^purchases?\b|purchase (a\/c|account)|raw material|stock purchase/, "purchase"],
   [/freight inward|carriage inward|wages|factory|manufacturing|power and fuel/, "direct_expense"],

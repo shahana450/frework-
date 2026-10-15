@@ -19,7 +19,7 @@ export function guessGroup(name: string, side?: "in" | "out" | null): string {
   if (/credit\s*card/.test(n)) return "current_liability";
   if (/\b(bank|hdfc|icici|sbi|axis|kotak|federal|canara|pnb|yes bank|idfc|indusind)\b/.test(n)) return "bank";
   if (/\b(gst|cgst|sgst|igst|tds|tcs|cess)\b/.test(n)) return "duties";
-  if (/\b(sales?|revenue)\b/.test(n)) return "sales";
+  if (/\b(sales?|revenue)\b|\bb2[bc] ?sales?\b/.test(n)) return "sales";
   if (/\b(purchases?)\b/.test(n)) return "purchase";
   if (/\b(capital|drawings?)\b/.test(n)) return "capital";
   if (/\b(loan|od|overdraft)\b/.test(n)) return "loan";

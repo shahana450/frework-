@@ -128,9 +128,33 @@ async function routeToParty(sb: SupabaseClient, req: PostingRequest): Promise<Po
   return swap.size ? { ...req, lines: req.lines.map(l => swap.has(l.accountId) ? { ...l, accountId: swap.get(l.accountId)! } : l) } : req;
 }
 
+/**
+ * An entry dated after the last financial year (but not in the future) opens the next year(s) automatically,
+ * same start day as the existing years — the way a new year simply begins. Earlier/future gaps still need Settings.
+ */
+async function ensureFinancialYear(sb: SupabaseClient, businessId: string, date: string) {
+  const { data } = await sb.from("fw_fin_financial_years").select("start_date,end_date").eq("business_id", businessId).order("end_date", { ascending: false });
+  const fys = (data ?? []) as { start_date: string; end_date: string }[];
+  const today = new Date().toISOString().slice(0, 10);
+  if (!fys.length || date > today || fys.some(f => date >= f.start_date && date <= f.end_date) || date <= fys[0].end_date) return;
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  let start = new Date(fys[0].end_date + "T00:00:00Z"); start.setUTCDate(start.getUTCDate() + 1);
+  for (let i = 0; i < 3; i++) {
+    const end = new Date(start); end.setUTCFullYear(end.getUTCFullYear() + 1); end.setUTCDate(end.getUTCDate() - 1);
+    const s = iso(start), e = iso(end), y = start.getUTCFullYear();
+    const label = s.slice(5) === "01-01" ? String(y) : `${y}-${String(y + 1).slice(2)}`;
+    const current = today >= s && today <= e;
+    const { data: row } = await sb.from("fw_fin_financial_years").insert({ business_id: businessId, label, start_date: s, end_date: e, is_current: current }).select("id").single();
+    if (current && row) await sb.from("fw_fin_financial_years").update({ is_current: false }).eq("business_id", businessId).neq("id", row.id);
+    if (date <= e) return;
+    start = new Date(end); start.setUTCDate(start.getUTCDate() + 1);
+  }
+}
+
 /** What validateJournal needs about this business: the ledgers used, the financial years and GST registration. */
 async function ruleContext(sb: SupabaseClient, req: PostingRequest) {
   const ids = [...new Set(req.lines.map(l => l.accountId).filter(Boolean))];
+  try { await ensureFinancialYear(sb, req.businessId, req.date); } catch { /* the rule below still reports it */ }
   const [{ data: accs }, { data: fys }, { data: biz }] = await Promise.all([
     sb.from("fw_fin_chart_of_accounts").select("id,name,type,sub_type,is_group").eq("business_id", req.businessId).in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
     sb.from("fw_fin_financial_years").select("start_date,end_date,is_locked").eq("business_id", req.businessId),
