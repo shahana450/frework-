@@ -227,6 +227,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [hasCoworkingListing, setHasCoworkingListing] = useState(false);
   const [showPurpose, setShowPurpose] = useState(false);
+  const [finSub, setFinSub] = useState<{ status: string; subscription_ends_at: string | null } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -245,6 +246,8 @@ export default function DashboardPage() {
         supabase.from("fw_workspaces").select("id, name, city, type, price_per_day, price_per_month, status, created_at").eq("user_id", u.id).order("created_at", { ascending: false }),
         supabase.from("coworking_spaces").select("id").eq("owner_id", u.id).limit(1).maybeSingle(),
       ]);
+      // FreBook plan (the subscription that matters now)
+      supabase.from("fw_fin_subscriptions").select("status,subscription_ends_at").eq("user_id", u.id).maybeSingle().then(({ data }) => setFinSub(data ?? null));
       setStartups(startupData ?? []);
       setSubscription(subData);
       setUserRole(fwUser?.role ?? "client");
@@ -418,6 +421,7 @@ export default function DashboardPage() {
   }
 
   const firstName = user?.name?.split(" ")[0] ?? "there";
+  const finActive = !!finSub && ["active", "trial"].includes(finSub.status) && !!finSub.subscription_ends_at && new Date(finSub.subscription_ends_at) > new Date();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
@@ -445,6 +449,26 @@ export default function DashboardPage() {
         .db-space-card { background: rgba(20,26,58,0.05); border: 1px solid rgba(20,26,58,0.07); border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.75rem; }
         ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(20,26,58,0.08); border-radius: 4px; }
         select option { background: #FFFFFF; }
+        .dbx-hero { display: grid; grid-template-columns: 1fr 1.15fr; gap: 1rem; margin-bottom: 1.75rem; }
+        .dbx-hello { background: #FFFFFF; border: 1px solid rgba(20,26,58,0.08); border-radius: 22px; padding: 1.6rem 1.75rem; }
+        .dbx-chip { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; background: #F2F3F6; color: #4A5070; }
+        .dbx-frebook { display: block; text-decoration: none; border-radius: 22px; padding: 1.6rem 1.75rem; background: radial-gradient(120% 120% at 100% 0%, #3A438E 0%, #232A63 45%, #161B47 100%); box-shadow: 0 18px 40px rgba(35,42,99,0.28); transition: transform .15s; }
+        .dbx-frebook:hover { transform: translateY(-2px); }
+        .dbx-plan { font-size: 12px; font-weight: 800; padding: 5px 11px; border-radius: 999px; white-space: nowrap; }
+        .dbx-cta { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 12px; background: #F0662B; color: #FFFFFF; font-weight: 800; font-size: 15px; }
+        .dbx-h2 { margin: 0 0 .85rem; font-size: 1.05rem; font-weight: 900; letter-spacing: -0.01em; color: #141A3A; }
+        .dbx-tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: .75rem; }
+        .dbx-tile { display: flex; flex-direction: column; gap: 6px; padding: 1rem; border-radius: 18px; background: #FFFFFF; border: 1px solid rgba(20,26,58,0.08); text-decoration: none; transition: transform .15s, box-shadow .15s; }
+        .dbx-tile:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(20,26,58,0.10); }
+        .dbx-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 4px; }
+        .dbx-wa { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 1rem 1.25rem; border-radius: 18px; background: #F0FBF4; border: 1px solid rgba(14,122,67,0.18); text-decoration: none; margin-bottom: 1.75rem; }
+        .dbx-services { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; }
+        .dbx-svc { display: flex; align-items: center; gap: 12px; padding: .9rem 1rem; border-radius: 16px; background: #FFFFFF; border: 1px solid rgba(20,26,58,0.08); text-decoration: none; }
+        .dbx-svc:hover { border-color: rgba(35,42,99,0.3); }
+        .dbx-two { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+        @media (max-width: 1000px) { .dbx-tiles { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 760px) { .dbx-hero, .dbx-two, .dbx-services { grid-template-columns: 1fr; } .dbx-tiles { grid-template-columns: repeat(2, 1fr); } }
+        @media (prefers-reduced-motion: reduce) { .dbx-frebook, .dbx-tile { transition: none; } }
       `}</style>
 
       {/* Header */}
@@ -487,67 +511,95 @@ export default function DashboardPage() {
       <div className="db-bg" style={{ minHeight: "calc(100vh - 60px)" }}>
         <main style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem 1.5rem" }}>
 
-          {/* Welcome banner */}
-          <div style={{ borderRadius: 20, overflow: "hidden", marginBottom: "1.75rem", background: "linear-gradient(135deg,#FFFFFF 0%,#F7F8FC 50%,#FFFFFF 100%)", border: "1px solid rgba(35,42,99,0.2)", position: "relative" }}>
-            <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 80% 50%, rgba(35,42,99,0.15) 0%, transparent 60%)", pointerEvents: "none" }} />
-            <div style={{ padding: "1.75rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
-              <div>
-                <p style={{ fontSize: "0.8rem", color: "#4A5070", marginBottom: "0.3rem", fontWeight: 500 }}>{greeting},</p>
-                <h1 style={{ margin: "0 0 0.3rem", fontSize: "2.2rem", fontWeight: 900, letterSpacing: "-0.03em", color: "#141A3A" }}>{firstName} <span style={{ opacity: 0.8 }}>👋</span></h1>
-                <p style={{ fontSize: "0.8rem", color: "#4A5070", margin: 0 }}>{user?.email}</p>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
-                <span style={{ fontSize: "0.72rem", padding: "5px 14px", borderRadius: 20, background: "rgba(11,122,85,0.15)", border: "1px solid rgba(11,122,85,0.3)", color: "#0B7A55", fontWeight: 700 }}>
-                  ● Active account
-                </span>
-                <span style={{ fontSize: "0.72rem", padding: "5px 14px", borderRadius: 20, background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.07)", color: "rgba(20,26,58,0.80)", fontWeight: 600, textTransform: "capitalize" }}>
-                  {subscription ? `${planLabel(subscription.plan)} Plan` : "Free Plan"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Finance banner */}
-          <Link href="/finance" style={{ display: "block", marginBottom: "1.75rem", borderRadius: 18, overflow: "hidden", border: "1px solid rgba(240,102,43,0.25)", background: "linear-gradient(135deg,#FFF7F2 0%,#FFF0E8 50%,#FFF7F2 100%)", textDecoration: "none", transition: "border-color 0.2s, transform 0.15s" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,102,43,0.5)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(240,102,43,0.25)"; (e.currentTarget as HTMLElement).style.transform = "none"; }}>
-            <div style={{ padding: "1.25rem 1.6rem", display: "flex", alignItems: "center", gap: "1.25rem" }}>
-              <div style={{ width: 50, height: 50, borderRadius: 14, background: "linear-gradient(135deg,rgba(240,102,43,0.25),rgba(240,102,43,0.08))", border: "1px solid rgba(240,102,43,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>🛩️</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.3rem" }}>
-                  <span style={{ fontSize: "0.6rem", padding: "2px 8px", borderRadius: 10, background: "rgba(240,102,43,0.2)", border: "1px solid rgba(240,102,43,0.35)", color: "#C2410C", fontWeight: 800, letterSpacing: "0.06em" }}>NEW</span>
-                  <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#C2410C" }}>FreWork Finance — AI Bookkeeping</span>
+          {/* Welcome + FreBook — the one thing most people come here for */}
+          <section className="dbx-hero">
+            <div className="dbx-hello">
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                {user?.avatar
+                  ? <img src={user.avatar} alt="" width={56} height={56} style={{ borderRadius: 18, border: "2px solid #FFFFFF", boxShadow: "0 6px 18px rgba(20,26,58,0.15)" }} />
+                  : <div style={{ width: 56, height: 56, borderRadius: 18, background: "#232A63", color: "#FFFFFF", display: "grid", placeItems: "center", fontWeight: 900, fontSize: 22 }}>{firstName[0]?.toUpperCase()}</div>}
+                <div>
+                  <p style={{ margin: 0, fontSize: 14, color: "#5A6080", fontWeight: 600 }}>{greeting}</p>
+                  <h1 style={{ margin: "2px 0 0", fontSize: "clamp(1.8rem,3.4vw,2.5rem)", fontWeight: 900, letterSpacing: "-0.03em", color: "#141A3A", lineHeight: 1.05 }}>{firstName}</h1>
                 </div>
-                <p style={{ fontSize: "0.76rem", color: "rgba(20,26,58,0.80)", margin: 0, lineHeight: 1.6 }}>
-                  Upload invoices, bills &amp; bank statements · AI posts journal entries · GST returns, P&amp;L, Balance Sheet
-                </p>
               </div>
-              <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "10px 20px", borderRadius: 12, background: "rgba(240,102,43,0.12)", border: "1px solid rgba(240,102,43,0.3)", color: "#C2410C", fontWeight: 800, fontSize: "0.84rem" }}>
-                Open Finance <ArrowRight className="w-4 h-4" />
+              <p style={{ margin: "18px 0 0", fontSize: 15, color: "#4A5070", lineHeight: 1.6, maxWidth: 440 }}>
+                What happened in the business today? Tell FreBook in a line — or drop a bill — and your books, GST and Tally stay up to date.
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 18 }}>
+                <span className="dbx-chip">● Signed in as {user?.email}</span>
               </div>
             </div>
-          </Link>
 
-          {/* FreBook banner */}
-          <Link href="/finance/chat-book" style={{ display: "block", marginTop: "-0.9rem", marginBottom: "1.75rem", borderRadius: 18, overflow: "hidden", border: "1px solid rgba(91,75,196,0.28)", background: "linear-gradient(135deg,#F5F6FB 0%,#EEF0F8 55%,#F5F6FB 100%)", textDecoration: "none", transition: "border-color 0.2s, transform 0.15s" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(91,75,196,0.55)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(91,75,196,0.28)"; (e.currentTarget as HTMLElement).style.transform = "none"; }}>
-            <div style={{ padding: "1.25rem 1.6rem", display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap" }}>
-              <div style={{ width: 50, height: 50, borderRadius: 14, background: "linear-gradient(135deg,rgba(91,75,196,0.28),rgba(91,75,196,0.08))", border: "1px solid rgba(91,75,196,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>💬</div>
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.3rem" }}>
-                  <span style={{ fontSize: "0.6rem", padding: "2px 8px", borderRadius: 10, background: "rgba(91,75,196,0.18)", border: "1px solid rgba(91,75,196,0.35)", color: "#5B4BC4", fontWeight: 800, letterSpacing: "0.06em" }}>NEW</span>
-                  <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#5B4BC4" }}>FreBook — Chat Bookkeeping</span>
-                </div>
-                <p style={{ fontSize: "0.76rem", color: "rgba(20,26,58,0.80)", margin: 0, lineHeight: 1.6 }}>
-                  Type &ldquo;Paid rent ₹25,000 by bank&rdquo; or drop a bill, statement or Excel · AI drafts the entry · you confirm and post
-                </p>
+            <Link href="/finance" className="dbx-frebook">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "#FFD9C7" }}>FreBook · AI accountant</span>
+                <span className="dbx-plan" style={{ background: finActive ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.14)", color: finActive ? "#86EFAC" : "#FFFFFF" }}>
+                  {finActive ? `Active · till ${new Date(finSub!.subscription_ends_at!).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : "1 month free"}
+                </span>
               </div>
-              <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "10px 20px", borderRadius: 12, background: "rgba(91,75,196,0.12)", border: "1px solid rgba(91,75,196,0.32)", color: "#5B4BC4", fontWeight: 800, fontSize: "0.84rem" }}>
-                Open FreBook <ArrowRight className="w-4 h-4" />
+              <h2 style={{ margin: "16px 0 6px", fontSize: "clamp(1.5rem,2.6vw,2rem)", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.02em", lineHeight: 1.1 }}>Chat in. Books out.</h2>
+              <p style={{ margin: 0, color: "#C8D2F2", fontSize: 14, lineHeight: 1.6 }}>
+                Entries drafted for you · GST-ready invoices · bank &amp; bill import · live P&amp;L · two-way Tally sync.
+              </p>
+              <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
+                <span className="dbx-cta">{finActive ? "Open FreBook" : "Start your free month"} <ArrowRight className="w-4 h-4" /></span>
               </div>
+            </Link>
+          </section>
+
+          {/* Jump back in */}
+          <section style={{ marginBottom: "1.75rem" }}>
+            <h2 className="dbx-h2">Jump back in</h2>
+            <div className="dbx-tiles">
+              {[
+                { href: "/finance/chat-book", icon: MessageSquare, label: "Record by chat", sub: "“Paid rent 25,000 by bank”", tint: "#EEF0FB", ink: "#232A63" },
+                { href: "/finance/sales/new", icon: ReceiptText, label: "New invoice", sub: "Bill a customer in a minute", tint: "#FFF1E8", ink: "#C2410C" },
+                { href: "/finance/inbox", icon: FileText, label: "Smart Inbox", sub: "Drop bills & bank statements", tint: "#E9F7F0", ink: "#0B7A55" },
+                { href: "/finance/reports?tab=profit_loss", icon: BarChart3, label: "Reports", sub: "P&L · Balance Sheet", tint: "#F3EEFB", ink: "#5B4BC4" },
+                { href: "/finance/gst/returns", icon: ClipboardList, label: "GST returns", sub: "GSTR-1 · 3B prepared", tint: "#FFF7DD", ink: "#8A5A00" },
+                { href: "/finance/tally", icon: TrendingUp, label: "Tally", sub: "Push & sync entries", tint: "#EAF2FF", ink: "#1F5EFF" },
+              ].map(t => (
+                <Link key={t.label} href={t.href} className="dbx-tile">
+                  <span className="dbx-ico" style={{ background: t.tint, color: t.ink }}><t.icon className="w-5 h-5" /></span>
+                  <span style={{ fontWeight: 800, fontSize: 15, color: "#141A3A" }}>{t.label}</span>
+                  <span style={{ fontSize: 12.5, color: "#5A6080" }}>{t.sub}</span>
+                </Link>
+              ))}
             </div>
-          </Link>
+          </section>
+
+          {/* WhatsApp */}
+          <a href="https://wa.me/918590874681?text=Hi%20FreBook" target="_blank" rel="noopener noreferrer" className="dbx-wa">
+            <span style={{ width: 42, height: 42, borderRadius: 12, background: "#25D366", display: "grid", placeItems: "center", flexShrink: 0 }}>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="#FFFFFF" aria-hidden="true"><path d="M12.04 2a9.93 9.93 0 0 0-8.6 14.9L2 22l5.25-1.38A9.94 9.94 0 1 0 12.04 2zm5.8 14.06c-.24.68-1.42 1.32-1.96 1.36-.5.05-1.13.07-1.82-.11a16.6 16.6 0 0 1-1.65-.61 12.9 12.9 0 0 1-4.94-4.37c-.36-.49-.87-1.46-.87-2.79 0-1.33.7-1.99.95-2.26.24-.27.53-.34.71-.34h.51c.16 0 .38-.06.6.46.22.53.75 1.83.82 1.96.07.13.11.29.02.47-.09.18-.13.29-.27.45-.13.16-.28.36-.4.48-.13.13-.27.28-.12.55.16.27.69 1.14 1.48 1.84 1.02.9 1.88 1.18 2.15 1.32.27.13.42.11.58-.07.16-.18.67-.78.85-1.05.18-.27.36-.22.6-.13.25.09 1.56.74 1.83.87.27.13.45.2.51.31.07.11.07.64-.17 1.32z"/></svg>
+            </span>
+            <span style={{ flex: 1, minWidth: 200 }}>
+              <b style={{ display: "block", fontSize: 15, color: "#141A3A" }}>FreBook on WhatsApp</b>
+              <span style={{ fontSize: 13, color: "#5A6080" }}>Record entries and ask &ldquo;profit this month&rdquo; from your phone. Link your number once in FreBook → WhatsApp.</span>
+            </span>
+            <span style={{ fontWeight: 800, fontSize: 14, color: "#0E7A43", whiteSpace: "nowrap" }}>Open chat →</span>
+          </a>
+
+          {/* Need a CA? */}
+          <section style={{ marginBottom: "1.75rem" }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <h2 className="dbx-h2">Need a CA?</h2>
+              <Link href="/services" style={{ fontSize: 13, fontWeight: 700, color: "#232A63", textDecoration: "none" }}>All services →</Link>
+            </div>
+            <div className="dbx-services">
+              {PAID_SERVICES.slice(0, 4).map(s => (
+                <Link key={s.label} href={s.href} className="dbx-svc">
+                  <span className="dbx-ico" style={{ background: "#F2F3F6", color: "#232A63" }}><s.icon className="w-5 h-5" /></span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <b style={{ display: "block", fontSize: 14, color: "#141A3A" }}>{s.label}</b>
+                    <span style={{ fontSize: 12, color: "#5A6080" }}>{s.sub}</span>
+                  </span>
+                  <span style={{ fontWeight: 900, color: "#232A63", fontSize: 15 }}>{s.price}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
 
           {/* ── SPACE OWNER SECTION ── */}
         {(userRole === "space_owner" || mySpaces.length > 0) && (
@@ -635,23 +687,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.75rem", marginBottom: "1.75rem" }}>
-          {[
-            { icon: "💬", label: "Active Queries",    value: "0",                      accent: "#232A63" },
-            { icon: "📅", label: "Upcoming Meetings", value: "0",                      accent: "#B45309" },
-            { icon: "✅", label: "Pending Tasks",     value: "0",                      accent: "#C2321F" },
-            { icon: "🚀", label: "My Startups",       value: String(startups.length),  accent: "#5B4BC4" },
-          ].map(s => (
-            <div key={s.label} className="db-stat">
-              <div style={{ fontSize: "1.2rem", marginBottom: "0.6rem" }}>{s.icon}</div>
-              <div style={{ fontSize: "1.6rem", fontWeight: 900, color: s.accent, letterSpacing: "-0.02em", lineHeight: 1, marginBottom: "0.35rem" }}>{s.value}</div>
-              <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.70)", fontWeight: 600 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 340px", gap: "1rem", alignItems: "start" }}>
+        <div className="dbx-two">
 
           {/* Queries */}
           <div className="db-card">
@@ -726,78 +762,6 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Right sidebar */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-
-            {/* Plan */}
-            <div className="db-card">
-              <div className="db-card-hd">
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                  <Crown className="w-4 h-4" style={{ color: "#B45309" }} />
-                  <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Your Plan</span>
-                </div>
-              </div>
-              <div style={{ padding: "1rem 1.25rem" }}>
-                {subscription ? (
-                  <>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
-                      <span style={{ fontSize: "0.7rem", padding: "3px 10px", borderRadius: 12, background: "rgba(35,42,99,0.1)", border: "1px solid rgba(35,42,99,0.2)", color: "#232A63", fontWeight: 700, textTransform: "capitalize" }}>{subscription.plan} Plan</span>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0B7A55", flexShrink: 0 }} />
-                      <span style={{ fontSize: "0.7rem", color: "#0B7A55", fontWeight: 600 }}>Active</span>
-                    </div>
-                    <p style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", marginBottom: "0.9rem", textTransform: "capitalize" }}>
-                      {subscription.billing} billing · since {new Date(subscription.started_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    </p>
-                    <Link href="/pricing" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px", borderRadius: 10, border: "1px solid rgba(35,42,99,0.2)", color: "#232A63", fontSize: "0.76rem", fontWeight: 700, textDecoration: "none" }}>
-                      Manage Plan <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-                      <span style={{ fontSize: "0.7rem", padding: "3px 10px", borderRadius: 12, background: "rgba(20,26,58,0.05)", border: "1px solid rgba(20,26,58,0.10)", color: "rgba(20,26,58,0.85)", fontWeight: 600 }}>Free Plan</span>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0B7A55", flexShrink: 0 }} />
-                      <span style={{ fontSize: "0.7rem", color: "#0B7A55", fontWeight: 600 }}>Active</span>
-                    </div>
-                    <ul style={{ listStyle: "none", padding: 0, margin: "0 0 0.9rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                      {["Browse freelancers & spaces free", "1 active service query", "Email support", "1 startup listing"].map(f => (
-                        <li key={f} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: "0.72rem", color: "rgba(20,26,58,0.85)" }}>
-                          <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="#0B7A55" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    <Link href="/pricing" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px", borderRadius: 10, background: "linear-gradient(135deg,#232A63,#232A63)", color: "#fff", fontSize: "0.76rem", fontWeight: 700, textDecoration: "none" }}>
-                      Upgrade Plan <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Links */}
-            <div className="db-card" style={{ padding: "1rem 1.25rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.85rem" }}>
-                <Zap className="w-3.5 h-3.5" style={{ color: "rgba(20,26,58,0.62)" }} />
-                <span style={{ fontWeight: 700, fontSize: "0.82rem" }}>Explore FreWork</span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-                {[
-                  { icon: "👥", label: "Freelancers", href: "/freelancers", color: "#0B7A55" },
-                  { icon: "🏛️", label: "Coworking",   href: "/coworking",   color: "#232A63" },
-                  { icon: "🚀", label: "Startups",    href: "/startups",    color: "#5B4BC4" },
-                  { icon: "📞", label: "Contact CA",  href: "/contact",     color: "#C2410C" },
-                  { icon: "📈", label: "Finance",     href: "/finance",     color: "#B45309" },
-                ].map(q => (
-                  <Link key={q.label} href={q.href} className="db-ql" style={{ color: q.color }}>
-                    <span style={{ fontSize: "1.15rem" }}>{q.icon}</span>
-                    {q.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-          </div>
         </div>
       </main>
       </div>
