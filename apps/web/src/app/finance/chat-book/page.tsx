@@ -298,15 +298,19 @@ export default function FreBookPage() {
   useEffect(() => { setAutoPush(tallyAutoPushOn()); }, [tally.company]);
   const toggleAutoPush = () => { const on = !autoPush; setTallyAutoPush(on); setAutoPush(on); };
 
-  // Auto-push: send a just-posted entry to the linked Tally company
-  async function autoPushToTally(journalId: string, date: string, entryNo: string) {
+  // Auto-push: send just-posted entries to the linked Tally company
+  async function autoPushToTally(journals: { id: string; date: string; entryNo: string }[]) {
     const t = tallyRef.current, bid = bizIdRef.current;
-    if (!bid || !tallyAutoPushOn() || t.status !== "connected" || !t.company) return;
-    const r = await pushToTally({ bizId: bid, ids: [journalId], dates: { [journalId]: date }, company: t.company, port: t.port, educational: t.educational });
-    const res = r.results[journalId];
-    const text = res && "at" in res ? `✓ ${entryNo} pushed to Tally (${t.company}).`
-      : `⚠ ${entryNo} posted in FreBook but not pushed to Tally: ${res && "error" in res ? res.error : r.message} You can push it later from Books.`;
-    setMessages(prev => [...prev, { id: `tp-${Date.now()}`, role: "system", text, timestamp: Date.now() }]);
+    if (!bid || !journals.length || !tallyAutoPushOn()) return;
+    const say = (text: string) => setMessages(prev => [...prev, { id: `tp-${Date.now()}-${Math.random()}`, role: "system", text, timestamp: Date.now() }]);
+    const what = journals.length === 1 ? journals[0].entryNo : `${journals.length} entries`;
+    if (t.status !== "connected" || !t.company) { say(`⚠ Auto-push is on, but Tally isn't connected right now, so ${what} wasn't sent. Open Tally, reconnect on the Tally page, then push from Books.`); return; }
+    say(`⇡ Sending ${what} to Tally (${t.company})…`);
+    const r = await pushToTally({ bizId: bid, ids: journals.map(j => j.id), dates: Object.fromEntries(journals.map(j => [j.id, j.date])), company: t.company, port: t.port, educational: t.educational });
+    if (journals.length === 1) {
+      const res = r.results[journals[0].id];
+      say(res && "at" in res ? `✓ ${what} pushed to Tally (${t.company}).` : `⚠ ${what} posted in FreBook but not pushed to Tally: ${res && "error" in res ? res.error : r.message} You can push it later from Books.`);
+    } else say(r.ok === journals.length ? `✓ ${r.ok} entries pushed to Tally (${t.company}).` : `⚠ ${r.message}${r.failed ? " Push the rest from Books." : ""}`);
   }
   const messagesRef = useRef<ChatMessage[]>([]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -547,7 +551,7 @@ export default function FreBookPage() {
         return;
       }
       setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: "posted", needsHeads: undefined, entryNo: data.entry_no, journalId: data.journal_id, transaction, createdLedgers: data.created_ledgers, ledgerAccountIds: ((data.lines ?? []) as { account_id: string; account_name: string }[]).map(l => ({ id: l.account_id, name: l.account_name })) } : m));
-      if (data.journal_id) void autoPushToTally(data.journal_id, transaction.transaction_date, data.entry_no ?? "Entry");
+      if (data.journal_id && !data.already_posted) void autoPushToTally([{ id: data.journal_id, date: transaction.transaction_date, entryNo: data.entry_no ?? "Entry" }]);
     } catch (e) {
       setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: "pending" } : m));
       setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: "system", text: `⚠ Post failed: ${e instanceof Error ? e.message : "Error"}`, timestamp: Date.now() }]);
@@ -1040,12 +1044,12 @@ export default function FreBookPage() {
       {simpleBulk && bizId && (
         <SimpleTemplateModal fileName={simpleBulk.fileName} fileKey={simpleBulk.fileKey} entries={simpleBulk.entries} bizId={bizId}
           onClose={() => setSimpleBulk(null)}
-          onPosted={(count, total) => setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} entr${count > 1 ? "ies" : "y"} (${fmt(total)}) from ${simpleBulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }])} />
+          onPosted={(count, total, journals) => { setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} entr${count > 1 ? "ies" : "y"} (${fmt(total)}) from ${simpleBulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }]); void autoPushToTally(journals ?? []); }} />
       )}
       {bulk && bizId && userId && (
         <BulkTemplateModal fileName={bulk.fileName} fileKey={bulk.fileKey} sentences={bulk.sentences} bizId={bizId} userId={userId}
           onClose={() => { setLastBulk(bulk); setBulk(null); }}
-          onPosted={(count, total) => setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} template entr${count > 1 ? "ies" : "y"} (${fmt(total)}) from ${bulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }])}
+          onPosted={(count, total, journals) => { setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} template entr${count > 1 ? "ies" : "y"} (${fmt(total)}) from ${bulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }]); void autoPushToTally(journals ?? []); }}
           onSendToChat={list => { setBatchTotal(list.length); setRowQueue(list); setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `📊 ${list.length} rows need more detail — answering them here one by one.`, timestamp: Date.now() }]); }} />
       )}
 
@@ -1053,7 +1057,7 @@ export default function FreBookPage() {
         <StatementModal
           file={statementFile} bizId={bizId} userId={userId}
           onClose={() => setStatementFile(null)}
-          onPosted={(count, total) => setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} bank transaction${count > 1 ? "s" : ""} (${fmt(total)}) from ${statementFile.name}. See them in 📚 Books.`, timestamp: Date.now() }])}
+          onPosted={(count, total, journals) => { setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} bank transaction${count > 1 ? "s" : ""} (${fmt(total)}) from ${statementFile.name}. See them in 📚 Books.`, timestamp: Date.now() }]); void autoPushToTally(journals ?? []); }}
         />
       )}
 

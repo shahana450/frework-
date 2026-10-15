@@ -20,7 +20,7 @@ const MAX_ROWS = 200;
 
 export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId, userId, onClose, onPosted, onSendToChat }: {
   fileName: string; fileKey: string; sentences: string[]; bizId: string; userId: string;
-  onClose: () => void; onPosted: (count: number, total: number) => void; onSendToChat: (sentences: string[]) => void;
+  onClose: () => void; onPosted: (count: number, total: number, journals?: { id: string; date: string; entryNo: string }[]) => void; onSendToChat: (sentences: string[]) => void;
 }) {
   const [rows, setRows] = useState<BRow[]>(() => sentences.slice(0, MAX_ROWS).map((text, i) => ({ i, text, state: "reading" })));
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -88,6 +88,7 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
     const ids = new Set(chosen.map(r => r.i));
     setRows(prev => prev.map(r => ids.has(r.i) ? { ...r, state: "posting" } : r));
     let posted = 0, total = 0;
+    const journals: { id: string; date: string; entryNo: string }[] = [];
     try {
       for (let k = 0; k < chosen.length; k += 100) {
         const part = chosen.slice(k, k + 100);
@@ -105,8 +106,9 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
           return;
         }
         if (!res.ok) throw new Error(d.error ?? "Posting failed.");
-        for (const x of (d.results ?? []) as { ref: string; entry_no: string }[]) {
+        for (const x of (d.results ?? []) as { ref: string; entry_no: string; journal_id: string; already?: boolean }[]) {
           const r = part.find(p => String(p.i) === x.ref);
+          if (r && !x.already) journals.push({ id: x.journal_id, date: r.tx!.transaction_date, entryNo: x.entry_no });
           patch(+x.ref, { state: "posted", entryNo: x.entry_no });
           posted++; total += r ? r.tx!.lines.reduce((t, l) => t + (l.debit || 0), 0) : 0;
         }
@@ -115,7 +117,7 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
       setSelected(new Set());
       setNeedHeads([]);
       setMsg({ ok: true, text: `Posted ${posted} entr${posted === 1 ? "y" : "ies"} · ${cur()}${fmt(total)}` });
-      if (posted) onPosted(posted, total);
+      if (posted) onPosted(posted, total, journals);
     } catch (e) {
       setRows(prev => prev.map(r => r.state === "posting" ? { ...r, state: "ready" } : r));
       setMsg({ ok: false, text: e instanceof Error ? e.message : "Posting failed." });

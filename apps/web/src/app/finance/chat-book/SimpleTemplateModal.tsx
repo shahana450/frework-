@@ -25,7 +25,7 @@ const C = { ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", soft: "#FBF8F1", 
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 const inr = (n: number) => n ? n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
 
-export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId, onClose, onPosted }: { fileName: string; fileKey: string; entries: SimpleEntry[]; bizId: string; onClose: () => void; onPosted: (count: number, total: number) => void }) {
+export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId, onClose, onPosted }: { fileName: string; fileKey: string; entries: SimpleEntry[]; bizId: string; onClose: () => void; onPosted: (count: number, total: number, journals?: { id: string; date: string; entryNo: string }[]) => void }) {
   const [sel, setSel] = useState<Set<number>>(() => new Set(entries.filter(e => !e.error).map(e => e.row)));
   const [done, setDone] = useState<Record<number, string>>({});      // row → entry no
   const [failed, setFailed] = useState<Record<number, string>>({});
@@ -60,6 +60,7 @@ export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId,
     if (need.some(n => !heads[n.account])) { setMsg("Choose a group for each new ledger first."); return; }
     setBusy(true); setMsg("");
     let count = 0, total = 0;
+    const journals: { id: string; date: string; entryNo: string }[] = [];
     for (let i = 0; i < chosen.length; i += 100) {
       const chunk = chosen.slice(i, i + 100);
       setMsg(`Posting ${i + 1}–${i + chunk.length} of ${chosen.length}…`);
@@ -90,10 +91,11 @@ export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId,
       setDone(p => ({ ...p, ...posted }));
       setFailed(p => ({ ...p, ...Object.fromEntries(((d.failures ?? []) as { ref: string; error: string }[]).map(f => [Number(f.ref), f.error])) }));
       for (const e of chunk) if (posted[e.row]) { count++; total += e.debit; }
+      for (const x of (d.results ?? []) as { ref: string; entry_no: string; journal_id: string; already?: boolean }[]) { const e = chunk.find(c => String(c.row) === x.ref); if (e && !x.already) journals.push({ id: x.journal_id, date: e.date, entryNo: x.entry_no }); }
     }
     setBusy(false); setNeed([]);
     setMsg(`✓ ${count} of ${chosen.length} posted.`);
-    if (count) onPosted(count, total);
+    if (count) onPosted(count, total, journals);
   }
 
   const btn = (primary: boolean): React.CSSProperties => ({ height: 42, padding: "0 18px", borderRadius: 11, border: primary ? "none" : `1px solid #D8CDB4`, background: primary ? C.forest : "#FFFFFF", color: primary ? "#FFFFFF" : C.ink, fontWeight: 800, fontSize: 14, cursor: busy ? "wait" : "pointer", fontFamily: "inherit" });

@@ -21,7 +21,7 @@ const fmt = (n: number) => n ? n.toLocaleString(activeMoney().locale, { minimumF
 const inputStyle: React.CSSProperties = { background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 9px", borderRadius: 7, fontSize: "0.8rem", fontFamily: "inherit", outline: "none" };
 
 export default function StatementModal({ file, bizId, userId, onClose, onPosted }: {
-  file: File; bizId: string; userId: string; onClose: () => void; onPosted: (count: number, total: number) => void;
+  file: File; bizId: string; userId: string; onClose: () => void; onPosted: (count: number, total: number, journals?: { id: string; date: string; entryNo: string }[]) => void;
 }) {
   const [phase, setPhase] = useState<"reading" | "suggesting" | "ready" | "error">("reading");
   const [error, setError] = useState("");
@@ -190,6 +190,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
     };
 
     const BATCH = 100;
+    const journals: { id: string; date: string; entryNo: string }[] = [];
     for (let i = 0; i < sel.length; i += BATCH) {
       const chunk = sel.slice(i, i + BATCH);
       const ids = new Set(chunk.map(r => r.id));
@@ -203,6 +204,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
         const data = await res.json();
         if (!res.ok || data.needs_heads) throw new Error(data.error ?? `Choose a group for ${data.needs_heads?.map((h: { account: string }) => h.account).join(", ")}`);
         const done = new Map(((data.results ?? []) as { ref: string; entry_no: string }[]).map(r => [r.ref, r.entry_no]));
+        for (const x of (data.results ?? []) as { ref: string; entry_no: string; journal_id: string; already?: boolean }[]) { const r = chunk.find(c => c.id === x.ref); if (r && !x.already) journals.push({ id: x.journal_id, date: r.date, entryNo: x.entry_no }); }
         const fails = new Map(((data.failures ?? []) as { ref: string; error: string }[]).map(f => [f.ref, f.error]));
         chunk.forEach(r => { if (done.has(r.id)) { ok++; total += r.debit || r.credit; } });
         setRows(prev => prev.map(x => done.has(x.id) ? { ...x, state: "posted", entryNo: done.get(x.id), error: undefined }
@@ -217,7 +219,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
     }
     setSelected(new Set()); setPosting(false);
     setProgress(`✓ ${ok} of ${sel.length} posted${ok < sel.length ? " — failed rows are marked in red" : ""}.`);
-    if (ok) onPosted(ok, total);
+    if (ok) onPosted(ok, total, journals);
   }
 
   const th = (label: string, key?: SortKey, right = false) => (
