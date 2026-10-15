@@ -347,13 +347,13 @@ export function BusinessOSHomepage() {
                   </div>
                   <span className="text-[10.5px] font-bold px-2.5 py-1 rounded-full" style={{ background:"rgba(255,255,255,0.12)", color:"#FFD9C7" }}>LIVE DEMO</span>
                 </div>
-                <div key={demoRun} className="p-5 flex flex-col gap-3 min-h-[330px]" style={{ background:"linear-gradient(180deg,#F7F8FC,#F1F3FA)" }}>
+                <div key={demoRun} className="relative p-5 flex flex-col gap-3 min-h-[330px]" style={{ background:"linear-gradient(180deg,#F7F8FC,#F1F3FA)" }}>
                   <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.4 }}
                     className="self-end max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-md text-[14px] font-medium" style={{ background:"#232A63", color:"#fff" }}>
                     Paid office rent ₹25,000 from HDFC
                   </motion.div>
                   <motion.div initial={{ opacity:0 }} animate={{ opacity:[0,1,1,0] }} transition={{ delay:0.9, duration:0.9, times:[0,0.1,0.8,1] }}
-                    className="self-start flex gap-1 px-3.5 py-3 rounded-2xl" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.06)" }} aria-hidden="true">
+                    className="absolute left-5 top-[76px] flex gap-1 px-3.5 py-3 rounded-2xl" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.06)" }} aria-hidden="true">
                     {[0,1,2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background:"#9AA0BE", animationDelay:`${i*0.12}s` }} />)}
                   </motion.div>
                   <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:1.8 }}
@@ -385,12 +385,12 @@ export function BusinessOSHomepage() {
               </div>
               {/* Floating proof badges */}
               <motion.div initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.9 }}
-                className="hidden md:flex absolute -left-8 top-[38%] items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[12.5px] font-bold"
+                className="hidden md:flex absolute -left-6 -top-5 z-20 items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[12.5px] font-bold"
                 style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.08)", boxShadow:"0 14px 30px rgba(20,26,58,0.14)", color:"#141A3A" }}>
                 <span className="w-7 h-7 rounded-lg grid place-items-center" style={{ background:"#FFF1E8", color:"#E2541B" }}>%</span> GST split · CGST + SGST
               </motion.div>
               <motion.div initial={{ opacity:0, x:10 }} animate={{ opacity:1, x:0 }} transition={{ delay:1.1 }}
-                className="hidden md:flex absolute -right-6 bottom-[18%] items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[12.5px] font-bold"
+                className="hidden md:flex absolute -right-5 -bottom-5 z-20 items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[12.5px] font-bold"
                 style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.08)", boxShadow:"0 14px 30px rgba(20,26,58,0.14)", color:"#141A3A" }}>
                 <span className="w-7 h-7 rounded-lg grid place-items-center" style={{ background:"#E3F6EE", color:"#0B7A55" }}><Check className="w-4 h-4" /></span> Synced to Tally
               </motion.div>
