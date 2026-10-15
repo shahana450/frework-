@@ -597,6 +597,24 @@ export default function FreBookPage() {
         <button onClick={() => setSidebarOpen(o => !o)} aria-label="Previous chats" style={{ background: "none", border: "none", color: "#C9D3CE", cursor: "pointer", fontSize: "1.1rem", padding: "4px 8px" }}>☰</button>
         <Link href="/finance" style={{ display: "flex", alignItems: "baseline", gap: 8, textDecoration: "none" }}><span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 700, fontSize: "1.45rem", color: "#FFFFFF" }}>FreBook</span><span className="fb-tag" style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontStyle: "italic", fontSize: "0.85rem", color: "#D9B56F" }}>Chat in. Books out.</span></Link>
                 <Link href="/finance/select-business" title="Switch business" style={{ marginLeft: 10, fontSize: "0.78rem", fontWeight: 700, color: "#E7ECE9", border: "1px solid rgba(217,181,111,0.3)", background: "rgba(255,255,255,0.04)", padding: "6px 12px", borderRadius: 999, whiteSpace: "nowrap", textDecoration: "none" }}>{bizName} <span aria-hidden="true" style={{ color: "#D9B56F" }}>⇄</span></Link>
+        {/* Tally status + auto-push */}
+        <div style={{ marginLeft: 6, display: "flex", alignItems: "center", gap: 0, border: "1px solid rgba(217,181,111,0.3)", background: "rgba(255,255,255,0.04)", borderRadius: 999, height: 32, flexShrink: 0, overflow: "hidden" }}>
+          <Link href="/finance/tally?redirect=/finance/chat-book" title={tally.status === "connected" ? `Connected to Tally company "${tally.company || "—"}"` : "Connect Tally"}
+            style={{ display: "flex", alignItems: "center", gap: 7, padding: "0 12px", height: "100%", textDecoration: "none", fontSize: "0.78rem", fontWeight: 700, color: "#E7ECE9", whiteSpace: "nowrap" }}>
+            <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: tally.status === "connected" ? "#3DDC97" : tally.status === "connecting" ? "#D9B56F" : "#8A968F", boxShadow: tally.status === "connected" ? "0 0 0 3px rgba(61,220,151,0.18)" : "none" }} />
+            {tally.status === "connected" ? <>Tally · <span style={{ color: "#D9B56F", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>{tally.company || "choose company"}</span></> : tally.status === "connecting" ? "Tally · connecting…" : "Tally · not connected"}
+          </Link>
+          {tally.status === "connected" && tally.company && (
+            <button onClick={toggleAutoPush} role="switch" aria-checked={autoPush}
+              title={autoPush ? "Every entry you post is sent to Tally straight away. Click to turn off." : "Turn on to send every posted entry to Tally straight away."}
+              style={{ display: "flex", alignItems: "center", gap: 7, height: "100%", padding: "0 12px 0 10px", border: "none", borderLeft: "1px solid rgba(217,181,111,0.25)", background: autoPush ? "rgba(61,220,151,0.12)" : "transparent", color: autoPush ? "#3DDC97" : "#C9D3CE", cursor: "pointer", fontFamily: "inherit", fontSize: "0.76rem", fontWeight: 800, whiteSpace: "nowrap" }}>
+              <span aria-hidden="true" style={{ width: 26, height: 15, borderRadius: 999, background: autoPush ? "#3DDC97" : "rgba(255,255,255,0.22)", position: "relative", transition: "background .15s" }}>
+                <span style={{ position: "absolute", top: 2, left: autoPush ? 13 : 2, width: 11, height: 11, borderRadius: 999, background: autoPush ? "#0F2B25" : "#FFFFFF", transition: "left .15s" }} />
+              </span>
+              Auto-push {autoPush ? "on" : "off"}
+            </button>
+          )}
+        </div>
         <div style={{ flex: 1 }} />
         <InstallApp />
         {[
@@ -953,16 +971,6 @@ export default function FreBookPage() {
                 <button onClick={() => setBulk(lastBulk)} className="fb-chip" title={`Reopen the review of ${lastBulk.fileName}`}
                   style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #C2410C", background: "#FFF1E8", color: "#C2410C", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 800 }}>
                   ↩ Back to bulk review · {lastBulk.fileName.length > 22 ? lastBulk.fileName.slice(0, 20) + "…" : lastBulk.fileName}
-                </button>
-              )}
-              {tally.status === "connected" && tally.company && (
-                <button onClick={toggleAutoPush} className="fb-chip" role="switch" aria-checked={autoPush}
-                  title={autoPush ? `Every entry you post is sent to Tally (${tally.company}) straight away. Click to turn off.` : `Turn on to send every posted entry to Tally (${tally.company}) straight away.`}
-                  style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: `1px solid ${autoPush ? "#0B7A55" : "#E0D6C1"}`, background: autoPush ? "#E9F7F0" : "#FFFFFF", color: autoPush ? "#0B7A55" : "#2E3B36", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 800, display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-                  <span aria-hidden="true" style={{ width: 26, height: 15, borderRadius: 999, background: autoPush ? "#0B7A55" : "#C9C2B3", position: "relative", transition: "background .15s" }}>
-                    <span style={{ position: "absolute", top: 2, left: autoPush ? 13 : 2, width: 11, height: 11, borderRadius: 999, background: "#FFFFFF", transition: "left .15s" }} />
-                  </span>
-                  Auto-push to Tally {autoPush ? "on" : "off"}
                 </button>
               )}
               <button onClick={downloadTemplate} className="fb-chip" style={{ flexShrink: 0, height: 32, padding: "0 12px", borderRadius: 999, border: "1px solid #0F2B25", background: "#0F2B25", color: "#FFFFFF", cursor: "pointer", fontFamily: "inherit", fontSize: "0.78rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
