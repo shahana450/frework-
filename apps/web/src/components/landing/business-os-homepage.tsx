@@ -323,226 +323,115 @@ export function BusinessOSHomepage() {
           </div>
         </div>
 
-        {/* Main hero content */}
-        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-36 pb-14">
+        {/* Main hero content — FreBook first */}
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-32 md:pt-36 pb-14">
+          <div className="grid lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-14 items-center">
 
-          {/* Brand headline */}
-          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
-            className="text-center mb-10">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 text-[10px] font-semibold tracking-[0.22em] uppercase mb-6 inline-block"
-              style={{ background:"rgba(35,42,99,0.06)", borderRadius:"4px", border:"1px solid rgba(35,42,99,0.25)", color:"#232A63" }}>
-              India&apos;s Business Platform
-            </span>
-            <h1 className="font-bold leading-[1.05] tracking-tight"
-              style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.4rem,5.5vw,4.8rem)", color:"#141A3A", letterSpacing:"-0.025em" }}>
-              The smarter way to
-              <br/>
-              <span style={{ background:"linear-gradient(135deg,#F0662B 0%,#F58A5B 60%,#F0662B 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
-                run your business.
+            {/* Left: the promise */}
+            <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold tracking-[0.16em] uppercase rounded-full"
+                style={{ background:"rgba(240,102,43,0.10)", color:"#C2410C", border:"1px solid rgba(240,102,43,0.25)" }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background:"#F0662B" }} /> FreBook · AI accountant
               </span>
-            </h1>
-            <p className="text-base max-w-lg mx-auto mt-5" style={{ color:"rgba(90,96,128,1.00)", lineHeight:"1.75" }}>
-              Expert CA compliance, verified coworking spaces, and AI-powered accounting — everything your Indian business needs, in one place.
-            </p>
-          </motion.div>
-
-          {/* ═══ TWO PILLAR CARDS ═══ */}
-          <div className="grid md:grid-cols-2 gap-5 mb-10">
-
-            {/* PILLAR 1 — COMPLIANCE */}
-            <motion.div initial={{ opacity:0, x:-24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.2, duration:0.5 }}>
-              <div className="relative rounded-2xl overflow-hidden h-full group transition-all"
-                style={{ background:"linear-gradient(145deg,#FFFFFF 0%,#FFFFFF 100%)", border:"1px solid rgba(35,42,99,0.2)", boxShadow:"0 0 0 0 rgba(35,42,99,0)" }}>
-                {/* Top accent bar */}
-                <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#232A63,#F58A5B 50%,transparent)" }} />
-                <div className="p-7 md:p-8">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background:"rgba(35,42,99,0.12)", border:"1px solid rgba(35,42,99,0.25)" }}>
-                      <FileText className="w-5 h-5" style={{ color:"#C2410C" }} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color:"#C2410C" }}>Compliance & Legal</p>
-                      <p className="text-[11px]" style={{ color:"#4A5070" }}>Expert CAs &amp; Lawyers</p>
-                    </div>
-                  </div>
-                  <h2 className="font-bold mb-3 leading-[1.1]"
-                    style={{ fontSize:"clamp(1.7rem,3vw,2.3rem)", color:"#141A3A", letterSpacing:"-0.02em" }}>
-                    Register. File. Comply.
-                  </h2>
-                  <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(90,96,128,0.95)", lineHeight:"1.7" }}>
-                    Company registration, GST, income tax, ROC and MSME — verified Chartered Accountants handle everything end-to-end.
-                  </p>
-                  {/* Pricing tiers */}
-                  <div className="flex gap-2 mb-5">
-                    {[
-                      { price:"₹999", label:"Basic", services:"GST Reg · MSME · PAN/TAN" },
-                      { price:"₹1,999", label:"Standard", services:"ITR Filing · GST Filing · TDS", popular:true },
-                      { price:"₹2,999", label:"Pro", services:"ROC · MCA · Company Reg" },
-                    ].map(p => (
-                      <a key={p.label} href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%27m%20interested%20in%20the%20${p.label}%20plan%20(${encodeURIComponent(p.price)}).`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="flex-1 rounded-xl p-3 text-center transition-all hover:scale-[1.02]"
-                        style={{ background: p.popular ? "rgba(35,42,99,0.12)" : "rgba(20,26,58,0.05)", border:`1px solid ${p.popular ? "rgba(35,42,99,0.4)" : "rgba(20,26,58,0.09)"}`, position:"relative" }}>
-                        {p.popular && <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[8px] font-bold px-2.5 py-0.5 rounded-full" style={{ background:"#232A63", color:"#fff", whiteSpace:"nowrap" }}>Popular</div>}
-                        <div className="text-base font-bold leading-none mb-1" style={{ color: p.popular ? "#9A3412" : "#232A63" }}>{p.price}</div>
-                        <div className="text-[9px] font-semibold mb-1" style={{ color:"rgba(20,26,58,0.75)" }}>{p.label}</div>
-                        <div className="text-[8px] leading-tight" style={{ color:"#4A5070" }}>{p.services}</div>
-                      </a>
-                    ))}
-                  </div>
-                  <div className="flex gap-2.5">
-                    <Link href="/services/compliance"
-                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
-                      style={{ background:"linear-gradient(135deg,#232A63,#1A1F4E)", color:"#fff", boxShadow:"0 4px 16px rgba(35,42,99,0.3)" }}>
-                      Explore Services <ArrowRight className="w-4 h-4" />
-                    </Link>
-                    <a href={`https://wa.me/${SUPPORT_WA}?text=Hi%20FreWork%2C%20I%20need%20help%20with%20compliance%20services.`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="px-4 py-3 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all hover:border-[#141A3A]/15"
-                      style={{ borderColor:"rgba(20,26,58,0.12)", color:"rgba(90,96,128,0.90)", background:"rgba(20,26,58,0.05)" }}>
-                      <svg viewBox="0 0 24 24" fill="#25D366" className="w-4 h-4 flex-shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                      Free Advice
-                    </a>
-                  </div>
-                </div>
+              <h1 className="font-bold leading-[1.02] tracking-tight mt-5"
+                style={{ fontFamily:"var(--font-plus-jakarta),sans-serif", fontSize:"clamp(2.5rem,5.6vw,4.6rem)", color:"#141A3A", letterSpacing:"-0.03em" }}>
+                Your AI accountant.
+                <br />
+                <span style={{ color:"#F0662B" }}>Chat in. Books out.</span>
+              </h1>
+              <p className="mt-5 max-w-xl" style={{ color:"#4A5070", fontSize:"1.08rem", lineHeight:1.7 }}>
+                Tell FreBook what happened — on the web or WhatsApp, in English or Hinglish. It drafts the journal entry, you approve it, and it lands in your books and in Tally. GST-ready invoices, bank import and live P&amp;L included.
+              </p>
+              <div className="flex flex-wrap gap-3 mt-7">
+                <button onClick={handleFreBookClick}
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[15px] font-bold transition-all hover:opacity-90"
+                  style={{ background:"#232A63", color:"#fff", boxShadow:"0 8px 24px rgba(35,42,99,0.28)", border:"none", cursor:"pointer" }}>
+                  {loggedIn ? "Open FreBook" : "Start your free month"} <ArrowRight className="w-4 h-4" />
+                </button>
+                <a href={`https://wa.me/${SUPPORT_WA}?text=${encodeURIComponent("Hi FreBook")}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-5 py-3.5 rounded-xl text-[15px] font-semibold border transition-all hover:bg-white"
+                  style={{ borderColor:"rgba(20,26,58,0.14)", color:"#141A3A", background:"rgba(255,255,255,0.6)" }}>
+                  <MessageCircle className="w-4 h-4" style={{ color:"#128C4B" }} /> See it on WhatsApp
+                </a>
+              </div>
+              <p className="mt-4 text-sm" style={{ color:"#5A6080" }}>
+                1 month free · then ₹1,499/month + GST · cancel anytime
+              </p>
+              <div className="flex flex-wrap gap-x-5 gap-y-2 mt-7">
+                {["Works on WhatsApp", "Two-way Tally sync", "GST-ready books", "You approve every entry"].map(s => (
+                  <span key={s} className="flex items-center gap-1.5 text-[13px] font-semibold" style={{ color:"#232A63" }}>
+                    <Check className="w-4 h-4" style={{ color:"#0B7A55" }} /> {s}
+                  </span>
+                ))}
               </div>
             </motion.div>
 
-            {/* PILLAR 2 — FREBOOK */}
-            <motion.div initial={{ opacity:0, x:24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.25, duration:0.5 }}>
-              <button onClick={handleFreBookClick} className="w-full h-full text-left group" style={{ background:"none", border:"none", padding:0, cursor:"pointer" }}>
-                <div className="relative rounded-2xl overflow-hidden h-full transition-all"
-                  style={{ background:"linear-gradient(150deg,#2C3374 0%,#232A63 55%,#1A1F4E 100%)", border:"1px solid rgba(255,255,255,0.25)" }}>
-                  <div className="h-[3px]" style={{ background:"linear-gradient(90deg,#F58A5B,#FFFFFF 50%,transparent)" }} />
-                  {/* Header bar */}
-                  <div className="flex items-center justify-between gap-4 px-6 py-3.5 border-b" style={{ borderColor:"rgba(255,255,255,0.12)" }}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background:"#C8D2F2", border:"1px solid #C8D2F2" }}>
-                        <span style={{ fontSize:"1rem" }}>🛩️</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold leading-none mb-0.5" style={{ color:"#FFD9C7" }}>FreBook — AI Accountant</p>
-                        <p className="text-[11px]" style={{ color:"#C8D2F2" }}>₹1,499/month + GST</p>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-bold px-2.5 py-1 rounded-full flex-shrink-0"
-                      style={{ background:"rgba(255,255,255,0.2)", color:"#FFD9C7", border:"1px solid rgba(255,255,255,0.35)" }}>NEW</span>
-                  </div>
-                  <div className="p-7 md:p-8">
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background:"#C8D2F2", border:"1px solid #C8D2F2" }}>
-                        <Rocket className="w-5 h-5" style={{ color:"#FFD9C7" }} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color:"#FFD9C7" }}>AI-Powered Accounting</p>
-                        <p className="text-[11px]" style={{ color:"#DCE3F8" }}>Built for Indian SMBs</p>
-                      </div>
-                    </div>
-                    <h2 className="font-bold mb-3 leading-[1.1]"
-                      style={{ fontSize:"clamp(1.7rem,3vw,2.3rem)", color:"#FFFFFF", letterSpacing:"-0.02em" }}>
-                      Your books. Done right.
-                    </h2>
-                    <p className="text-sm leading-relaxed mb-6" style={{ color:"rgba(220,227,248,0.95)", lineHeight:"1.7" }}>
-                      GST invoicing, TDS tracking, P&amp;L reports, and an AI accounting assistant — all in one platform built for India.
-                    </p>
-                    <div className="grid grid-cols-2 gap-y-2.5 gap-x-3 mb-6">
-                      {["GST Invoicing","AI Chat Assistant","TDS Tracker","P&L & Balance Sheet","Journal Entries","Tally Export"].map(s => (
-                        <div key={s} className="flex items-center gap-2 text-xs" style={{ color:"#DCE3F8" }}>
-                          <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0" style={{ background:"rgba(255,255,255,0.15)" }}>
-                            <Check className="w-2.5 h-2.5" style={{ color:"#C2410C" }} />
-                          </div>{s}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-0 mb-6 rounded-xl overflow-hidden border" style={{ borderColor:"rgba(255,255,255,0.15)", background:"rgba(255,255,255,0.05)" }}>
-                      {[["₹1,499","Per Month"],["Unlimited","Transactions"],["AI","Powered"]].map(([n,l],i,arr) => (
-                        <div key={l} className="flex-1 text-center py-3" style={{ borderRight:i<arr.length-1?"1px solid rgba(255,255,255,0.1)":"none" }}>
-                          <p className="text-sm font-bold leading-none" style={{ color:"#FFD9C7" }}>{n}</p>
-                          <p className="text-[9px] font-medium mt-0.5" style={{ color:"#DCE3F8" }}>{l}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2.5">
-                      <span className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all group-hover:opacity-90"
-                        style={{ background:"linear-gradient(135deg,#232A63,#232A63)", color:"#fff", boxShadow:"0 4px 16px rgba(255,255,255,0.35)" }}>
-                        {loggedIn ? "Open FreBook" : "Get Started"} <ArrowRight className="w-4 h-4" />
-                      </span>
-                      {!loggedIn && (
-                        <span className="px-4 py-3 rounded-xl text-xs font-medium border flex items-center gap-1.5"
-                          style={{ borderColor:"rgba(255,255,255,0.12)", color:"#DCE3F8", background:"rgba(255,255,255,0.05)" }}>
-                          Google Sign-in
-                        </span>
-                      )}
-                    </div>
-                  </div>
+            {/* Right: what it feels like — a chat that turns into a posted entry */}
+            <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2, duration:0.5 }}
+              className="rounded-[22px] overflow-hidden" style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.10)", boxShadow:"0 24px 60px rgba(20,26,58,0.14)" }}>
+              <div className="flex items-center gap-3 px-5 py-3.5" style={{ background:"#232A63" }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black" style={{ background:"#FFFFFF", color:"#232A63" }}>F</div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-white leading-none">FreBook</p>
+                  <p className="text-[11px] mt-1" style={{ color:"#C8D2F2" }}>Your books · always up to date</p>
                 </div>
-              </button>
+                <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background:"rgba(255,255,255,0.14)", color:"#FFD9C7" }}>HOW IT WORKS</span>
+              </div>
+              <div className="p-5 flex flex-col gap-3" style={{ background:"#F5F6FA" }}>
+                <motion.div initial={{ opacity:0, x:12 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.6 }}
+                  className="self-end max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-md text-[14px]" style={{ background:"#232A63", color:"#fff" }}>
+                  Paid office rent ₹25,000 from HDFC
+                </motion.div>
+                <motion.div initial={{ opacity:0, x:-12 }} animate={{ opacity:1, x:0 }} transition={{ delay:1.1 }}
+                  className="self-start w-[92%] rounded-2xl rounded-bl-md p-4" style={{ background:"#fff", border:"1px solid rgba(20,26,58,0.08)" }}>
+                  <p className="text-[11px] font-bold tracking-[0.14em] uppercase" style={{ color:"#C2410C" }}>Draft entry</p>
+                  <div className="mt-2 text-[13.5px] font-mono" style={{ color:"#141A3A", fontVariantNumeric:"tabular-nums" }}>
+                    <div className="flex justify-between"><span>Dr Rent</span><span>₹25,000</span></div>
+                    <div className="flex justify-between pl-4" style={{ color:"#4A5070" }}><span>Cr HDFC Bank</span><span>₹25,000</span></div>
+                  </div>
+                  <p className="mt-2 text-[12px]" style={{ color:"#5A6080" }}>Same ledger you used for rent last month.</p>
+                </motion.div>
+                <motion.div initial={{ opacity:0, x:12 }} animate={{ opacity:1, x:0 }} transition={{ delay:1.6 }}
+                  className="self-end px-4 py-2 rounded-2xl rounded-br-md text-[14px] font-semibold" style={{ background:"#232A63", color:"#fff" }}>
+                  YES
+                </motion.div>
+                <motion.div initial={{ opacity:0, scale:0.96 }} animate={{ opacity:1, scale:1 }} transition={{ delay:2.1 }}
+                  className="self-start flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[13.5px] font-semibold" style={{ background:"#E3F6EE", color:"#0B7A55" }}>
+                  <Check className="w-4 h-4" /> Posted as PMT/2026-27/0042 · sent to Tally
+                </motion.div>
+              </div>
+              <div className="grid grid-cols-3 text-center" style={{ borderTop:"1px solid rgba(20,26,58,0.08)" }}>
+                {[["Bills & statements","read for you"],["P&L, Balance Sheet","always live"],["GSTR-1 / 3B","prepared"]].map(([a,b],i) => (
+                  <div key={a} className="py-3 px-2" style={{ borderRight: i < 2 ? "1px solid rgba(20,26,58,0.08)" : "none" }}>
+                    <p className="text-[12.5px] font-bold" style={{ color:"#141A3A" }}>{a}</p>
+                    <p className="text-[11px]" style={{ color:"#5A6080" }}>{b}</p>
+                  </div>
+                ))}
+              </div>
             </motion.div>
           </div>
 
-          {/* ═══ COWORKING — compact card below ═══ */}
-          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3, duration:0.5 }} className="mb-10">
-            <div className="relative rounded-2xl overflow-hidden transition-all"
-              style={{ background:"linear-gradient(145deg,#FFFFFF,#FFFFFF)", border:"1px solid rgba(240,102,43,0.2)" }}>
-              <div className="h-[2px]" style={{ background:"linear-gradient(90deg,#F0662B,transparent)" }} />
-              <div className="p-6 md:p-7 flex flex-col md:flex-row items-start md:items-center gap-6">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background:"rgba(240,102,43,0.12)", border:"1px solid rgba(240,102,43,0.3)" }}>
-                  <MapPin className="w-5 h-5" style={{ color:"#C2410C" }} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-[10px] font-semibold tracking-[0.18em] uppercase mb-1" style={{ color:"#C2410C" }}>Premium Coworking</p>
-                  <h3 className="font-bold mb-2 leading-tight" style={{ fontSize:"clamp(1.1rem,2vw,1.4rem)", color:"#141A3A" }}>
-                    Your Ideal Workspace — 8 Indian Cities
-                  </h3>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1">
-                    {["Hot Desks from ₹350/day","Private Cabins","Meeting Rooms","Verified Spaces"].map(s => (
-                      <span key={s} className="text-xs flex items-center gap-1.5" style={{ color:"#4A5070" }}>
-                        <span className="w-1 h-1 rounded-full" style={{ background:"#C2410C", display:"inline-block", opacity:0.7 }} />{s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex gap-2.5 flex-shrink-0">
-                  <Link href="/coworking"
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
-                    style={{ background:"linear-gradient(135deg,#C2410C,#9A3412)", color:"#fff", boxShadow:"0 4px 14px rgba(240,102,43,0.3)" }}>
-                    Find a Space <ArrowRight className="w-4 h-4" />
-                  </Link>
-                  <Link href="/coworking/list"
-                    className="px-4 py-2.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition-all hover:border-[#F0662B]/30"
-                    style={{ borderColor:"rgba(240,102,43,0.2)", color:"#4A5070", background:"rgba(240,102,43,0.05)" }}>
-                    List Free
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Stats strip */}
+          {/* Secondary: CA services and coworking, one quiet row */}
           <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35 }}
-            className="flex items-center justify-center gap-8 flex-wrap mb-6">
-            {[["Expert CAs","Every filing"],["3–5 days","GSTIN turnaround"],["FreBook","Chat bookkeeping"],["Tally","Two-way sync"]].map(([n,l]) => (
-              <div key={l} className="text-center">
-                <p className="text-xl font-black leading-none" style={{ color:"#232A63" }}>{n}</p>
-                <p className="text-[10px] font-semibold mt-1" style={{ color:"#4A5070" }}>{l}</p>
+            className="mt-14 grid md:grid-cols-[1.6fr_1fr] gap-4">
+            <div className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4" style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.09)" }}>
+              <div className="flex-1">
+                <p className="text-[11px] font-bold tracking-[0.16em] uppercase" style={{ color:"#C2410C" }}>Need a CA too?</p>
+                <p className="mt-1 text-[15px] font-semibold" style={{ color:"#141A3A" }}>GST registration ₹999 · ITR filing ₹799 · Company registration · ROC</p>
+                <p className="text-[13px]" style={{ color:"#5A6080" }}>Done end-to-end by verified Chartered Accountants.</p>
               </div>
-            ))}
-          </motion.div>
-
-          {/* Trust note */}
-          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.45 }}
-            className="text-center">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold" style={{ color:"#4A5070" }}>
-              <span className="w-1 h-1 rounded-full bg-[#F0662B]" />
-              Built for Indian businesses
-              <span className="w-1 h-1 rounded-full bg-[#F0662B]" />
-              Free WhatsApp consultation
-              <span className="w-1 h-1 rounded-full bg-[#F0662B]" />
-              100% online
+              <Link href="/services/compliance" className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap"
+                style={{ background:"rgba(35,42,99,0.08)", color:"#232A63" }}>
+                Explore services <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background:"#FFFFFF", border:"1px solid rgba(20,26,58,0.09)" }}>
+              <MapPin className="w-5 h-5 flex-shrink-0" style={{ color:"#C2410C" }} />
+              <div className="flex-1">
+                <p className="text-[15px] font-semibold" style={{ color:"#141A3A" }}>Coworking in 8 cities</p>
+                <p className="text-[13px]" style={{ color:"#5A6080" }}>Hot desks from ₹350/day</p>
+              </div>
+              <Link href="/coworking" className="text-sm font-semibold whitespace-nowrap" style={{ color:"#232A63" }}>Find a space →</Link>
             </div>
           </motion.div>
         </div>
