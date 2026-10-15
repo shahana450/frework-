@@ -80,6 +80,29 @@ export default function TaxDocs() {
           <p style={{ margin: "6px 0 0", fontSize: 14, color: C.muted, maxWidth: 680 }}>Under the Income-tax Act, 2025 the annual tax credit statement is <b>Form 168</b> (earlier Form 26AS) and the salary TDS certificate is <b>Form 130</b> (earlier Form 16). Old forms still apply for FY 2025-26 and earlier — both are read here. Download the statement from the Income-tax portal or the certificate from your employer, and drop it here. FreWork reads every deductor, section and amount, and checks TDS against your books.</p>
         </header>
 
+        {/* Get the PDF: the user signs in on the official portal themselves (FreWork never asks for or stores portal passwords) */}
+        <section style={{ ...card, display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <div style={{ flex: 1, minWidth: 260 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted }}>Step 1 · get the PDF</div>
+            <ol style={{ margin: "10px 0 0", paddingLeft: 20, fontSize: 14, lineHeight: 1.7, color: C.ink }}>
+              {kind === "26as" ? <>
+                <li>Sign in to the Income-tax portal (opens in a new tab).</li>
+                <li><b>e-File → Income Tax Returns → View Form 26AS</b> → Confirm (opens TRACES).</li>
+                <li>Choose the <b>assessment year</b>, View as <b>HTML</b>, then <b>Export as PDF</b>.</li>
+                <li>Drop the PDF below. Its password is usually your <b>date of birth (DDMMYYYY)</b>.</li>
+              </> : <>
+                <li>Salary: ask your employer for <b>Form 130 / Form 16</b> (they issue it every June).</li>
+                <li>Other TDS (Form 16A): sign in to the portal → <b>e-File → View Form 26AS</b> → TRACES → <b>Downloads</b>.</li>
+                <li>Drop the PDF below. If it asks for a password, it&apos;s usually your <b>PAN in capitals + date of birth</b>.</li>
+              </>}
+            </ol>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 220 }}>
+            <a href="https://eportal.incometax.gov.in/iec/foservices/#/login" target="_blank" rel="noopener noreferrer" style={{ ...btn(true), textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>Open Income-tax portal ↗</a>
+            <span style={{ fontSize: 12, color: C.muted, lineHeight: 1.5 }}>You sign in on the government site yourself. FreWork never asks for or stores your portal password.</span>
+          </div>
+        </section>
+
         <section onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files?.[0]; if (f) pick(f); }}
           style={{ ...card, border: `2px dashed ${drag ? C.gold : "#CDBF9F"}`, background: drag ? "#FFF8E8" : C.card, display: "flex", flexDirection: "column", gap: 12, alignItems: "center", textAlign: "center", padding: "26px 18px" }}>
           <div role="radiogroup" aria-label="Document type" style={{ display: "flex", gap: 4, background: "#EFE8D9", borderRadius: 999, padding: 4 }}>
