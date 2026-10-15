@@ -12,6 +12,9 @@ const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SU
 const ADMIN_EMAILS = (process.env.FW_ADMIN_EMAILS ?? "admin.frework@gmail.com,auditmanagercswa@gmail.com")
   .split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 
+/** FreWork staff (FW_ADMIN_EMAILS). */
+export const isAdminEmail = (email?: string | null) => !!email && ADMIN_EMAILS.includes(email.toLowerCase());
+
 export type Access = { user: User; role: Role };
 
 const deny = (status: 401 | 403, message: string) => NextResponse.json({ error: message }, { status });

@@ -148,6 +148,129 @@ function AdminCardGrid({ cards }: { cards: AdminCard[] }) {
   );
 }
 
+type AdminMetrics = {
+  users: { total: number; new7: number; new30: number; active7: number };
+  signups: { day: string; n: number }[];
+  businesses: { total: number; new30: number; outsideIndia: number };
+  frebook: { paying: number; free: number; mrr: number; revenueMonth: number; autoRenew: number };
+  activity: { posted7: number; posted30: number; viaWhatsApp30: number; waLinked: number };
+  expiring: { email: string; ends: string; paying: boolean; auto: boolean }[];
+  recent: { email: string; created: string; via: string; hasBusiness: boolean }[];
+};
+
+// Business overview for FreWork staff: growth, customers, revenue, product use
+function AdminOverview() {
+  const [m, setM] = useState<AdminMetrics | null>(null);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      const r = await fetch("/api/admin/metrics", { headers: { Authorization: `Bearer ${session.access_token}` } });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setErr(d.error ?? "Couldn't load the overview."); return; }
+      setM(d as AdminMetrics);
+    });
+  }, []);
+  const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
+  const day = (s: string) => new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  const card: React.CSSProperties = { background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 18, padding: "1rem 1.1rem" };
+  const label: React.CSSProperties = { fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8A90AE" };
+
+  if (err) return <div style={{ ...card, color: "#C2321F", marginBottom: 24 }}>{err}</div>;
+  if (!m) return <div style={{ ...card, color: "#5A6080", marginBottom: 24 }}>Loading the business overview…</div>;
+  const max = Math.max(1, ...m.signups.map(s => s.n));
+  const kpis: { k: string; v: string; sub: string; tone?: string }[] = [
+    { k: "Users", v: m.users.total.toLocaleString("en-IN"), sub: `+${m.users.new7} this week · ${m.users.active7} active` },
+    { k: "Businesses", v: m.businesses.total.toLocaleString("en-IN"), sub: `+${m.businesses.new30} in 30 days${m.businesses.outsideIndia ? ` · ${m.businesses.outsideIndia} abroad` : ""}` },
+    { k: "Paying customers", v: String(m.frebook.paying), sub: `${m.frebook.autoRenew} on auto-renew`, tone: "#0B7A55" },
+    { k: "Free / trial", v: String(m.frebook.free), sub: "convert these next", tone: "#B45309" },
+    { k: "MRR", v: inr(m.frebook.mrr), sub: "paying × ₹1,499, before GST", tone: "#232A63" },
+    { k: "Collected this month", v: inr(m.frebook.revenueMonth), sub: "FreBook payments, incl. GST", tone: "#232A63" },
+  ];
+
+  return (
+    <section style={{ marginBottom: 28, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: "#141A3A" }}>Business overview</h2>
+        <span style={{ fontSize: 12, color: "#8A90AE" }}>Live · test companies excluded</span>
+      </div>
+
+      <div className="adm-kpis">
+        {kpis.map(x => (
+          <div key={x.k} style={card}>
+            <div style={label}>{x.k}</div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: x.tone ?? "#141A3A", marginTop: 6, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>{x.v}</div>
+            <div style={{ fontSize: 12, color: "#5A6080", marginTop: 2 }}>{x.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="adm-two">
+        <div style={card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={label}>Sign-ups · last 30 days</span>
+            <b style={{ fontSize: 13, color: "#141A3A" }}>{m.users.new30} total</b>
+          </div>
+          <div role="img" aria-label={`Sign-ups per day for the last 30 days, ${m.users.new30} in total`} style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 110, marginTop: 14 }}>
+            {m.signups.map((s, i) => (
+              <div key={s.day} title={`${day(s.day)}: ${s.n}`} style={{ flex: 1, height: `${Math.max(4, (s.n / max) * 100)}%`, borderRadius: 4, background: i === m.signups.length - 1 ? "#F0662B" : s.n ? "#3A438E" : "rgba(35,42,99,0.12)" }} />
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#8A90AE", marginTop: 6 }}>
+            <span>{day(m.signups[0].day)}</span><span>today</span>
+          </div>
+        </div>
+        <div style={card}>
+          <span style={label}>Product use · FreBook</span>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+            {[["Entries posted · 7 days", m.activity.posted7], ["Entries posted · 30 days", m.activity.posted30], ["Via WhatsApp · 30 days", m.activity.viaWhatsApp30], ["WhatsApp numbers linked", m.activity.waLinked]].map(([k, v]) => (
+              <div key={k as string} style={{ background: "#F5F6FA", borderRadius: 12, padding: "10px 12px" }}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "#141A3A", fontVariantNumeric: "tabular-nums" }}>{(v as number).toLocaleString("en-IN")}</div>
+                <div style={{ fontSize: 12, color: "#5A6080" }}>{k as string}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="adm-two">
+        <div style={card}>
+          <span style={label}>Renewals due · next 7 days</span>
+          {m.expiring.length === 0 ? <p style={{ margin: "12px 0 0", fontSize: 13, color: "#5A6080" }}>Nobody&apos;s plan ends this week.</p> : (
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column" }}>
+              {m.expiring.map(e => (
+                <div key={e.email + e.ends} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: "1px solid rgba(20,26,58,0.06)", fontSize: 13 }}>
+                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#141A3A" }}>{e.email}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: e.paying ? "#E3F6EE" : "#FFF4DB", color: e.paying ? "#0B7A55" : "#8A5A00" }}>{e.auto ? "auto-renews" : e.paying ? "paid" : "free"}</span>
+                  <span style={{ color: "#5A6080", fontVariantNumeric: "tabular-nums" }}>{day(e.ends)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div style={card}>
+          <span style={label}>Latest sign-ups</span>
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column" }}>
+            {m.recent.map(u => (
+              <div key={u.email + u.created} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: "1px solid rgba(20,26,58,0.06)", fontSize: 13 }}>
+                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#141A3A" }}>{u.email || "(no email)"}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: u.hasBusiness ? "#EEF0FB" : "#F2F3F6", color: u.hasBusiness ? "#232A63" : "#8A90AE" }}>{u.hasBusiness ? "set up books" : "no business yet"}</span>
+                <span style={{ color: "#5A6080", fontSize: 12, width: 52, textAlign: "right" }}>{day(u.created)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <style>{`
+        .adm-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+        .adm-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 1100px) { .adm-kpis { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 700px) { .adm-kpis { grid-template-columns: repeat(2, 1fr); } .adm-two { grid-template-columns: 1fr; } }
+      `}</style>
+    </section>
+  );
+}
+
 function TrialGrantWidget() {
   const [userId, setUserId] = useState("");
   const [plan, setPlan] = useState<string>(FREBOOK_PLAN.id);
@@ -377,7 +500,7 @@ export default function DashboardPage() {
 
   if (isAdmin) {
     return (
-      <div className="min-h-screen" style={{ background: "#F2F3F6", color: "#141A3A" }}>
+      <div className="min-h-screen" style={{ background: "#F2F3F6", color: "#141A3A", fontFamily: "var(--font-plus-jakarta),var(--font-inter),system-ui,sans-serif" }}>
         {/* Admin header */}
         <div className="border-b sticky top-0 z-30" style={{ borderColor: "rgba(240,102,43,0.12)", background: "rgba(255,255,255,0.97)", backdropFilter: "blur(12px)" }}>
           <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -395,9 +518,11 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-4 py-10">
+        <div className="max-w-6xl mx-auto px-4 py-10">
           <h1 className="text-2xl font-black mb-1" style={{ color: "#141A3A" }}>Admin Panel</h1>
           <p className="text-sm mb-8" style={{ color: "#4A5070" }}>Manage FreWork — approve spaces, review orders, monitor platform.</p>
+
+          <AdminOverview />
 
           {/* Quick Trial Grant */}
           <TrialGrantWidget />
