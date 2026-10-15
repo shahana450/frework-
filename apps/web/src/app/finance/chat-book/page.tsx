@@ -7,6 +7,7 @@ import { currentUser } from "@/lib/currentUser";
 import type { ParsedTransaction } from "@/app/api/finance/chat-book/route";
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
 import GroupChips, { guessGroup } from "@/components/GroupChips";
+import LedgerPicker, { type Ledger } from "@/components/LedgerPicker";
 import StatementModal from "./StatementModal";
 import ReviewChecks from "./ReviewChecks";
 import BulkTemplateModal from "./BulkTemplateModal";
@@ -227,6 +228,8 @@ export default function FreBookPage() {
   useEffect(() => () => { (recognitionRef.current as { abort?: () => void } | null)?.abort?.(); }, []);
   const bizIdRef = useRef<string | null>(null);
   const userIdRef = useRef<string | null>(null);
+  const [ledgers, setLedgers] = useState<Ledger[]>([]);
+  const [pickedHeads, setPickedHeads] = useState<Record<string, Record<string, string>>>({});
 
   // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -236,6 +239,7 @@ export default function FreBookPage() {
       const saved = (readActiveBusiness(user.id) ?? "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved); bizIdRef.current = saved;
+      supabase.from("fw_fin_chart_of_accounts").select("name,type,sub_type").eq("business_id", saved).eq("is_group", false).order("name").then(({ data }) => setLedgers((data ?? []) as Ledger[]));
       const { data: biz } = await supabase.from("fw_fin_businesses").select("name,currency,country").eq("id", saved).single();
       if (biz) {
         const code = String(biz.currency ?? "INR").toUpperCase();
@@ -867,7 +871,7 @@ export default function FreBookPage() {
                               ? { ...msg.transaction!, transaction_date: editDate, narrative: editNarration, lines: editLines }
                               : msg.transaction!;
                             const lastUser = [...messages].reverse().find(m => m.role === "user");
-                            const run = () => postTransaction(tx, currentSession, lastUser?.text ?? "", msg.id);
+                            const run = () => postTransaction(tx, currentSession, lastUser?.text ?? "", msg.id, pickedHeads[msg.id]);
                             const warnings = postWarnings({ compliance: violations[msg.id], questions: msg.verdict?.questions, duplicate: msg.duplicate });
                             if (warnings.length) { setConfirmPost({ msgId: msg.id, warnings, run }); return; }
                             run();
@@ -884,6 +888,14 @@ export default function FreBookPage() {
                           }))}
                           onPostWithHeads={heads => postTransaction(msg.transaction!, msg.postArgs?.sessId ?? currentSession, msg.postArgs?.originalMsg ?? "", msg.id, heads)}
                           onCancel={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, status: "cancelled" } : m))}
+                          ledgers={ledgers}
+                          heads={pickedHeads[msg.id] ?? {}}
+                          onPickLine={(i, name, opts) => {
+                            if (opts.isNew && opts.head) setPickedHeads(h => ({ ...h, [msg.id]: { ...(h[msg.id] ?? {}), [name]: opts.head! } }));
+                            setMessages(prev => prev.map(m => m.id !== msg.id || !m.transaction ? m : { ...m, status: "edited", transaction: {
+                              ...m.transaction, lines: m.transaction.lines.map((l, k) => k === i ? { ...l, account: name, confidence: 1, is_new_account: opts.isNew } : l),
+                            } }));
+                          }}
                         />
                       )}
                     </div>
@@ -1069,7 +1081,10 @@ function HeadPicker({ needs, willCreate, busy, onSubmit }: {
 }
 
 // ── Transaction Card ───────────────────────────────────────────────────────────
-function TransactionCard({ msg, editing, editLines, editDate, editNarration, onEditLines, onEditDate, onEditNarration, onStartEdit, onApplyEdit, onCancelEdit, onConfirm, onPostWithHeads, onSwapAccount, onCancel }: {
+function TransactionCard({ msg, editing, editLines, editDate, editNarration, onEditLines, onEditDate, onEditNarration, onStartEdit, onApplyEdit, onCancelEdit, onConfirm, onPostWithHeads, onSwapAccount, onCancel, ledgers, heads, onPickLine }: {
+  ledgers: Ledger[];
+  heads: Record<string, string>;
+  onPickLine: (i: number, name: string, opts: { isNew: boolean; head?: string }) => void;
   onPostWithHeads: (heads: Record<string, string>) => void;
   onSwapAccount: (account: string) => void;
   msg: ChatMessage;
@@ -1100,7 +1115,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
   const inputS: React.CSSProperties = { background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "5px 8px", borderRadius: 6, fontSize: "0.78rem", fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" };
 
   return (
-    <div style={{ background: "#FFFFFF", border: `1px solid ${isPosted ? "rgba(11,122,85,0.3)" : isCancelled ? "#FFFFFF" : "rgba(35,42,99,0.2)"}`, borderRadius: 14, overflow: "hidden", opacity: isCancelled ? 0.5 : 1 }}>
+    <div style={{ background: "#FFFFFF", border: `1px solid ${isPosted ? "rgba(11,122,85,0.3)" : isCancelled ? "#FFFFFF" : "rgba(35,42,99,0.2)"}`, borderRadius: 14, overflow: "visible", opacity: isCancelled ? 0.5 : 1 }}>
 
       {/* Header */}
       <div style={{ padding: "0.75rem 1rem", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
@@ -1193,13 +1208,13 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
               <tr key={i} style={{ borderBottom: `1px solid #E1E4EE` }}>
                 <td style={{ padding: "0.45rem 1rem" }}>
                   {editing ? (
-                    <input value={line.account} onChange={e => { const l = [...editLines]; l[i] = { ...l[i], account: e.target.value }; onEditLines(l); }} style={{ ...inputS, width: "100%", minWidth: 140 }} />
+                    <LedgerPicker value={line.account} ledgers={ledgers} isNew={line.is_new_account} head={heads[line.account]}
+                      onPick={(name, o) => { const l = [...editLines]; l[i] = { ...l[i], account: name, is_new_account: o.isNew }; onEditLines(l); }} />
+                  ) : msg.status === "posted" || msg.status === "cancelled" ? (
+                    <span>{line.account}</span>
                   ) : (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span>{line.account}</span>
-                      {line.is_new_account && <span style={{ fontSize: "0.62rem", color: AMBER, background: "rgba(184,120,0,0.1)", padding: "1px 6px", borderRadius: 8, border: `1px solid rgba(184,120,0,0.25)` }}>New</span>}
-
-                    </div>
+                    <LedgerPicker value={line.account} ledgers={ledgers} isNew={line.is_new_account} head={heads[line.account]}
+                      recent={[...new Set(lines.map(x => x.account))]} onPick={(name, o) => onPickLine(i, name, o)} />
                   )}
                 </td>
                 <td style={{ padding: "0.45rem 1rem", textAlign: "right", fontFamily: MONO, color: (editing ? line.debit : line.debit) > 0 ? RED : MUTED }}>
