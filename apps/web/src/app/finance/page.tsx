@@ -94,7 +94,7 @@ const QUICK = [
   { icon: "💸", label: "Record Expense", href: "/finance/expenses",      color: "#5B4BC4" },
   { icon: "📤", label: "Upload Doc",     href: "/finance/upload",        color: "#0B7A55" },
   { icon: "💳", label: "Payment Entry",  href: "/finance/payment",       color: "#B4561E" },
-  { icon: "🛩️", label: "Ask FreWork AI",  href: "/finance/virtual-ca",    color: "#8A5A00" },
+  { icon: "🛩️", label: "Ask your books",  href: "/finance/chat-book",    color: "#8A5A00" },
 ];
 
 const MODULES = [

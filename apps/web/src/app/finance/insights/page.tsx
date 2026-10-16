@@ -130,8 +130,8 @@ export default function InsightsPage() {
         <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
         <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>AI Insights</span>
         <div style={{ flex: 1 }} />
-        <Link href="/finance/virtual-ca" style={{ background: "rgba(35,42,99,0.1)", border: "1px solid rgba(35,42,99,0.3)", color: "#232A63", padding: "6px 14px", borderRadius: 8, textDecoration: "none", fontSize: "0.82rem" }}>
-          🛩️ Ask FreWork AI
+        <Link href="/finance/chat-book" style={{ background: "rgba(35,42,99,0.1)", border: "1px solid rgba(35,42,99,0.3)", color: "#232A63", padding: "6px 14px", borderRadius: 8, textDecoration: "none", fontSize: "0.82rem" }}>
+          🛩️ Ask your books
         </Link>
       </nav>
 
@@ -177,8 +177,8 @@ export default function InsightsPage() {
                   ? "Thin margin. Review your largest expense categories and consider pricing strategy."
                   : "Operating at a loss. Immediate action needed — cut costs or increase revenue."}
               </div>
-              <Link href="/finance/virtual-ca" style={{ flexShrink: 0, background: "rgba(35,42,99,0.1)", border: "1px solid rgba(35,42,99,0.25)", color: "#232A63", padding: "8px 16px", borderRadius: 8, textDecoration: "none", fontSize: "0.8rem", fontWeight: 600 }}>
-                Ask FreWork AI →
+              <Link href="/finance/chat-book" style={{ flexShrink: 0, background: "rgba(35,42,99,0.1)", border: "1px solid rgba(35,42,99,0.25)", color: "#232A63", padding: "8px 16px", borderRadius: 8, textDecoration: "none", fontSize: "0.8rem", fontWeight: 600 }}>
+                Ask your books →
               </Link>
             </div>
 
@@ -286,10 +286,10 @@ export default function InsightsPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
                 {[
                   gstPayable > 0 && { icon: "🏛️", text: `GST payable estimated at ${cur()}${fmt(gstPayable)}. File GSTR-3B before the 20th.`, color: "#1F5EFF", href: "/finance/gst" },
-                  netProfit < 0 && { icon: "⚠️", text: "Business is operating at a loss this year. Review your top expenses and pricing.", color: "#C2321F", href: "/finance/virtual-ca" },
+                  netProfit < 0 && { icon: "⚠️", text: "Business is operating at a loss this year. Review your top expenses and pricing.", color: "#C2321F", href: "/finance/chat-book" },
                   totalRevenue === 0 && { icon: "📈", text: "No sales recorded yet. Create your first sales invoice to start tracking revenue.", color: "#232A63", href: "/finance/sales/new" },
                   totalExpenses > totalRevenue * 0.8 && totalRevenue > 0 && { icon: "📊", text: `Expenses are ${((totalExpenses / totalRevenue) * 100).toFixed(0)}% of revenue. Industry benchmark is typically 60–70%.`, color: "#B4561E", href: "/finance/reports" },
-                  gstPayable > 0 && { icon: "✅", text: "Ensure GST ITC is claimed on all purchase bills with valid GSTIN.", color: "#0B7A55", href: "/finance/virtual-ca" },
+                  gstPayable > 0 && { icon: "✅", text: "Ensure GST ITC is claimed on all purchase bills with valid GSTIN.", color: "#0B7A55", href: "/finance/chat-book" },
                   { icon: "📋", text: "Keep all invoices uploaded and AI-reviewed for accurate books and easy ITR filing.", color: "rgba(20,26,58,0.75)", href: "/finance/upload" },
                 ].filter(Boolean).map((alert, i) => alert && (
                   <Link key={i} href={alert.href} style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.65rem 0.85rem", background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, textDecoration: "none" }}>
