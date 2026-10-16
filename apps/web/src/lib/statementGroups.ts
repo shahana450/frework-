@@ -29,6 +29,8 @@ const RULES: [RegExp, string, string | null, string | null][] = [
   [/\b(AMAZON|FLIPKART)\b/, "Online purchases", "Office Expenses", null],
   [/\b(GOOGLE|MICROSOFT|AWS|ZOHO|ADOBE|CANVA|GODADDY|HOSTINGER)\b/, "Software & subscriptions", "Software Subscriptions", null],
   [/\b(INSURANCE|LIC|PREMIUM)\b/, "Insurance", "Insurance", null],
+  [/\b(STATIONERY|OFFICE ?SUPPLIES|PRINTING|XEROX)\b/, "Office supplies", "Printing & Stationery", null],
+  [/\b(RAZORPAY|PAYU|CASHFREE|PHONEPE ?PG|CCAVENUE|STRIPE|SETTLEMENT)\b/, "Payment gateway settlement", null, "Sales"],
 ];
 
 const title = (s: string) => s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());

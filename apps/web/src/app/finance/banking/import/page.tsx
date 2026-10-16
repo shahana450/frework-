@@ -6,7 +6,8 @@ import { supabase } from "@/lib/supabase";
 import { parseStatementGrid } from "@/lib/bankExcel";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import GroupChips, { guessGroup } from "@/components/GroupChips";
-import { headByKey } from "@/lib/ledgerHeads";
+import { headByKey, inferHead } from "@/lib/ledgerHeads";
+import { groupKeyOf } from "@/lib/statementGroups";
 
 /* ─── Types ─────────────────────────────────────────────── */
 type TxRow = {
@@ -19,6 +20,7 @@ type TxRow = {
   ledger_id: string | null;
   ledger_name: string | null;
   pushed: boolean;
+  suggested?: boolean;   // filled by "Suggest ledgers" — check before pushing
   error?: string;
 };
 
@@ -248,7 +250,74 @@ export default function BankingPage() {
   /* ── Assign ledger to a single row ── */
   function assignLedger(rowId: string, ledgerId: string) {
     const acct = coa.find(a => a.id === ledgerId);
-    setRows(r => r.map(x => x.id === rowId ? { ...x, ledger_id: ledgerId || null, ledger_name: acct?.name ?? null } : x));
+    setRows(r => r.map(x => x.id === rowId ? { ...x, ledger_id: ledgerId || null, ledger_name: acct?.name ?? null, suggested: false } : x));
+  }
+
+  /* ── Suggest a ledger for every unassigned row; create the ones that don't exist yet ── */
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestMsg, setSuggestMsg] = useState("");
+  async function suggestLedgers() {
+    if (!bizId) return;
+    setSuggesting(true); setSuggestMsg("");
+    try {
+      const want = new Map<string, string>();               // ledger name → group key
+      const pick: Record<string, string> = {};              // row id → ledger name
+      for (const r of rows) {
+        if (r.pushed || r.ledger_id) continue;
+        const out = r.debit > 0;
+        const g = groupKeyOf(r.description);
+        const name = g.rule ? (out ? g.rule[2] : g.rule[3]) : g.label !== "Other" ? g.label : null;
+        if (!name) continue;
+        const existing = coa.find(a => a.name.trim().toLowerCase() === name.toLowerCase());
+        pick[r.id] = existing?.name ?? name;
+        if (!existing && !want.has(name)) want.set(name, g.rule ? (inferHead(name)?.key ?? guessGroup(name, out ? "out" : "in")) : out ? "creditors" : "debtors");
+      }
+      let all = coa;
+      if (want.size) {
+        const stamp = Date.now().toString().slice(-6);
+        const { data, error } = await supabase.from("fw_fin_chart_of_accounts").insert([...want].map(([name, key], i) => {
+          const h = headByKey(key) ?? headByKey("indirect_expense")!;
+          return { business_id: bizId, name, code: `AUTO-${stamp}${i}`, type: h.type, sub_type: h.sub_type, is_group: false, is_system: false, description: `Created from bank statement under ${h.label}` };
+        })).select("id,name,type,code");
+        if (error) throw error;
+        all = [...coa, ...((data ?? []) as CoaAccount[])];
+        setCoa(all);
+      }
+      const byName = new Map(all.map(a => [a.name.toLowerCase(), a]));
+      let n = 0;
+      setRows(rs => rs.map(x => { const nm = pick[x.id]; const a = nm ? byName.get(nm.toLowerCase()) : undefined; if (!a || x.ledger_id || x.pushed) return x; n++; return { ...x, ledger_id: a.id, ledger_name: a.name, suggested: true }; }));
+      const left = rows.filter(r => !r.pushed && !r.ledger_id && !pick[r.id]).length;
+      setSuggestMsg(`✨ ${Object.keys(pick).length} suggested${want.size ? ` · ${want.size} new ledger${want.size > 1 ? "s" : ""} created (${[...want.keys()].join(", ")})` : ""}${left ? ` · ${left} need you to choose` : ""}. Check the ✨ rows, then push.`);
+    } catch (e) {
+      setSuggestMsg(`Couldn't suggest: ${(e as { message?: string })?.message ?? String(e)}`);
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
+  /* ── Saved automatically on this device, so a statement in progress isn't lost ── */
+  const draftKey = bizId ? `fw_bank_import_${bizId}` : "";
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [restorable, setRestorable] = useState<{ rows: TxRow[]; bank: string; at: number } | null>(null);
+  useEffect(() => {
+    if (!draftKey) return;
+    try { const d = JSON.parse(localStorage.getItem(draftKey) ?? "null"); if (d?.rows?.some((r: TxRow) => !r.pushed)) setRestorable(d); } catch { /* */ }
+  }, [draftKey]);
+  useEffect(() => {
+    if (!draftKey || !rows.length) return;
+    try { const at = Date.now(); localStorage.setItem(draftKey, JSON.stringify({ rows, bank: bankAccountId, at })); setSavedAt(at); } catch { /* */ }
+  }, [rows, bankAccountId, draftKey]);
+  const clearDraft = () => { try { if (draftKey) localStorage.removeItem(draftKey); } catch { /* */ } setRestorable(null); setSavedAt(null); };
+
+  /* ── Add the bank account itself, right here ── */
+  const [newBank, setNewBank] = useState("");
+  async function addBank() {
+    if (!bizId || !newBank.trim()) return;
+    const h = headByKey("bank")!;
+    const { data, error } = await supabase.from("fw_fin_chart_of_accounts").insert({ business_id: bizId, name: newBank.trim(), code: `AUTO-${Date.now().toString().slice(-7)}`, type: h.type, sub_type: h.sub_type, is_group: false, is_system: false, description: "Bank account added from statement import" }).select("id,name,type,code").single();
+    if (error) { alert(`Couldn't add the bank: ${error.message}`); return; }
+    const a = data as CoaAccount;
+    setCoa(c => [...c, a]); setBankAccounts(b => [...b, a]); setBankAccountId(a.id); setNewBank("");
   }
 
   /* ── Bulk assign ── */
@@ -391,6 +460,13 @@ export default function BankingPage() {
       <div style={{ maxWidth: 1320, margin: "0 auto", padding: "1.5rem" }}>
 
         {/* ── Upload area (shown when no rows) ── */}
+        {rows.length === 0 && restorable && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "0 0 1rem", padding: "12px 16px", borderRadius: 12, background: "#FFF4DB", border: "1px solid #F2D29B", color: "#5A3A00" }}>
+            <span style={{ fontSize: "0.86rem", flex: 1, minWidth: 220 }}>💾 You have a saved statement — <b>{restorable.rows.length} transactions</b>, {restorable.rows.filter(r => r.ledger_id).length} with ledgers, saved {new Date(restorable.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.</span>
+            <button onClick={() => { setRows(restorable.rows); if (restorable.bank) setBankAccountId(restorable.bank); setRestorable(null); }} style={{ height: 34, padding: "0 14px", borderRadius: 9, border: "none", background: "#232A63", color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Continue where I left off</button>
+            <button onClick={clearDraft} style={{ height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid #F2D29B", background: "#FFFFFF", color: "#8A5A00", fontWeight: 700, cursor: "pointer" }}>Discard</button>
+          </div>
+        )}
         {rows.length === 0 && (
           <div>
             <div style={{ marginBottom: "1.5rem" }}>
@@ -493,6 +569,16 @@ export default function BankingPage() {
                 <span style={{ marginLeft: "auto", fontSize: "0.74rem", color: "#5A6080" }}>{filtered.length} shown</span>
               </div>
 
+              {/* Suggest + saved */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "0 0 0.75rem", padding: "10px 12px", borderRadius: 12, background: "linear-gradient(90deg,#FFFFFF,#FBF7EE)", border: "1px solid rgba(201,162,74,0.35)" }}>
+                <button onClick={suggestLedgers} disabled={suggesting || !rows.some(r => !r.pushed && !r.ledger_id)}
+                  style={{ height: 36, padding: "0 16px", borderRadius: 10, border: "none", background: rows.some(r => !r.pushed && !r.ledger_id) ? "#232A63" : "#B9BDD6", color: "#FFFFFF", fontWeight: 800, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>
+                  {suggesting ? "Suggesting…" : `✨ Suggest ledgers${rows.some(r => !r.pushed && !r.ledger_id) ? ` for ${rows.filter(r => !r.pushed && !r.ledger_id).length}` : ""}`}
+                </button>
+                <span style={{ fontSize: "0.76rem", color: "#5A6080", flex: 1, minWidth: 200 }}>{suggestMsg || "Reads each description (rent, salary, electricity, bank charges, party names…) and creates any missing ledger under the right group."}</span>
+                {savedAt && <span title="Saved on this device — come back any time" style={{ fontSize: "0.74rem", fontWeight: 700, color: "#0B7A55" }}>💾 Saved {new Date(savedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>}
+              </div>
+
               {/* Bulk assign bar — visible when rows are selected */}
               {selected.size > 0 && (
                 <div style={{ background: "rgba(37,99,235,0.08)", border: "1px solid rgba(31,94,255,0.25)", borderRadius: 10, padding: "0.65rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
@@ -555,6 +641,7 @@ export default function BankingPage() {
                               {row.balance ? `${cur()}${fmt(row.balance)}` : ""}
                             </td>
                             <td style={{ padding: "0.5rem 0.75rem" }}>
+                              {row.suggested && !row.pushed && addLedgerRow !== row.id && <span title="Suggested from the description — change it if wrong" style={{ display: "inline-block", fontSize: 10.5, fontWeight: 800, color: "#8A5A00", background: "#FFF4DB", borderRadius: 999, padding: "1px 7px", marginBottom: 4 }}>✨ Suggested</span>}
                               {row.pushed ? (
                                 <span className="bs-chip" style={{ background: "rgba(11,122,85,0.12)", color: "#0B7A55" }}>✓ Pushed</span>
                               ) : addLedgerRow === row.id ? (
@@ -642,7 +729,12 @@ export default function BankingPage() {
                   <option value="">— select account —</option>
                   {bankAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
-                <div style={{ fontSize: "0.66rem", color: "#E1E4EE", marginTop: "0.4rem" }}>All transactions in this statement belong to this account</div>
+                <div style={{ fontSize: "0.68rem", color: "#5A6080", marginTop: "0.4rem" }}>All transactions in this statement belong to this account</div>
+                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                  <input value={newBank} onChange={e => setNewBank(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addBank(); }} placeholder={bankAccounts.length ? "＋ Another bank…" : "＋ Add your bank, e.g. IDFC First Bank"} aria-label="Add a bank account"
+                    style={{ ...inp, flex: 1, minWidth: 0, fontSize: "0.76rem", padding: "6px 8px" }} />
+                  {newBank.trim() && <button onClick={addBank} style={{ border: "none", borderRadius: 8, background: "#232A63", color: "#FFFFFF", fontWeight: 800, fontSize: "0.74rem", padding: "0 10px", cursor: "pointer" }}>Add</button>}
+                </div>
               </div>
 
               {/* Summary */}
