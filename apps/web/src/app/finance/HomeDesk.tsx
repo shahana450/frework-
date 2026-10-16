@@ -72,7 +72,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         .b-entry { grid-area: entry } .b-profit { grid-area: profit } .b-dues { grid-area: dues } .b-cash { grid-area: cash } .b-recv { grid-area: recv }
         .b-pay { grid-area: pay } .b-quick { grid-area: quick } .b-insight { grid-area: insight } .b-recent { grid-area: recent }
         @media (max-width: 1100px) { .bento { grid-template-columns: repeat(2, minmax(0,1fr)); grid-template-areas: "entry entry" "profit dues" "cash recv" "pay quick" "tax tax" "insight insight" "recent recent"; } }
-        @media (max-width: 640px) { .bento { grid-template-columns: minmax(0,1fr); grid-template-areas: "entry" "quick" "profit" "dues" "cash" "recv" "pay" "tax" "insight" "recent"; } }
+        @media (max-width: 640px) { .bento { grid-template-columns: minmax(0,1fr); grid-template-areas: "entry" "dues" "quick" "profit" "tax" "insight" "recent"; } .b-cash, .b-recv, .b-pay { display: none !important; } }
         .bento a.lift, .bento button.lift { transition: transform .15s, box-shadow .15s, border-color .15s; }
         .bento a.lift:hover, .bento button.lift:hover { transform: translateY(-2px); box-shadow: 0 12px 26px -16px rgba(15,43,37,0.4); border-color: #C99A4E; }
         .bento .chip:hover { border-color: ${C.navy}; color: ${C.navy}; background: #FFFFFF; }
@@ -85,15 +85,35 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         @keyframes ringIn { from { stroke-dasharray: 0 999; } }
         .ring-arc { animation: ringIn .9s ease-out both; }
         @keyframes glow { 0%,100% { opacity: .55 } 50% { opacity: .9 } }
+        .hd-snap { display: none; }
+        @media (max-width: 640px) {
+          .hd-crumb { display: none !important; }
+          .hd-controls { flex-wrap: nowrap !important; overflow-x: auto; width: 100%; padding-bottom: 2px; scrollbar-width: none; }
+          .hd-controls::-webkit-scrollbar, .hd-today::-webkit-scrollbar, .hd-snap::-webkit-scrollbar { display: none; }
+          .hd-controls > * { flex-shrink: 0; }
+          .hd-today { flex-wrap: nowrap !important; overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px 12px !important; border-radius: 18px !important; scrollbar-width: none; }
+          .hd-today > * { flex-shrink: 0; scroll-snap-align: start; }
+          .hd-today .today-pill { max-width: 78vw; white-space: normal; }
+          .hd-snap { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -2px; padding: 2px; scrollbar-width: none; }
+          .hd-snap > a { scroll-snap-align: start; flex: 0 0 44%; }
+          .bento { gap: 12px; }
+          .b-entry { padding: 18px !important; border-radius: 20px !important; }
+          .b-entry h1 { font-size: 25px !important; }
+          .hd-greet { font-size: 12.5px !important; }
+          .hd-examples { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; }
+          .hd-examples::-webkit-scrollbar { display: none; }
+          .hd-examples > * { flex-shrink: 0; }
+          .hd-qa { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+        }
         @media (prefers-reduced-motion: reduce) { .ring-arc, .glow { animation: none !important } .lift, .qa, .due-row, .today-pill { transition: none !important } }
       `}</style>
 
       {/* Top bar */}
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: C.muted }}>
+        <div className="hd-crumb" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: C.muted }}>
           <span>{bizName}</span><span style={{ color: "#D8CDB4" }}>/</span><span style={{ color: C.ink, fontWeight: 700 }}>Home</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{controls}</div>
+        <div className="hd-controls" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{controls}</div>
       </header>
 
       {dashErr && <div style={{ ...tile, flexDirection: "row", alignItems: "center", color: C.warn, background: C.warnSoft, borderColor: "#FFE2A8" }}>{dashErr}{onRetry && <button onClick={onRetry} style={{ marginLeft: "auto", border: `1px solid ${C.warn}`, background: "transparent", color: C.warn, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontWeight: 700 }}>Try again</button>}</div>}
@@ -108,7 +128,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         if (dash.recent.length < 5) todo.push({ text: "Finish setup — about 10 minutes", href: "/finance/start", tone: "go" });
         else todo.push({ text: "This month's MIS report", href: "/finance/mis", tone: "go" });
         return (
-          <section aria-label="To do today" style={{ ...tile, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, padding: "12px 14px", background: "linear-gradient(90deg,#FFFFFF 0%,#FFFDF8 100%)" }}>
+          <section aria-label="To do today" className="hd-today" style={{ ...tile, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, padding: "12px 14px", background: "linear-gradient(90deg,#FFFFFF 0%,#FFFDF8 100%)" }}>
             <span style={{ display: "flex", flexDirection: "column", marginRight: 8, paddingRight: 14, borderRight: `1px solid ${C.line}` }}>
               <span style={{ ...label, color: C.orange }}>Today</span>
               <span style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 700 }}>{new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
@@ -126,12 +146,30 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         );
       })()}
 
+      {dash && (
+        <nav aria-label="Money at a glance" className="hd-snap">
+          {[
+            { label: profit < 0 ? "Net loss" : "Net profit", v: money(profit), sub: margin == null ? dash.period.label : `${margin}% margin`, href: "/finance/reports?tab=profit_loss", dark: true, tone: profit < 0 ? "#F6C66B" : "#A8F0CF" },
+            { label: "Cash & bank", v: money(dash.cash), sub: "Today", href: "/finance/banking", tone: (dash.cash ?? 0) < 0 ? C.neg : C.ink },
+            { label: "To receive", v: money(dash.receivables), sub: "From customers", href: "/finance/collect", tone: C.orange },
+            { label: "To pay", v: money(dash.payables), sub: "To suppliers", href: "/finance/payables", tone: C.ink },
+          ].map(s => (
+            <Link key={s.label} href={s.href} style={{ display: "flex", flexDirection: "column", gap: 3, padding: "12px 14px", borderRadius: 16, textDecoration: "none",
+              background: s.dark ? "radial-gradient(120% 90% at 50% 0%, #24564A 0%, #0F2B25 100%)" : C.tile, border: s.dark ? "none" : `1px solid ${C.line}`, color: s.dark ? "#FFFFFF" : C.ink }}>
+              <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: s.dark ? "#D9B56F" : C.muted }}>{s.label}</span>
+              <span style={{ fontFamily: MONO, fontSize: 18, fontWeight: 600, color: s.tone, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{s.v}</span>
+              <span style={{ fontSize: 11, color: s.dark ? "#C9D3CE" : C.muted }}>{s.sub}</span>
+            </Link>
+          ))}
+        </nav>
+      )}
+
       <div className="bento">
         {/* Large entry tile */}
         <section className="b-entry" aria-labelledby="hero" style={{ ...tile, padding: 26, gap: 16, position: "relative", overflow: "hidden", background: "linear-gradient(155deg,#FFFFFF 0%,#FFFCF5 55%,#FBF3E2 100%)" }}>
           <div aria-hidden="true" className="glow" style={{ position: "absolute", right: -90, top: -90, width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle,rgba(201,154,78,0.22),transparent 70%)", animation: "glow 6s ease-in-out infinite", pointerEvents: "none" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: C.muted }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: critical ? "#C2321F" : waiting ? C.orange : C.pos }} />
+          <div className="hd-greet" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: C.muted }}>
+            <span style={{ width: 8, height: 8, flexShrink: 0, borderRadius: "50%", background: critical ? "#C2321F" : waiting ? C.orange : C.pos }} />
             {greeting}{critical ? ` — ${critical} balance problem${critical > 1 ? "s" : ""} need${critical > 1 ? "" : "s"} attention` : waiting ? ` — ${waiting} item${waiting > 1 ? "s" : ""} waiting for you` : " — books are up to date"}
             {dash && <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: C.navySoft, color: C.navy }}>Health {dash.health.score}{dash.streak > 0 ? ` · ${dash.streak}-day streak` : ""}</span>}
           </div>
@@ -161,12 +199,12 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
               </button>
             </div>
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <div className="hd-examples" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {(mode === "record" ? (india ? ["Received ₹1.2L from a customer", "Paid salaries for last month", "Bought stationery ₹1,800 in cash"] : [`Received ${cur()}12,000 from a customer`, "Paid salaries for last month", `Bought stationery ${cur()}180 in cash`]) : ["Who owes me for more than 60 days?", "Profit this month vs last month", "GST collected last month"]).map(c => (
               <button key={c} className="chip" onClick={() => mode === "ask" ? go(c) : setText(c)} style={{ height: 34, padding: "0 13px", borderRadius: 17, border: `1px solid ${C.line}`, background: "rgba(255,255,255,0.7)", color: C.muted, fontSize: 12.5, cursor: "pointer" }}>{mode === "ask" ? "? " : "+ "}{c}</button>
             ))}
           </div>
-          <div style={{ marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 10, position: "relative" }}>
+          <div className="hd-qa" style={{ marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 10, position: "relative" }}>
             {[
               { href: "/finance/sales/new", t: "New invoice", s: "Bill a customer", d: "M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5" },
               { href: "/finance/purchases/new", t: "Add a bill", s: "Supplier bill", d: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6" },
