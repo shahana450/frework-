@@ -113,6 +113,9 @@ RULES:
 
     return NextResponse.json({ reply });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    const msg = String(err);
+    console.error("virtual-ca", msg);
+    const busy = /429|503|high demand|overloaded/i.test(msg);
+    return NextResponse.json({ error: busy ? "The AI is busy right now — please ask again in a minute." : "Couldn't answer just now. Please try again." }, { status: busy ? 503 : 500 });
   }
 }

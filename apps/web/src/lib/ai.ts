@@ -77,21 +77,34 @@ async function geminiCreate(params: CreateParams) {
 // Uses Gemini when GEMINI_API_KEY is set, otherwise the Anthropic API.
 export function getAI(): Anthropic {
   if (process.env.GEMINI_API_KEY) {
-    return { messages: { create: geminiCreate } } as unknown as Anthropic;
+    // Gemini first; when it is overloaded or rate-limited (503/429/500) and a Claude key is set, Claude answers instead
+    const create = async (params: CreateParams) => {
+      try { return await geminiCreate(params); }
+      catch (e) {
+        const busy = /Gemini (429|500|503)|high demand|overloaded|UNAVAILABLE|RESOURCE_EXHAUSTED/i.test(e instanceof Error ? e.message : String(e));
+        if (!busy || !process.env.ANTHROPIC_API_KEY) throw e;
+        console.warn("Gemini busy — answering with Claude");
+        return anthropicCreate(params as unknown as Record<string, unknown>);
+      }
+    };
+    return { messages: { create } } as unknown as Anthropic;
   }
-  // Plain request to the Messages API (the SDK reads files at load time, which the edge runtime can't)
-  const create = async (params: Record<string, unknown>) => {
+  return { messages: { create: anthropicCreate } } as unknown as Anthropic;
+}
+
+// Plain request to the Messages API (the SDK reads files at load time, which the edge runtime can't)
+async function anthropicCreate(params: Record<string, unknown>) {
+  {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY ?? "", "anthropic-version": "2023-06-01" },
-      body: JSON.stringify(params),
+      body: JSON.stringify({ ...params, model: process.env.ANTHROPIC_MODEL || params.model }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(`Anthropic ${res.status}: ${data?.error?.message ?? "request failed"}`);
     logUsage({ kind: "ai", provider: "anthropic", model: String(data.model ?? params.model ?? ""), input_tokens: (data.usage?.input_tokens ?? 0) + (data.usage?.cache_read_input_tokens ?? 0) + (data.usage?.cache_creation_input_tokens ?? 0), output_tokens: data.usage?.output_tokens ?? 0 });
     return data;
-  };
-  return { messages: { create } } as unknown as Anthropic;
+  }
 }
 
 export const aiConfigured = () => Boolean(process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY);
