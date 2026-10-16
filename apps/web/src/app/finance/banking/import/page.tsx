@@ -266,9 +266,12 @@ export default function BankingPage() {
     if (!bizId || !newLedgerName.trim()) return;
     setAddingLedger(true);
     try {
+      // Already have it (any capitalisation)? Use that ledger instead of creating a second one
+      const same = coa.find(a => a.name.trim().toLowerCase() === newLedgerName.trim().toLowerCase());
+      if (same) { assignLedger(forRowId, same.id); setAddLedgerRow(null); setNewLedgerName(""); return; }
       const { data, error } = await supabase
         .from("fw_fin_chart_of_accounts")
-        .insert((() => { const h = headByKey(newLedgerType) ?? headByKey("indirect_expense")!; return { business_id: bizId, name: newLedgerName.trim(), type: h.type, sub_type: h.sub_type, is_group: false, is_system: false, description: `Created from bank statement under ${h.label}` }; })())
+        .insert((() => { const h = headByKey(newLedgerType) ?? headByKey("indirect_expense")!; return { business_id: bizId, name: newLedgerName.trim(), code: `AUTO-${Date.now().toString().slice(-7)}`, type: h.type, sub_type: h.sub_type, is_group: false, is_system: false, description: `Created from bank statement under ${h.label}` }; })())
         .select("id,name,type,code")
         .single();
       if (error) throw error;
@@ -278,7 +281,8 @@ export default function BankingPage() {
       setAddLedgerRow(null);
       setNewLedgerName("");
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : String(e));
+      const msg = (e as { message?: string })?.message ?? String(e);
+      alert(/duplicate|unique/i.test(msg) ? `A ledger named "${newLedgerName.trim()}" already exists — pick it from the list.` : `Couldn't add the ledger: ${msg}`);
     } finally {
       setAddingLedger(false);
     }
