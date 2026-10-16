@@ -29,7 +29,7 @@ const FINANCE_CSS = `
   .fw-topicons a.on::after { content: ""; position: absolute; bottom: 3px; left: 50%; width: 16px; height: 3px; margin-left: -8px; border-radius: 3px; background: #D9B56F; }
   .fw-topicons a.grp { margin-left: 10px; }
   .fw-topicons a.grp::before { content: ""; position: absolute; left: -6px; top: 22%; height: 56%; width: 1px; background: #E6DFD0; }
-  @media (max-width: 760px) { .fw-topicons { margin: 8px 10px 0; border-radius: 16px; } .fw-topicons a { min-width: 62px; padding: 6px 6px 7px; } .fw-topicons a .ic { width: 30px; height: 30px; } }
+  @media (max-width: 760px) { .fw-topicons { position: static; margin: 8px 10px 0; border-radius: 16px; padding: 4px; box-shadow: none; } .fw-topicons a { min-width: 58px; padding: 5px 4px 6px; font-size: 10.5px; gap: 3px; } .fw-topicons a .ic { width: 28px; height: 28px; border-radius: 9px; } .fw-topicons a.on::after { bottom: 2px; } }
   @media (prefers-reduced-motion: reduce) { .fw-topicons a, .fw-topicons a .ic { transition: none; } }
 
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');

@@ -96,14 +96,22 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
           .hd-controls { flex-wrap: nowrap !important; overflow-x: auto; width: 100%; padding-bottom: 2px; scrollbar-width: none; }
           .hd-controls::-webkit-scrollbar, .hd-today::-webkit-scrollbar, .hd-snap::-webkit-scrollbar { display: none; }
           .hd-controls > * { flex-shrink: 0; }
-          .hd-today { flex-wrap: nowrap !important; overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px 12px !important; border-radius: 18px !important; scrollbar-width: none; }
-          .hd-today > * { flex-shrink: 0; scroll-snap-align: start; }
-          .hd-today .today-pill { max-width: 78vw; white-space: normal; }
-          .hd-snap { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -2px; padding: 2px; scrollbar-width: none; }
-          .hd-snap > a { scroll-snap-align: start; flex: 0 0 44%; }
+          .hd-today { flex-direction: column !important; align-items: stretch !important; gap: 6px !important; padding: 12px !important; border-radius: 18px !important; }
+          .hd-today > span:first-child { flex-direction: row !important; align-items: baseline; gap: 8px; border-right: none !important; padding: 0 2px 4px !important; margin: 0 !important; }
+          .hd-today > span:first-child > span:last-child { font-size: 15px !important; }
+          .hd-today .today-pill { width: 100%; box-sizing: border-box; padding: 9px 12px 9px 9px !important; font-size: 12.5px !important; line-height: 1.35; white-space: normal; border-radius: 12px !important; }
+          .hd-today .today-pill:nth-of-type(n+4) { display: none !important; }
+          .hd-snap { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+          .hd-snap > a { min-width: 0; padding: 12px !important; }
+          .hd-snap > a > span:nth-child(2) { font-size: 15.5px !important; overflow: hidden; text-overflow: ellipsis; }
+          .b-entry > .glow { display: none; }
+          .b-entry textarea { font-size: 15.5px !important; min-height: 64px; }
+          .hd-biz { padding: 6px 10px 6px 6px !important; border-radius: 14px !important; }
+          .hd-biz > span:first-child { width: 36px !important; height: 36px !important; font-size: 13px !important; }
+          .hd-biz > span:nth-child(2) > span:last-child { font-size: 16px !important; }
           .bento { gap: 12px; }
           .b-entry { padding: 18px !important; border-radius: 20px !important; }
-          .b-entry h1 { font-size: 25px !important; }
+          .b-entry h1 { font-size: 21px !important; }
           .hd-greet { font-size: 12.5px !important; }
           .hd-examples { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; }
           .hd-examples::-webkit-scrollbar { display: none; }
