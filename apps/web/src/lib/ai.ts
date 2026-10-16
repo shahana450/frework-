@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { logUsage } from "./usage";
 
 type Block =
   | { type: "text"; text: string }
@@ -60,6 +61,7 @@ async function geminiCreate(params: CreateParams) {
   }
   if (!res!.ok) throw new Error(`Gemini ${res!.status}: ${data?.error?.message ?? JSON.stringify(data).slice(0, 300)}`);
   const text: string = (data.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? "").join("");
+  logUsage({ kind: "ai", provider: "gemini", model: data.modelVersion ?? GEMINI_MODEL, input_tokens: data.usageMetadata?.promptTokenCount ?? 0, output_tokens: (data.usageMetadata?.candidatesTokenCount ?? 0) + (data.usageMetadata?.thoughtsTokenCount ?? 0) });
   return {
     id: data.responseId ?? "gemini",
     type: "message",
@@ -86,6 +88,7 @@ export function getAI(): Anthropic {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(`Anthropic ${res.status}: ${data?.error?.message ?? "request failed"}`);
+    logUsage({ kind: "ai", provider: "anthropic", model: String(data.model ?? params.model ?? ""), input_tokens: (data.usage?.input_tokens ?? 0) + (data.usage?.cache_read_input_tokens ?? 0) + (data.usage?.cache_creation_input_tokens ?? 0), output_tokens: data.usage?.output_tokens ?? 0 });
     return data;
   };
   return { messages: { create } } as unknown as Anthropic;

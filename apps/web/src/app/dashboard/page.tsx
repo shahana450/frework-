@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import AdminCosts from "./AdminCosts";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import {
@@ -523,6 +524,7 @@ export default function DashboardPage() {
           <p className="text-sm mb-8" style={{ color: "#4A5070" }}>Manage FreWork — approve spaces, review orders, monitor platform.</p>
 
           <AdminOverview />
+          <AdminCosts />
 
           {/* Quick Trial Grant */}
           <TrialGrantWidget />

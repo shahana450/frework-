@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createHmac, timingSafeEqual } from "crypto";
 import { handleWhatsApp, type Incoming } from "@/lib/whatsapp/bot";
 import { sendContactCard } from "@/lib/whatsapp/contactCard";
+import { logUsage } from "@/lib/usage";
 
 export const maxDuration = 120;
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -15,6 +16,7 @@ async function send(to: string, body: string) {
     body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: body.slice(0, 4000), preview_url: false } }),
   });
   if (!r.ok) console.error("whatsapp send failed", r.status, (await r.text()).slice(0, 300));
+  else logUsage({ kind: "wa_reply", provider: "whatsapp", model: "service" });   // replies within 24 h: free
 }
 
 async function markRead(id: string) {

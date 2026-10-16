@@ -4,6 +4,7 @@
 //   Template: Meta → WhatsApp Manager → Message templates → Authentication, "Copy code" button.
 //   Name from WHATSAPP_LINK_TEMPLATE (default "frebook_link_code"), language WHATSAPP_LINK_TEMPLATE_LANG (default "en").
 import { createHmac } from "node:crypto";
+import { logUsage } from "../usage";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -49,7 +50,7 @@ export async function sendLinkCode(to: string, code: string): Promise<{ ok: true
     body: JSON.stringify(linkTemplatePayload(to, code, name, lang)),
   }).catch(() => null);
   if (!r) return { ok: false, error: linkSendError(0, "") };
-  if (r.ok) return { ok: true };
+  if (r.ok) { logUsage({ kind: "wa_business", provider: "whatsapp", model: "authentication" }); return { ok: true }; }
   const body = (await r.text()).slice(0, 500);
   console.error("whatsapp link code send failed", r.status, body);
   return { ok: false, error: linkSendError(r.status, body) };
