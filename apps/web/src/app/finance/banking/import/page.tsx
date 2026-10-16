@@ -199,6 +199,8 @@ export default function BankingPage() {
       setParseProgress(100); setParseStep(`Found ${txs.length} transactions!`);
       await new Promise(r => setTimeout(r, 400));
       setRows(txs);
+      // Keep the statement itself on the Shelf (Bank rack), so the original is always there
+      if (bizId) { const fd = new FormData(); fd.append("business_id", bizId); fd.append("file", file); fd.append("rack", "bank"); void fetch("/api/finance/shelf", { method: "POST", body: fd }).catch(() => null); }
     } catch (e: unknown) {
       if (progressInterval) clearInterval(progressInterval);
       setParseError(e instanceof Error ? e.message : String(e));
