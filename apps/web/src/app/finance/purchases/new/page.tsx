@@ -97,7 +97,23 @@ export default function NewPurchaseBillPage() {
   const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   async function handleSubmit(mode: "draft" | "post") {
-    if (!bizId || !purchaseAccountId) { setError("Select purchase account"); return; }
+    if (!bizId) return;
+    // No purchase ledger yet (new business): open "Purchases" under Purchase Accounts instead of stopping
+    let purchaseId = purchaseAccountId;
+    if (!purchaseId) {
+      const existing = accounts.find(a => /^purchases?\b/i.test(a.name) && a.type === "expense");
+      if (existing) purchaseId = existing.id;
+      else if (accounts.some(a => a.type === "expense")) { setError("Choose the purchase or expense account for this bill."); return; }
+      else {
+        const { data: made, error: mErr } = await supabase.from("fw_fin_chart_of_accounts")
+          .insert({ business_id: bizId, name: "Purchases", code: `AUTO-${Date.now().toString().slice(-7)}`, type: "expense", sub_type: "direct_expense", is_group: false, is_system: false, description: "Created with the first bill under Purchase Accounts" })
+          .select("id,code,name,type,sub_type").single();
+        if (mErr || !made) { setError(`Couldn't create the Purchases ledger: ${mErr?.message ?? "unknown error"}`); return; }
+        setAccounts(a => [...a, made as Account]);
+        purchaseId = made.id as string;
+      }
+      setPurchaseAccountId(purchaseId);
+    }
     if (!lines.some(l => l.amount > 0)) { setError("Add at least one line item"); return; }
     setSaving(true); setError("");
 
@@ -115,7 +131,7 @@ export default function NewPurchaseBillPage() {
         narration: narration || `Purchase Bill ${billNo} - ${vendor?.name ?? "Vendor"}`,
         reference_no: vendorBillNo || billNo || null, party_name: vendor?.name ?? null, contact_id: vendorId || null,
         lines: [
-          { account_id: purchaseAccountId, dr: subtotal, cr: 0, narration: `Purchase - ${billNo}` },
+          { account_id: purchaseId, dr: subtotal, cr: 0, narration: `Purchase - ${billNo}` },
           { account_id: cgstInAcc?.id, account_name: cgstInAcc ? null : "Input CGST", dr: totalCGST, cr: 0, narration: "CGST Input" },
           { account_id: sgstInAcc?.id, account_name: sgstInAcc ? null : "Input SGST", dr: totalSGST, cr: 0, narration: "SGST Input" },
           { account_id: igstInAcc?.id, account_name: igstInAcc ? null : "Input IGST", dr: totalIGST, cr: 0, narration: "IGST Input" },

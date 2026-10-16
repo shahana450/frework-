@@ -114,7 +114,21 @@ export default function NewSalesInvoicePage() {
 
   async function save(mode: "draft" | "post") {
     if (!bizId) return;
-    if (!salesAccountId) { setError("No sales ledger found. Open More options and choose one."); setMore(true); return; }
+    // No sales ledger yet (new business): open "Sales" under Sales Accounts instead of stopping
+    let salesId = salesAccountId;
+    if (!salesId) {
+      const existing = accounts.find(a => a.type === "income" && /^sales\b/i.test(a.name));
+      if (existing) salesId = existing.id;
+      else {
+        const { data: made, error: mErr } = await supabase.from("fw_fin_chart_of_accounts")
+          .insert({ business_id: bizId, name: "Sales", code: `AUTO-${Date.now().toString().slice(-7)}`, type: "income", sub_type: "revenue", is_group: false, is_system: false, description: "Created with the first invoice under Sales Accounts" })
+          .select("id,code,name,type,sub_type").single();
+        if (mErr || !made) { setError(`Couldn't create the Sales ledger: ${mErr?.message ?? "unknown error"}`); setMore(true); return; }
+        setAccounts(a => [...a, made as Account]);
+        salesId = made.id as string;
+      }
+      setSalesAccountId(salesId);
+    }
     if (!t.subtotal) { setError("Add at least one item with a price."); return; }
     if (paid === "bank" && !bankAccountId) { setError("Choose the bank account the money went into."); return; }
     setSaving(true); setError("");
@@ -138,7 +152,7 @@ export default function NewSalesInvoicePage() {
           paid === "credit" ? { account_id: debtorAcc?.id, account_name: debtorAcc ? null : "Debtors Control", dr: total, cr: 0, narration: `Sales to ${who}` }
             : paid === "cash" ? { account_id: cashAcc?.id, account_name: cashAcc ? null : "Cash", dr: total, cr: 0, narration: `Cash sale to ${who}` }
             : { account_id: bankAccountId, dr: total, cr: 0, narration: `Sale to ${who}, paid to bank` },
-          { account_id: salesAccountId, dr: 0, cr: t.subtotal, narration: `Sales - ${invoiceNo}` },
+          { account_id: salesId, dr: 0, cr: t.subtotal, narration: `Sales - ${invoiceNo}` },
           { account_id: cgstAcc?.id, account_name: cgstAcc ? null : "Output CGST", dr: 0, cr: t.cgst, narration: "CGST Output" },
           { account_id: sgstAcc?.id, account_name: sgstAcc ? null : "Output SGST", dr: 0, cr: t.sgst, narration: "SGST Output" },
           { account_id: igstAcc?.id, account_name: igstAcc ? null : "Output IGST", dr: 0, cr: t.igst, narration: "IGST Output" },
@@ -294,7 +308,7 @@ export default function NewSalesInvoicePage() {
               <div><label style={label}>Customer state (for GST)</label><input className="bill-input" style={field} value={customerState} onChange={e => setCustomerState(e.target.value)} placeholder={bizState || "e.g. Kerala"} /></div>
               <div><label style={label}>Sales ledger</label>
                 <select className="bill-input" style={field} value={salesAccountId} onChange={e => setSalesAccountId(e.target.value)}>
-                  <option value="">Choose…</option>
+                  <option value="">{accounts.some(a => a.type === "income") ? "Choose…" : "Sales (created when you save)"}</option>
                   {accounts.filter(a => a.type === "income").map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select></div>
               <div><label style={label}>HSN / SAC codes</label>
