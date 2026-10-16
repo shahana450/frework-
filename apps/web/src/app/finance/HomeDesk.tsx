@@ -2,7 +2,7 @@
 import { activeCountry, cur } from "@/lib/money";
 import { dueText, dueChip } from "@/lib/dueText";
 // FreBook home — Bento grid. White and light-grey tiles, navy and orange accents. Every figure comes from /api/finance/dashboard.
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTally } from "@/lib/tallyConnection";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -47,6 +47,9 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
   const router = useRouter();
   const tally = useTally();
   const [mode, setMode] = useState<"record" | "ask">("record");
+  // Opened from WhatsApp: recording happens in the chat, so only "Ask your books" is offered here
+  const [fromWa, setFromWa] = useState(false);
+  useEffect(() => { try { if (sessionStorage.getItem("fw_from_wa") === "1") { setFromWa(true); setMode("ask"); } } catch { /* */ } }, []);
   const [text, setText] = useState("");
   const [showAllDues, setShowAllDues] = useState(false);
   const money = (n: number | undefined | null) => n == null ? "—" : formatMoney(n, { currency: dash?.currency ?? "INR", locale: dash?.locale ?? "en-IN" }, { decimals: false });
@@ -190,7 +193,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
           </h1>
           <div style={{ background: "#FFFFFF", border: `1.5px solid ${text.trim() ? "#C99A4E" : C.line}`, boxShadow: "0 14px 30px -22px rgba(15,43,37,0.45)", borderRadius: 18, padding: 6, display: "flex", flexDirection: "column", position: "relative", transition: "border-color .15s" }}>
             <div role="tablist" style={{ display: "flex", gap: 4, padding: "4px 4px 0" }}>
-              {(["record", "ask"] as const).map(m => (
+              {(fromWa ? ["ask"] as const : ["record", "ask"] as const).map(m => (
                 <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} style={{ height: 32, padding: "0 14px", borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, background: mode === m ? C.navy : "transparent", color: mode === m ? "#FFFFFF" : C.muted, boxShadow: "none" }}>
                   {m === "record" ? "Record" : "Ask your books"}
                 </button>
@@ -202,9 +205,9 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
               placeholder={mode === "record" ? (india ? "Paid office rent ₹25,000 from the bank for October" : `Paid office rent ${cur()}2,500 from the bank for October`) : "Who owes me for more than 60 days?"}
               style={{ display: "block", width: "100%", boxSizing: "border-box", resize: "none", border: "none", outline: "none", background: "transparent", padding: "12px 12px 4px", fontSize: 17, lineHeight: 1.5, color: C.ink }} />
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px 6px" }}>
-              <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill" style={{ width: 40, height: 40, borderRadius: 11, background: C.tileGrey, display: "flex", alignItems: "center", justifyContent: "center", color: C.muted }}>
+              {!fromWa && <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill" style={{ width: 40, height: 40, borderRadius: 11, background: C.tileGrey, display: "flex", alignItems: "center", justifyContent: "center", color: C.muted }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-              </Link>
+              </Link>}
               <span style={{ fontSize: 12, color: C.muted }}>Enter to {mode === "record" ? "draft" : "ask"}</span>
               <button onClick={() => go(text)} disabled={!text.trim()} style={{ marginLeft: "auto", height: 42, padding: "0 20px", borderRadius: 12, border: "none", background: text.trim() ? "linear-gradient(135deg,#1B4237,#0F2B25)" : C.navy, color: "#FFFFFF", fontWeight: 800, fontSize: 14.5, cursor: text.trim() ? "pointer" : "default", opacity: text.trim() ? 1 : 0.55, boxShadow: text.trim() ? "0 10px 20px -12px rgba(15,43,37,0.7)" : "none" }}>
                 {mode === "record" ? "Draft entry →" : "Ask →"}

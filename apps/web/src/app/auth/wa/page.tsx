@@ -15,6 +15,8 @@ function WaSignIn() {
     if (!token) { setError("This sign-in link is incomplete."); return; }
     supabase.auth.verifyOtp({ type: "magiclink", token_hash: token }).then(({ error: e }) => {
       if (e) { setError("This sign-in link has expired or was already used. Send LOGIN to FreBook on WhatsApp for a new one."); return; }
+      // Came from WhatsApp: entries are recorded there, so the dashboard opens in "Ask your books" mode (this tab only)
+      try { sessionStorage.setItem("fw_from_wa", "1"); } catch { /* */ }
       router.replace("/finance/select-business");
     });
   }, [params, router]);
