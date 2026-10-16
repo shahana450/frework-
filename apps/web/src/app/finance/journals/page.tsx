@@ -270,9 +270,9 @@ export default function JournalsPage() {
               style={{ flex: "1 1 260px", height: 40, borderRadius: 10, border: "1px solid rgba(20,26,58,0.14)", padding: "0 14px", fontSize: "0.88rem", fontFamily: "inherit", background: "#FFFFFF" }} />
             <label style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 4px 0 12px", borderRadius: 10, border: "1px solid rgba(20,26,58,0.14)", background: "#FFFFFF", fontSize: "0.8rem", fontWeight: 700, color: "rgba(20,26,58,0.65)" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4" /></svg>
-              Sort
+              Sort<style>{`.jr-sort:focus-visible{box-shadow:0 0 0 2px #C9A24A !important}`}</style>
               <select value={sort} onChange={e => { setSort(e.target.value as SortKey); setShown(100); }} aria-label="Sort entries"
-                style={{ height: 32, border: "none", background: "transparent", fontSize: "0.85rem", fontWeight: 700, color: "#141A3A", fontFamily: "inherit", cursor: "pointer" }}>
+                className="jr-sort" style={{ height: 32, padding: "0 26px 0 8px", margin: 0, lineHeight: "32px", border: "none", borderRadius: 8, background: "transparent url(\"data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23232A63%27 stroke-width=%273%27 stroke-linecap=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E\") no-repeat right 8px center", appearance: "none", WebkitAppearance: "none", boxShadow: "none", outline: "none", fontSize: "0.85rem", fontWeight: 700, color: "#141A3A", fontFamily: "inherit", cursor: "pointer" }}>
                 <option value="posted">Latest posted first</option>
                 <option value="date_desc">Date — newest first</option>
                 <option value="date_asc">Date — oldest first</option>
