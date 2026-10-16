@@ -139,7 +139,7 @@ export default function RegisterPage() {
             <div className="flex items-center gap-2 mb-8">
               {steps.map((s, i) => (
                 <div key={s} className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${i <= currentStepIdx ? "bg-[#C9A84C] text-[#0B1120]" : "bg-white/8 text-white/30"}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${i <= currentStepIdx ? "bg-[#C9A84C] text-[#0B1120]" : "bg-white/[0.08] text-white/30"}`}>
                     {i < currentStepIdx ? "✓" : i + 1}
                   </div>
                   <span className={`text-xs font-medium ${i === currentStepIdx ? "text-[#C9A84C]" : "text-white/30"}`}>{s}</span>
@@ -225,7 +225,7 @@ export default function RegisterPage() {
                 {error && <div className="border border-red-500/30 bg-red-500/10 text-red-400 rounded-xl px-4 py-3 text-sm mb-5">{error}</div>}
 
                 <button onClick={handleGoogle} disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 py-3.5 border border-white/12 rounded-2xl hover:border-white/25 hover:bg-white/4 transition-all font-medium text-white/80 hover:text-white mb-5">
+                  className="w-full flex items-center justify-center gap-3 py-3.5 border border-white/12 rounded-2xl hover:border-white/25 hover:bg-white/[0.04] transition-all font-medium text-white/80 hover:text-white mb-5">
                   {loading ? <Loader2 className="w-5 h-5 animate-spin text-[#C9A84C]" /> : (
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -246,7 +246,7 @@ export default function RegisterPage() {
                 </div>
 
                 <button onClick={() => setStep("details")}
-                  className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl border border-white/12 text-white/70 hover:text-white hover:border-white/25 hover:bg-white/4 transition-all font-medium text-sm">
+                  className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl border border-white/12 text-white/70 hover:text-white hover:border-white/25 hover:bg-white/[0.04] transition-all font-medium text-sm">
                   <Mail className="w-4 h-4" /> Continue with Email
                 </button>
 
@@ -272,7 +272,7 @@ export default function RegisterPage() {
                       <div className="relative">
                         <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
                         <input type={type} value={value} onChange={e => set(e.target.value)} placeholder={placeholder} required
-                          className="w-full border border-white/10 rounded-2xl pl-11 pr-4 py-3 bg-white/4 text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all placeholder:text-white/20" />
+                          className="w-full border border-white/10 rounded-2xl pl-11 pr-4 py-3 bg-white/[0.04] text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all placeholder:text-white/20" />
                       </div>
                     </div>
                   ))}
@@ -281,7 +281,7 @@ export default function RegisterPage() {
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
                       <input type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 8 characters" minLength={8} required
-                        className="w-full border border-white/10 rounded-2xl pl-11 pr-11 py-3 bg-white/4 text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all placeholder:text-white/20" />
+                        className="w-full border border-white/10 rounded-2xl pl-11 pr-11 py-3 bg-white/[0.04] text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all placeholder:text-white/20" />
                       <button type="button" onClick={() => setShowPass(s => !s)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60">
                         {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -318,9 +318,9 @@ export default function RegisterPage() {
                   <div>
                     <label className="text-sm font-medium text-white/60 mb-1.5 block">Mobile number</label>
                     <div className="flex gap-2">
-                      <span className="flex items-center px-4 border border-white/10 rounded-2xl text-sm text-white/35 bg-white/4">+91</span>
+                      <span className="flex items-center px-4 border border-white/10 rounded-2xl text-sm text-white/35 bg-white/[0.04]">+91</span>
                       <input type="tel" value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10-digit number"
-                        className="flex-1 border border-white/10 rounded-2xl px-4 py-3 bg-white/4 text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all placeholder:text-white/20" />
+                        className="flex-1 border border-white/10 rounded-2xl px-4 py-3 bg-white/[0.04] text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all placeholder:text-white/20" />
                     </div>
                   </div>
                   <button onClick={saveMobile} disabled={loading || mobile.length < 10}

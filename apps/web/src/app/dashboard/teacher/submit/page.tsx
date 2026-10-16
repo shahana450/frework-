@@ -89,7 +89,7 @@ export default function TeacherSubmitPage() {
             <div className="flex flex-wrap gap-2">
               {SUBJECTS.map(s => (
                 <button key={s} type="button" onClick={() => setSelSubjects(p => p.includes(s) ? p.filter(x=>x!==s) : [...p,s])}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selSubjects.includes(s) ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300" : "bg-white/4 border-white/10 text-white/40 hover:border-white/20"}`}>
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selSubjects.includes(s) ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300" : "bg-white/[0.04] border-white/10 text-white/40 hover:border-white/20"}`}>
                   {s}
                 </button>
               ))}
@@ -101,7 +101,7 @@ export default function TeacherSubmitPage() {
             <div className="flex flex-wrap gap-2">
               {MODES.map(m => (
                 <button key={m} type="button" onClick={() => setSelModes(p => p.includes(m) ? p.filter(x=>x!==m) : [...p,m])}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selModes.includes(m) ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300" : "bg-white/4 border-white/10 text-white/40 hover:border-white/20"}`}>
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selModes.includes(m) ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300" : "bg-white/[0.04] border-white/10 text-white/40 hover:border-white/20"}`}>
                   {m}
                 </button>
               ))}

@@ -41,7 +41,7 @@ export function HomepageHero() {
             transition={{ duration: 0.5 }}
             className="flex justify-center mb-10"
           >
-            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/10 bg-white/4 text-white/50 text-xs font-medium tracking-widest uppercase">
+            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/10 bg-white/[0.04] text-white/50 text-xs font-medium tracking-widest uppercase">
               India&apos;s Professional Growth Platform
             </span>
           </motion.div>
@@ -237,7 +237,7 @@ export function HomepageHero() {
                   { num: "24 hrs", label: "Response Time", sub: "guaranteed", color: "text-emerald-400" },
                   { num: "₹1,499", label: "FreBook / month", sub: "+ GST, no hidden fees", color: "text-purple-400" },
                 ].map(({ num, label, sub, color }) => (
-                  <div key={label} className="flex flex-col items-center justify-center py-6 px-4 text-center gap-1 hover:bg-white/2 transition-colors">
+                  <div key={label} className="flex flex-col items-center justify-center py-6 px-4 text-center gap-1 hover:bg-white/[0.02] transition-colors">
                     <span className={`text-2xl font-bold ${color}`} style={{ fontFamily: "var(--font-cormorant), serif" }}>{num}</span>
                     <span className="text-xs font-medium text-white/60 leading-tight">{label}</span>
                     <span className="text-[10px] text-white/20 tracking-wide">{sub}</span>

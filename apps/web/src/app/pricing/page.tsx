@@ -137,7 +137,7 @@ export default function PricingPage() {
           {/* Trust pills */}
           <div className="flex flex-wrap justify-center gap-3 mb-12">
             {TRUST.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/4 border border-white/8 text-white/50 text-xs">
+              <div key={label} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/8 text-white/50 text-xs">
                 <Icon className="w-3.5 h-3.5 text-[#C9A84C]/70" /> {label}
               </div>
             ))}
@@ -229,7 +229,7 @@ export default function PricingPage() {
                   </button>
 
                   {/* Divider */}
-                  <div className={`h-px mb-5 ${isPopular ? "bg-[#C9A84C]/15" : "bg-white/6"}`} />
+                  <div className={`h-px mb-5 ${isPopular ? "bg-[#C9A84C]/15" : "bg-white/[0.06]"}`} />
 
                   {/* Feature sections */}
                   <div className="space-y-5 flex-1">
@@ -258,11 +258,11 @@ export default function PricingPage() {
                     {/* Not included */}
                     {plan.notIncluded.length > 0 && (
                       <div>
-                        <div className="h-px bg-white/4 mb-4" />
+                        <div className="h-px bg-white/[0.04] mb-4" />
                         <div className="space-y-2">
                           {plan.notIncluded.map(f => (
                             <div key={f} className="flex items-start gap-2.5 opacity-25">
-                              <div className="mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 bg-white/6">
+                              <div className="mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 bg-white/[0.06]">
                                 <X className="w-2.5 h-2.5 text-white/50" />
                               </div>
                               <span className="text-xs text-white/40 line-through leading-relaxed">{f}</span>
@@ -336,7 +336,7 @@ export default function PricingPage() {
             ))}
           </div>
 
-          <div className="mt-12 text-center rounded-3xl border border-white/6 bg-white/2 p-8">
+          <div className="mt-12 text-center rounded-3xl border border-white/6 bg-white/[0.02] p-8">
             <p className="text-white/50 text-sm mb-2">Need something custom?</p>
             <p className="text-white font-semibold mb-5">Our team will build a plan around your requirements.</p>
             <Link href="/contact"

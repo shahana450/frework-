@@ -175,7 +175,7 @@ function LandingInner() {
             {/* Offerings */}
             <div className="grid grid-cols-2 gap-3 mb-8">
               {OFFERINGS.map(({ icon: Icon, label, desc }) => (
-                <div key={label} className="flex items-start gap-3 p-3.5 rounded-2xl border border-white/7 bg-white/3">
+                <div key={label} className="flex items-start gap-3 p-3.5 rounded-2xl border border-white/7 bg-white/[0.03]">
                   <div className="w-8 h-8 rounded-xl bg-[#C9A84C]/12 border border-[#C9A84C]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Icon className="w-4 h-4 text-[#C9A84C]" />
                   </div>
@@ -221,7 +221,7 @@ function LandingInner() {
                   <input
                     type="text" placeholder="e.g. Rahul Sharma" required
                     value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/12 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-[#C9A84C]/50 focus:bg-white/7 transition-all"
+                    className="w-full bg-white/5 border border-white/12 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-[#C9A84C]/50 focus:bg-white/[0.07] transition-all"
                   />
                 </div>
 
@@ -232,7 +232,7 @@ function LandingInner() {
                     <input
                       type="tel" placeholder="9876543210" required maxLength={10}
                       value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value.replace(/\D/g, "") }))}
-                      className="w-full bg-white/5 border border-white/12 rounded-xl pl-12 pr-4 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-[#C9A84C]/50 focus:bg-white/7 transition-all"
+                      className="w-full bg-white/5 border border-white/12 rounded-xl pl-12 pr-4 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-[#C9A84C]/50 focus:bg-white/[0.07] transition-all"
                     />
                   </div>
                 </div>
@@ -242,7 +242,7 @@ function LandingInner() {
                   <input
                     type="email" placeholder="rahul@company.com"
                     value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/12 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-[#C9A84C]/50 focus:bg-white/7 transition-all"
+                    className="w-full bg-white/5 border border-white/12 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-[#C9A84C]/50 focus:bg-white/[0.07] transition-all"
                   />
                 </div>
 
@@ -290,7 +290,7 @@ function LandingInner() {
               <div className="grid md:grid-cols-3 gap-4">
                 {REVIEWS.map((r) => (
                   <motion.div key={r.name} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                    className="rounded-2xl border border-white/8 bg-white/3 p-5">
+                    className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
                     <div className="flex gap-0.5 mb-3">
                       {Array.from({ length: r.stars }).map((_, i) => (
                         <Star key={i} className="w-3.5 h-3.5 text-[#C9A84C] fill-[#C9A84C]" />

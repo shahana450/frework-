@@ -91,7 +91,7 @@ export function HorizontalHomepage() {
 
             {/* top headline strip */}
             <div className="text-center pt-5 pb-3 px-4">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/8 bg-white/3 text-white/30 text-[10px] font-semibold tracking-[0.25em] uppercase mb-3">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/8 bg-white/[0.03] text-white/30 text-[10px] font-semibold tracking-[0.25em] uppercase mb-3">
                 India&apos;s Professional Growth Platform
               </span>
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight"
@@ -418,7 +418,7 @@ export function HorizontalHomepage() {
               </div>
 
               {/* For investors */}
-              <div className="rounded-2xl border border-white/8 bg-white/2 p-6">
+              <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6">
                 <h3 className="font-semibold text-white mb-1 flex items-center gap-2">
                   <Star className="w-4 h-4 text-[#C9A84C]" /> For Investors & Partners
                 </h3>

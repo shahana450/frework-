@@ -32,7 +32,7 @@ export function HomepageFAQ() {
             <div key={i} className={`rounded-2xl border transition-all duration-300 overflow-hidden ${open === i ? "border-[#C9A84C]/25 bg-[#C9A84C]/4" : "border-white/6 bg-white/[0.025] hover:border-white/12"}`}>
               <button onClick={() => setOpen(open === i ? null : i)} className="w-full flex items-center justify-between p-6 text-left">
                 <span className="font-medium text-white/90 pr-6 text-sm leading-relaxed">{faq.q}</span>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${open === i ? "bg-[#C9A84C]/20 text-[#C9A84C]" : "bg-white/6 text-white/40"}`}>
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${open === i ? "bg-[#C9A84C]/20 text-[#C9A84C]" : "bg-white/[0.06] text-white/40"}`}>
                   {open === i ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                 </div>
               </button>

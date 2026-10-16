@@ -37,10 +37,10 @@ function WhatsAppSignIn() {
     if (!r.ok || !d.token) { setMsg({ ok: false, text: d.error ?? "That code didn't work." }); return; }
     router.push(`/auth/wa?t=${encodeURIComponent(d.token)}`);
   };
-  const field = "w-full border border-white/10 rounded-2xl px-4 py-3 bg-white/4 text-white outline-none focus:border-[#25D366]/60 text-sm transition-all placeholder:text-white/25";
+  const field = "w-full border border-white/10 rounded-2xl px-4 py-3 bg-white/[0.04] text-white outline-none focus:border-[#25D366]/60 text-sm transition-all placeholder:text-white/25";
   if (!open) return (
     <button type="button" onClick={() => setOpen(true)}
-      className="w-full flex items-center justify-center gap-3 py-3.5 border border-white/12 rounded-2xl hover:border-[#25D366]/50 hover:bg-white/4 transition-all font-medium text-white/80 hover:text-white mb-5">
+      className="w-full flex items-center justify-center gap-3 py-3.5 border border-white/12 rounded-2xl hover:border-[#25D366]/50 hover:bg-white/[0.04] transition-all font-medium text-white/80 hover:text-white mb-5">
       <span className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black" style={{ background: "#25D366", color: "#0B1120" }}>W</span>
       <span>Continue with WhatsApp</span>
     </button>
@@ -172,7 +172,7 @@ function LoginForm() {
           <p className="text-white/45 text-sm mb-10 leading-relaxed">Find workspaces, freelancers & jobs — or grow your business with expert Professional Services.</p>
           <div className="space-y-3">
             {[["GST", "Registration & filing"], ["expert professionals", "Qualified experts"], ["₹1,499", "FreBook per month + GST"]].map(([v, l]) => (
-              <div key={l} className="flex items-center gap-4 bg-white/4 border border-white/6 rounded-2xl px-4 py-3">
+              <div key={l} className="flex items-center gap-4 bg-white/[0.04] border border-white/6 rounded-2xl px-4 py-3">
                 <span className="text-lg font-bold w-20 text-[#E8C97A]" style={{ fontFamily: "var(--font-cormorant), serif" }}>{v}</span>
                 <span className="text-white/50 text-sm">{l}</span>
               </div>
@@ -210,7 +210,7 @@ function LoginForm() {
                 <button
                   onClick={handleGoogle}
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 py-3.5 border border-white/12 rounded-2xl hover:border-white/25 hover:bg-white/4 transition-all font-medium text-white/80 hover:text-white mb-5"
+                  className="w-full flex items-center justify-center gap-3 py-3.5 border border-white/12 rounded-2xl hover:border-white/25 hover:bg-white/[0.04] transition-all font-medium text-white/80 hover:text-white mb-5"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin text-[#C9A84C]" /> : (
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -234,7 +234,7 @@ function LoginForm() {
                   <div>
                     <label className="text-sm font-medium text-white/60 mb-1.5 block">Email address</label>
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required
-                      className="w-full border border-white/10 rounded-2xl px-4 py-3 bg-white/4 text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all placeholder:text-white/20" />
+                      className="w-full border border-white/10 rounded-2xl px-4 py-3 bg-white/[0.04] text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all placeholder:text-white/20" />
                   </div>
                   <div>
                     <div className="flex justify-between mb-1.5">
@@ -243,7 +243,7 @@ function LoginForm() {
                     </div>
                     <div className="relative">
                       <input type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required
-                        className="w-full border border-white/10 rounded-2xl px-4 py-3 pr-11 bg-white/4 text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all" />
+                        className="w-full border border-white/10 rounded-2xl px-4 py-3 pr-11 bg-white/[0.04] text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all" />
                       <button type="button" onClick={() => setShowPass(s => !s)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors">
                         {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -279,9 +279,9 @@ function LoginForm() {
                   <div>
                     <label className="text-sm font-medium text-white/60 mb-1.5 block">Mobile number</label>
                     <div className="flex gap-2">
-                      <span className="flex items-center px-4 border border-white/10 rounded-2xl text-sm text-white/35 bg-white/4">+91</span>
+                      <span className="flex items-center px-4 border border-white/10 rounded-2xl text-sm text-white/35 bg-white/[0.04]">+91</span>
                       <input type="tel" value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10-digit number"
-                        className="flex-1 border border-white/10 rounded-2xl px-4 py-3 bg-white/4 text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all placeholder:text-white/20" />
+                        className="flex-1 border border-white/10 rounded-2xl px-4 py-3 bg-white/[0.04] text-white outline-none focus:border-[#C9A84C]/50 text-sm transition-all placeholder:text-white/20" />
                     </div>
                   </div>
                   <button onClick={saveMobile} disabled={loading || mobile.length < 10}

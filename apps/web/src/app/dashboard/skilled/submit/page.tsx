@@ -89,7 +89,7 @@ export default function SkilledSubmitPage() {
             <div className="flex flex-wrap gap-2">
               {TRADES.map(t => (
                 <button key={t} type="button" onClick={() => setSelTrades(p => p.includes(t) ? p.filter(x=>x!==t) : [...p,t])}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selTrades.includes(t) ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "bg-white/4 border-white/10 text-white/40 hover:border-white/20"}`}>
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selTrades.includes(t) ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "bg-white/[0.04] border-white/10 text-white/40 hover:border-white/20"}`}>
                   {t}
                 </button>
               ))}
@@ -101,7 +101,7 @@ export default function SkilledSubmitPage() {
             <div className="flex flex-wrap gap-2">
               {AVAILABILITY.map(a => (
                 <button key={a} type="button" onClick={() => setSelAvail(p => p.includes(a) ? p.filter(x=>x!==a) : [...p,a])}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selAvail.includes(a) ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "bg-white/4 border-white/10 text-white/40 hover:border-white/20"}`}>
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selAvail.includes(a) ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "bg-white/[0.04] border-white/10 text-white/40 hover:border-white/20"}`}>
                   {a}
                 </button>
               ))}

@@ -102,7 +102,7 @@ export function PhotoUpload({ userId, folder, maxPhotos = 8, onUrlsChange, accen
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-200 py-10 px-6 text-center
-            ${dragging ? `${ac.border} ${ac.bg} scale-[1.01]` : "border-white/10 bg-white/2 hover:border-white/20 hover:bg-white/4"}`}>
+            ${dragging ? `${ac.border} ${ac.bg} scale-[1.01]` : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"}`}>
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${ac.bg} border ${ac.border}`}>
             <Upload className={`w-5 h-5 ${ac.text}`} />
           </div>
@@ -174,7 +174,7 @@ export function PhotoUpload({ userId, folder, maxPhotos = 8, onUrlsChange, accen
           {/* Add more slot */}
           {photos.length < maxPhotos && (
             <button type="button" onClick={() => inputRef.current?.click()}
-              className="aspect-square rounded-xl border-2 border-dashed border-white/10 bg-white/2 hover:border-white/20 hover:bg-white/4 flex flex-col items-center justify-center gap-1 transition-all">
+              className="aspect-square rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04] flex flex-col items-center justify-center gap-1 transition-all">
               <ImageIcon className="w-5 h-5 text-white/20" />
               <span className="text-[9px] text-white/20">Add more</span>
             </button>
