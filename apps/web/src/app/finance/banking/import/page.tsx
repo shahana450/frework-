@@ -5,6 +5,8 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { parseStatementGrid } from "@/lib/bankExcel";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import GroupChips, { guessGroup } from "@/components/GroupChips";
+import { headByKey } from "@/lib/ledgerHeads";
 
 /* ─── Types ─────────────────────────────────────────────── */
 type TxRow = {
@@ -77,7 +79,8 @@ export default function BankingPage() {
   // Add new ledger inline
   const [addLedgerRow, setAddLedgerRow] = useState<string | null>(null); // row id
   const [newLedgerName, setNewLedgerName] = useState("");
-  const [newLedgerType, setNewLedgerType] = useState("expense");
+  const [newLedgerType, setNewLedgerType] = useState("indirect_expense");   // a ledger group key (Sales Accounts, Purchase Accounts, …)
+  const [groupTouched, setGroupTouched] = useState(false);
   const [addingLedger, setAddingLedger] = useState(false);
 
   /* ── Init ── */
@@ -265,7 +268,7 @@ export default function BankingPage() {
     try {
       const { data, error } = await supabase
         .from("fw_fin_chart_of_accounts")
-        .insert({ business_id: bizId, name: newLedgerName.trim(), type: newLedgerType, is_group: false, is_system: false })
+        .insert((() => { const h = headByKey(newLedgerType) ?? headByKey("indirect_expense")!; return { business_id: bizId, name: newLedgerName.trim(), type: h.type, sub_type: h.sub_type, is_group: false, is_system: false, description: `Created from bank statement under ${h.label}` }; })())
         .select("id,name,type,code")
         .single();
       if (error) throw error;
@@ -551,21 +554,30 @@ export default function BankingPage() {
                               {row.pushed ? (
                                 <span className="bs-chip" style={{ background: "rgba(11,122,85,0.12)", color: "#0B7A55" }}>✓ Pushed</span>
                               ) : addLedgerRow === row.id ? (
-                                <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
-                                  <input value={newLedgerName} onChange={e => setNewLedgerName(e.target.value)} placeholder="Ledger name" style={{ ...inp, padding: "4px 8px", fontSize: "0.72rem", width: 140 }} />
-                                  <select value={newLedgerType} onChange={e => setNewLedgerType(e.target.value)} style={{ ...inp, padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer" }}>
-                                    {["expense","income","asset","liability","bank","cash","receivable","payable"].map(t => <option key={t} value={t}>{t}</option>)}
-                                  </select>
-                                  <button onClick={() => addLedger(row.id)} disabled={addingLedger || !newLedgerName.trim()} className="bs-btn" style={{ background: "#0B7A55", color: "#fff", padding: "4px 10px", fontSize: "0.72rem", borderRadius: 6 }}>
-                                    {addingLedger ? "…" : "Add"}
+                                <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 12, borderRadius: 14, background: "#FFFFFF", border: "1px solid rgba(35,42,99,0.16)", boxShadow: "0 12px 28px -18px rgba(20,26,58,0.45)", minWidth: 300, maxWidth: 380 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#8A90AE" }}>New ledger</span>
+                                    <span style={{ fontSize: 11, color: "#5A6080" }}>· money {row.debit ? "paid out" : "received"}</span>
+                                    <button onClick={() => setAddLedgerRow(null)} aria-label="Cancel" style={{ marginLeft: "auto", background: "none", border: "none", color: "#5A6080", cursor: "pointer", fontSize: 15, lineHeight: 1 }}>×</button>
+                                  </div>
+                                  <input autoFocus value={newLedgerName} placeholder={row.debit ? "e.g. Office Rent, Purchases, Supplier name" : "e.g. Sales, Customer name, Interest Received"}
+                                    onChange={e => { const v = e.target.value; setNewLedgerName(v); if (!groupTouched) setNewLedgerType(guessGroup(v, row.debit ? "out" : "in")); }}
+                                    onKeyDown={e => { if (e.key === "Enter" && newLedgerName.trim()) addLedger(row.id); if (e.key === "Escape") setAddLedgerRow(null); }}
+                                    style={{ height: 36, borderRadius: 10, border: "1px solid rgba(20,26,58,0.16)", padding: "0 12px", fontSize: 13.5, fontWeight: 600, color: "#141A3A", fontFamily: "inherit" }} />
+                                  <div>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: "#4A5070", marginBottom: 6 }}>Group</div>
+                                    <GroupChips compact value={newLedgerType} onChange={k => { setGroupTouched(true); setNewLedgerType(k); }} />
+                                  </div>
+                                  <button onClick={() => addLedger(row.id)} disabled={addingLedger || !newLedgerName.trim()}
+                                    style={{ height: 36, borderRadius: 10, border: "none", background: newLedgerName.trim() ? "#232A63" : "#B9BDD6", color: "#FFFFFF", fontWeight: 800, fontSize: 13, cursor: newLedgerName.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
+                                    {addingLedger ? "Adding…" : `Add under ${headByKey(newLedgerType)?.label ?? "Indirect Expenses"}`}
                                   </button>
-                                  <button onClick={() => setAddLedgerRow(null)} style={{ background: "none", border: "none", color: "#5A6080", cursor: "pointer", fontSize: "0.8rem" }}>✕</button>
                                 </div>
                               ) : (
                                 <select
                                   value={row.ledger_id ?? ""}
                                   onChange={e => {
-                                    if (e.target.value === "__add__") { setAddLedgerRow(row.id); setNewLedgerName(""); return; }
+                                    if (e.target.value === "__add__") { setAddLedgerRow(row.id); setNewLedgerName(""); setGroupTouched(false); setNewLedgerType(row.debit ? "indirect_expense" : "indirect_income"); return; }
                                     assignLedger(row.id, e.target.value);
                                   }}
                                   className="ledger-sel"
