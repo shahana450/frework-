@@ -25,6 +25,7 @@ type Journal = {
   created_at: string;
 };
 
+type SortKey = "posted" | "date_desc" | "date_asc" | "amount_desc" | "amount_asc" | "entry";
 type JournalLine = {
   id: string;
   account_id: string;
@@ -73,6 +74,7 @@ export default function JournalsPage() {
   const [filter, setFilter] = useState<"all" | "draft" | "posted" | "ai">("all");
   const [loadErr, setLoadErr] = useState("");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortKey>("posted");
   const [shown, setShown] = useState(100);          // rows drawn; thousands at once froze the page
   const checkedIncome = useRef<Set<string>>(new Set());
 
@@ -156,7 +158,18 @@ export default function JournalsPage() {
     : filter === "ai" ? afterTypeFilter.filter(j => j.ai_generated)
     : afterTypeFilter.filter(j => j.status === filter);
   const q = query.trim().toLowerCase();
-  const filtered = q ? byStatus.filter(j => j.entry_no?.toLowerCase().includes(q) || j.narration?.toLowerCase().includes(q) || String(j.total_debit).includes(q)) : byStatus;
+  const matched = q ? byStatus.filter(j => j.entry_no?.toLowerCase().includes(q) || j.narration?.toLowerCase().includes(q) || String(j.total_debit).includes(q)) : byStatus;
+  // Sort: latest posted first by default (when it was entered, not the transaction date)
+  const amt = (j: Journal) => Number(j.total_debit ?? 0);
+  const cmp: Record<SortKey, (a: Journal, b: Journal) => number> = {
+    posted: (a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""),
+    date_desc: (a, b) => b.date.localeCompare(a.date) || (b.created_at ?? "").localeCompare(a.created_at ?? ""),
+    date_asc: (a, b) => a.date.localeCompare(b.date) || (a.created_at ?? "").localeCompare(b.created_at ?? ""),
+    amount_desc: (a, b) => amt(b) - amt(a),
+    amount_asc: (a, b) => amt(a) - amt(b),
+    entry: (a, b) => (a.entry_no ?? "").localeCompare(b.entry_no ?? "", undefined, { numeric: true }),
+  };
+  const filtered = [...matched].sort(cmp[sort]);
   const visible = filtered.slice(0, shown);
 
   // Which rows on screen record income? Those get an "Invoice" button. Checked only for what's drawn.
@@ -252,8 +265,23 @@ export default function JournalsPage() {
             </div>
           </div>
 
-          <input value={query} onChange={ev => { setQuery(ev.target.value); setShown(100); }} placeholder="Search entry no, narration or amount…" aria-label="Search entries"
-            style={{ width: "100%", height: 40, borderRadius: 10, border: "1px solid rgba(20,26,58,0.14)", padding: "0 14px", fontSize: "0.88rem", fontFamily: "inherit", marginBottom: "0.75rem", background: "#FFFFFF" }} />
+          <div style={{ display: "flex", gap: 8, marginBottom: "0.75rem", flexWrap: "wrap" }}>
+            <input value={query} onChange={ev => { setQuery(ev.target.value); setShown(100); }} placeholder="Search entry no, narration or amount…" aria-label="Search entries"
+              style={{ flex: "1 1 260px", height: 40, borderRadius: 10, border: "1px solid rgba(20,26,58,0.14)", padding: "0 14px", fontSize: "0.88rem", fontFamily: "inherit", background: "#FFFFFF" }} />
+            <label style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 4px 0 12px", borderRadius: 10, border: "1px solid rgba(20,26,58,0.14)", background: "#FFFFFF", fontSize: "0.8rem", fontWeight: 700, color: "rgba(20,26,58,0.65)" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4" /></svg>
+              Sort
+              <select value={sort} onChange={e => { setSort(e.target.value as SortKey); setShown(100); }} aria-label="Sort entries"
+                style={{ height: 32, border: "none", background: "transparent", fontSize: "0.85rem", fontWeight: 700, color: "#141A3A", fontFamily: "inherit", cursor: "pointer" }}>
+                <option value="posted">Latest posted first</option>
+                <option value="date_desc">Date — newest first</option>
+                <option value="date_asc">Date — oldest first</option>
+                <option value="amount_desc">Amount — highest first</option>
+                <option value="amount_asc">Amount — lowest first</option>
+                <option value="entry">Entry no.</option>
+              </select>
+            </label>
+          </div>
           <div style={{ marginBottom: "1rem", display: "flex", flexDirection: "column", gap: 8 }}>
             <TallyBar preferName={bizName} returnTo="/finance/journals">
               {tally.status === "connected" && (
@@ -293,9 +321,16 @@ export default function JournalsPage() {
                         <input type="checkbox" aria-label="Select all entries that can be pushed" checked={allSelected} disabled={!selectableHere.length}
                           onChange={() => setSelected(allSelected ? new Set() : new Set(selectableHere.map(j => j.id)))} />
                       </th>
-                      {["Entry No", "Date", "Type", "Narration", "Debit (" + cur() + ")", "Credit (" + cur() + ")", "Status", "Tally", ""].map(h => (
-                        <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h === "Debit (" + cur() + ")" || h === "Credit (" + cur() + ")" ? "right" : "left", fontSize: "0.68rem", color: "rgba(20,26,58,0.60)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
-                      ))}
+                      {["Entry No", "Date", "Type", "Narration", "Debit (" + cur() + ")", "Credit (" + cur() + ")", "Status", "Tally", ""].map((h, i) => {
+                        const key: SortKey | null = i === 0 ? "entry" : i === 1 ? (sort === "date_desc" ? "date_asc" : "date_desc") : i === 4 ? (sort === "amount_desc" ? "amount_asc" : "amount_desc") : null;
+                        const on = (i === 0 && sort === "entry") || (i === 1 && sort.startsWith("date")) || (i === 4 && sort.startsWith("amount"));
+                        const arrow = !on ? "" : sort.endsWith("asc") || sort === "entry" ? " ↑" : " ↓";
+                        return (
+                          <th key={h} aria-sort={on ? (arrow === " ↑" ? "ascending" : "descending") : undefined} style={{ padding: "0.6rem 1rem", textAlign: i === 4 || i === 5 ? "right" : "left", fontSize: "0.68rem", color: on ? "#141A3A" : "rgba(20,26,58,0.60)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                            {key ? <button onClick={() => { setSort(key); setShown(100); }} title="Sort by this column" style={{ all: "unset", cursor: "pointer" }}>{h}{arrow || <span style={{ opacity: 0.35 }}> ↕</span>}</button> : h}
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
