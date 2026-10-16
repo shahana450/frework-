@@ -69,6 +69,8 @@ function LoginForm() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loginHelp, setLoginHelp] = useState<"" | "bad" | "confirm">("");
+  const [resent, setResent] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mobile, setMobile] = useState("");
@@ -109,14 +111,17 @@ function LoginForm() {
     e.preventDefault();
     if (!email || !password) return;
     setLoading(true);
-    setError("");
+    setError(""); setLoginHelp(""); setResent(false);
     try {
       const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
       if (err) throw err;
       setUserId(data.user?.id ?? "");
       setStep("done");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Sign-in failed. Check your email and password.");
+      const msg = e instanceof Error ? e.message : "";
+      if (/invalid login credentials/i.test(msg)) { setError("Email or password is wrong."); setLoginHelp("bad"); }
+      else if (/email not confirmed/i.test(msg)) { setError("Please confirm your email first — open the link we sent when you signed up."); setLoginHelp("confirm"); }
+      else setError(msg || "Sign-in failed. Check your email and password.");
     } finally {
       setLoading(false);
     }
@@ -203,7 +208,19 @@ function LoginForm() {
                 <p className="text-white/40 mb-8 text-sm">Sign in to your FreWork account</p>
 
                 {error && (
-                  <div className="border border-red-500/30 bg-red-500/10 text-red-400 rounded-xl px-4 py-3 text-sm mb-5">{error}</div>
+                  <div role="alert" className="border border-red-500/30 bg-red-500/10 text-red-300 rounded-xl px-4 py-3 text-sm mb-5">
+                    <div className="font-semibold text-red-200">{error}</div>
+                    {loginHelp === "bad" && <>
+                      <div className="text-red-300/80 mt-1 leading-relaxed">If you signed up with Google or WhatsApp, your account has no password — use those buttons below. Otherwise reset it:</div>
+                      <Link href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`} className="inline-flex items-center gap-1.5 mt-3 px-3.5 py-2 rounded-lg bg-[#C9A84C] text-[#0A0E1A] font-bold text-xs hover:brightness-110">Reset password →</Link>
+                    </>}
+                    {loginHelp === "confirm" && (
+                      <button type="button" disabled={resent} onClick={async () => { await supabase.auth.resend({ type: "signup", email }); setResent(true); }}
+                        className="inline-flex items-center gap-1.5 mt-3 px-3.5 py-2 rounded-lg bg-[#C9A84C] text-[#0A0E1A] font-bold text-xs hover:brightness-110 disabled:opacity-60">
+                        {resent ? "Sent — check your inbox" : "Send the confirmation email again"}
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {/* Google */}
