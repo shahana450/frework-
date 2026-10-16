@@ -54,6 +54,22 @@ export async function GET(req: NextRequest) {
     ]);
     const storageBytes = ((files ?? []) as { size_bytes: number | null }[]).reduce((s, f) => s + Number(f.size_bytes ?? 0), 0);
 
+    // Capacity: database, file storage, active users (Supabase) and the WhatsApp daily limit (Meta)
+    const { data: capRows, error: capErr } = await sb.rpc("fw_capacity");
+    const cap = Array.isArray(capRows) ? capRows[0] : capRows;
+    let wa: { tier: string | null; limit: number | null; quality: string | null; name_status: string | null } | null = null;
+    const token = (process.env.WHATSAPP_ACCESS_TOKEN ?? "").trim(), phoneId = (process.env.WHATSAPP_PHONE_ID ?? "").trim();
+    if (token && phoneId) {
+      const r = await fetch(`https://graph.facebook.com/v21.0/${phoneId}?fields=messaging_limit_tier,quality_rating,name_status`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null);
+      const j = r?.ok ? await r.json().catch(() => null) : null;
+      if (j) {
+        const t: string | null = j.messaging_limit_tier ?? null;
+        const lim = t ? ({ TIER_50: 50, TIER_250: 250, TIER_1K: 1000, TIER_10K: 10000, TIER_100K: 100000, TIER_UNLIMITED: null } as Record<string, number | null>)[t] ?? null : null;
+        wa = { tier: t, limit: lim, quality: j.quality_rating ?? null, name_status: j.name_status ?? null };
+      }
+    }
+    const peakBusinessPerDay = Math.max(0, ...days.map(d => rows.filter(r => r.day === d && r.kind === "wa_business").reduce((s, r) => s + r.calls, 0)));
+
     // Days into the month → projection for the whole month
     const dayOfMonth = now.getDate(), daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const mtdInr = aiUsd * USD_INR + waBusiness * WA_BUSINESS_INR;
@@ -68,6 +84,9 @@ export async function GET(req: NextRequest) {
       },
       storage: { files: (files ?? []).length, bytes: storageBytes },
       books: { journals: journals ?? 0, businesses: businesses ?? 0 },
+      capacity: cap && !capErr ? { dbBytes: Number(cap.db_bytes), storageBytes: Number(cap.storage_bytes), storageFiles: Number(cap.storage_files), users: Number(cap.users_total), mau: Number(cap.mau) } : null,
+      capacitySetup: capErr ? "Run 2026-10-28_capacity.sql in Supabase to see database and storage size." : null,
+      whatsapp: wa ? { ...wa, peakBusinessPerDay } : null,
       daily: daily.map(d => ({ ...d, inr: Math.round(d.inr * 100) / 100 })),
     });
   } catch (e) {
