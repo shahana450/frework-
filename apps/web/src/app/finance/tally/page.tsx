@@ -934,7 +934,7 @@ export default function TallyPage() {
             <div className="tb-steps">
               {[
                 { n: "1", t: "Turn on Tally's server", d: <>In Tally Prime: <b>F1 → Settings → Connectivity</b> → enable the HTTP server on port <b className="tb-mono">7001</b>. Once only.</> },
-                { n: "2", t: "Run the Tally Bridge", d: <><a href="https://nodejs.org/en/download" target="_blank" rel="noreferrer" style={{ color: "#8A6420", fontWeight: 700 }}>Install Node.js</a> once, extract the zip, double-click <b>run-tally-bridge.bat</b> and keep it open.</>, a: <a href="/tally-bridge-node.zip" download="FreWork-Tally-Bridge.zip" className="tb-btn tb-btn-soft" style={{ padding: "0 14px", textDecoration: "none", alignSelf: "flex-start", minHeight: 36, fontSize: "0.8rem" }}>⬇ Download bridge</a> },
+                { n: "2", t: "Run the Tally Bridge", d: <>Download the bridge (about 31 MB — Node.js is included, nothing to install). Right-click the zip → <b>Extract All</b>, double-click <b>run-tally-bridge.bat</b> and keep the window open.</>, a: <a href="/tally-bridge-node.zip" download="FreWork-Tally-Bridge.zip" className="tb-btn tb-btn-soft" style={{ padding: "0 14px", textDecoration: "none", alignSelf: "flex-start", minHeight: 36, fontSize: "0.8rem" }}>⬇ Download bridge</a> },
                 { n: "3", t: "Connect", d: <>With your company open in Tally, press <b>Connect to Tally</b> below. FreWork remembers it on every page.</> },
               ].map(s => (
                 <div key={s.n} style={{ background: "#FBF8F1", border: "1px solid #EFE8D9", borderRadius: 16, padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
