@@ -23,6 +23,7 @@ export default function RegisterPage() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [confirmSent, setConfirmSent] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,10 +57,14 @@ export default function RegisterPage() {
       const { data, error: err } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: name } },
+        options: { data: { full_name: name }, emailRedirectTo: `${window.location.origin}/auth/callback` },
       });
       if (err) throw err;
       if (!data.user) throw new Error("Sign-up failed. Please try again.");
+      // Supabase hides existing accounts: no identities means this email is already registered
+      if (!data.user.identities?.length) { setError("This email already has a FreWork account. Sign in instead — or use Forgot password if you don't remember it."); return; }
+      // Email confirmation is on: no session until the link in the email is opened
+      if (!data.session) { setConfirmSent(true); return; }
 
       // Also save to fw_users table with role
       await supabase.from("fw_users").upsert({
@@ -257,7 +262,17 @@ export default function RegisterPage() {
               </motion.div>
             )}
 
-            {step === "details" && (
+            {step === "details" && confirmSent && (
+              <div className="flex flex-col gap-4">
+                <h2 className="text-3xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>Check your email</h2>
+                <p className="text-white/60 text-sm leading-relaxed">We sent a confirmation link to <b className="text-white">{email}</b>. Open it to activate your account — then sign in. Check spam if it isn&apos;t there in a couple of minutes.</p>
+                <button type="button" onClick={async () => { await supabase.auth.resend({ type: "signup", email, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } }); setError("Sent again."); }}
+                  className="rounded-2xl border border-white/15 py-3 text-sm font-semibold text-white/80 hover:border-white/30">Send the link again</button>
+                {error && <div className="text-xs text-white/50">{error}</div>}
+                <Link href="/login" className="text-center text-sm font-bold text-[#C9A84C]">Go to sign in →</Link>
+              </div>
+            )}
+            {step === "details" && !confirmSent && (
               <motion.div key="details" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}>
                 <h1 className="text-3xl font-bold text-white mb-1" style={{ fontFamily: "var(--font-cormorant), serif" }}>Your details</h1>
                 <p className="text-white/40 mb-8 text-sm">Create your FreWork account</p>
