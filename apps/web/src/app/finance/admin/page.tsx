@@ -3,10 +3,10 @@ import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { FREBOOK_PLAN, planLabel } from "@/lib/plans";
+import { FREBOOK_PLAN, FREBOOK_PLANS_LIST, planLabel } from "@/lib/plans";
 
 const ADMIN_EMAILS = ["admin.frework@gmail.com"];
-const PLANS = [FREBOOK_PLAN.id];
+const PLANS = FREBOOK_PLANS_LIST.map(p => p.id);
 
 type Sub = {
   id: string;

@@ -1,7 +1,7 @@
-// One free FreBook month per account, claimed by the user. Pure logic over a small store so it can be tested without a database.
+// One free FreBook week per account, claimed by the user. Pure logic over a small store so it can be tested without a database.
 import { FREBOOK_PLAN } from "./plans";
 
-export const TRIAL_DAYS = 30;
+export const TRIAL_DAYS = 7;   // was 30; trials already running keep their end date
 
 export type SubscriptionRow = { status: string | null; plan: string | null; subscription_ends_at: string | null };
 
@@ -16,7 +16,7 @@ export type ClaimResult =
   | { status: 200; body: { ok: true; ends_at: string } }
   | { status: 409; body: { error: string } };
 
-export const ALREADY_USED = "The free month has already been used on this account.";
+export const ALREADY_USED = "The free trial has already been used on this account.";
 export const ALREADY_ACTIVE = "You already have access — no need to claim again.";
 
 export async function claimTrial(store: TrialStore, userId: string, now: Date = new Date()): Promise<ClaimResult> {

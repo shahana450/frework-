@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { PLAN_PRICES } from "@/lib/plans";
+import { afterPayment } from "@/lib/referrals";
 
 // Razorpay → FreWork: monthly renewals of FreBook subscriptions.
 //   Razorpay Dashboard → Webhooks → URL https://frework.online/api/finance/subscription/razorpay-webhook,
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
       subscription_ends_at: endsAt.toISOString(), granted_by_admin: false, updated_at: new Date().toISOString(),
     }, { onConflict: "user_id" });
     if (error) { console.error("razorpay-webhook: save failed", error.message); return NextResponse.json({ error: "retry" }, { status: 500 }); }   // Razorpay retries
+    await afterPayment(supabase, userId).catch(() => null);   // a referred user's first payment earns the referrer a credit
   } else if (evt.event === "subscription.cancelled" || evt.event === "subscription.halted") {
     console.info("razorpay-webhook:", evt.event, sub.id, "— access runs to the end of the paid month");
   }

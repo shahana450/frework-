@@ -11,7 +11,8 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { FREBOOK_PLAN, FREBOOK_PRICE_LABEL } from "@/lib/plans";
+import { FREBOOK_PLANS_LIST, FREBOOK_PRICE_LABEL, REFERRAL_DISCOUNT_PCT } from "@/lib/plans";
+import { TRIAL_DAYS } from "@/lib/claimTrial";
 
 type PlanFeature = { text: string; note?: string };
 
@@ -28,15 +29,15 @@ type Plan = {
   cta: string;
 };
 
-const PLANS: Plan[] = [
-  {
-    name: FREBOOK_PLAN.name,
+const PLANS: Plan[] = FREBOOK_PLANS_LIST.map(p => ({
+    name: p.name,
     icon: BookOpen,
-    price: FREBOOK_PLAN.price,
-    tagline: "One plan · everything included",
-    desc: "Chat bookkeeping for Indian small businesses. Professional services (GST registration, ITR, audits) are ordered separately at the prices shown on each service.",
-    popular: true,
+    price: p.price,
+    tagline: p.businesses === null ? "Unlimited businesses · one login" : `Up to ${p.businesses} businesses · one login`,
+    desc: "Every FreBook feature. Plans differ only in how many businesses you keep under one login.",
+    popular: !!p.badge,
     color: {
+      badge: p.badge,
       border: "border-[#C9A84C]/50",
       iconBg: "bg-[#C9A84C]/15", iconText: "text-[#E8C97A]",
       glow: "rgba(201,168,76,0.22)",
@@ -44,16 +45,17 @@ const PLANS: Plan[] = [
       cta: "text-[#0B1120] font-bold",
       ctaStyle: { background: "linear-gradient(135deg,#F0D78A,#C9A84C,#A8883A)" },
     },
-    sections: [{ heading: "FreBook Accounting", icon: BookOpen, items: FREBOOK_PLAN.features.map(text => ({ text })) }],
+    sections: [{ heading: "FreBook Accounting", icon: BookOpen, items: p.features.map(text => ({ text })) }],
     notIncluded: [],
     cta: "Get Started",
-  },
-];
+}));
 
 const FAQS = [
-  { q: "What does the FreBook plan include?", a: "Everything in FreBook: chat bookkeeping, invoicing, journals, ledgers, bank import and reconciliation, GST returns preparation, TDS tracker, Tally push and import, and financial reports." },
+  { q: "What's the difference between the plans?", a: "Only the number of businesses one login can keep: Basic up to 2, Pro up to 5, Unlimited any number. Every plan has every FreBook feature — chat bookkeeping, invoicing, ledgers, bank import, GST returns preparation, TDS tracker, Tally push and import, and reports." },
+  { q: "Is there a free trial?", a: `Yes — ${TRIAL_DAYS} days with every feature and any number of businesses. No card needed.` },
+  { q: "Is there a referral discount?", a: `Yes. Share your link from the Plans page: your friend gets ${REFERRAL_DISCOUNT_PCT}% off their first month, and when they pay, your next month is ${REFERRAL_DISCOUNT_PCT}% off too.` },
   { q: "Are professional services included?", a: "No. GST registration, ITR filing, ROC filings and audits are ordered separately, at the price shown on each service. Audits are performed by an independent Chartered Accountant." },
-  { q: "Is GST extra?", a: `Yes. ${FREBOOK_PRICE_LABEL} per month plus GST, billed monthly.` },
+  { q: "Is GST extra?", a: "Yes. Plan prices are per month plus 18% GST, billed monthly." },
   { q: "Can I cancel?", a: "Yes, anytime. Access continues until the end of the month you paid for. See the Refund Policy for the 7-day refund rule." },
   { q: "What payment methods do you accept?", a: "UPI, cards and net banking." },
 ];
@@ -68,7 +70,7 @@ const TRUST = [
 export default function PricingPage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [trialUsed, setTrialUsed] = useState(false);   // any subscription row (paid, trial or expired) means the free month is gone
+  const [trialUsed, setTrialUsed] = useState(false);   // any subscription row (paid, trial or expired) means the free week is gone
   const [claiming, setClaiming] = useState(false);
   const [claimMsg, setClaimMsg] = useState("");
   const router = useRouter();
@@ -82,21 +84,21 @@ export default function PricingPage() {
     });
   }, []);
 
-  // One free month, once per account. The server refuses a second claim with 409.
+  // One free week, once per account. The server refuses a second claim with 409.
   async function claimFreeMonth() {
     setClaiming(true); setClaimMsg("");
     try {
       const r = await fetch("/api/finance/subscription/claim-trial", { method: "POST" });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
-        setClaimMsg(d.error ?? "Couldn't start your free month. Please try again.");
+        setClaimMsg(d.error ?? "Couldn't start your free week. Please try again.");
         if (r.status === 409) { setTrialUsed(true); setTimeout(() => router.push("/finance/pricing"), 1800); }
         return;
       }
-      setClaimMsg(`✓ Your free month has started — FreBook is yours until ${new Date(d.ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}.`);
+      setClaimMsg(`✓ Your free week has started — FreBook is yours until ${new Date(d.ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}.`);
       setTimeout(() => router.push("/finance/start"), 1800);
     } catch {
-      setClaimMsg("Couldn't start your free month. Please try again.");
+      setClaimMsg("Couldn't start your free week. Please try again.");
     } finally { setClaiming(false); }
   }
 
@@ -109,7 +111,7 @@ export default function PricingPage() {
 
   const ctaLabel = (plan: Plan) => {
     if (loggedIn && trialUsed) return "Subscribe Now";
-    return claiming ? "Starting your free month…" : "🎁 Claim 1 month free";
+    return claiming ? "Starting your free week…" : `🎁 Start ${TRIAL_DAYS} days free`;
   };
 
   return (
@@ -131,7 +133,7 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="text-white/45 text-lg mb-10 leading-relaxed">
-            Start with one month free. Then one FreBook plan at {FREBOOK_PRICE_LABEL}/month + GST.<br className="hidden sm:block" /> Professional services are ordered separately when you need them.
+            Start with {TRIAL_DAYS} days free. Then FreBook from {FREBOOK_PRICE_LABEL}/month + GST — Basic, Pro or Unlimited by number of businesses.<br className="hidden sm:block" /> Professional services are ordered separately when you need them.
           </p>
 
           {/* Trust pills */}
@@ -147,7 +149,7 @@ export default function PricingPage() {
 
       {/* ── Plan Cards ── */}
       <section className="px-4 pb-24">
-        <div className="max-w-md mx-auto grid grid-cols-1 gap-5 items-start">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {PLANS.map((plan, i) => {
             const Icon = plan.icon;
             const price = plan.price;
@@ -213,7 +215,7 @@ export default function PricingPage() {
                       </div>
                     </div>
                     {price === 0 && <p className="text-[11px] text-white/20 mt-1.5">Free forever · No card required</p>}
-                    {price > 0 && !trialUsed && <p className="text-[11px] font-semibold text-emerald-400/80 mt-1.5">₹0 for the first month · then {FREBOOK_PRICE_LABEL} + GST/month</p>}
+                    {price > 0 && !trialUsed && <p className="text-[11px] font-semibold text-emerald-400/80 mt-1.5">₹0 for {TRIAL_DAYS} days · then ₹{price.toLocaleString("en-IN")} + GST/month</p>}
                   </div>
 
                   {/* CTA */}
@@ -286,7 +288,7 @@ export default function PricingPage() {
           style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.06),rgba(201,168,76,0.02))" }}>
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/6">
             {[
-              { val: "₹1,499", label: "Per month + GST", sub: "One plan" },
+              { val: "₹699", label: "From, per month + GST", sub: "Basic · Pro · Unlimited" },
               { val: "7 days", label: "Refund window", sub: "See Refund Policy" },
               { val: "< 4 hrs", label: "Avg. support response", sub: "For paid plans" },
               { val: "Zero", label: "Lock-in or exit fees", sub: "Cancel anytime" },

@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, serverError } from "@/lib/apiAuth";
 import { PLAN_PRICES, chargePaise } from "@/lib/plans";
+import { afterPayment } from "@/lib/referrals";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
     const get = (path: string) => fetch(`https://api.razorpay.com/v1/${path}`, { headers: { Authorization: `Basic ${auth}` } });
 
     let plan: string, paid: number, ref: string, endsAt: Date;
+    let applied: { kind?: string; referralId?: string } | undefined;
     if (razorpay_subscription_id) {
       // Subscription: signature is over payment_id|subscription_id
       if (!sigOk(secret, `${razorpay_payment_id}|${razorpay_subscription_id}`, razorpay_signature)) return NextResponse.json({ error: "Payment could not be verified." }, { status: 400 });
@@ -47,8 +49,11 @@ export async function POST(req: NextRequest) {
       const order = await orderRes.json();
       plan = order.notes?.plan as string;
       if (order.notes?.user_id !== user.id) return NextResponse.json({ error: "This payment belongs to a different account." }, { status: 403 });
-      const due = chargePaise(plan);
+      // A referral discount was decided on the server when the order was made; it travels in the order's notes
+      const pct = Number(order.notes?.discount_pct ?? 0);
+      const due = chargePaise(plan, pct === 50 ? 50 : 0);
       if (!due || order.amount_paid < due) return NextResponse.json({ error: "Payment amount doesn't match the plan. Contact support." }, { status: 400 });
+      if (pct) applied = { kind: order.notes?.ref_kind, referralId: order.notes?.ref_id };
       paid = order.amount_paid;
       ref = razorpay_order_id;
       endsAt = new Date(Date.now() + 30 * 86400000);
@@ -59,6 +64,7 @@ export async function POST(req: NextRequest) {
       payment_id: razorpay_payment_id, order_id: ref,   // order_id holds the Razorpay subscription id (sub_…) for auto-renewing plans
       subscription_ends_at: endsAt.toISOString(), granted_by_admin: false, updated_at: new Date().toISOString(),
     }, { onConflict: "user_id" });
+    await afterPayment(supabaseAdmin, user.id, applied).catch(e => console.error("referral after payment", e));
 
     return NextResponse.json({ ok: true });
   } catch (e) {

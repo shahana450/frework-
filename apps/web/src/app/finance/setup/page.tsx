@@ -87,6 +87,14 @@ export default function BusinessSetup() {
 
   async function handleSubmit() {
     if (!userId) { setError("Your session has expired. Please sign in again, then press Create Business."); return; }
+    // Plan limit: Basic keeps 2 businesses, Pro 5, Unlimited any number
+    const lim = await fetch("/api/finance/plan-limit").then(r => r.ok ? r.json() : null).catch(() => null) as { can_add: boolean; limit: number | null; used: number; plan_label: string; upgrade_to: { name: string; price: number; businesses: number | null } | null } | null;
+    if (lim && !lim.can_add) {
+      const up = lim.upgrade_to;
+      if (lim.plan_label === "No plan") { setError("To add another business, start your free week or choose a plan on the Pricing page."); return; }
+      setError(`Your ${lim.plan_label} plan keeps ${lim.limit} business${lim.limit === 1 ? "" : "es"} and you have ${lim.used}. ${up ? `Move to ${up.name} (₹${up.price.toLocaleString("en-IN")}/month + GST, ${up.businesses ?? "unlimited"} businesses) on the Pricing page to add more.` : "Upgrade on the Pricing page to add more."}`);
+      return;
+    }
     const gate = canCreate(step, form);
     if (!gate.ok) { setError(gate.error); setStep(gate.step as Step); return; }
     if (Date.now() - reviewSince < 800) return;          // a double-click on "Next" never creates the business

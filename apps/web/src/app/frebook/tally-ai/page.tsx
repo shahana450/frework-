@@ -40,7 +40,7 @@ const FAQS = [
   { q: "Can a CA firm use it for many Tally clients?",
     a: "Yes. FreBook supports several businesses in one account, and you choose which Tally company to connect to each time." },
   { q: "What does it cost?",
-    a: `Tally sync is included in the FreBook plan at ${FREBOOK_PRICE_LABEL} per month plus GST.` },
+    a: `Tally sync is included in every FreBook plan, from ${FREBOOK_PRICE_LABEL} per month plus GST.` },
 ];
 
 const JSON_LD = {
@@ -155,7 +155,7 @@ export default function TallyAiPage() {
         <section className="fb-final">
           <div className="fb-wrap">
             <h2>Keep Tally. Lose the typing.</h2>
-            <p>Tally sync is included in FreBook at {FREBOOK_PRICE_LABEL}/month + GST.</p>
+            <p>Tally sync is included in every FreBook plan, from {FREBOOK_PRICE_LABEL}/month + GST.</p>
             <div className="fb-cta" style={{ justifyContent: "center" }}>
               <Link className="fb-btn fb-gold" href={FB_APP}>Start FreBook</Link>
               <Link className="fb-btn fb-ghost" href="/frebook#pricing">See what&apos;s included</Link>

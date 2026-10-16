@@ -34,7 +34,7 @@ const faqs = [
   },
   {
     q: "Are there any extra fees?",
-    a: "No. You pay the FreBook plan (₹1,499/month + GST) and the price shown on any service you order — nothing else.",
+    a: "No. You pay your FreBook plan (from ₹699/month + GST) and the price shown on any service you order — nothing else.",
   },
   {
     q: "Can agencies use FreWork?",

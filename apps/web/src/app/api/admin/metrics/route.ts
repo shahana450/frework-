@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, isAdminEmail, serverError } from "@/lib/apiAuth";
-import { FREBOOK_PLAN } from "@/lib/plans";
+import { FREBOOK_PLAN, PLAN_PRICES } from "@/lib/plans";
 
 // Admin overview: users, businesses, FreBook subscriptions and revenue, product activity. Staff only.
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       users: { total: users.length, new7: users.filter(u => u.created_at >= d7).length, new30: users.filter(u => u.created_at >= d30).length, active7: users.filter(u => (u.last_sign_in_at ?? "") >= d7).length },
       signups,
       businesses: { total: biz.length, new30: biz.filter(b => b.created_at >= d30).length, outsideIndia: biz.filter(b => b.country && b.country !== "IN").length },
-      frebook: { paying: paying.length, free: free.length, mrr: paying.length * FREBOOK_PLAN.price, revenueMonth: Math.round(revenueMonth * 100) / 100, autoRenew: paying.filter(s => (s.order_id ?? "").startsWith("sub_")).length },
+      frebook: { paying: paying.length, free: free.length, mrr: paying.reduce((s: number, p: { plan?: string | null }) => s + (PLAN_PRICES[p.plan ?? ""] ?? FREBOOK_PLAN.price), 0), revenueMonth: Math.round(revenueMonth * 100) / 100, autoRenew: paying.filter(s => (s.order_id ?? "").startsWith("sub_")).length },
       activity: { posted7, posted30, viaWhatsApp30: viaWa30, waLinked },
       expiring,
       recent: [...users].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 10)

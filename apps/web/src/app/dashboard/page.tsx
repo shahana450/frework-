@@ -14,7 +14,7 @@ import {
   CheckCircle, Clock,
 } from "lucide-react";
 import { FreWorkLogo } from "@/components/ui/frework-logo";
-import { FREBOOK_PLAN, planLabel } from "@/lib/plans";
+import { FREBOOK_PLAN, FREBOOK_PLANS_LIST, planLabel } from "@/lib/plans";
 
 const PAID_SERVICES = [
   {
@@ -185,7 +185,7 @@ function AdminOverview() {
     { k: "Businesses", v: m.businesses.total.toLocaleString("en-IN"), sub: `+${m.businesses.new30} in 30 days${m.businesses.outsideIndia ? ` · ${m.businesses.outsideIndia} abroad` : ""}` },
     { k: "Paying customers", v: String(m.frebook.paying), sub: `${m.frebook.autoRenew} on auto-renew`, tone: "#0B7A55" },
     { k: "Free / trial", v: String(m.frebook.free), sub: "convert these next", tone: "#B45309" },
-    { k: "MRR", v: inr(m.frebook.mrr), sub: "paying × ₹1,499, before GST", tone: "#232A63" },
+    { k: "MRR", v: inr(m.frebook.mrr), sub: "plan prices × paying users, before GST", tone: "#232A63" },
     { k: "Collected this month", v: inr(m.frebook.revenueMonth), sub: "FreBook payments, incl. GST", tone: "#232A63" },
   ];
 
@@ -316,7 +316,7 @@ function TrialGrantWidget() {
         <div>
           <label className="block text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "rgba(20,26,58,0.60)" }}>Plan</label>
           <select value={plan} onChange={e => setPlan(e.target.value)} style={{ ...inp, width: "auto", cursor: "pointer" }}>
-            {[FREBOOK_PLAN.id].map(p => <option key={p} value={p}>{planLabel(p)}</option>)}
+            {FREBOOK_PLANS_LIST.map(p => <option key={p.id} value={p.id}>{planLabel(p.id)}</option>)}
           </select>
         </div>
         <div>
@@ -662,7 +662,7 @@ export default function DashboardPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "#FFD9C7" }}>FreBook · AI accountant</span>
                 <span className="dbx-plan" style={{ background: finActive ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.14)", color: finActive ? "#86EFAC" : "#FFFFFF" }}>
-                  {finActive ? `Active · till ${new Date(finSub!.subscription_ends_at!).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : "1 month free"}
+                  {finActive ? `Active · till ${new Date(finSub!.subscription_ends_at!).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : "7 days free"}
                 </span>
               </div>
               <h2 style={{ margin: "16px 0 6px", fontSize: "clamp(1.5rem,2.6vw,2rem)", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.02em", lineHeight: 1.1 }}>Chat in. Books out.</h2>
@@ -670,7 +670,7 @@ export default function DashboardPage() {
                 Entries drafted for you · GST-ready invoices · bank &amp; bill import · live P&amp;L · two-way Tally sync.
               </p>
               <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
-                <span className="dbx-cta">{finActive ? "Open FreBook" : "Start your free month"} <ArrowRight className="w-4 h-4" /></span>
+                <span className="dbx-cta">{finActive ? "Open FreBook" : "Start your free week"} <ArrowRight className="w-4 h-4" /></span>
               </div>
             </Link>
           </section>

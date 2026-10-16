@@ -47,7 +47,7 @@ const FAQS = [
   { q: "Does it work with Tally?",
     a: "Yes. FreBook can push entries into Tally Prime and import your Tally ledgers and vouchers." },
   { q: "How much does it cost?",
-    a: `FreBook costs ${FREBOOK_PRICE_LABEL} per month plus GST.` },
+    a: `FreBook starts at ${FREBOOK_PRICE_LABEL} per month plus GST (Basic, 2 businesses); Pro is ₹999 for 5 businesses and Unlimited ₹1,499.` },
 ];
 
 const JSON_LD = {
@@ -135,7 +135,7 @@ export default function AiAccountantPage() {
         <section className="fb-alt">
           <div className="fb-wrap">
             <h2>FreBook: the AI accountant from FreWork</h2>
-            <p className="fb-sub">Everything below is included in one plan at {FREBOOK_PRICE_LABEL}/month + GST.</p>
+            <p className="fb-sub">Everything below is on every plan, from {FREBOOK_PRICE_LABEL}/month + GST.</p>
             <div className="fb-price" style={{ maxWidth: 620 }}>
               <ul className="fb-ticks" style={{ margin: "0 0 26px" }}>{FREBOOK_PLAN.features.map(f => <li key={f}>{f}</li>)}</ul>
               <Link className="fb-btn fb-gold" href={FB_APP}>Start FreBook</Link>

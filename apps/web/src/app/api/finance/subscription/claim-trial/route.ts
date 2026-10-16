@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireUser, serverError } from "@/lib/apiAuth";
 import { claimTrial, type TrialStore } from "@/lib/claimTrial";
 
-// One free month of the FreBook plan, once per account. The user claims it themselves from the pricing page.
+// One free week of FreBook, once per account. The user claims it themselves from the pricing page.
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 const store: TrialStore = {
@@ -26,6 +26,6 @@ export async function POST(req: NextRequest) {
     const r = await claimTrial(store, user.id);
     return NextResponse.json(r.body, { status: r.status });
   } catch (e) {
-    return serverError("subscription/claim-trial", e, "Couldn't start your free month. Please try again.");
+    return serverError("subscription/claim-trial", e, "Couldn't start your free trial. Please try again.");
   }
 }

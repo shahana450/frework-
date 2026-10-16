@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FREBOOK_PLAN, FREBOOK_PRICE_LABEL } from "@/lib/plans";
+import { FREBOOK_PLAN, FREBOOK_PRICE_LABEL, LOWEST_PLAN } from "@/lib/plans";
 import { FB_CSS, FbHeader, FbFooter, FbRelated } from "@/components/frebook/shell";
 
 // SEO landing page for FreBook. Targets: AI accountant, AI bookkeeping,
@@ -47,7 +47,7 @@ const FAQS: { q: string; a: string }[] = [
   { q: "Is FreBook built for GST and TDS?",
     a: "Yes. FreBook handles GST invoicing, purchase bills, GSTR-1 and GSTR-3B preparation, and section-wise TDS tracking." },
   { q: "How much does FreBook cost?",
-    a: `FreBook costs ${FREBOOK_PRICE_LABEL} per month plus GST.` },
+    a: `FreBook starts at ${FREBOOK_PRICE_LABEL} per month plus GST (Basic, 2 businesses); Pro is ₹999 for 5 businesses and Unlimited ₹1,499.` },
   { q: "Will FreBook replace my CA or accountant?",
     a: "No. FreBook removes day-to-day data entry so your CA can spend time on review, tax planning and filing. Every AI-drafted entry is confirmed before it posts." },
   { q: "What is FreBook AI?",
@@ -70,7 +70,7 @@ const JSON_LD = {
       inLanguage: "en-IN",
       offers: {
         "@type": "Offer",
-        price: String(FREBOOK_PLAN.price),
+        price: String(LOWEST_PLAN.price),
         priceCurrency: "INR",
         description: "Per month, plus GST",
         url: `${PAGE_URL}#pricing`,
@@ -226,7 +226,7 @@ export default function FreBookLandingPage() {
             <h2 className="fb-center">Simple pricing</h2>
             <p className="fb-sub fb-center" style={{ margin: "0 auto 36px" }}>One plan with everything included.</p>
             <div className="fb-price">
-              <div className="fb-amt">{FREBOOK_PRICE_LABEL} <small>/ month + GST</small></div>
+              <div className="fb-amt"><small>from</small> {FREBOOK_PRICE_LABEL} <small>/ month + GST</small></div>
               <ul className="fb-ticks">{FREBOOK_PLAN.features.map(f => <li key={f}>{f}</li>)}</ul>
               <Link className="fb-btn fb-gold" href={APP}>Get started</Link>
             </div>

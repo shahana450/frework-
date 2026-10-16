@@ -75,15 +75,15 @@ test("claim-trial: other users are unaffected", async () => {
   assert.equal((await claimTrial(db.store, "u4", NOW)).status, 200);
 });
 
-test("pricing pages: FreBook only, with the Claim 1 month free button calling claim-trial and going to /finance/start", () => {
+test("pricing pages: the free-week button calls claim-trial and goes to /finance/start; plans come from the plan list", () => {
   for (const f of ["src/app/pricing/page.tsx", "src/app/finance/pricing/page.tsx"]) {
     const s = readFileSync(join(process.cwd(), f), "utf8");
-    assert.ok(s.includes("🎁 Claim 1 month free"), f);
+    assert.ok(/\$\{TRIAL_DAYS\} days? free|free \$\{TRIAL_DAYS\}-day trial|\{TRIAL_DAYS\} days free/.test(s), `${f}: free-week button`);
     assert.ok(s.includes('"/api/finance/subscription/claim-trial"'), f);
     assert.ok(s.includes('"/finance/start"'), f);
-    assert.ok(s.includes("₹0 for the first month · then {FREBOOK_PRICE_LABEL} + GST/month"), f);
+    assert.ok(s.includes("FREBOOK_PLANS_LIST"), `${f}: plans from the list`);
     // old tiers by id or as a plan name ("Professional services" is fine — that's the services line)
     assert.ok(!/["'](starter|professional|enterprise)["']|\b(Starter|Professional|Enterprise)\s+(plan|tier)\b|name:\s*["'](Starter|Professional|Enterprise)/i.test(s), `${f} shows an old plan`);
   }
-  assert.ok(readFileSync(join(process.cwd(), "src/app/finance/pricing/page.tsx"), "utf8").includes("Start with <span"), "Start with one month free");
+  assert.equal(TRIAL_DAYS, 7);
 });

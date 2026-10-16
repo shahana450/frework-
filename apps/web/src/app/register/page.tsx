@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, ArrowRight, Phone, CheckCircle, Loader2, User, Mail, Lock } from "lucide-react";
 import Link from "next/link";
@@ -28,6 +28,12 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mobile, setMobile] = useState("");
+  // Signed up through a referral link (?ref=CODE): kept until the account exists, then applied once (finance layout)
+  const [refCode, setRefCode] = useState("");
+  useEffect(() => {
+    const r = new URLSearchParams(window.location.search).get("ref")?.trim().toUpperCase();
+    try { if (r) localStorage.setItem("fw_ref", r); setRefCode(r || localStorage.getItem("fw_ref") || ""); } catch { /* */ }
+  }, []);
   const [displayName, setDisplayName] = useState("");
 
   // Google OAuth — real Supabase flow, goes to /auth/callback → /dashboard
@@ -125,6 +131,11 @@ export default function RegisterPage() {
             Join growing<br />businesses
           </h2>
           <p className="text-white/45 text-sm mb-10 leading-relaxed">Expert Professional Services, coworking spaces, and freelancers — all in one place.</p>
+          {refCode && (
+            <div className="mb-8 rounded-2xl border border-[#C9A84C]/40 bg-[#C9A84C]/10 px-4 py-3 text-sm text-[#F2DDA4]">
+              🎁 Referral applied — a <b>free week</b>, then <b>50% off</b> your first FreBook month.
+            </div>
+          )}
           <div className="space-y-3">
             {[["✅", "verified expert professionals"], ["⚡", "24-hour turnaround"], ["🔒", "100% data privacy"], ["📞", "Dedicated account manager"]].map(([icon, text]) => (
               <div key={text} className="flex items-center gap-3 text-white/70 text-sm">

@@ -84,7 +84,7 @@ const MODULES = [
       heading: "Your finance team, built in",
       why: "Most SMEs lose money due to poor bookkeeping and late invoicing. FreWork gives you professional-grade finance tools without hiring a full-time accountant.",
       steps: ["Connect your bank account", "Auto-categorize transactions", "Generate GST-ready invoices", "Get monthly P&L reports"],
-      pricing: "FreBook ₹1,499/mo + GST",
+      pricing: "FreBook from ₹699/mo + GST",
       time: "Real-time updates",
       features: [
         { icon: FileText, text: "GST-compliant invoicing in seconds" },
@@ -314,11 +314,11 @@ export function BusinessOSHomepage() {
                 <button onClick={handleFreBookClick}
                   className="group flex items-center gap-2 px-6 py-3.5 rounded-2xl text-[15px] font-bold transition-all hover:-translate-y-0.5"
                   style={{ background:"linear-gradient(180deg,#2C3478,#1E2459)", color:"#fff", boxShadow:"0 12px 28px rgba(35,42,99,0.32), inset 0 1px 0 rgba(255,255,255,0.15)", border:"none", cursor:"pointer" }}>
-                  {loggedIn ? "Open FreBook" : "Start your free month"} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                  {loggedIn ? "Open FreBook" : "Start your free week"} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                 </button>
               </div>
               <p className="mt-4 text-[13.5px] font-medium" style={{ color:"#5A6080" }}>
-                <b style={{ color:"#0B7A55" }}>1 month free</b> · then ₹1,499/month + GST · cancel anytime · no card to start
+                <b style={{ color:"#0B7A55" }}>7 days free</b> · then from ₹699/month + GST · cancel anytime · no card to start
               </p>
               <div className="mt-9">
                 <p className="text-[11px] font-bold tracking-[0.18em] uppercase mb-3" style={{ color:"#8A90AE" }}>Works with what you already use</p>

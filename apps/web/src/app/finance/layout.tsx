@@ -109,6 +109,13 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   // The one active business (Task 6): resolved here, shown in the header, provided to every page
   const active = useActiveBusinessStore();
   useTallyAutoCatchUp(active.businessId, tallyState);
+  // A referral link used at sign-up is applied once, now that the account exists
+  useEffect(() => {
+    let code = ""; try { code = localStorage.getItem("fw_ref") ?? ""; } catch { /* */ }
+    if (!code) return;
+    fetch("/api/finance/referral", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) })
+      .then(r => { if (r.status !== 401) { try { localStorage.removeItem("fw_ref"); } catch { /* */ } } }).catch(() => null);
+  }, []);
   const [autoToast, setAutoToast] = useState<{ text: string; ok: boolean } | null>(null);
   useEffect(() => {
     let tm: ReturnType<typeof setTimeout>;
