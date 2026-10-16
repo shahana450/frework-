@@ -8,6 +8,7 @@ import { intentSystemFor, loadBusinessContext, interpret, loadQueryBooks, accoun
 import { TOOLS, runTool, resolvePeriod, monthPeriod, type Tool, type Period } from "../bookQueries";
 import { reviewChecks } from "../reviewChecks";
 import { resolveLedgers } from "../ledgerResolve";
+import { headByKey } from "../ledgerHeads";
 import { postJournal, voucherTypeFor, postingErrorMessage } from "../posting";
 import { readAttachmentBuffer, type Attachment } from "../attachments";
 import { fileToShelf, fyOfDate } from "../shelf";
@@ -15,7 +16,7 @@ import { parseCommand, helpText, draftText, answerText } from "./format";
 import { loginToken, loginUrl } from "./loginLink";
 
 type Link = { business_id: string; user_id: string; name: string };
-type Session = { phone: string; business_id: string | null; pending: { parsed?: ParsedTransaction; key?: string; original?: string; picking?: boolean } | null; history: { role: "user" | "assistant"; content: string }[]; picking?: boolean };
+type Session = { phone: string; business_id: string | null; pending: { parsed?: ParsedTransaction; key?: string; original?: string; picking?: boolean; heads?: Record<string, string>; asking?: string[] } | null; history: { role: "user" | "assistant"; content: string }[]; picking?: boolean };
 export type Incoming = { from: string; id: string; text: string; media?: { bytes: Buffer; mime: string; name: string } };
 
 // Offered only when no draft is waiting, so YES can never post something by accident
@@ -77,12 +78,24 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
   if (cmd.type === "login") return signInLink();
   if (cmd.type === "no") { await save({ pending: null }); return sess.pending ? "❌ Draft dropped. Nothing was posted." : "Nothing pending."; }
 
+  // Choosing groups for new ledgers: "2 direct" changes item 2, then YES posts
+  const pick = sess.pending?.asking?.length ? m.text.trim().match(/^(\d+)\s*[-.:)]?\s*([a-z ]+)$/i) : null;
+  if (pick && sess.pending?.parsed) {
+    const i = Number(pick[1]) - 1, key = GROUP_WORDS[pick[2].trim().toLowerCase()];
+    const name = sess.pending.asking![i];
+    if (!name) return `There's no item ${pick[1]}. ` + headsText(sess.pending.asking!, sess.pending.heads ?? {});
+    if (!key) return `I don't know the group "${pick[2].trim()}". Use one of: ${Object.keys(GROUP_WORDS).filter((_, k) => k < 7).join(", ")}.`;
+    const heads = { ...(sess.pending.heads ?? {}), [name]: key };
+    await save({ pending: { ...sess.pending, heads } });
+    return headsText(sess.pending.asking!, heads);
+  }
+
   if (cmd.type === "yes" || cmd.type === "post_anyway") {
     const p = sess.pending;
     // No draft waiting: YES means "open the dashboard" (the offer made after answers and posted entries)
     if (!p?.parsed) return cmd.type === "yes" ? signInLink() : "Nothing to post. Type a transaction first.";
     if (!can(role, "post")) return "Your role can view but not post. Ask the owner for posting access.";
-    return postPending(sb, link, au!.user!.id, { parsed: p.parsed, key: p.key ?? `wa:${m.id}`, original: p.original ?? "" }, cmd.type === "post_anyway", save);
+    return postPending(sb, link, au!.user!.id, { parsed: p.parsed, key: p.key ?? `wa:${m.id}`, original: p.original ?? "", heads: p.heads }, cmd.type === "post_anyway", save);
   }
 
   // A new message: question or transaction — the same AI instructions as FreBook in the app
@@ -144,15 +157,31 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
   return draftText(parsed, bad, biz.baseCurrency);
 }
 
-async function postPending(sb: SupabaseClient, link: Link, actorId: string, p: { parsed: ParsedTransaction; key: string; original: string }, dupOk: boolean, save: (x: { pending?: unknown }) => unknown): Promise<string> {
+// Words a user can reply with to choose a ledger's group
+const GROUP_WORDS: Record<string, string> = {
+  expense: "indirect_expense", direct: "direct_expense", purchase: "purchase", asset: "fixed_asset", income: "indirect_income", sales: "sales", liability: "current_liability",
+  expenses: "indirect_expense", indirect: "indirect_expense", "direct expense": "direct_expense", "fixed asset": "fixed_asset", "current asset": "current_asset", advance: "advances",
+  loan: "loan", capital: "capital", supplier: "creditors", customer: "debtors", bank: "bank", cash: "cash", tax: "duties",
+};
+function headsText(names: string[], heads: Record<string, string>) {
+  return `📂 New ledger${names.length > 1 ? "s" : ""} — I'll file ${names.length > 1 ? "them" : "it"} like this:\n${names.map((n, i) => `${i + 1}. *${n}* → ${headByKey(heads[n] ?? "indirect_expense")?.label ?? "Indirect Expenses"}`).join("\n")}\n\nReply *YES* to post. To change one, reply e.g. *${names.length > 1 ? 2 : 1} direct* (expense · direct · purchase · asset · income · liability).`;
+}
+
+async function postPending(sb: SupabaseClient, link: Link, actorId: string, p: { parsed: ParsedTransaction; key: string; original: string; heads?: Record<string, string> }, dupOk: boolean, save: (x: { pending?: unknown }) => unknown): Promise<string> {
   const t = p.parsed;
   if (t.warnings.some(w => /locked/i.test(w))) return "🔒 This period is locked — the owner or an admin can post it from the app.";
   // Posted once only, however many times YES is sent
   // (a draft held for review carries the same key but is not in the books — only a posted entry counts)
   const { data: prior } = await sb.from("fw_fin_journals").select("entry_no").eq("business_id", link.business_id).eq("metadata->>client_key", p.key).eq("status", "posted").limit(1).maybeSingle();
   if (prior) { await save({ pending: null }); return `✅ Already posted as *${prior.entry_no}*.`; }
-  const resolved = await resolveLedgers(sb, link.business_id, t.lines.map(l => ({ name: l.account, suggestedType: l.suggested_type })), {}, "WhatsApp");
-  if (!resolved.ok) return `I need to know which group these new ledgers belong to: ${resolved.needHeads.map(h => h.account).join(", ")}.\nPlease post this one from FreBook in the app (it will ask you).`;
+  const resolved = await resolveLedgers(sb, link.business_id, t.lines.map(l => ({ name: l.account, suggestedType: l.suggested_type })), p.heads ?? {}, "WhatsApp");
+  if (!resolved.ok) {
+    // Ask here in WhatsApp: suggested groups, change any with "2 direct", then YES
+    const asking = resolved.needHeads.map(h => h.account);
+    const heads = { ...Object.fromEntries(resolved.needHeads.map(h => [h.account, h.suggested])), ...(p.heads ?? {}) };
+    await save({ pending: { parsed: t, key: p.key, original: p.original, heads, asking } });
+    return headsText(asking, heads);
+  }
   try {
     const posted = await postJournal(sb, {
       businessId: link.business_id, actorId, date: t.transaction_date, type: voucherTypeFor(t.transaction_type), narration: t.narrative || p.original,
