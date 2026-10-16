@@ -223,8 +223,19 @@ export default function JournalsPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; }
-        .jrow:hover td { background: rgba(35,42,99,0.04); }
-        .jrow-hl td { background: rgba(35,42,99,0.06) !important; outline: 1px solid rgba(35,42,99,0.25); }
+        .jrow td { transition: background .12s; }
+        .jrow:hover td { background: #F7F8FE; }
+        .jrow-hl td { background: #EEF0FB !important; }
+        .jrow-rev td { opacity: .62; }
+        .jr-head th { background: #F9FAFD; border-bottom: 1px solid rgba(20,26,58,0.08); }
+        .jr-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 800; white-space: nowrap; }
+        .jr-pill i { width: 6px; height: 6px; border-radius: 999px; background: currentColor; display: inline-block; }
+        .jr-seg { display: inline-flex; padding: 4px; gap: 2px; border-radius: 12px; background: #FFFFFF; border: 1px solid rgba(20,26,58,0.1); }
+        .jr-seg button { border: none; background: transparent; padding: 7px 14px; border-radius: 9px; font-weight: 700; font-size: 0.8rem; color: rgba(20,26,58,0.7); cursor: pointer; font-family: inherit; display: inline-flex; gap: 6px; align-items: center; }
+        .jr-seg button.on { background: #232A63; color: #FFFFFF; box-shadow: 0 6px 14px -8px rgba(35,42,99,.7); }
+        .jr-seg button span { font-size: 0.68rem; padding: 1px 7px; border-radius: 999px; background: rgba(20,26,58,0.07); }
+        .jr-seg button.on span { background: rgba(255,255,255,0.18); }
+        .jr-stat { background: #FFFFFF; border: 1px solid rgba(20,26,58,0.09); border-radius: 14px; padding: 12px 16px; min-width: 150px; flex: 1; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #FFFFFF; border-radius: 4px; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -250,19 +261,32 @@ export default function JournalsPage() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
-              <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>{pageTitle}</h1>
-              <div style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.65)" }}>{filtered.length} entries · Total: {cur()}{totalDebit.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</div>
+              <h1 style={{ margin: "0 0 0.2rem", fontSize: "1.9rem", fontWeight: 700, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", letterSpacing: "-0.01em" }}>{pageTitle}</h1>
+              <div style={{ fontSize: "0.84rem", color: "rgba(20,26,58,0.6)" }}>Every entry in your books — click one to see its lines.</div>
             </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
+            <div className="jr-seg" role="tablist" aria-label="Filter entries">
               {(["all", "draft", "posted", "ai"] as const).map(f => (
-                <button key={f} onClick={() => setFilter(f)} style={{
-                  background: filter === f ? "rgba(35,42,99,0.15)" : "#FFFFFF",
-                  border: `1px solid ${filter === f ? "rgba(35,42,99,0.4)" : "rgba(20,26,58,0.14)"}`,
-                  color: filter === f ? "#232A63" : "rgba(20,26,58,0.75)",
-                  padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.8rem", textTransform: "capitalize", fontFamily: "inherit",
-                }}>{f === "ai" ? "AI / Chat" : f}</button>
+                <button key={f} role="tab" aria-selected={filter === f} className={filter === f ? "on" : ""} onClick={() => setFilter(f)}>
+                  {f === "all" ? "All" : f === "ai" ? "AI / Chat" : f === "draft" ? "Draft" : "Posted"}
+                  <span>{(f === "all" ? afterTypeFilter : f === "ai" ? afterTypeFilter.filter(j => j.ai_generated) : afterTypeFilter.filter(j => j.status === f)).length}</span>
+                </button>
               ))}
             </div>
+          </div>
+
+          {/* At a glance */}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: "1rem" }}>
+            {[
+              { l: "Entries shown", v: filtered.length.toLocaleString("en-IN"), c: "#141A3A" },
+              { l: "Total value", v: `${cur()}${totalDebit.toLocaleString(activeMoney().locale, { maximumFractionDigits: 0 })}`, c: "#232A63" },
+              { l: "Posted", v: filtered.filter(j => j.status === "posted").length.toLocaleString("en-IN"), c: "#0B7A55" },
+              { l: "Not in Tally", v: notPushed.length.toLocaleString("en-IN"), c: notPushed.length ? "#8A5A00" : "#0B7A55" },
+            ].map(s => (
+              <div key={s.l} className="jr-stat">
+                <div style={{ fontSize: "0.66rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(20,26,58,0.5)" }}>{s.l}</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 800, color: s.c, fontVariantNumeric: "tabular-nums", marginTop: 2 }}>{s.v}</div>
+              </div>
+            ))}
           </div>
 
           <div style={{ display: "flex", gap: 8, marginBottom: "0.75rem", flexWrap: "wrap" }}>
@@ -301,7 +325,7 @@ export default function JournalsPage() {
             {pushMsg && <div role="status" style={{ fontSize: "0.82rem", fontWeight: 600, color: pushMsg.startsWith("✓") ? "#0B7A55" : "#10241F", background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 10, padding: "8px 12px" }}>{pushMsg}</div>}
           </div>
 
-          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.09)", borderRadius: 18, overflow: "hidden", boxShadow: "0 16px 40px -32px rgba(20,26,58,0.5)" }}>
             {loading ? (
               <div style={{ padding: "4rem", textAlign: "center", color: "rgba(20,26,58,0.55)" }}>Loading…</div>
             ) : loadErr ? (
@@ -315,8 +339,8 @@ export default function JournalsPage() {
             ) : (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ background: "#FFFFFF" }}>
+                  <thead className="jr-head">
+                    <tr>
                       <th style={{ padding: "0.6rem 0 0.6rem 1rem", width: 28 }}>
                         <input type="checkbox" aria-label="Select all entries that can be pushed" checked={allSelected} disabled={!selectableHere.length}
                           onChange={() => setSelected(allSelected ? new Set() : new Set(selectableHere.map(j => j.id)))} />
@@ -341,45 +365,44 @@ export default function JournalsPage() {
                         <tr
                           key={j.id}
                           ref={isHighlighted ? highlightRef : null}
-                          className={`jrow${isHighlighted || isSelected ? " jrow-hl" : ""}`}
+                          className={`jrow${isHighlighted || isSelected ? " jrow-hl" : ""}${(j as { reversed_by?: string | null }).reversed_by ? " jrow-rev" : ""}`}
                           onClick={() => openDrawer(j)}
                           style={{ borderTop: "1px solid rgba(20,26,58,0.08)", cursor: "pointer" }}
                         >
                           <td style={{ padding: "0.65rem 0 0.65rem 1rem" }} onClick={e => e.stopPropagation()}>
                             {pushable(j) && <input type="checkbox" aria-label={`Select ${j.entry_no}`} checked={selected.has(j.id)} onChange={() => toggle(j.id)} />}
                           </td>
-                          <td style={{ padding: "0.65rem 1rem", fontSize: "0.78rem", fontFamily: "'IBM Plex Mono',monospace", color: "#232A63", whiteSpace: "nowrap" }}>{j.entry_no}</td>
-                          <td style={{ padding: "0.65rem 1rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.80)", whiteSpace: "nowrap" }}>
-                            {new Date(j.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                          <td style={{ padding: "0.8rem 1rem", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: "0.76rem", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, color: "#232A63", background: "#F1F3FB", border: "1px solid #E1E5F5", padding: "3px 8px", borderRadius: 7 }}>{j.entry_no}</span>
                           </td>
-                          <td style={{ padding: "0.65rem 1rem" }}>
-                            <span style={{ fontSize: "0.7rem", fontWeight: 700, color: TYPE_COLOR[j.type] ?? "#141A3A", background: `${TYPE_COLOR[j.type] ?? "#141A3A"}15`, padding: "2px 8px", borderRadius: 4 }}>
-                              {TYPE_LABEL[j.type] ?? j.type}
-                            </span>
+                          <td style={{ padding: "0.8rem 1rem", whiteSpace: "nowrap" }}>
+                            <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}</div>
+                            <div style={{ fontSize: "0.66rem", color: "rgba(20,26,58,0.45)" }}>{new Date(j.date).toLocaleDateString("en-IN", { weekday: "short" })}</div>
                           </td>
-                          <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", maxWidth: selectedJournal ? 160 : 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
-                          <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", fontFamily: "'IBM Plex Mono',monospace", textAlign: "right", color: "#C2321F" }}>
+                          <td style={{ padding: "0.8rem 1rem" }}>
+                            <span className="jr-pill" style={{ color: TYPE_COLOR[j.type] ?? "#141A3A", background: `${TYPE_COLOR[j.type] ?? "#141A3A"}14` }}><i />{TYPE_LABEL[j.type] ?? j.type}</span>
+                          </td>
+                          <td style={{ padding: "0.8rem 1rem", fontSize: "0.84rem", fontWeight: 500, maxWidth: selectedJournal ? 160 : 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={j.narration}>{j.narration}</td>
+                          <td style={{ padding: "0.8rem 1rem", fontSize: "0.84rem", fontWeight: 500, fontFamily: "'IBM Plex Mono',monospace", textAlign: "right", color: "#B4321F", fontVariantNumeric: "tabular-nums" }}>
                             {j.total_debit ? j.total_debit.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
                           </td>
-                          <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", fontFamily: "'IBM Plex Mono',monospace", textAlign: "right", color: "#0B7A55" }}>
+                          <td style={{ padding: "0.8rem 1rem", fontSize: "0.84rem", fontWeight: 500, fontFamily: "'IBM Plex Mono',monospace", textAlign: "right", color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>
                             {j.total_credit ? j.total_credit.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
                           </td>
-                          <td style={{ padding: "0.65rem 1rem" }}>
-                            <span style={{ color: STATUS_COLOR[j.status] ?? "#141A3A", background: `${STATUS_COLOR[j.status] ?? "#141A3A"}18`, padding: "2px 8px", borderRadius: 4, fontSize: "0.7rem", fontWeight: 700 }}>
-                              {j.status.charAt(0).toUpperCase() + j.status.slice(1)}
-                            </span>
+                          <td style={{ padding: "0.8rem 1rem" }}>
+                            <span className="jr-pill" style={{ color: STATUS_COLOR[j.status] ?? "#141A3A", background: `${STATUS_COLOR[j.status] ?? "#141A3A"}16` }}><i />{j.status.charAt(0).toUpperCase() + j.status.slice(1)}</span>
                             {/* B13 — reversal pairs are linked both ways */}
                             {(j as { reversed_by?: string | null }).reversed_by && <div style={{ fontSize: "0.68rem", color: "#C2321F", marginTop: 3 }}>Reversed by {journals.find(x => x.id === (j as { reversed_by?: string | null }).reversed_by)?.entry_no ?? "a reversal"}</div>}
                             {(j as { reversal_of?: string | null }).reversal_of && <div style={{ fontSize: "0.68rem", color: "#5A6080", marginTop: 3 }}>Reverses {journals.find(x => x.id === (j as { reversal_of?: string | null }).reversal_of)?.entry_no ?? "an entry"}</div>}
                           </td>
-                          <td style={{ padding: "0.65rem 1rem", fontSize: "0.7rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-                            {j.entry_no?.startsWith("TLY-") ? <span style={{ color: "#5E6B66" }}>From Tally</span>
-                              : isPushed(j.id) ? <span style={{ color: "#0B7A55" }}>✓ Pushed</span>
-                              : pushed[j.id] && "error" in pushed[j.id] ? <span style={{ color: "#C2321F" }} title={explainTallyError((pushed[j.id] as { error: string }).error, tally.educational)}>✗ Failed</span>
-                              : j.status === "posted" ? <span style={{ color: "#8A5A00" }}>Not pushed</span> : null}
+                          <td style={{ padding: "0.8rem 1rem", whiteSpace: "nowrap" }}>
+                            {j.entry_no?.startsWith("TLY-") ? <span className="jr-pill" style={{ color: "#5E6B66", background: "#EEF1EF" }}><i />From Tally</span>
+                              : isPushed(j.id) ? <span className="jr-pill" style={{ color: "#0B7A55", background: "#E3F6EE" }}>✓ Pushed</span>
+                              : pushed[j.id] && "error" in pushed[j.id] ? <span className="jr-pill" style={{ color: "#C2321F", background: "#FDECEA" }} title={explainTallyError((pushed[j.id] as { error: string }).error, tally.educational)}>✗ Failed</span>
+                              : j.status === "posted" ? <span className="jr-pill" style={{ color: "#8A5A00", background: "#FFF4DB" }}><i />Not pushed</span> : null}
                           </td>
                           <td style={{ padding: "0.65rem 0.75rem", whiteSpace: "nowrap" }}>
-                            {j.ai_generated && <span style={{ fontSize: "0.68rem", color: "#5B4BC4", background: "rgba(91,75,196,0.1)", padding: "2px 6px", borderRadius: 4 }}>AI</span>}
+                            {j.ai_generated && <span className="jr-pill" title="Drafted by FreBook AI" style={{ color: "#5B4BC4", background: "rgba(91,75,196,0.1)" }}>✦ AI</span>}
                             {incomeIds.has(j.id) && (
                               <Link href={`/finance/invoices/${j.id}`} onClick={e => e.stopPropagation()} title="Create an invoice for this sale"
                                 style={{ marginLeft: 6, fontSize: "0.72rem", fontWeight: 700, color: "#FFFFFF", background: "#232A63", padding: "4px 9px", borderRadius: 6, textDecoration: "none" }}>Invoice</Link>
