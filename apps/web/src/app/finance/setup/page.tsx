@@ -98,9 +98,13 @@ export default function BusinessSetup() {
     setSaving(true);
     setError("");
     try {
-      const { data: biz, error: bizErr } = await supabase
+      // The id is made here and the row is not read back: reading a just-inserted business is checked against
+      // membership before the row is visible, which the database refuses ("violates row-level security")
+      const biz = { id: crypto.randomUUID() };
+      const { error: bizErr } = await supabase
         .from("fw_fin_businesses")
         .insert({
+          id: biz.id,
           owner_id: userId,
           name: form.name,
           legal_name: form.legal_name || form.name,
@@ -121,9 +125,7 @@ export default function BusinessSetup() {
           fiscal_year_start: form.fy_start.slice(5),
           country: country.code, timezone: country.timezone, locale: country.locale, tax_regime: isIN ? "IN_GST" : "NONE",
           is_active: true,
-        })
-        .select("id")
-        .single();
+        });
 
       if (bizErr) throw new Error(bizErr.message);
       if (form.logo_url) await supabase.from("fw_fin_businesses").update({ logo_url: form.logo_url }).eq("id", biz.id);
