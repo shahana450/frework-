@@ -190,6 +190,16 @@ export async function postJournal(sb: SupabaseClient, reqIn: PostingRequest): Pr
     const hit = await findLikelyDuplicate(sb, req.businessId, req.date, lines);
     if (hit) throw new PostingError("POSSIBLE_DUPLICATE", `This looks like a duplicate of ${hit.entry_no} (${hit.date}${hit.narration ? ` — ${hit.narration.slice(0, 80)}` : ""}), same amount and same ledgers.`, hit);
   }
+  // POST ANYWAY / reviewed: the draft held for review carries the same client_key, which may only exist once — clear it first
+  const ck = (req.metadata as { client_key?: string } | undefined)?.client_key;
+  if (req.reviewed && ck) {
+    const { data: held } = await sb.from("fw_fin_journals").select("id").eq("business_id", req.businessId).eq("status", "draft").eq("metadata->>client_key", ck);
+    const ids = ((held ?? []) as { id: string }[]).map(h => h.id);
+    if (ids.length) {
+      await sb.from("fw_fin_journal_lines").delete().in("journal_id", ids);
+      await sb.from("fw_fin_journals").delete().in("id", ids).eq("status", "draft");
+    }
+  }
   const header = {
     date: req.date, type: req.type, narration: req.narration.slice(0, 500), reference_no: req.referenceNo ?? null,
     party_name: req.partyName ?? null, contact_id: req.contactId ?? null, source: req.source, ai_generated: !!req.aiGenerated, metadata: withForce(req), force: !!req.force,
