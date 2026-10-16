@@ -16,7 +16,7 @@ import { parseCommand, helpText, draftText, answerText } from "./format";
 import { loginToken, loginUrl } from "./loginLink";
 
 type Link = { business_id: string; user_id: string; name: string };
-type Session = { phone: string; business_id: string | null; pending: { parsed?: ParsedTransaction; key?: string; original?: string; picking?: boolean; heads?: Record<string, string>; asking?: string[] } | null; history: { role: "user" | "assistant"; content: string }[]; picking?: boolean };
+type Session = { phone: string; business_id: string | null; pending: { parsed?: ParsedTransaction; key?: string; original?: string; picking?: boolean; heads?: Record<string, string>; asking?: string[]; queue?: ParsedTransaction[] } | null; history: { role: "user" | "assistant"; content: string }[]; picking?: boolean };
 export type Incoming = { from: string; id: string; text: string; media?: { bytes: Buffer; mime: string; name: string } };
 
 // Offered only when no draft is waiting, so YES can never post something by accident
@@ -95,6 +95,21 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
     // No draft waiting: YES means "open the dashboard" (the offer made after answers and posted entries)
     if (!p?.parsed) return cmd.type === "yes" ? signInLink() : "Nothing to post. Type a transaction first.";
     if (!can(role, "post")) return "Your role can view but not post. Ask the owner for posting access.";
+    if (p.queue?.length) {
+      // Posts the first entry, then the next ones; new-ledger questions are asked once for all of them
+      const all = [p.parsed, ...p.queue];
+      const pre = await resolveLedgers(sb, link.business_id, all.flatMap(t => t.lines.map(l => ({ name: l.account, suggestedType: l.suggested_type }))), p.heads ?? {}, "WhatsApp");
+      if (!pre.ok) {
+        const asking = pre.needHeads.map(h => h.account);
+        const heads = { ...Object.fromEntries(pre.needHeads.map(h => [h.account, h.suggested])), ...(p.heads ?? {}) };
+        await save({ pending: { ...p, heads, asking } });
+        return headsText(asking, heads);
+      }
+      const out: string[] = [];
+      for (let i = 0; i < all.length; i++) out.push(await postPending(sb, link, au!.user!.id, { parsed: all[i], key: `${p.key ?? `wa:${m.id}`}:${i}`, original: p.original ?? "", heads: p.heads }, cmd.type === "post_anyway", save));
+      await save({ pending: null });
+      return out.map(s => s.replace(DASH_HINT, "")).join("\n") + DASH_HINT;
+    }
     return postPending(sb, link, au!.user!.id, { parsed: p.parsed, key: p.key ?? `wa:${m.id}`, original: p.original ?? "", heads: p.heads }, cmd.type === "post_anyway", save);
   }
 
@@ -153,8 +168,13 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
   const books = parsed.transaction_date <= today ? await booksToday : await loadQueryBooks(sb, link.business_id, parsed.transaction_date);
   const checks = books.error ? { checks: [] } : reviewChecks(books.accounts, books.journals, today, { date: parsed.transaction_date, lines: parsed.lines.map(l => ({ account: l.account, debit: l.debit, credit: l.credit })) });
   const bad = checks.checks.filter(c => c.tone === "bad");
-  await save({ pending: { parsed, key: `wa:${m.id}`, original: message.slice(0, 300) }, history: hist(raw) });
-  return draftText(parsed, bad, biz.baseCurrency);
+  const queue = parsed.more ?? [];
+  const first = { ...parsed, more: undefined };
+  await save({ pending: { parsed: first, key: `wa:${m.id}`, original: message.slice(0, 300), queue }, history: hist(raw) });
+  if (!queue.length) return draftText(first, bad, biz.baseCurrency);
+  // One message per date, one YES for all of them
+  const all = [first, ...queue];
+  return [`📅 Your items are on *${all.length} different dates* — ${all.length} entries:`, ...all.map((d, i) => `*${i + 1}.* ` + draftText(d, i === 0 ? bad : [], biz.baseCurrency).replace(/\n*Reply \*YES\* to post · \*NO\* to cancel$/, ""))].join("\n\n") + `\n\nReply *YES* to post all ${all.length} · *NO* to cancel`;
 }
 
 // Words a user can reply with to choose a ledger's group

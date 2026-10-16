@@ -27,7 +27,7 @@ FIELDS:
 - currency: ISO code (e.g. "USD") ONLY when the amount is in a currency other than the business base currency; else null.
 - exchange_rate: base-currency units per 1 unit of "currency", ONLY if the user or document states it. Never look up, estimate or invent a rate; leave null and the app will ask.
 - manual_lines: ONLY for journal_adjustment: [{account, debit, credit}].
-- splits: when ONE payment covers SEVERAL different expenses/items listed separately (e.g. "paid in cash: wages 1000, salary 2500, cleaning 3200"), list each as [{account, amount}] with its own specific ledger (existing ledger from the list when it fits, else a standard name like "Wages", "Salary", "Coolie / Loading Charges", "Cleaning Charges", "Painting Charges"); set amount to the total and counter_account to the first item's ledger. Never lump listed items into one "Other Expenses". Else null.
+- splits: when ONE payment covers SEVERAL different expenses/items listed separately (e.g. "paid in cash: wages 1000, salary 2500, cleaning 3200"), list each as [{account, amount}] with its own specific ledger (existing ledger from the list when it fits, else a standard name like "Wages", "Salary", "Coolie / Loading Charges", "Cleaning Charges", "Painting Charges"); set amount to the total and counter_account to the first item's ledger. Never lump listed items into one "Other Expenses". When an item has its own date, add "date":"YYYY-MM-DD" to it (items on different dates become separate entries). Else null.
 - confidence: 0–1 for the whole reading; account_confidence: 0–1 for counter_account specifically.
 - alternatives: up to 3 other plausible counter_account ledgers when you are not certain, else [].
 - reason: one or two sentences explaining WHY you chose the action and counter_account, quoting the words from the message/document you relied on. Do not invent facts.
@@ -88,6 +88,7 @@ export type ParsedTransaction = {
   alternatives?: string[];
   history_evidence?: string | null;
   fx?: { currency: string; rate: number; base_currency: string } | null;
+  more?: ParsedTransaction[];   // further entries when the message listed items on different dates
 };
 
 // Posted entries with their lines, for answering questions (paged so nothing is cut off)
@@ -178,6 +179,20 @@ export function accountListForAI(accounts: { name: string; type: string; sub_typ
 }
 
 export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { name: string; type: string; sub_type: string | null }[], businessId: string, today: string, ctx?: BusinessContext): Promise<ParsedTransaction> {
+  // Items paid on different dates are separate entries — one per date, in date order
+  const iso = /^\d{4}-\d{2}-\d{2}$/;
+  const dated = (ai.splits ?? []).filter(s => s?.account && Number(s.amount) > 0);
+  const dates = [...new Set(dated.map(s => (iso.test(s.date ?? "") ? s.date! : ai.transaction_date ?? today)))].sort();
+  if (dated.length > 1 && dates.length > 1) {
+    const all = await Promise.all(dates.map(d => {
+      const items = dated.filter(s => (iso.test(s.date ?? "") ? s.date! : ai.transaction_date ?? today) === d).map(s => ({ account: s.account, amount: Number(s.amount) }));
+      const total = Math.round(items.reduce((t, s) => t + s.amount, 0) * 100) / 100;
+      const names = items.map(s => s.account).join(", ");
+      return interpret(sb, { ...ai, transaction_date: d, amount: total, splits: items, counter_account: items[0].account,
+        narrative: `${names} paid${ai.payment_mode === "cash" ? " in cash" : ""} on ${d}` }, accounts, businessId, today, ctx);
+    }));
+    return { ...all[0], more: all.slice(1) };
+  }
   const base = {
     transaction_date: /^\d{4}-\d{2}-\d{2}$/.test(ai.transaction_date ?? "") ? ai.transaction_date! : today,
     narrative: ai.narrative ?? "", party_name: ai.party_name ?? null, party_type: null, invoice_number: ai.invoice_number ?? null,

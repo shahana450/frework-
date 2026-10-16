@@ -26,7 +26,7 @@ export type Intent = {
   // amount: TDS stated in money; amount_is_net: the main amount is what was actually paid/received after TDS
   tds?: { applicable: boolean; section: string | null; rate: number; amount?: number | null; amount_is_net?: boolean | null } | null;
   manual_lines?: { account: string; debit: number; credit: number }[] | null; // journal_adjustment only
-  splits?: { account: string; amount: number }[] | null;  // several expense heads paid together (one line each)
+  splits?: { account: string; amount: number; date?: string | null }[] | null;  // several expense heads paid together (one line each)
   currency?: string | null;                        // transaction currency when not the base currency
   exchange_rate?: number | null;                   // base units per 1 unit of `currency` — never guessed
 };

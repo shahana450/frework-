@@ -472,11 +472,14 @@ export default function FreBookPage() {
         text: parsed.status === "needs_clarification" ? parsed.needs_clarification[0] : undefined,
       };
 
+      // Items on different dates come back as one draft per date
+      const extra: ChatMessage[] = (parsed.more ?? []).map((p, i) => ({ id: `a-${Date.now()}-${i + 1}`, role: "ai", transaction: p, status: "pending", timestamp: Date.now() }));
+      if (extra.length) aiMsg.transaction = { ...parsed, more: undefined };
       // Auto-post mode
-      if (autoPost && parsed.status === "complete" && !fy_locked && !duplicate) {
+      if (autoPost && parsed.status === "complete" && !fy_locked && !duplicate && !extra.length) {
         await postTransaction(parsed, session_id, text, aiMsg.id);
       } else {
-        setMessages(prev => [...prev, aiMsg]);
+        setMessages(prev => [...prev, ...(extra.length ? [{ id: `s-${Date.now()}`, role: "system" as const, text: `📅 Your items are on ${extra.length + 1} different dates, so they're ${extra.length + 1} separate entries below.`, timestamp: Date.now() }] : []), aiMsg, ...extra]);
       }
     } catch (e) {
       setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: "system", text: `⚠ ${e instanceof Error ? e.message : "Error"}`, timestamp: Date.now() }]);
