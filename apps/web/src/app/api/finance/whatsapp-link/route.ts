@@ -5,6 +5,7 @@ import { sendLinkCode, phoneCode } from "@/lib/whatsapp/linkCode";
 import { requireBusiness, serverError } from "@/lib/apiAuth";
 import { logAudit } from "@/lib/audit";
 import { normPhone } from "@/lib/whatsapp/format";
+import { sendContactCard } from "@/lib/whatsapp/contactCard";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const NEEDS_SQL = "WhatsApp needs its database setup — run 2026-10-14_whatsapp.sql in Supabase.";
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
       }
       await supabase.from("fw_fin_wa_links").update({ verified: true, code: null, code_expires: null }).eq("id", row.id);
       await logAudit(supabase, { businessId: business_id, actor: gate.user.id, action: "whatsapp_link_verified", source: "whatsapp", detail: { method: "code_on_page" } });
+      await sendContactCard(p).catch(() => null);   // so the chat shows "FreBook" once saved
       return NextResponse.json({ ok: true });
     }
     const p = normPhone(phone ?? "");

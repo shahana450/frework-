@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHmac, timingSafeEqual } from "crypto";
 import { handleWhatsApp, type Incoming } from "@/lib/whatsapp/bot";
+import { sendContactCard } from "@/lib/whatsapp/contactCard";
 
 export const maxDuration = 120;
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -74,6 +75,8 @@ export async function POST(req: NextRequest) {
       if (!text && !media) return;
       const reply = await handleWhatsApp(supabase, { from: msg.from, id: msg.id, text, media });
       await send(msg.from, reply);
+      // Just linked: send FreBook as a contact card, so one tap saves it and the chat shows "FreBook" by name
+      if (reply.startsWith("✅ Linked")) await sendContactCard(msg.from);
     } catch (e) {
       console.error("whatsapp-webhook", e instanceof Error ? e.message : e);
       const busy = /Gemini (429|503)|high demand|overloaded/i.test(e instanceof Error ? e.message : "");

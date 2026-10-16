@@ -109,6 +109,10 @@ export default function WhatsAppPage() {
               <p style={{ margin: 0, color: C.muted, fontSize: 14, lineHeight: 1.55 }}>Scan with your phone camera — the FreBook chat opens in WhatsApp. Then save <b style={{ fontFamily: MONO, color: C.ink }}>{pretty(bot)}</b> as <b style={{ color: C.ink }}>FreBook</b> so it shows by name. (Searching the number in WhatsApp shows &ldquo;Invite&rdquo; until it&apos;s saved.)</p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <a href={chatUrl} target="_blank" rel="noreferrer" style={{ height: 42, padding: "0 16px", borderRadius: 11, background: C.wa, color: "#FFFFFF", fontWeight: 800, fontSize: 14, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open FreBook on WhatsApp</a>
+                <a href="/frebook.vcf" download="FreBook.vcf" title="Adds FreBook to your phone contacts, so WhatsApp shows it by name" style={{ height: 42, padding: "0 16px", borderRadius: 11, background: C.navy, color: "#FFFFFF", fontWeight: 800, fontSize: 14, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="4" /><path d="M2 21c0-4 4-6 8-6s8 2 8 6M19 8v6M16 11h6" /></svg>
+                  Save FreBook to contacts
+                </a>
                 {qr && <a href={qr} download="FreBook-WhatsApp-QR.png" style={{ height: 42, padding: "0 14px", borderRadius: 11, border: `1px solid ${C.line}`, color: C.ink, fontWeight: 700, fontSize: 14, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Download QR</a>}
                 <button onClick={() => navigator.clipboard?.writeText(chatUrl)} style={{ height: 42, padding: "0 14px", borderRadius: 11, border: `1px solid ${C.line}`, background: C.tile, color: C.ink, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Copy link</button>
               </div>
