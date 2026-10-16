@@ -17,13 +17,20 @@ import { ActiveBusinessProvider, useActiveBusinessStore, setActiveBusiness, read
 
 // Navy Prestige type + phone layout for every finance page
 const FINANCE_CSS = `
-  .fw-topicons { display: flex; gap: 4px; overflow-x: auto; padding: 8px 16px; background: rgba(246,241,231,0.96); backdrop-filter: blur(8px); border-bottom: 1px solid #E6DFD0; scrollbar-width: none; }
+  .fw-topicons { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 2px; overflow-x: auto; margin: 10px 16px 0; padding: 6px; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid #E6DFD0; border-radius: 18px; box-shadow: 0 10px 28px -20px rgba(15,43,37,0.55); scrollbar-width: none; }
   .fw-topicons::-webkit-scrollbar { display: none; }
-  .fw-topicons a { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 64px; padding: 6px 8px; border-radius: 12px; text-decoration: none; color: #2E3B36; font-size: 11.5px; font-weight: 600; white-space: nowrap; transition: background .15s, color .15s; }
-  .fw-topicons a svg { color: #0F2B25; }
-  .fw-topicons a:hover, .fw-topicons a:focus-visible { background: #EFE6D3; outline: none; }
-  .fw-topicons a.on { background: #0F2B25; color: #FFFFFF; }
-  .fw-topicons a.on svg { color: #D9B56F; }
+  .fw-topicons a { position: relative; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 70px; padding: 7px 10px 8px; border-radius: 13px; text-decoration: none; color: #4A5752; font-size: 11.5px; font-weight: 700; white-space: nowrap; transition: background .18s, color .18s, transform .18s; }
+  .fw-topicons a .ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: #F4EEE2; color: #0F2B25; transition: background .18s, color .18s, transform .18s; }
+  .fw-topicons a:hover, .fw-topicons a:focus-visible { background: #FBF7EE; color: #0F2B25; outline: none; }
+  .fw-topicons a:hover .ic { background: #EBDDBF; transform: translateY(-1px); }
+  .fw-topicons a:focus-visible { box-shadow: 0 0 0 2px #C99A4E; }
+  .fw-topicons a.on { background: linear-gradient(160deg,#1B4237,#0F2B25); color: #FFFFFF; box-shadow: 0 8px 18px -10px rgba(15,43,37,0.7); }
+  .fw-topicons a.on .ic { background: rgba(217,181,111,0.18); color: #E8C27A; }
+  .fw-topicons a.on::after { content: ""; position: absolute; bottom: 3px; left: 50%; width: 16px; height: 3px; margin-left: -8px; border-radius: 3px; background: #D9B56F; }
+  .fw-topicons a.grp { margin-left: 10px; }
+  .fw-topicons a.grp::before { content: ""; position: absolute; left: -6px; top: 22%; height: 56%; width: 1px; background: #E6DFD0; }
+  @media (max-width: 760px) { .fw-topicons { margin: 8px 10px 0; border-radius: 16px; } .fw-topicons a { min-width: 62px; padding: 6px 6px 7px; } .fw-topicons a .ic { width: 30px; height: 30px; } }
+  @media (prefers-reduced-motion: reduce) { .fw-topicons a, .fw-topicons a .ic { transition: none; } }
 
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 .fw-main { background: #F6F1E7; min-height: 100vh; }
@@ -355,8 +362,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             {TOP_ICONS.filter(t => india || !t.href.startsWith("/finance/gst")).map(t => {
               const on = t.href.includes("?") ? pathname + search === t.href : t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
               return (
-                <Link key={t.href} href={t.href} className={on ? "on" : ""} title={t.label}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(t.href)} /></svg>
+                <Link key={t.href} href={t.href} className={[on ? "on" : "", ["/finance/books", "/finance/reports?tab=profit_loss", "/finance/gst/returns"].includes(t.href) ? "grp" : ""].join(" ").trim() || undefined} title={t.label} aria-current={on ? "page" : undefined}>
+                  <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(t.href)} /></svg></span>
                   <span>{t.label}</span>
                 </Link>
               );
