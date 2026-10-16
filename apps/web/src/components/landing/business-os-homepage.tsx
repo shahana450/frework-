@@ -552,6 +552,68 @@ export function BusinessOSHomepage() {
         </div>
       </section>
 
+      {/* --- FREBOOK PLANS: do it yourself, or we keep your books --- */}
+      <section id="frebook-plans" className="py-20 px-4 relative" style={{ background:"#FFFFFF", borderTop:"1px solid rgba(20,26,58,0.07)", fontFamily:"var(--font-plus-jakarta),var(--font-inter),system-ui,sans-serif" }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-[11px] font-bold tracking-[0.2em] uppercase mb-3" style={{ color:"#C2410C" }}>FreBook plans</p>
+            <h2 className="font-extrabold leading-tight" style={{ fontSize:"clamp(1.8rem,4vw,2.6rem)", color:"#141A3A", letterSpacing:"-0.02em" }}>
+              Do your books yourself, or let us do them.
+            </h2>
+            <p className="mt-3 max-w-xl mx-auto text-[15px]" style={{ color:"#4A5070" }}>
+              Either way, your accounts are live on your phone.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-5 items-stretch">
+            {/* Self-serve */}
+            <div className="rounded-3xl p-7 flex flex-col" style={{ background:"#F7F8FC", border:"1px solid rgba(20,26,58,0.09)" }}>
+              <p className="text-[13px] font-bold" style={{ color:"#232A63" }}>FreBook</p>
+              <p className="mt-1 text-[14px]" style={{ color:"#5A6080" }}>You chat the entries, FreBook keeps the books.</p>
+              <p className="mt-5 flex items-baseline gap-1.5">
+                <span className="font-extrabold" style={{ fontSize:"2.4rem", color:"#141A3A", letterSpacing:"-0.03em" }}>₹1,499</span>
+                <span className="text-[14px] font-medium" style={{ color:"#5A6080" }}>/month + GST</span>
+              </p>
+              <ul className="mt-6 space-y-3 flex-1">
+                {["Entries by chat, WhatsApp, bill photo or bank statement", "Live P&L, cash and dues on your phone", "GSTR-1 / 3B prepared for you to file", "Sync to Tally"].map(f => (
+                  <li key={f} className="flex items-start gap-2.5 text-[14px]" style={{ color:"#141A3A" }}>
+                    <Check className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color:"#0B7A55" }} /> {f}
+                  </li>
+                ))}
+              </ul>
+              <button onClick={handleFreBookClick}
+                className="mt-7 w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-[15px] font-bold transition-all hover:-translate-y-0.5"
+                style={{ background:"#FFFFFF", color:"#232A63", border:"1.5px solid rgba(35,42,99,0.25)", cursor:"pointer" }}>
+                {loggedIn ? "Open FreBook" : "Start your free month"} <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Managed */}
+            <div className="relative rounded-3xl p-7 flex flex-col" style={{ background:"linear-gradient(180deg,#232A63,#1A1F4E)", boxShadow:"0 24px 50px rgba(35,42,99,0.28)" }}>
+              <span className="absolute -top-3 left-7 px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide" style={{ background:"#F0662B", color:"#fff" }}>WE DO IT FOR YOU</span>
+              <p className="text-[13px] font-bold" style={{ color:"#FFD9C7" }}>FreBook Managed</p>
+              <p className="mt-1 text-[14px]" style={{ color:"#C8D2F2" }}>Our accounts team keeps your books and files your GST.</p>
+              <p className="mt-5 flex items-baseline gap-1.5">
+                <span className="font-extrabold text-white" style={{ fontSize:"2.4rem", letterSpacing:"-0.03em" }}>₹3,999</span>
+                <span className="text-[14px] font-medium" style={{ color:"#C8D2F2" }}>/month + GST</span>
+              </p>
+              <ul className="mt-6 space-y-3 flex-1">
+                {["Monthly bookkeeping done by our accounts team", "GST returns filed every month (GSTR-1 & GSTR-3B)", "Real-time dashboard on your phone: sales, expenses, cash, dues and GST", "24×7 replies on WhatsApp"].map(f => (
+                  <li key={f} className="flex items-start gap-2.5 text-[14px] text-white">
+                    <Check className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color:"#4ADE80" }} /> {f}
+                  </li>
+                ))}
+              </ul>
+              <a href={`https://wa.me/${SUPPORT_WA}?text=${encodeURIComponent("Hi, I'd like FreBook Managed (₹3,999/month) — monthly bookkeeping and GST filing.")}`}
+                target="_blank" rel="noopener noreferrer"
+                className="mt-7 w-full flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-[15px] font-bold transition-all hover:-translate-y-0.5"
+                style={{ background:"#F0662B", color:"#fff", boxShadow:"0 10px 24px rgba(240,102,43,0.35)" }}>
+                <MessageCircle className="w-4 h-4" /> Get started on WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* --- PLATFORM OVERVIEW --- */}
       <section className="py-20 px-4 relative" style={{ background: "#F2F3F6", borderTop:"1px solid rgba(20,26,58,0.07)" }}>
