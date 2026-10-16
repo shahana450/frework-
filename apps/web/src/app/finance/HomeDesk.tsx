@@ -3,6 +3,7 @@ import { activeCountry, cur } from "@/lib/money";
 import { dueText, dueChip } from "@/lib/dueText";
 // FreBook home — Bento grid. White and light-grey tiles, navy and orange accents. Every figure comes from /api/finance/dashboard.
 import { useState } from "react";
+import { useTally } from "@/lib/tallyConnection";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Dashboard } from "@/lib/dashboard";
@@ -44,6 +45,7 @@ function Ring({ income, expenses, profit }: { income: number; expenses: number; 
 export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, onRetry }: Props) {
   const india = activeCountry() === "IN";   // examples in the business's own currency
   const router = useRouter();
+  const tally = useTally();
   const [mode, setMode] = useState<"record" | "ask">("record");
   const [text, setText] = useState("");
   const [showAllDues, setShowAllDues] = useState(false);
@@ -87,7 +89,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         @keyframes glow { 0%,100% { opacity: .55 } 50% { opacity: .9 } }
         .hd-snap { display: none; }
         @media (max-width: 640px) {
-          .hd-crumb { display: none !important; }
+          .hd-biz { width: 100%; }
           .hd-controls { flex-wrap: nowrap !important; overflow-x: auto; width: 100%; padding-bottom: 2px; scrollbar-width: none; }
           .hd-controls::-webkit-scrollbar, .hd-today::-webkit-scrollbar, .hd-snap::-webkit-scrollbar { display: none; }
           .hd-controls > * { flex-shrink: 0; }
@@ -110,9 +112,19 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
 
       {/* Top bar */}
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div className="hd-crumb" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: C.muted }}>
-          <span>{bizName}</span><span style={{ color: "#D8CDB4" }}>/</span><span style={{ color: C.ink, fontWeight: 700 }}>Home</span>
-        </div>
+        <Link href="/finance/select-business" className="hd-biz lift" title="Switch business" style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 14px 8px 8px", borderRadius: 16, background: C.tile, border: `1px solid ${C.line}`, textDecoration: "none", color: C.ink, minWidth: 0, maxWidth: "100%" }}>
+          <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: 12, display: "grid", placeItems: "center", flexShrink: 0, background: "linear-gradient(145deg,#1B4237,#0F2B25)", color: "#E8C27A", fontWeight: 900, fontSize: 15, letterSpacing: "0.02em" }}>
+            {(bizName || "?").split(/s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase()}
+          </span>
+          <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: C.orange }}>Active business</span>
+            <span style={{ fontFamily: SERIF, fontSize: 19, fontWeight: 700, lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bizName}</span>
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 6, fontSize: 11.5, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: tally.status === "connected" ? C.posSoft : C.tileGrey, color: tally.status === "connected" ? C.pos : C.muted, whiteSpace: "nowrap" }}>
+            <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor" }} />Tally{tally.status === "connected" ? "" : " off"}
+          </span>
+          <span aria-hidden="true" style={{ color: C.orange, fontSize: 15, marginLeft: 2 }}>⇄</span>
+        </Link>
         <div className="hd-controls" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{controls}</div>
       </header>
 

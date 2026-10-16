@@ -1,7 +1,7 @@
 "use client";
 import { setActiveCurrency } from "@/lib/money";
 import { financeTitle } from "@/lib/dueText";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
 import { useTallyAutoCatchUp, AUTO_PUSH_EVENT } from "@/lib/tallyAutoCatchUp";
 import { usePathname, useRouter } from "next/navigation";
@@ -94,6 +94,10 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const [india, setIndia] = useState(true);   // GST / TDS / Income-tax menus only for Indian businesses
   const [bizCount, setBizCount] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
+  // Collapsed menu opens while the pointer is over it (desktop), and closes when it leaves
+  const [peek, setPeek] = useState(false);
+  const peekTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const slim = collapsed && !peek;
   const [tip, setTip] = useState<{ label: string; top: number } | null>(null);
   const [subChecked, setSubChecked] = useState(false);
   // The app-wide Tally connection (checked once a minute for the whole app)
@@ -197,29 +201,32 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       <meta name="description" content="FreBook: chat bookkeeping, GST, reports and Tally sync for your business." />
       <style>{FINANCE_CSS}</style>
       <UpdatePrompt />
-      {collapsed && tip && <span className="fw-tip" role="tooltip" style={{ left: sidebarW + 8, top: tip.top }}>{tip.label}</span>}
+      {slim && tip && <span className="fw-tip" role="tooltip" style={{ left: sidebarW + 8, top: tip.top }}>{tip.label}</span>}
       {/* Sidebar */}
-      <aside className="fw-side" style={{
-        width: sidebarW, flexShrink: 0, background: "#0F2B25",
+      <aside className="fw-side"
+        onMouseEnter={() => { if (collapsed && window.matchMedia("(hover: hover) and (min-width: 760px)").matches) { clearTimeout(peekTimer.current); peekTimer.current = setTimeout(() => setPeek(true), 180); } }}
+        onMouseLeave={() => { clearTimeout(peekTimer.current); setPeek(false); }}
+        style={{
+        width: slim ? 96 : 240, boxShadow: peek ? "18px 0 40px -20px rgba(0,0,0,0.55)" : "none", flexShrink: 0, background: "#0F2B25",
         borderRight: "1px solid rgba(217,181,111,0.12)", display: "flex", flexDirection: "column",
         position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 40, transition: "width 0.2s",
         overflowY: "auto", overflowX: "hidden",
       }}>
         {/* Logo + collapse */}
         <div style={{ padding: "0 12px", height: 76, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
-          {!collapsed && (
+          {!slim && (
             <Link href="/finance" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
               <FreBookMark size={30} />
               <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}><span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 700, fontSize: "1.1rem", color: "#FFFFFF" }}>FreBook</span><span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontStyle: "italic", fontSize: "0.7rem", color: "#D9B56F" }}>Chat in. Books out.</span></span>
             </Link>
           )}
-          <button onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? "Expand menu" : "Collapse menu"} style={{ width: collapsed ? 48 : "auto", height: collapsed ? 48 : "auto", borderRadius: "50%", border: collapsed ? "1px solid rgba(217,181,111,0.55)" : "none", display: "flex", alignItems: "center", justifyContent: "center", background: "none", color: "#D9B56F", cursor: "pointer", padding: 4, fontSize: "0.9rem", marginLeft: collapsed ? "auto" : 0, marginRight: collapsed ? "auto" : 0 }}>
-            {collapsed ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 4h5a2 2 0 012 2v14a2 2 0 00-2-2H5zM19 4h-5a2 2 0 00-2 2v14a2 2 0 012-2h5z" /></svg> : "←"}
+          <button onClick={() => { setPeek(false); setCollapsed(c => !c); }} aria-label={collapsed ? "Pin the menu open" : "Collapse menu"} style={{ width: slim ? 48 : "auto", height: slim ? 48 : "auto", borderRadius: "50%", border: slim ? "1px solid rgba(217,181,111,0.55)" : "none", display: "flex", alignItems: "center", justifyContent: "center", background: "none", color: "#D9B56F", cursor: "pointer", padding: 4, fontSize: "0.9rem", marginLeft: slim ? "auto" : 0, marginRight: slim ? "auto" : 0 }}>
+            {slim ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 4h5a2 2 0 012 2v14a2 2 0 00-2-2H5zM19 4h-5a2 2 0 00-2 2v14a2 2 0 012-2h5z" /></svg> : "←"}
           </button>
         </div>
 
         {/* Business switcher */}
-        {!collapsed && (
+        {!slim && (
           <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ fontSize: "0.6rem", color: "#8FA39B", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Active Business</div>
             {bizName && (
@@ -248,7 +255,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         )}
 
         {/* Tally connection badge */}
-        {!collapsed && tallyCompany && (
+        {!slim && tallyCompany && (
           <div style={{ padding: "6px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
             <Link href="/finance/tally" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 6,
               background: "rgba(255,255,255,0.05)",
@@ -267,14 +274,25 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             </Link>
           </div>
         )}
-        {collapsed && tallyCompany && (
-          <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.08)", textAlign: "center" }}>
-            <Link href="/finance/tally" title={`Tally: ${tallyCompany}`} style={{ textDecoration: "none", fontSize: "0.65rem", color: tallyConnected ? "#7FE0B4" : "#8FA39B" }}>● <span style={{ fontSize: "0.6rem", color: "#C9D3CE" }}>Tally</span></Link>
+        {slim && (
+          <div style={{ padding: "10px 6px 8px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            {bizName && (
+              <Link href="/finance/select-business" title={`Active business: ${bizName}${bizCount > 1 ? " — switch" : ""}`} style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, maxWidth: "100%" }}>
+                <span style={{ position: "relative", width: 40, height: 40, borderRadius: 12, display: "grid", placeItems: "center", background: "linear-gradient(145deg,#E8C27A,#B07E33)", color: "#0F2B25", fontWeight: 900, fontSize: "0.85rem", letterSpacing: "0.02em", boxShadow: "0 6px 14px -8px rgba(0,0,0,0.6)" }}>
+                  {bizName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase()}
+                  {bizCount > 1 && <span aria-hidden="true" style={{ position: "absolute", right: -5, bottom: -5, width: 18, height: 18, borderRadius: 999, background: "#0F2B25", border: "1px solid rgba(217,181,111,0.6)", color: "#D9B56F", fontSize: "0.6rem", display: "grid", placeItems: "center" }}>⇄</span>}
+                </span>
+                <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#FFFFFF", maxWidth: 84, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bizName}</span>
+              </Link>
+            )}
+            <Link href="/finance/tally" title={tallyCompany ? `Tally: ${tallyCompany} — ${tallyConnected ? "connected" : "not connected"}` : "Connect Tally"} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 999, border: `1px solid ${tallyConnected ? "rgba(127,224,180,0.35)" : "rgba(255,255,255,0.14)"}`, fontSize: "0.6rem", fontWeight: 700, color: tallyConnected ? "#7FE0B4" : "#8FA39B" }}>
+              <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor" }} />Tally
+            </Link>
           </div>
         )}
 
         {/* Simple / Accountant view */}
-        {!collapsed && (
+        {!slim && (
           <div style={{ padding: "8px 10px 0" }}>
             <button onClick={toggleMode} title="Accountant view shows journal, ledger, trial balance and other advanced pages" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 8, padding: "5px 8px", color: "#E7ECE9", fontSize: "0.7rem", cursor: "pointer", fontFamily: "inherit" }}>
               <span>{accountant ? "Accountant view" : "Simple view"}</span>
@@ -292,25 +310,25 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             if (!items.length) return null;
             return (
               <div key={group.label || "top"} style={{ marginBottom: 4 }}>
-                {!collapsed && group.label && (
+                {!slim && group.label && (
                   <div style={{ padding: "12px 16px 4px", fontSize: "0.62rem", color: "#8FA39B", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 800 }}>
                     {group.label}
                   </div>
                 )}
-                {collapsed && group.label && <div aria-hidden="true" style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "10px 18px" }} />}
+                {slim && group.label && <div aria-hidden="true" style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "10px 18px" }} />}
                 {items.map(item => {
                   const active = isActive(item, pathname, search);
                   const badge = item.badge === "review" && reviewCount > 0 ? reviewCount : 0;
                   const isBook = item.href === "/finance/chat-book";
                   return (
-                    <Link key={item.href} href={item.href} aria-label={collapsed ? item.label : undefined} className={`fw-nav${active ? " on" : ""}`}
-                      onMouseEnter={e => { if (collapsed && shortLabel(item.label) !== item.label) { const r = e.currentTarget.getBoundingClientRect(); setTip({ label: item.label, top: r.top + r.height / 2 }); } }}
-                      onFocus={e => { if (collapsed) { const r = e.currentTarget.getBoundingClientRect(); setTip({ label: item.label, top: r.top + r.height / 2 }); } }}
+                    <Link key={item.href} href={item.href} aria-label={slim ? item.label : undefined} className={`fw-nav${active ? " on" : ""}`}
+                      onMouseEnter={e => { if (slim && shortLabel(item.label) !== item.label) { const r = e.currentTarget.getBoundingClientRect(); setTip({ label: item.label, top: r.top + r.height / 2 }); } }}
+                      onFocus={e => { if (slim) { const r = e.currentTarget.getBoundingClientRect(); setTip({ label: item.label, top: r.top + r.height / 2 }); } }}
                       onMouseLeave={() => setTip(null)} onBlur={() => setTip(null)} style={{
-                      display: "flex", flexDirection: collapsed ? "column" : "row", alignItems: "center", gap: collapsed ? 4 : 10, position: "relative",
-                      margin: collapsed ? "2px 10px" : "1px 8px", padding: collapsed ? "9px 2px 8px" : "7px 10px",
-                      justifyContent: collapsed ? "center" : "flex-start", borderRadius: 12,
-                      fontSize: collapsed ? "0.66rem" : "0.82rem", textDecoration: "none",
+                      display: "flex", flexDirection: slim ? "column" : "row", alignItems: "center", gap: slim ? 4 : 10, position: "relative",
+                      margin: slim ? "2px 10px" : "1px 8px", padding: slim ? "9px 2px 8px" : "7px 10px",
+                      justifyContent: slim ? "center" : "flex-start", borderRadius: 12,
+                      fontSize: slim ? "0.66rem" : "0.82rem", textDecoration: "none",
                       color: active ? "#0F2B25" : "#C9D3CE", fontWeight: active || isBook ? 700 : 500,
                       background: active ? "#C99A4E" : "transparent",
                     }}>
@@ -320,8 +338,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                       }}>
                         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(item.href)} /></svg>
                       </span>
-                      {collapsed ? <span style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2 }}>{shortLabel(item.label)}</span> : <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{item.label}</span>}
-                      {badge > 0 && <span style={{ background: "#D9B56F", color: "#0F2B25", fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", borderRadius: 8, position: collapsed ? "absolute" : "static", top: -2, right: -4 }}>{badge}</span>}
+                      {slim ? <span style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2 }}>{shortLabel(item.label)}</span> : <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{item.label}</span>}
+                      {badge > 0 && <span style={{ background: "#D9B56F", color: "#0F2B25", fontSize: "0.6rem", fontWeight: 800, padding: "1px 6px", borderRadius: 8, position: slim ? "absolute" : "static", top: -2, right: -4 }}>{badge}</span>}
                     </Link>
                   );
                 })}
@@ -331,10 +349,10 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         </nav>
         {/* Bottom links */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "8px 0", flexShrink: 0 }}>
-          <Link href="/dashboard" title={collapsed ? "Main Dashboard" : undefined} style={{
-            display: "flex", alignItems: "center", gap: collapsed ? 0 : 8,
-            padding: collapsed ? "8px 0" : "7px 14px",
-            justifyContent: collapsed ? "center" : "flex-start",
+          <Link href="/dashboard" title={slim ? "Main Dashboard" : undefined} style={{
+            display: "flex", alignItems: "center", gap: slim ? 0 : 8,
+            padding: slim ? "8px 0" : "7px 14px",
+            justifyContent: slim ? "center" : "flex-start",
             textDecoration: "none", fontSize: "0.78rem", fontWeight: 600,
             color: "#C9D3CE",
             background: "transparent",
@@ -343,7 +361,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             transition: "all 0.15s",
           }}>
             <span style={{ fontSize: "0.9rem" }}>🏠</span>
-            {!collapsed && <span>← Main Dashboard</span>}
+            {!slim && <span>← Main Dashboard</span>}
           </Link>
         </div>
       </aside>
