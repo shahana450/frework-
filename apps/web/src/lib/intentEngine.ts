@@ -27,6 +27,7 @@ FIELDS:
 - currency: ISO code (e.g. "USD") ONLY when the amount is in a currency other than the business base currency; else null.
 - exchange_rate: base-currency units per 1 unit of "currency", ONLY if the user or document states it. Never look up, estimate or invent a rate; leave null and the app will ask.
 - manual_lines: ONLY for journal_adjustment: [{account, debit, credit}].
+- splits: when ONE payment covers SEVERAL different expenses/items listed separately (e.g. "paid in cash: wages 1000, salary 2500, cleaning 3200"), list each as [{account, amount}] with its own specific ledger (existing ledger from the list when it fits, else a standard name like "Wages", "Salary", "Coolie / Loading Charges", "Cleaning Charges", "Painting Charges"); set amount to the total and counter_account to the first item's ledger. Never lump listed items into one "Other Expenses". Else null.
 - confidence: 0–1 for the whole reading; account_confidence: 0–1 for counter_account specifically.
 - alternatives: up to 3 other plausible counter_account ledgers when you are not certain, else [].
 - reason: one or two sentences explaining WHY you chose the action and counter_account, quoting the words from the message/document you relied on. Do not invent facts.
@@ -41,7 +42,7 @@ OUTPUT:
   "counter_account": null, "party_name": null, "invoice_number": null,
   "gst": {"applicable": false, "rate": 0, "inclusive": true, "supply": "intra"},
   "tds": {"applicable": false, "section": null, "rate": 0, "amount": 0, "amount_is_net": false},
-  "manual_lines": null, "currency": null, "exchange_rate": null, "narrative": "one plain sentence describing the transaction",
+  "manual_lines": null, "splits": null, "currency": null, "exchange_rate": null, "narrative": "one plain sentence describing the transaction",
   "reason": "...", "confidence": 0.9, "account_confidence": 0.9, "alternatives": [], "missing": [],
   "document_summary": null, "document_kind": null
 }
@@ -137,7 +138,7 @@ export type AiIntent = {
   kind?: "record" | "query"; tool?: string; params?: Record<string, unknown>; period?: unknown; period2?: unknown;
   action?: string; transaction_date?: string; amount?: number; payment_mode?: "cash" | "bank" | "credit" | null;
   payment_account?: string | null; counter_account?: string | null; party_name?: string | null; invoice_number?: string | null;
-  gst?: Intent["gst"]; tds?: Intent["tds"]; manual_lines?: Intent["manual_lines"]; narrative?: string; reason?: string;
+  gst?: Intent["gst"]; tds?: Intent["tds"]; manual_lines?: Intent["manual_lines"]; splits?: Intent["splits"]; narrative?: string; reason?: string;
   confidence?: number; account_confidence?: number; alternatives?: string[]; missing?: string[];
   document_summary?: string | null; document_kind?: string | null;
   currency?: string | null; exchange_rate?: number | null;
@@ -222,6 +223,7 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
     action, amount: Number(ai.amount) || 0, payment_mode: ai.payment_mode ?? (paymentAccount ? "bank" : null),
     payment_account: paymentAccount, counter_account: counter, party_name: partyName,
     gst: ai.gst ?? null, tds: ai.tds ?? null, manual_lines: ai.manual_lines?.map(l => ({ ...l, account: canon(l.account) ?? l.account })) ?? null,
+    splits: SPEND_ACTIONS.has(action) && Array.isArray(ai.splits) ? ai.splits.filter(s => s?.account && Number(s.amount) > 0).map(s => ({ account: canon(s.account) ?? s.account, amount: Number(s.amount) })) : null,
     currency: ai.currency ?? null, exchange_rate: ai.exchange_rate ?? null,
   };
   // An Indian business without a GSTIN is not GST-registered: GST goes into the cost, none is charged

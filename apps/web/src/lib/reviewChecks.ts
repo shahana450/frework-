@@ -77,9 +77,12 @@ export function reviewChecks(accounts: Account[], journals: QJournal[], today: s
     const limit = others.some(l => l.debit > 0 && isTransport(l.account)) ? 35000 : 10000;
     if (loanRepaid && cashCr >= 20000) {
       checks.push({ tone: "bad", title: "Loan repaid in cash", detail: `Repaying a loan or deposit of ${inr(cashCr)} in cash (₹20,000 or more) is barred by section 188, Income-tax Act 2025 (was s.269T) — penalty equal to the amount. Repay by bank transfer or account-payee cheque.`, rule: "cash_loan_repaid", fix: "Use Edit to change Cash to your bank account." });
-    } else if (!loanRepaid && cashCr > limit && others.some(l => l.debit > 0 && !/drawings|capital|salary payable|creditor|payable/i.test(l.account))) {
+    }
+    const heads = others.filter(l => l.debit > 0);
+    const perPayee = heads.length > 1 ? Math.max(...heads.map(l => l.debit)) : cashCr;   // several heads = several payees
+    if (loanRepaid && cashCr >= 20000) { /* reported above */ } else if (!loanRepaid && perPayee > limit && others.some(l => l.debit > 0 && !/drawings|capital|salary payable|creditor|payable/i.test(l.account))) {
       const asset = others.some(l => l.debit > 0 && l.acc && /fixed|asset/i.test(`${l.acc.type} ${l.acc.sub_type ?? ""}`));
-      checks.push({ tone: "bad", title: `Cash payment over ${inr(limit)}`, detail: `Paying ${inr(cashCr)} in cash to one person in a day means ${asset ? "the asset's cost won't qualify for depreciation" : "the expense is not deductible"} (section 36(4), Income-tax Act 2025 — was s.40A(3)). Pay by bank transfer, UPI or account-payee cheque — or split only if they are genuinely separate days' payments.`, rule: "cash_payment_limit", fix: "Use Edit to change Cash to your bank account if it was paid that way." });
+      checks.push({ tone: "bad", title: `Cash payment over ${inr(limit)}`, detail: `Paying ${inr(perPayee)} in cash to one person in a day means ${asset ? "the asset's cost won't qualify for depreciation" : "the expense is not deductible"} (section 36(4), Income-tax Act 2025 — was s.40A(3)). Pay by bank transfer, UPI or account-payee cheque — or split only if they are genuinely separate days' payments.`, rule: "cash_payment_limit", fix: "Use Edit to change Cash to your bank account if it was paid that way." });
     }
   }
   if (cashDr > 0) {

@@ -26,6 +26,7 @@ export type Intent = {
   // amount: TDS stated in money; amount_is_net: the main amount is what was actually paid/received after TDS
   tds?: { applicable: boolean; section: string | null; rate: number; amount?: number | null; amount_is_net?: boolean | null } | null;
   manual_lines?: { account: string; debit: number; credit: number }[] | null; // journal_adjustment only
+  splits?: { account: string; amount: number }[] | null;  // several expense heads paid together (one line each)
   currency?: string | null;                        // transaction currency when not the base currency
   exchange_rate?: number | null;                   // base units per 1 unit of `currency` — never guessed
 };
@@ -151,6 +152,18 @@ function buildLocal(intent: Intent, tax: TaxModule, registered = true): RuleResu
     case "expense_payment":
     case "purchase":
     case "asset_purchase": {
+      // Several heads paid together ("wages 1000, salary 2500, cleaning 3200 in cash"): one debit line each
+      const parts = (intent.splits ?? []).filter(s => s.account?.trim() && Number(s.amount) > 0);
+      if (parts.length >= 2 && !g && !tdsAmt) {
+        const type = intent.action === "asset_purchase" ? "asset" : "expense";
+        const total = r2(parts.reduce((s, p) => s + Number(p.amount), 0));
+        for (const p of parts) lines.push(DR(p.account.trim(), Number(p.amount), intent.action === "asset_purchase" ? "Asset" : "Expense", type));
+        const supplier = credit ? partyLedger("supplier") : "";
+        lines.push(credit ? CR(supplier, total, `Payable to ${supplier || "supplier"}`, "creditors") : CR(settle ?? "", total, "Paid from", "asset"));
+        if (stated > 0 && Math.abs(stated - total) > 0.5) warnings.push(`The items add up to ${total}, not ${stated} — the entry uses the items.`);
+        rule = `${parts.length} expenses paid together: Dr ${parts.map(p => p.account.trim()).join(", ")} — Cr ${credit ? `${supplier || "supplier"} (unpaid)` : settle}`;
+        return { lines, rule, gst: gstOut, tds: tdsOut(total), missing: missing.filter(m => m !== "amount"), warnings };
+      }
       const acc = intent.action === "purchase" ? (counter || DEFAULT_LEDGERS.purchases) : needCounter(intent.action === "asset_purchase" ? "asset_account" : "expense_account");
       const type = intent.action === "asset_purchase" ? "asset" : "expense";
       lines.push(DR(acc, gst.taxable, intent.action === "asset_purchase" ? "Asset" : intent.action === "purchase" ? "Purchases" : "Expense", type));
