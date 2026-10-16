@@ -553,6 +553,52 @@ export function BusinessOSHomepage() {
       </section>
 
 
+      {/* --- FREBOOK MANAGED --- */}
+      <section id="frebook-managed" className="py-16 px-4" style={{ background: "#FFFFFF", borderTop: "1px solid rgba(20,26,58,0.07)" }}>
+        <div className="container max-w-6xl mx-auto">
+          <div className="grid gap-8 md:grid-cols-[1.15fr_1fr] items-center rounded-[28px] p-7 md:p-10 relative overflow-hidden"
+            style={{ background: "radial-gradient(120% 90% at 0% 0%, #24564A 0%, #133A31 45%, #0B211C 100%)", color: "#FFFFFF", boxShadow: "0 30px 60px -40px rgba(15,43,37,0.8)" }}>
+            <div aria-hidden="true" className="absolute -right-24 -top-24 w-72 h-72 rounded-full" style={{ background: "radial-gradient(circle, rgba(217,181,111,0.28), transparent 70%)" }} />
+            <div className="relative flex flex-col gap-4">
+              <span className="text-[11px] font-extrabold tracking-[0.2em] uppercase" style={{ color: "#D9B56F" }}>Done for you</span>
+              <h2 className="text-3xl md:text-4xl font-black leading-tight" style={{ textWrap: "balance" }}>FreBook Managed</h2>
+              <p className="text-base md:text-lg leading-relaxed" style={{ color: "#C9D3CE", maxWidth: 520 }}>
+                Hand over your books. Our accounts team keeps them up to date, files your GST every month, and you see everything live on your phone.
+              </p>
+              <div className="flex items-end gap-2">
+                <span className="text-5xl font-black tracking-tight" style={{ fontVariantNumeric: "tabular-nums" }}>₹3,999</span>
+                <span className="text-base font-semibold pb-1.5" style={{ color: "#C9D3CE" }}>/month</span>
+              </div>
+              <div className="flex flex-wrap gap-3 pt-1">
+                <a href={`https://wa.me/${SUPPORT_WA}?text=${encodeURIComponent("Hi FreWork, I'd like to get started with FreBook Managed (₹3,999/month). Please guide me.")}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 h-12 px-6 rounded-xl font-extrabold text-[15px] transition-transform hover:-translate-y-0.5"
+                  style={{ background: "#25D366", color: "#08311E", boxShadow: "0 12px 24px -12px rgba(37,211,102,0.7)" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.7-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3z" /></svg>
+                  Get started on WhatsApp
+                </a>
+              </div>
+            </div>
+            <ul className="relative grid gap-3">
+              {[
+                { t: "Monthly bookkeeping", d: "Done by your dedicated accounts team." },
+                { t: "GSTR-1 & GSTR-3B filed", d: "Every month, on time." },
+                { t: "Real-time dashboard on your phone", d: "Sales, expenses, cash, dues and GST." },
+                { t: "24×7 replies on WhatsApp", d: "Ask anything about your books, any time." },
+              ].map(f => (
+                <li key={f.t} className="flex gap-3 items-start rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                  <span aria-hidden="true" className="shrink-0 w-7 h-7 rounded-full grid place-items-center text-sm font-black" style={{ background: "#D9B56F", color: "#1B2A22" }}>✓</span>
+                  <span>
+                    <span className="block font-extrabold text-[15px]">{f.t}</span>
+                    <span className="block text-sm" style={{ color: "#C9D3CE" }}>{f.d}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
       {/* --- PLATFORM OVERVIEW --- */}
       <section className="py-20 px-4 relative" style={{ background: "#F2F3F6", borderTop:"1px solid rgba(20,26,58,0.07)" }}>
         <div className="container max-w-6xl mx-auto relative z-10">
