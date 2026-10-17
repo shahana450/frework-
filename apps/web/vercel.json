@@ -3,5 +3,13 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["bom1"]
+  "regions": [
+    "bom1"
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/wa-health",
+      "schedule": "30 3 * * *"
+    }
+  ]
 }
