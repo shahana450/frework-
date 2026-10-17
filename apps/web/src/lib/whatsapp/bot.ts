@@ -76,6 +76,17 @@ ${loginUrl(token)}
 Works once and expires soon. Don't forward it — it signs in as you.`;
   };
   if (cmd.type === "login") return signInLink();
+  // INVOICE after a sale was posted here: a sign-in link that opens that invoice (view, edit, print / PDF)
+  if (/^(invoice|inv|bill|invoice pdf|send invoice)\s*$/i.test(m.text.trim())) {
+    const id = (sess.pending as { lastSale?: string } | null)?.lastSale;
+    if (!id) return "No recent sale to make an invoice for. Post a sale first, then reply *INVOICE*.";
+    const token = await loginToken(sb, link.user_id);
+    if (!token) return "❌ Couldn't make the invoice link. Open Journal entries in the app and press Invoice.";
+    return `🧾 Your invoice — view, edit, then *Print / PDF* to download or share:
+${loginUrl(token, `/finance/invoices/${id}`, link.business_id)}
+
+Works once and expires soon. Don't forward this link — it signs in as you. Share the PDF instead.`;
+  }
   if (cmd.type === "no") { await save({ pending: null }); return sess.pending ? "❌ Draft dropped. Nothing was posted." : "Nothing pending."; }
 
   // Choosing groups for new ledgers: "2 direct" changes item 2, then YES posts
@@ -218,8 +229,11 @@ async function postPending(sb: SupabaseClient, link: Link, actorId: string, p: {
       await sb.from("fw_fin_journal_lines").delete().in("journal_id", heldIds);
       await sb.from("fw_fin_journals").delete().in("id", heldIds).eq("status", "draft");
     }
-    await save({ pending: null });
-    return `✅ Posted as *${posted.entryNo}* · ${link.name}${resolved.created.length ? `\nNew ledger${resolved.created.length > 1 ? "s" : ""}: ${resolved.created.map(c => c.name).join(", ")}` : ""}` + DASH_HINT;
+    // A sale: remember it, so *INVOICE* can open its invoice
+    const isSale = /^(sale|sales)$/i.test(t.transaction_type);
+    await save({ pending: isSale ? { lastSale: posted.id } : null });
+    return `✅ Posted as *${posted.entryNo}* · ${link.name}${resolved.created.length ? `\nNew ledger${resolved.created.length > 1 ? "s" : ""}: ${resolved.created.map(c => c.name).join(", ")}` : ""}`
+      + (isSale ? "\n\nNeed the invoice? Reply *INVOICE* to view, edit or download it." : DASH_HINT);
   } catch (e) {
     const err = postingErrorMessage(e);
     if (err.code === "POSSIBLE_DUPLICATE") return `⚠️ ${err.message}\n\nReply *POST ANYWAY* if this is a separate transaction, or *NO* to drop it.`;

@@ -15,7 +15,9 @@ export async function loginToken(sb: SupabaseClient, userId: string): Promise<st
   return data?.properties?.hashed_token ?? null;
 }
 
-export const loginUrl = (token: string) => `${SITE}/auth/wa?t=${encodeURIComponent(token)}`;
+/** Sign-in link; `next` opens a FreWork page straight after (e.g. an invoice), in business `biz`. */
+export const loginUrl = (token: string, next?: string, biz?: string) =>
+  `${SITE}/auth/wa?t=${encodeURIComponent(token)}${next ? `&next=${encodeURIComponent(next)}` : ""}${biz ? `&biz=${encodeURIComponent(biz)}` : ""}`;
 
 /** The FreWork user behind a verified WhatsApp number — only when exactly one user has linked it. */
 export async function userForPhone(sb: SupabaseClient, phone: string): Promise<{ userId: string; businessId: string } | "none" | "many"> {

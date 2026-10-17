@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { setActiveBusiness } from "@/lib/activeBusiness";
 
 function WaSignIn() {
   const router = useRouter();
@@ -13,8 +14,16 @@ function WaSignIn() {
   useEffect(() => {
     const token = params.get("t");
     if (!token) { setError("This sign-in link is incomplete."); return; }
-    supabase.auth.verifyOtp({ type: "magiclink", token_hash: token }).then(({ error: e }) => {
+    // Optional: open a page straight away (only FreWork finance pages) in the business the link was made for
+    const next = params.get("next") ?? "", biz = params.get("biz") ?? "";
+    supabase.auth.verifyOtp({ type: "magiclink", token_hash: token }).then(({ data, error: e }) => {
       if (e) { setError("This sign-in link has expired or was already used. Send LOGIN to FreBook on WhatsApp for a new one."); return; }
+      if (/^\/finance\/[\w\-/]+$/.test(next)) {
+        try { sessionStorage.setItem("fw_from_wa", "1"); } catch { /* */ }
+        if (biz && data.user) setActiveBusiness(data.user.id, biz);
+        router.replace(next);
+        return;
+      }
       // Came from WhatsApp: entries are recorded there, so the dashboard opens in "Ask your books" mode (this tab only)
       try { sessionStorage.setItem("fw_from_wa", "1"); } catch { /* */ }
       router.replace("/finance/select-business");
