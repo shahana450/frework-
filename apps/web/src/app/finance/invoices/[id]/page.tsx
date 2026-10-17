@@ -22,6 +22,45 @@ function E({ value, onChange, placeholder, style, multiline, align, readOnly }: 
     : <input className="ie" value={value} readOnly={readOnly} placeholder={placeholder} onChange={e => onChange(e.target.value)} style={s} />;
 }
 
+type Customer = { name: string; gstin: string | null; state: string | null; phone: string | null; email: string | null; address: string | null; city: string | null; pincode: string | null };
+
+/** Customer name: type freely, or pick a saved customer to fill GSTIN, state, phone and address. */
+function CustomerPick({ value, customers, onType, onPick }: { value: string; customers: Customer[]; onType: (v: string) => void; onPick: (c: Customer) => void }) {
+  const [open, setOpen] = useState(false);
+  const [hi, setHi] = useState(0);
+  const q = value.trim().toLowerCase();
+  const list = customers.filter(c => !q || c.name.toLowerCase().includes(q)).slice(0, 8);
+  const exact = customers.some(c => c.name.trim().toLowerCase() === q);
+  return (
+    <div style={{ position: "relative" }}>
+      <input className="ie" value={value} placeholder="Customer name — type or pick a saved customer" aria-autocomplete="list" aria-expanded={open}
+        onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onChange={e => { onType(e.target.value); setOpen(true); setHi(0); }}
+        onKeyDown={e => {
+          if (!open || !list.length) return;
+          if (e.key === "ArrowDown") { e.preventDefault(); setHi(h => Math.min(h + 1, list.length - 1)); }
+          else if (e.key === "ArrowUp") { e.preventDefault(); setHi(h => Math.max(h - 1, 0)); }
+          else if (e.key === "Enter") { e.preventDefault(); onPick(list[hi]); setOpen(false); }
+          else if (e.key === "Escape") setOpen(false);
+        }}
+        style={{ width: "100%", border: "1px dashed transparent", borderRadius: 4, background: "transparent", color: "inherit", font: "inherit", padding: "1px 3px", margin: "-2px -4px", fontSize: 16, fontWeight: 700 }} />
+      {open && (list.length > 0 || (q && !exact)) && (
+        <div className="no-print" role="listbox" style={{ position: "absolute", zIndex: 30, top: "calc(100% + 6px)", left: -4, width: "min(420px, 100%)", background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 12, boxShadow: "0 16px 36px -18px rgba(20,26,58,.45)", overflow: "hidden" }}>
+          {list.length > 0 && <div style={{ padding: "8px 12px 4px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#8A90AE" }}>Saved customers</div>}
+          {list.map((cu, i) => (
+            <button key={cu.name + i} type="button" role="option" aria-selected={i === hi} onMouseDown={e => { e.preventDefault(); onPick(cu); setOpen(false); }} onMouseEnter={() => setHi(i)}
+              style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", width: "100%", padding: "8px 12px", border: "none", background: i === hi ? "#F1F3FB" : "transparent", cursor: "pointer", textAlign: "left", font: "inherit" }}>
+              <span style={{ fontWeight: 700, fontSize: 14, color: "#141A3A" }}>{cu.name}</span>
+              <span style={{ fontSize: 11.5, color: "#5A6080" }}>{[cu.gstin || "No GSTIN", cu.state, cu.phone].filter(Boolean).join(" · ")}</span>
+            </button>
+          ))}
+          {q && !exact && <div style={{ padding: "8px 12px", fontSize: 12, color: "#5A6080", borderTop: list.length ? "1px solid #EEF0F6" : "none" }}>Keep typing to use “{value.trim()}” as a new customer.</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function InvoicePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -33,6 +72,7 @@ export default function InvoicePage() {
   const [canSave, setCanSave] = useState(true);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -40,6 +80,16 @@ export default function InvoicePage() {
       const biz = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!biz) { router.push("/finance/setup"); return; }
       setBizId(biz);
+      // Saved customers (contacts) plus customer ledgers, for the Bill-to picker
+      Promise.all([
+        supabase.from("fw_fin_contacts").select("name,gstin,state,phone,email,address,city,pincode").eq("business_id", biz).eq("type", "customer").order("name"),
+        supabase.from("fw_fin_chart_of_accounts").select("name").eq("business_id", biz).eq("sub_type", "trade_receivables").eq("is_group", false),
+      ]).then(([ct, led]) => {
+        const list = (ct.data ?? []) as Customer[];
+        const known = new Set(list.map(x => x.name.trim().toLowerCase()));
+        for (const l of (led.data ?? []) as { name: string }[]) if (!known.has(l.name.trim().toLowerCase())) list.push({ name: l.name, gstin: null, state: null, phone: null, email: null, address: null, city: null, pincode: null });
+        setCustomers(list.sort((a, b) => a.name.localeCompare(b.name)));
+      });
       const r = await fetch(`/api/finance/invoice-doc?business_id=${biz}&journal_id=${id}`);
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setMsg({ ok: false, text: d.error ?? "Couldn't open the invoice." }); return; }
@@ -170,7 +220,14 @@ export default function InvoicePage() {
           {/* Bill to */}
           <section style={{ borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}`, padding: "14px 0", display: "flex", flexDirection: "column", gap: 3 }}>
             <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", color: C.muted }}>BILL TO</span>
-            <E value={doc.buyer.name} onChange={v => setBuyer("name", v)} placeholder="Customer name" style={{ fontSize: 16, fontWeight: 700 }} />
+            <CustomerPick value={doc.buyer.name} customers={customers} onType={v => setBuyer("name", v)}
+              onPick={cu => setDoc(d => {
+                if (!d) return d;
+                const address = cu.address ? [cu.address, [cu.city, cu.pincode].filter(Boolean).join(" ")].filter(Boolean).join("\n") : d.buyer.address;
+                const state = cu.state || d.buyer.state;
+                return { ...d, buyer: { ...d.buyer, name: cu.name, gstin: (cu.gstin ?? "").toUpperCase(), state, phone: cu.phone ?? d.buyer.phone, email: cu.email ?? d.buyer.email, address },
+                  placeOfSupply: !d.placeOfSupply || d.placeOfSupply === d.buyer.state ? state : d.placeOfSupply };
+              })} />
             <E value={doc.buyer.address} onChange={v => setBuyer("address", v)} placeholder="Customer address" multiline style={{ fontSize: 13, color: C.muted }} />
             <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 13 }}>
               <span style={{ display: "flex", gap: 6, alignItems: "center", minWidth: 220 }}><span style={{ color: C.muted }}>GSTIN</span><E value={doc.buyer.gstin} onChange={v => setBuyer("gstin", v.toUpperCase())} placeholder="Unregistered" style={{ fontFamily: MONO }} /></span>
