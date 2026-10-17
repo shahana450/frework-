@@ -10,6 +10,10 @@
     {
       "path": "/api/cron/wa-health",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/collect-alerts",
+      "schedule": "30 3 * * *"
     }
   ]
 }

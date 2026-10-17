@@ -14,6 +14,7 @@ import { readAttachmentBuffer, type Attachment } from "../attachments";
 import { fileToShelf, fyOfDate } from "../shelf";
 import { parseCommand, helpText, draftText, answerText } from "./format";
 import { loginToken, loginUrl } from "./loginLink";
+import { loadOverdue, listMessage } from "../collectAlert";
 
 type Link = { business_id: string; user_id: string; name: string };
 type Session = { phone: string; business_id: string | null; pending: { parsed?: ParsedTransaction; key?: string; original?: string; picking?: boolean; heads?: Record<string, string>; asking?: string[]; queue?: ParsedTransaction[] } | null; history: { role: "user" | "assistant"; content: string }[]; picking?: boolean };
@@ -76,6 +77,13 @@ ${loginUrl(token)}
 Works once and expires soon. Don't forward it — it signs in as you.`;
   };
   if (cmd.type === "login") return signInLink();
+  // LIST: overdue customers with one-tap reminder links (the owner sends them from their own WhatsApp)
+  if (/^(list|dues|overdue|reminders?)\s*$/i.test(m.text.trim())) {
+    const { data: al } = await sb.from("fw_fin_wa_links").select("collect_alert_days").eq("phone", m.from).eq("business_id", link.business_id).maybeSingle();
+    const days = (al as { collect_alert_days?: number } | null)?.collect_alert_days ?? 30;
+    const r = await loadOverdue(sb, link.business_id, days, new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }));
+    return r ? listMessage(r.business || link.name, r.overdue, days) : "❌ Couldn't load receivables right now. Try again in a minute.";
+  }
   // INVOICE after a sale was posted here: a sign-in link that opens that invoice (view, edit, print / PDF)
   if (/^(invoice|inv|invoice pdf|send invoice)\s*$/i.test(m.text.trim())) {
     const id = (sess.pending as { lastSale?: string } | null)?.lastSale;

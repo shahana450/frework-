@@ -45,6 +45,7 @@ export function helpText(bizName: string): string {
     "",
     "Reply *YES* to post a draft, *NO* to drop it. *SWITCH* to change business.",
     "*LOGIN* — a one-tap link to open your FreBook dashboard.",
+    "*LIST* — overdue customers, with ready-to-send reminders.",
   ].join("\n");
 }
 

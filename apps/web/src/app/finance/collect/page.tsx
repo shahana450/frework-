@@ -24,6 +24,8 @@ export default function CollectPage() {
   const [upi, setUpi] = useState("");
   const [bizId, setBizId] = useState("");
   const [phoneEdit, setPhoneEdit] = useState<Record<string, string>>({});
+  const [alert, setAlert] = useState<{ linked: boolean; phone?: string | null; freq: "off" | "daily" | "weekly"; days: number; setup_needed?: string } | null>(null);
+  const [alertMsg, setAlertMsg] = useState("");
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -32,6 +34,7 @@ export default function CollectPage() {
       if (!biz) { router.push("/finance/setup"); return; }
       setBizId(biz);
       try { setUpi(localStorage.getItem(`fw_upi_${biz}`) ?? ""); } catch { /* storage blocked */ }
+      fetch(`/api/finance/collect-alerts?business_id=${biz}`).then(r => r.json()).then(setAlert).catch(() => null);
       const res = await fetch(`/api/finance/collect?business_id=${biz}`);
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(d.error ?? "Couldn't load receivables."); return; }
@@ -47,6 +50,12 @@ export default function CollectPage() {
   const overdue = data?.debtors.filter(x => x.oldestDays > 30) ?? [];
 
   const saveUpi = (v: string) => { setUpi(v); try { localStorage.setItem(`fw_upi_${bizId}`, v); } catch { /* ignore */ } };
+  const saveAlert = async (freq: "off" | "daily" | "weekly", days: number) => {
+    setAlert(a => a && { ...a, freq, days }); setAlertMsg("");
+    const r = await fetch("/api/finance/collect-alerts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, freq, days }) });
+    const j = await r.json().catch(() => ({}));
+    setAlertMsg(r.ok ? (freq === "off" ? "Alerts off." : `Saved — you'll get a WhatsApp at 9 AM ${freq === "daily" ? "each day" : "every Monday"} when someone is overdue.`) : j.error ?? "Couldn't save.");
+  };
   const card: React.CSSProperties = { background: C.surface, border: `1px solid ${C.line}`, borderRadius: 18 };
 
   return (
@@ -102,6 +111,30 @@ export default function CollectPage() {
           </section>
 
           <aside style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {alert && (
+              <section style={{ ...card, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+                <h2 style={{ margin: 0, fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", color: C.muted }}>AUTO REMINDERS · TO YOU ON WHATSAPP</h2>
+                {alert.setup_needed ? <div style={{ fontSize: 13, color: C.warn }}>{alert.setup_needed}</div>
+                  : !alert.linked ? <div style={{ fontSize: 13, color: C.muted }}>Link your WhatsApp in <Link href="/finance/settings" style={{ color: C.primary, fontWeight: 700 }}>Settings → WhatsApp</Link> to get overdue alerts.</div>
+                  : <>
+                    <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>FreBook WhatsApps you ({alert.phone}) at 9 AM with who&apos;s overdue. Reply <b>LIST</b> to get each reminder ready to send.</div>
+                    <div role="radiogroup" aria-label="How often" style={{ display: "flex", gap: 6 }}>
+                      {(["off", "daily", "weekly"] as const).map(f => (
+                        <button key={f} role="radio" aria-checked={alert.freq === f} onClick={() => saveAlert(f, alert.days)} style={{ flex: 1, height: 38, borderRadius: 10, border: `1px solid ${alert.freq === f ? C.primary : C.line}`, background: alert.freq === f ? C.soft : "transparent", color: alert.freq === f ? C.primary : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{f === "off" ? "Off" : f === "daily" ? "Daily" : "Mondays"}</button>
+                      ))}
+                    </div>
+                    {alert.freq !== "off" && (
+                      <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, fontSize: 13, color: C.muted }}>
+                        Overdue after
+                        <select value={alert.days} onChange={e => saveAlert(alert.freq, Number(e.target.value))} style={{ height: 36, borderRadius: 9, border: `1px solid ${C.line}`, padding: "0 8px", fontSize: 14, color: C.ink, background: C.surface }}>
+                          {[7, 15, 30, 45, 60].map(n => <option key={n} value={n}>{n} days</option>)}
+                        </select>
+                      </label>
+                    )}
+                    {alertMsg && <div style={{ fontSize: 12.5, color: /saved|off/i.test(alertMsg) ? C.pos : C.neg, fontWeight: 600 }}>{alertMsg}</div>}
+                  </>}
+              </section>
+            )}
             {d ? (
               <section style={{ ...card, padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
                 <h2 style={{ margin: 0, fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", color: C.muted }}>REMINDER PREVIEW · WHATSAPP</h2>
