@@ -77,6 +77,8 @@ const TOP_ICONS = [
   { href: "/finance/sales/new", label: "Invoice" },
   { href: "/finance/purchases/new", label: "Bill" },
   { href: "/finance/books", label: "Books" },
+  { href: "/finance/journals", label: "Journal" },
+  { href: "/finance/ledger", label: "Ledger" },
   { href: "/finance/banking", label: "Banking" },
   { href: "/finance/receivables", label: "Receivables" },
   { href: "/finance/payables", label: "Payables" },
