@@ -77,7 +77,7 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
   };
   if (cmd.type === "login") return signInLink();
   // INVOICE after a sale was posted here: a sign-in link that opens that invoice (view, edit, print / PDF)
-  if (/^(invoice|inv|bill|invoice pdf|send invoice)\s*$/i.test(m.text.trim())) {
+  if (/^(invoice|inv|invoice pdf|send invoice)\s*$/i.test(m.text.trim())) {
     const id = (sess.pending as { lastSale?: string } | null)?.lastSale;
     if (!id) return "No recent sale to make an invoice for. Post a sale first, then reply *INVOICE*.";
     const token = await loginToken(sb, link.user_id);
