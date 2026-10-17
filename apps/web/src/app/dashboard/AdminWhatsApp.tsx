@@ -28,7 +28,7 @@ export default function AdminWhatsApp() {
 
   const row = (k: string, v: React.ReactNode, tone = "#141A3A") => <div style={{ display: "flex", gap: 10, fontSize: 13, padding: "5px 0", borderBottom: "1px solid #EEF0F6" }}><span style={{ color: "#5A6080", minWidth: 150 }}>{k}</span><b style={{ color: tone }}>{v}</b></div>;
   return (
-    <section style={{ background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 20, padding: 20, marginBottom: 24, color: "#141A3A" }}>
+    <section id="wa-panel" style={{ background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 20, padding: 20, marginBottom: 24, color: "#141A3A", scrollMarginTop: 80 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>FreBook WhatsApp</h2>
         <button onClick={() => void load()} style={{ marginLeft: "auto", height: 32, padding: "0 12px", borderRadius: 9, border: "1px solid #E1E4EE", background: "#FFFFFF", fontWeight: 700, cursor: "pointer" }}>Recheck</button>
@@ -42,5 +42,34 @@ export default function AdminWhatsApp() {
         {msg && <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: msg.startsWith("✓") ? "#0B7A55" : "#C2321F" }}>{msg}</div>}
       </>}
     </section>
+  );
+}
+
+/** Red banner at the top of the admin dashboard — only when FreBook's WhatsApp needs attention. */
+export function AdminWhatsAppBanner() {
+  const [issues, setIssues] = useState<string[]>([]);
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      const r = await fetch("/api/admin/whatsapp", { headers: { Authorization: `Bearer ${session.access_token}` } }).catch(() => null);
+      if (!r?.ok) return;
+      const h = await r.json() as Health;
+      const out: string[] = [];
+      if (!h.token_ok) out.push("the access token isn't working, so FreBook can't reply");
+      else {
+        const st = (h.phone?.status ?? "").toString();
+        if (st && st !== "CONNECTED") out.push(`the number's status is ${st}`);
+        if (h.phone?.quality_rating && h.phone.quality_rating !== "GREEN") out.push(`message quality is ${h.phone.quality_rating.toString().toLowerCase()}`);
+        if (h.subscribed_apps && h.subscribed_apps.length === 0) out.push("no app is receiving messages");
+      }
+      setIssues(out);
+    });
+  }, []);
+  if (!issues.length) return null;
+  return (
+    <div role="alert" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "#FDECEA", border: "1px solid #E8A59B", borderLeft: "5px solid #C2321F", borderRadius: 14, padding: "12px 16px", marginBottom: 20, color: "#7A1C10" }}>
+      <span style={{ fontSize: 14 }}>⚠ <b>FreBook WhatsApp needs attention</b> — {issues.join("; ")}.</span>
+      <a href="#wa-panel" style={{ marginLeft: "auto", height: 34, padding: "0 14px", borderRadius: 9, background: "#C2321F", color: "#FFFFFF", fontWeight: 800, fontSize: 13, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Fix →</a>
+    </div>
   );
 }

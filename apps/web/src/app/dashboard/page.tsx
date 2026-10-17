@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminCosts from "./AdminCosts";
-import AdminWhatsApp from "./AdminWhatsApp";
+import AdminWhatsApp, { AdminWhatsAppBanner } from "./AdminWhatsApp";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import {
@@ -524,6 +524,7 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-black mb-1" style={{ color: "#141A3A" }}>Admin Panel</h1>
           <p className="text-sm mb-8" style={{ color: "#4A5070" }}>Manage FreWork — approve spaces, review orders, monitor platform.</p>
 
+          <AdminWhatsAppBanner />
           <AdminOverview />
           <AdminWhatsApp />
           <AdminCosts />
