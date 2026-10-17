@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { amountInWords, invoiceTotals, recalcItem, type InvItem, type InvoiceDoc } from "@/lib/invoiceDoc";
 import { stateCode } from "@/lib/gstr1";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import GovFiles from "./GovFiles";
 
 const C = { bg: "#F5F6FA", line: "#E1E4EE", strong: "#C9CEDF", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", soft: "#E6E8F4", pos: "#0B7A55", neg: "#C2321F", warn: "#8A5A00", warnSoft: "#FFF4DB" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
@@ -182,6 +183,7 @@ export default function InvoicePage() {
         {!canSave && !msg && <span style={{ fontSize: 12.5, color: C.warn }}>Saving edits may need a one-time database update — press Save to check.</span>}
         {msg && <span role="status" style={{ fontSize: 13, fontWeight: 600, color: msg.ok ? C.pos : C.warn }}>{msg.text}</span>}
         <button onClick={save} disabled={!dirty || saving} title={dirty ? "" : "Edit the invoice to enable Save"} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: `1px solid ${C.strong}`, background: "#FFFFFF", color: C.ink, fontWeight: 700, cursor: dirty ? "pointer" : "default", opacity: dirty ? 1 : 0.5 }}>{saving ? "Saving…" : "Save"}</button>
+        {doc && <GovFiles doc={doc} />}
         <button onClick={() => window.print()} style={{ height: 40, padding: "0 18px", borderRadius: 10, border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Print / PDF</button>
       </div>
       {mismatch && <div className="no-print" style={{ maxWidth: 860, margin: "0 auto 14px", background: C.warnSoft, color: C.warn, borderRadius: 10, padding: "10px 14px", fontSize: 13.5, fontWeight: 600 }}>The invoice total ({cur()}{money(tot!.total)}) differs from the posted entry ({cur()}{money(bookTotal!)}). Your books aren&apos;t changed by edits here — post an adjustment if the sale amount was wrong.</div>}
