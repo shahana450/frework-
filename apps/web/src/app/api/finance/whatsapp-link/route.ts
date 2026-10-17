@@ -6,6 +6,7 @@ import { requireBusiness, serverError } from "@/lib/apiAuth";
 import { logAudit } from "@/lib/audit";
 import { normPhone } from "@/lib/whatsapp/format";
 import { sendContactCard } from "@/lib/whatsapp/contactCard";
+import { waConfigured } from "@/lib/whatsapp/transport";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const NEEDS_SQL = "WhatsApp needs its database setup — run 2026-10-14_whatsapp.sql in Supabase.";
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
     if (gate instanceof NextResponse) return gate;
     const { data, error } = await supabase.from("fw_fin_wa_links").select("id,phone,verified,code,code_expires,created_at").eq("business_id", bizId!).eq("user_id", gate.user.id).order("created_at");
     if (error) return missing(error.message) ? NextResponse.json({ setup_needed: NEEDS_SQL, links: [] }) : serverError("whatsapp-link", error);
-    return NextResponse.json({ links: data ?? [], bot_number: botNumber() || null, live: !!(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_ID && process.env.WHATSAPP_APP_SECRET) });
+    return NextResponse.json({ links: data ?? [], bot_number: botNumber() || null, live: waConfigured() });
   } catch (e) {
     return serverError("whatsapp-link", e);
   }

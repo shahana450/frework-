@@ -5,8 +5,8 @@
 //   Name from WHATSAPP_LINK_TEMPLATE (default "frebook_link_code"), language WHATSAPP_LINK_TEMPLATE_LANG (default "en").
 import { createHmac } from "node:crypto";
 import { logUsage } from "../usage";
+import { waPost, waConfigured } from "./transport";
 
-const GRAPH = "https://graph.facebook.com/v21.0";
 
 /**
  * The 6-digit code sent to the phone. It is derived (never stored or shown) from the link row and the
@@ -42,13 +42,9 @@ export function linkSendError(status: number, body: string): string {
 }
 
 export async function sendLinkCode(to: string, code: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  const token = (process.env.WHATSAPP_ACCESS_TOKEN ?? "").trim(), phoneId = (process.env.WHATSAPP_PHONE_ID ?? "").trim();
-  if (!token || !phoneId) return { ok: false, error: "The FreBook WhatsApp number isn't switched on yet." };
+  if (!waConfigured()) return { ok: false, error: "The FreBook WhatsApp number isn't switched on yet." };
   const name = (process.env.WHATSAPP_LINK_TEMPLATE ?? "frebook_link_code").trim(), lang = (process.env.WHATSAPP_LINK_TEMPLATE_LANG ?? "en").trim();
-  const r = await fetch(`${GRAPH}/${phoneId}/messages`, {
-    method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify(linkTemplatePayload(to, code, name, lang)),
-  }).catch(() => null);
+  const r = await waPost(linkTemplatePayload(to, code, name, lang));
   if (!r) return { ok: false, error: linkSendError(0, "") };
   if (r.ok) { logUsage({ kind: "wa_business", provider: "whatsapp", model: "authentication" }); return { ok: true }; }
   const body = (await r.text()).slice(0, 500);
