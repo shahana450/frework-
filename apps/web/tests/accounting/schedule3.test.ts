@@ -1,7 +1,7 @@
 // Schedule III Balance Sheet: every presented line lands under one head, totals unchanged
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { scheduleIII, headOf } from "../../src/lib/schedule3";
+import { scheduleIII, headOf, scheduleIIIPL, plHeadOf } from "../../src/lib/schedule3";
 import type { PresentedBS } from "../../src/lib/statements";
 
 const sec = (key: string, title: string, lines: { id: string; name: string; amount: number }[]) => ({ key, title, lines, total: lines.reduce((s, l) => s + l.amount, 0) });
@@ -33,4 +33,21 @@ test("Schedule III keeps the totals and numbers the notes in order", () => {
   assert.deepEqual(s.equityLiabilities.map(b => b.key), ["equity", "current_liab"]);
   assert.deepEqual(s.equityLiabilities.flatMap(b => b.heads.map(h => `${h.note}:${h.key}`)), ["1:capital", "2:reserves", "3:st_borrowings", "4:trade_payables", "5:other_cl"]);
   assert.deepEqual(s.assets.flatMap(b => b.heads.map(h => h.key)), ["ppe", "trade_receivables", "cash", "loans_advances"]);
+});
+
+test("P&L Schedule III: expenses by nature, profit unchanged", () => {
+  assert.equal(plHeadOf("indirect_expense", "Salary"), "employee");
+  assert.equal(plHeadOf("indirect_expense", "Bank Interest"), "finance");
+  assert.equal(plHeadOf("indirect_expense", "Depreciation"), "depreciation");
+  assert.equal(plHeadOf("direct_expense", "Purchase @18%"), "purchases");
+  assert.equal(plHeadOf("direct_expense", "Freight Inward"), "other");
+  const L = (id: string, name: string, amount: number) => ({ id, name, amount });
+  const s = (key: string, lines: ReturnType<typeof L>[]) => ({ key, title: key, lines, total: lines.reduce((a, l) => a + l.amount, 0) });
+  const r = scheduleIIIPL({ sections: [s("sales", [L("a", "Sales", 1000)]), s("direct_expense", [L("b", "Purchases", 400)]), s("indirect_income", [L("c", "Interest received", 50)]), s("indirect_expense", [L("d", "Salary", 200), L("e", "Rent", 100), L("f", "Income Tax", 30)])], grossProfit: 600, netProfit: 320, footed: true, problems: [] });
+  assert.equal(r.totalIncome, 1050);
+  assert.equal(r.totalExpenses, 700);
+  assert.equal(r.pbt, 350);
+  assert.equal(r.profit, 320);
+  assert.deepEqual(r.expenses.map(h => `${h.note}:${h.key}`), ["3:purchases", "4:employee", "5:other"]);
+  assert.equal(r.tax?.note, 6);
 });

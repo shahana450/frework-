@@ -1,6 +1,6 @@
 // Balance Sheet in the Schedule III (Companies Act 2013, Division I) vertical format, built from the presented
 // statement: every displayed line goes under exactly one Schedule III head, so totals are unchanged and still foot.
-import type { PresentedBS, StmtLine } from "./statements";
+import type { PresentedBS, PresentedPL, StmtLine } from "./statements";
 import type { Group } from "./books";
 
 export type S3Head = { key: string; label: string; note: number; total: number; lines: StmtLine[] };
@@ -74,4 +74,50 @@ export function scheduleIII(p: PresentedBS, info: Map<string, LineInfo>): Schedu
   const el = (["equity", "noncurrent_liab", "current_liab"] as const).map(block).filter((x): x is S3Block => !!x);
   const as = (["noncurrent_assets", "current_assets"] as const).map(block).filter((x): x is S3Block => !!x);
   return { equityLiabilities: el, assets: as, totalEL: r2(el.reduce((s, b) => s + b.total, 0)), totalAssets: r2(as.reduce((s, b) => s + b.total, 0)) };
+}
+
+// ── Statement of Profit and Loss, Schedule III (Division I) ─────────────────────────────────────────────
+
+export type Schedule3PL = {
+  revenue: S3Head | null; otherIncome: S3Head | null; totalIncome: number;
+  expenses: S3Head[]; totalExpenses: number; pbt: number; tax: S3Head | null; profit: number;
+};
+const PL_HEADS: { key: string; label: string }[] = [
+  { key: "purchases", label: "Purchases / cost of materials consumed" },
+  { key: "inventory_change", label: "Changes in inventories" },
+  { key: "employee", label: "Employee benefits expense" },
+  { key: "finance", label: "Finance costs" },
+  { key: "depreciation", label: "Depreciation and amortisation expense" },
+  { key: "other", label: "Other expenses" },
+];
+
+/** Expense head by nature. Direct-expense lines that are purchases stay under Purchases. */
+export function plHeadOf(section: string, name: string): string {
+  if (/\b(income tax|tax expense|deferred tax|current tax|provision for tax)\b/i.test(name)) return "tax";
+  if (/\b(opening stock|closing stock|change in (inventor|stock))/i.test(name)) return "inventory_change";
+  if (/\b(depreciation|amorti[sz]ation)\b/i.test(name)) return "depreciation";
+  if (/\b(salary|salaries|wages|bonus|staff|employee|pf|provident|esi|gratuity|incentive|stipend|director'?s? remuneration)\b/i.test(name)) return "employee";
+  if (/\b(interest|finance charges?|loan processing)\b/i.test(name)) return "finance";
+  if (section === "direct_expense" && (/\b(purchase|purchases|materials?|consum|stock|goods)\b/i.test(name) || !/\b(freight|carriage|transport|power|fuel|rent|repair|electric)/i.test(name))) return "purchases";
+  return "other";
+}
+
+export function scheduleIIIPL(p: PresentedPL): Schedule3PL {
+  const sec = (k: string) => p.sections.find(s => s.key === k);
+  const sum = (ls: StmtLine[]) => r2(ls.reduce((s, l) => s + l.amount, 0));
+  let note = 0;
+  const head = (key: string, label: string, lines: StmtLine[]): S3Head | null => lines.length ? { key, label, note: ++note, lines, total: sum(lines) } : null;
+  const revenue = head("revenue", "Revenue from operations", sec("sales")?.lines ?? []);
+  const otherIncome = head("other_income", "Other income", sec("indirect_income")?.lines ?? []);
+  const by = new Map<string, StmtLine[]>();
+  for (const k of ["direct_expense", "indirect_expense"]) for (const l of sec(k)?.lines ?? []) {
+    const h = plHeadOf(k, l.name);
+    by.set(h, [...(by.get(h) ?? []), l]);
+  }
+  const expenses = PL_HEADS.map(h => head(h.key, h.label, by.get(h.key) ?? [])).filter((x): x is S3Head => !!x);
+  const tax = head("tax", "Tax expense", by.get("tax") ?? []);
+  const totalIncome = r2((revenue?.total ?? 0) + (otherIncome?.total ?? 0));
+  const totalExpenses = r2(expenses.reduce((s, h) => s + h.total, 0));
+  const pbt = r2(totalIncome - totalExpenses);
+  return { revenue, otherIncome, totalIncome, expenses, totalExpenses, pbt, tax, profit: r2(pbt - (tax?.total ?? 0)) };
 }

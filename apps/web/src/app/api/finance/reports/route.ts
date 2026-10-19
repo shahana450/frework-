@@ -5,7 +5,7 @@ import { buildTrialBalance, buildPL, buildBS, loadBookLines, GROUP_LABEL, type T
 import { loadQueryBooks } from "@/lib/intentEngine";
 import { computeCashFlow } from "@/lib/cashFlow";
 import { presentBalanceSheet, presentPL } from "@/lib/statements";
-import { scheduleIII } from "@/lib/schedule3";
+import { scheduleIII, scheduleIIIPL } from "@/lib/schedule3";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
       total_expense: pl.cogs + pl.expenses,
       net_profit: pl.netProfit,
       presented: presentPL(pl),
+      schedule3: scheduleIIIPL(presentPL(pl)),
   });
   if (report === "profit_loss") return NextResponse.json(plJson());
 

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { signedMoney, type PresentedBS, type PresentedPL, type StmtSection } from "@/lib/statements";
 import { plExportRows, bsExportRows, exportFileName, type ExportMeta } from "@/lib/statementExport";
 import { readActiveBusiness } from "@/lib/activeBusiness";
-import type { Schedule3BS } from "@/lib/schedule3";
+import type { Schedule3BS, Schedule3PL, S3Head } from "@/lib/schedule3";
 
 // Excel export of the presented statement — the same lines and signs as the screen (and as Print → PDF)
 async function downloadStatementExcel(kind: "pl" | "bs", presented: PresentedPL | PresentedBS, meta: ExportMeta) {
@@ -37,6 +37,7 @@ type PLData = {
   direct_expense: AccRow[]; indirect_expense: AccRow[];
   gross_profit: number; total_income: number; total_expense: number; net_profit: number;
   presented?: PresentedPL;
+  schedule3?: Schedule3PL;
 };
 
 type BSData = {
@@ -218,7 +219,17 @@ export default function ReportsPage() {
         ) : (
           <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 12, overflow: "hidden" }}>
             {/* Profit & Loss */}
-            {tab === "profit_loss" && plData && (
+            {tab === "profit_loss" && plData?.schedule3 && (
+              <>
+                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(20,26,58,0.11)" }}>
+                  <div style={{ fontWeight: 800, fontSize: "1rem" }}>Statement of Profit and Loss</div>
+                  <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>For the year — FY {financialYears.find(f => f.id === fyId)?.label}</div>
+                </div>
+                {plData.presented && <FootingBanner problems={plData.presented.problems} />}
+                <Schedule3PLView s={plData.schedule3} />
+              </>
+            )}
+            {tab === "profit_loss" && plData && !plData.schedule3 && (
               <>
                 <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(20,26,58,0.11)" }}>
                   <div style={{ fontWeight: 800, fontSize: "1rem" }}>Profit & Loss Statement</div>
@@ -348,6 +359,86 @@ export default function ReportsPage() {
   );
 }
 
+const S3CSS = `
+        .s3-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid rgba(20,26,58,0.08);font-size:12.5px;color:rgba(20,26,58,0.62)}
+        .s3-bar button{border:1px solid rgba(35,42,99,0.22);background:#FFFFFF;color:#232A63;font-weight:700;font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer}
+        .s3 table{width:100%;border-collapse:collapse}
+        .s3 th{padding:10px 20px;text-align:left;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(20,26,58,0.6);font-weight:700;border-bottom:1px solid rgba(20,26,58,0.12);background:#FAFBFD}
+        .s3 th:nth-child(2){text-align:center;width:70px}.s3 th:nth-child(3){text-align:right;width:190px}
+        .s3 td{padding:9px 20px;font-size:14px}
+        .s3-num{text-align:right;white-space:nowrap}
+        .s3-part td{padding:18px 20px 8px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#232A63}
+        .s3-roman{display:inline-block;min-width:26px;color:#8A93C8}
+        .s3-block td{font-weight:700;color:#141A3A;padding-left:46px;background:#F7F8FC;border-top:1px solid rgba(20,26,58,0.06)}
+        .s3-sub{color:rgba(20,26,58,0.6)}
+        .s3-head{cursor:pointer;border-top:1px solid rgba(20,26,58,0.06)}
+        .s3-head td:first-child{padding-left:66px}
+        .s3-head:hover,.s3-head.on{background:#EEF0FA}
+        .s3-caret{display:inline-block;width:16px;margin-left:-18px;color:#8A93C8;font-size:11px}
+        .s3-note{text-align:center;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;color:#232A63}
+        .s3-line td{font-size:13px;padding-top:6px;padding-bottom:6px;background:#FCFCFE;color:rgba(20,26,58,0.85)}
+        .s3-line td:first-child{padding-left:90px}
+        .s3-flag{margin-left:8px;font-size:11px;color:#8A5A00;background:#FFF4DB;padding:1px 6px;border-radius:5px}
+        .s3-total td{font-weight:800;border-top:2px solid #232A63;border-bottom:3px double #232A63;background:#EEF0FA;padding-top:12px;padding-bottom:12px}
+        @media(max-width:640px){.s3 td{padding-left:12px;padding-right:12px}.s3-block td{padding-left:20px}.s3-head td:first-child{padding-left:34px}.s3-line td:first-child{padding-left:48px}.s3 th:nth-child(3){width:auto}}
+        @media print{.s3-bar{display:none}}
+`;
+
+// One expandable note row: head with note number, then (when open) its ledgers, each opening the ledger
+function S3HeadRows({ h, prefix, open, toggle, amt }: { h: S3Head; prefix: string; open: boolean; toggle: () => void; amt: (n: number, strong?: boolean) => React.ReactNode }) {
+  return (
+    <>
+      <tr className={"s3-head" + (open ? " on" : "")} onClick={toggle} title="Show the ledgers in this note">
+        <td><span className="s3-caret">{open ? "▾" : "▸"}</span>{prefix}{h.label}</td>
+        <td className="s3-note">{h.note}</td>
+        <td className="s3-num">{amt(h.total)}</td>
+      </tr>
+      {open && h.lines.map(l => (
+        <tr key={l.id} className="s3-line">
+          <td><Drill id={l.id}>{l.name}</Drill>{l.note && <span className="s3-flag">{l.note}</span>}</td>
+          <td />
+          <td className="s3-num"><Drill id={l.id}>{amt(l.amount)}</Drill></td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+// Statement of Profit and Loss in Schedule III format
+function Schedule3PLView({ s }: { s: Schedule3PL }) {
+  const heads = [s.revenue, s.otherIncome, ...s.expenses, s.tax].filter((x): x is S3Head => !!x);
+  const [open, setOpen] = useState<Set<number>>(new Set());
+  const toggle = (n: number) => setOpen(o => { const x = new Set(o); if (x.has(n)) x.delete(n); else x.add(n); return x; });
+  const amt = (n: number, strong = false) => <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: strong ? 800 : 600, color: n < 0 ? "#C2321F" : "#141A3A" }}>{signedMoney(n)}</span>;
+  const head = (h: S3Head | null, prefix: string) => h ? <S3HeadRows key={h.key} h={h} prefix={prefix} open={open.has(h.note)} toggle={() => toggle(h.note)} amt={amt} /> : null;
+  const sumRow = (roman: string, label: string, n: number, cls = "s3-block") => <tr className={cls}><td><span className="s3-roman">{roman}</span>{label}</td><td /><td className="s3-num">{amt(n, cls === "s3-total")}</td></tr>;
+  return (
+    <div className="s3">
+      <style>{S3CSS}</style>
+      <div className="s3-bar">
+        <span>Schedule III format · click a line to see its ledgers, click a ledger to open it</span>
+        <button onClick={() => setOpen(open.size ? new Set() : new Set(heads.map(h => h.note)))}>{open.size ? "Collapse notes" : "Expand all notes"}</button>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table>
+          <thead><tr><th>Particulars</th><th>Note</th><th>Amount ({cur()})</th></tr></thead>
+          <tbody>
+            {head(s.revenue, "I. ")}
+            {head(s.otherIncome, "II. ")}
+            {sumRow("III", "Total income (I + II)", s.totalIncome)}
+            <tr className="s3-part"><td colSpan={3}><span className="s3-roman">IV</span>Expenses</td></tr>
+            {s.expenses.map((h, i) => head(h, `(${String.fromCharCode(97 + i)}) `))}
+            {sumRow("", "Total expenses (IV)", s.totalExpenses)}
+            {sumRow("V", `${s.pbt >= 0 ? "Profit" : "Loss"} before tax (III − IV)`, s.pbt)}
+            {s.tax && <><tr className="s3-part"><td colSpan={3}><span className="s3-roman">VI</span>Tax expense</td></tr>{head(s.tax, "")}</>}
+            {sumRow(s.tax ? "VII" : "VI", `${s.profit >= 0 ? "Profit" : "Loss"} for the year`, s.profit, "s3-total")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // Balance Sheet in Schedule III vertical format: blocks → note-numbered heads → (expand) ledgers
 const ROMAN = ["I", "II"];
 function Schedule3View({ s, netProfit }: { s: Schedule3BS; netProfit: number }) {
@@ -384,31 +475,7 @@ function Schedule3View({ s, netProfit }: { s: Schedule3BS; netProfit: number }) 
   );
   return (
     <div className="s3">
-      <style>{`
-        .s3{padding:0 0 8px}
-        .s3-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid rgba(20,26,58,0.08);font-size:12.5px;color:rgba(20,26,58,0.62)}
-        .s3-bar button{border:1px solid rgba(35,42,99,0.22);background:#FFFFFF;color:#232A63;font-weight:700;font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer}
-        .s3 table{width:100%;border-collapse:collapse}
-        .s3 th{padding:10px 20px;text-align:left;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(20,26,58,0.6);font-weight:700;border-bottom:1px solid rgba(20,26,58,0.12);background:#FAFBFD}
-        .s3 th:nth-child(2){text-align:center;width:70px}.s3 th:nth-child(3){text-align:right;width:190px}
-        .s3 td{padding:9px 20px;font-size:14px}
-        .s3-num{text-align:right;white-space:nowrap}
-        .s3-part td{padding:18px 20px 8px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#232A63}
-        .s3-roman{display:inline-block;min-width:26px;color:#8A93C8}
-        .s3-block td{font-weight:700;color:#141A3A;padding-left:46px;background:#F7F8FC;border-top:1px solid rgba(20,26,58,0.06)}
-        .s3-sub{color:rgba(20,26,58,0.6)}
-        .s3-head{cursor:pointer;border-top:1px solid rgba(20,26,58,0.06)}
-        .s3-head td:first-child{padding-left:66px}
-        .s3-head:hover,.s3-head.on{background:#EEF0FA}
-        .s3-caret{display:inline-block;width:16px;margin-left:-18px;color:#8A93C8;font-size:11px}
-        .s3-note{text-align:center;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;color:#232A63}
-        .s3-line td{font-size:13px;padding-top:6px;padding-bottom:6px;background:#FCFCFE;color:rgba(20,26,58,0.85)}
-        .s3-line td:first-child{padding-left:90px}
-        .s3-flag{margin-left:8px;font-size:11px;color:#8A5A00;background:#FFF4DB;padding:1px 6px;border-radius:5px}
-        .s3-total td{font-weight:800;border-top:2px solid #232A63;border-bottom:3px double #232A63;background:#EEF0FA;padding-top:12px;padding-bottom:12px}
-        @media(max-width:640px){.s3 td{padding-left:12px;padding-right:12px}.s3-block td{padding-left:20px}.s3-head td:first-child{padding-left:34px}.s3-line td:first-child{padding-left:48px}.s3 th:nth-child(3){width:auto}}
-        @media print{.s3-bar{display:none}}
-      `}</style>
+      <style>{S3CSS}</style>
       <div className="s3-bar">
         <span>Schedule III format · click a line to see its ledgers, click a ledger to open it</span>
         <button onClick={() => setOpen(open.size ? new Set() : new Set(allNotes))}>{open.size ? "Collapse notes" : "Expand all notes"}</button>
