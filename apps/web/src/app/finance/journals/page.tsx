@@ -242,8 +242,8 @@ export default function JournalsPage() {
       `}</style>
 
       <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56, position: "sticky", top: 0, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)", zIndex: 30 }}>
-        {referer === "audit" ? (
-          <button onClick={() => router.back()} style={{ background: "none", border: "none", color: "#232A63", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: "0.88rem" }}>← Back to Audit</button>
+        {referer === "audit" || referer === "ledger" ? (
+          <button onClick={() => router.back()} style={{ background: "rgba(35,42,99,0.08)", border: "1px solid rgba(35,42,99,0.2)", color: "#232A63", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: "0.85rem", padding: "5px 12px", borderRadius: 8 }}>← Back to {referer === "ledger" ? "Ledger" : "Audit"}</button>
         ) : (
           <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
         )}

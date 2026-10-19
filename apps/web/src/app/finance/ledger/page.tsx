@@ -36,6 +36,10 @@ function LedgerContent() {
   // Period from the report that linked here (?from=&to=); none = the whole ledger
   const [from, setFrom] = useState(searchParams.get("from") ?? "");
   const [to, setTo] = useState(searchParams.get("to") ?? "");
+  const BACK: Record<string, string> = { trial_balance: "Trial Balance", profit_loss: "Profit & Loss", balance_sheet: "Balance Sheet" };
+  const back = searchParams.get("back") ?? "";
+  const backLabel = BACK[back];
+  const goBack = () => { if (window.history.length > 1) router.back(); else router.push(`/finance/reports?tab=${back}`); };
   const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 
   useEffect(() => {
@@ -142,9 +146,11 @@ function LedgerContent() {
     <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
       <style>{`.lg-row:hover{background:rgba(35,42,99,0.06)}`}</style>
       <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        {backLabel
+          ? <button onClick={goBack} style={{ background: "rgba(35,42,99,0.08)", border: "1px solid rgba(35,42,99,0.2)", color: "#232A63", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: "0.85rem", padding: "5px 12px", borderRadius: 8 }}>← Back to {backLabel}</button>
+          : <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>}
         <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
-        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Ledger</span>
+        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Ledger{selectedAcc ? ` · ${selectedAcc.name}` : ""}</span>
         <div style={{ flex: 1 }} />
         <button onClick={() => window.print()} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "#141A3A", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
           🖨 Print
@@ -250,7 +256,7 @@ function LedgerContent() {
                         </td>
                       </tr>
                       {entries.map((e, i) => (
-                        <tr key={i} className="lg-row" onClick={() => e.journal_id && router.push(`/finance/journals?id=${e.journal_id}`)} title="View this entry" style={{ borderTop: "1px solid rgba(20,26,58,0.08)", cursor: e.journal_id ? "pointer" : undefined }}>
+                        <tr key={i} className="lg-row" onClick={() => e.journal_id && router.push(`/finance/journals?id=${e.journal_id}&from=ledger`)} title="View this entry" style={{ borderTop: "1px solid rgba(20,26,58,0.08)", cursor: e.journal_id ? "pointer" : undefined }}>
                           <td style={{ padding: "0.5rem 0.85rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.75)", whiteSpace: "nowrap" }}>
                             {new Date(e.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
                           </td>

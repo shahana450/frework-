@@ -82,6 +82,7 @@ const TOP_ICONS = [
   { href: "/finance/banking", label: "Banking" },
   { href: "/finance/receivables", label: "Receivables" },
   { href: "/finance/payables", label: "Payables" },
+  { href: "/finance/reports?tab=trial_balance", label: "TB" },
   { href: "/finance/reports?tab=profit_loss", label: "P&L" },
   { href: "/finance/reports?tab=balance_sheet", label: "Balance Sheet" },
   { href: "/finance/gst/returns", label: "GST" },
@@ -389,7 +390,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             {TOP_ICONS.filter(t => india || !t.href.startsWith("/finance/gst")).map(t => {
               const on = t.href.includes("?") ? pathname + search === t.href : t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
               return (
-                <Link key={t.href} href={t.href} className={[on ? "on" : "", ["/finance/books", "/finance/reports?tab=profit_loss", "/finance/gst/returns"].includes(t.href) ? "grp" : ""].join(" ").trim() || undefined} title={t.label} aria-current={on ? "page" : undefined}>
+                <Link key={t.href} href={t.href} className={[on ? "on" : "", ["/finance/books", "/finance/reports?tab=trial_balance", "/finance/gst/returns"].includes(t.href) ? "grp" : ""].join(" ").trim() || undefined} title={t.label} aria-current={on ? "page" : undefined}>
                   <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(t.href)} /></svg></span>
                   <span>{t.label}</span>
                 </Link>

@@ -24,8 +24,8 @@ type ReportTab = "trial_balance" | "profit_loss" | "balance_sheet" | "cash_flow"
 type AccRow = { id?: string; code?: string; name: string; type: string; sub_type: string | null; dr: number; cr: number; opening?: number; period_dr?: number; period_cr?: number };
 
 // Ledger drill-down for a line, in the report's period (built-in lines like brought-forward profit have no ledger)
-let PERIOD = { from: "", to: "" };
-const ledgerHref = (id?: string) => id && !id.startsWith("__") ? `/finance/ledger?account=${id}${PERIOD.from ? `&from=${PERIOD.from}&to=${PERIOD.to}` : ""}` : null;
+let PERIOD = { from: "", to: "", tab: "" };
+const ledgerHref = (id?: string) => id && !id.startsWith("__") ? `/finance/ledger?account=${id}${PERIOD.from ? `&from=${PERIOD.from}&to=${PERIOD.to}` : ""}${PERIOD.tab ? `&back=${PERIOD.tab}` : ""}` : null;
 function Drill({ id, children, style }: { id?: string; children: React.ReactNode; style?: React.CSSProperties }) {
   const href = ledgerHref(id);
   return href ? <Link href={href} className="rp-drill" title="Open ledger" style={{ color: "inherit", textDecoration: "none", ...style }}>{children}</Link> : <span style={style}>{children}</span>;
@@ -118,7 +118,7 @@ export default function ReportsPage() {
   const [error, setError] = useState("");
   const [bizName, setBizName] = useState("");
   const [tbDetail, setTbDetail] = useState(false);   // TB: opening balance + this period's debits/credits + closing
-  PERIOD = period ? { from: period.start_date, to: period.end_date } : { from: "", to: "" };
+  PERIOD = period ? { from: period.start_date, to: period.end_date, tab } : { from: "", to: "", tab };
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
