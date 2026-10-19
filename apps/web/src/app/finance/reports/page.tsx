@@ -7,6 +7,7 @@ import Link from "next/link";
 import { signedMoney, type PresentedBS, type PresentedPL, type StmtSection } from "@/lib/statements";
 import { plExportRows, bsExportRows, exportFileName, type ExportMeta } from "@/lib/statementExport";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import type { Schedule3BS } from "@/lib/schedule3";
 
 // Excel export of the presented statement — the same lines and signs as the screen (and as Print → PDF)
 async function downloadStatementExcel(kind: "pl" | "bs", presented: PresentedPL | PresentedBS, meta: ExportMeta) {
@@ -44,6 +45,7 @@ type BSData = {
   equity: AccRow[]; net_profit: number;
   total_assets: number; total_liabilities_equity: number;
   presented?: PresentedBS;
+  schedule3?: Schedule3BS;
 };
 
 type TBData = { accounts: AccRow[]; total_dr: number; total_cr: number };
@@ -253,7 +255,7 @@ export default function ReportsPage() {
                   <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>As at end of FY {financialYears.find(f => f.id === fyId)?.label}</div>
                 </div>
                 {bsData.presented && <FootingBanner problems={bsData.presented.problems} />}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+                {bsData.schedule3 ? <Schedule3View s={bsData.schedule3} netProfit={bsData.net_profit} /> : <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
                   <div style={{ borderRight: "1px solid rgba(20,26,58,0.11)" }}>
                     <div style={{ padding: "0.6rem 1rem", fontSize: "0.75rem", fontWeight: 700, color: "#1F5EFF", textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(31,94,255,0.05)" }}>Assets</div>
                     {bsData.presented ? bsData.presented.assets.map(s => <Section key={s.key} s={s} />) : <><SectionTable title="Current Assets" rows={bsData.current_assets} /><SectionTable title="Fixed Assets" rows={bsData.fixed_assets} /></>}
@@ -270,7 +272,7 @@ export default function ReportsPage() {
                       <span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>{signedMoney(bsData.presented?.totalLiabilities ?? bsData.total_liabilities_equity)}</span>
                     </div>
                   </div>
-                </div>
+                </div>}
                 {bsData.total_assets === 0 && (
                   <div style={{ padding: "3rem", textAlign: "center", color: "rgba(20,26,58,0.55)", fontSize: "0.88rem" }}>No posted entries yet.</div>
                 )}
@@ -342,6 +344,85 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Balance Sheet in Schedule III vertical format: blocks → note-numbered heads → (expand) ledgers
+const ROMAN = ["I", "II"];
+function Schedule3View({ s, netProfit }: { s: Schedule3BS; netProfit: number }) {
+  const [open, setOpen] = useState<Set<number>>(new Set());
+  const allNotes = [...s.equityLiabilities, ...s.assets].flatMap(b => b.heads.map(h => h.note));
+  const toggle = (n: number) => setOpen(o => { const x = new Set(o); if (x.has(n)) x.delete(n); else x.add(n); return x; });
+  const amt = (n: number, strong = false) => <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: strong ? 800 : 600, color: n < 0 ? "#C2321F" : "#141A3A" }}>{signedMoney(n)}</span>;
+  const part = (title: string, blocks: Schedule3BS["assets"], total: number, i: number) => (
+    <Fragment key={title}>
+      <tr className="s3-part"><td colSpan={3}><span className="s3-roman">{ROMAN[i]}</span>{title}</td></tr>
+      {blocks.map((b, bi) => (
+        <Fragment key={b.key}>
+          <tr className="s3-block"><td>({bi + 1}) {b.label}</td><td /><td className="s3-num s3-sub">{amt(b.total)}</td></tr>
+          {b.heads.map((h, hi) => (
+            <Fragment key={h.key}>
+              <tr className={"s3-head" + (open.has(h.note) ? " on" : "")} onClick={() => toggle(h.note)} title="Show the ledgers in this note">
+                <td><span className="s3-caret">{open.has(h.note) ? "▾" : "▸"}</span>({String.fromCharCode(97 + hi)}) {h.label}</td>
+                <td className="s3-note">{h.note}</td>
+                <td className="s3-num">{amt(h.total)}</td>
+              </tr>
+              {open.has(h.note) && h.lines.map(l => (
+                <tr key={l.id} className="s3-line">
+                  <td><Drill id={l.id}>{l.name}</Drill>{l.note && <span className="s3-flag">{l.note}</span>}</td>
+                  <td />
+                  <td className="s3-num"><Drill id={l.id}>{amt(l.amount)}</Drill></td>
+                </tr>
+              ))}
+            </Fragment>
+          ))}
+        </Fragment>
+      ))}
+      <tr className="s3-total"><td>Total</td><td /><td className="s3-num">{amt(total, true)}</td></tr>
+    </Fragment>
+  );
+  return (
+    <div className="s3">
+      <style>{`
+        .s3{padding:0 0 8px}
+        .s3-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid rgba(20,26,58,0.08);font-size:12.5px;color:rgba(20,26,58,0.62)}
+        .s3-bar button{border:1px solid rgba(35,42,99,0.22);background:#FFFFFF;color:#232A63;font-weight:700;font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer}
+        .s3 table{width:100%;border-collapse:collapse}
+        .s3 th{padding:10px 20px;text-align:left;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(20,26,58,0.6);font-weight:700;border-bottom:1px solid rgba(20,26,58,0.12);background:#FAFBFD}
+        .s3 th:nth-child(2){text-align:center;width:70px}.s3 th:nth-child(3){text-align:right;width:190px}
+        .s3 td{padding:9px 20px;font-size:14px}
+        .s3-num{text-align:right;white-space:nowrap}
+        .s3-part td{padding:18px 20px 8px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#232A63}
+        .s3-roman{display:inline-block;min-width:26px;color:#8A93C8}
+        .s3-block td{font-weight:700;color:#141A3A;padding-left:46px;background:#F7F8FC;border-top:1px solid rgba(20,26,58,0.06)}
+        .s3-sub{color:rgba(20,26,58,0.6)}
+        .s3-head{cursor:pointer;border-top:1px solid rgba(20,26,58,0.06)}
+        .s3-head td:first-child{padding-left:66px}
+        .s3-head:hover,.s3-head.on{background:#EEF0FA}
+        .s3-caret{display:inline-block;width:16px;margin-left:-18px;color:#8A93C8;font-size:11px}
+        .s3-note{text-align:center;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;color:#232A63}
+        .s3-line td{font-size:13px;padding-top:6px;padding-bottom:6px;background:#FCFCFE;color:rgba(20,26,58,0.85)}
+        .s3-line td:first-child{padding-left:90px}
+        .s3-flag{margin-left:8px;font-size:11px;color:#8A5A00;background:#FFF4DB;padding:1px 6px;border-radius:5px}
+        .s3-total td{font-weight:800;border-top:2px solid #232A63;border-bottom:3px double #232A63;background:#EEF0FA;padding-top:12px;padding-bottom:12px}
+        @media(max-width:640px){.s3 td{padding-left:12px;padding-right:12px}.s3-block td{padding-left:20px}.s3-head td:first-child{padding-left:34px}.s3-line td:first-child{padding-left:48px}.s3 th:nth-child(3){width:auto}}
+        @media print{.s3-bar{display:none}}
+      `}</style>
+      <div className="s3-bar">
+        <span>Schedule III format · click a line to see its ledgers, click a ledger to open it</span>
+        <button onClick={() => setOpen(open.size ? new Set() : new Set(allNotes))}>{open.size ? "Collapse notes" : "Expand all notes"}</button>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table>
+          <thead><tr><th>Particulars</th><th>Note</th><th>Amount ({cur()})</th></tr></thead>
+          <tbody>
+            {part("Equity and liabilities", s.equityLiabilities, s.totalEL, 0)}
+            {part("Assets", s.assets, s.totalAssets, 1)}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ padding: "10px 20px 0", fontSize: 12, color: "rgba(20,26,58,0.6)" }}>Reserves and surplus include the {netProfit >= 0 ? "profit" : "loss"} for the year of {signedMoney(netProfit)}.{Math.abs(s.totalEL - s.totalAssets) < 0.01 ? " ✓ Balanced." : ""}</div>
     </div>
   );
 }

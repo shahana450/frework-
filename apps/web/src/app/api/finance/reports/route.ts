@@ -5,6 +5,7 @@ import { buildTrialBalance, buildPL, buildBS, loadBookLines, GROUP_LABEL, type T
 import { loadQueryBooks } from "@/lib/intentEngine";
 import { computeCashFlow } from "@/lib/cashFlow";
 import { presentBalanceSheet, presentPL } from "@/lib/statements";
+import { scheduleIII } from "@/lib/schedule3";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -77,6 +78,8 @@ export async function GET(req: NextRequest) {
 
   const bsJson = () => {
     const bs = buildBS(tb, pl.netProfit);
+    const subOf = new Map(accounts.map(a => [a.id, a.sub_type ?? null]));
+    const presented = presentBalanceSheet(bs, tb.map(r => ({ ...r, sub_type: subOf.get(r.id) ?? null })));
     return {
       report: "balance_sheet",
       current_assets: bs.currentAssets.map(row),
@@ -88,7 +91,8 @@ export async function GET(req: NextRequest) {
       total_assets: bs.totalAssets,
       total_liabilities_equity: bs.totalLiabEq,
       // Signed, reclassified (overdrafts → liabilities) and footed — what the page and exports show
-      presented: presentBalanceSheet(bs, tb.map(r => ({ ...r, sub_type: accounts.find(a => a.id === r.id)?.sub_type ?? null }))),
+      presented,
+      schedule3: scheduleIII(presented, new Map(tb.map(r => [r.id, { group: r.group, sub_type: subOf.get(r.id) ?? null }]))),
     };
   };
   if (report === "balance_sheet") return NextResponse.json(bsJson());
