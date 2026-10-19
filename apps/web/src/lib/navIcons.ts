@@ -1,5 +1,6 @@
 // Line icons (24×24, stroke) for the finance menu, keyed by the item's path. One consistent set instead of emoji.
 const P = {
+  help: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01",
   home: "M4 11l8-7 8 7v9H4zM9 20v-6h6v6",
   spark: "M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z",
   plusDoc: "M7 3h7l5 5v13H7zM14 3v5h5M12 11v6M9 14h6",
@@ -54,7 +55,7 @@ const BY_PATH: Record<string, string> = {
   "/finance/audit": P.search, "/finance/gst": P.percent, "/finance/audit/gst-recon": P.sync, "/finance/tds": P.tag,
   "/finance/ai-review": P.robot, "/finance/upload": P.clip, "/finance/shelf": P.shelf, "/finance/insights": P.bulb, "/finance/virtual-ca": P.plane,
   "/finance/settings/business": P.building, "/finance/settings/region": P.globe, "/finance/integrations": P.link, "/finance/portals": P.bank, "/finance/whatsapp": P.whatsapp, "/finance/fy": P.calendar,
-  "/finance/team": P.team, "/finance/tally": P.plug, "/finance/ca-dashboard": P.briefcase, "/dashboard": P.home,
+  "/finance/team": P.team, "/finance/tally": P.plug, "/finance/ca-dashboard": P.briefcase, "/finance/help": P.help, "/dashboard": P.home,
 };
 
 export const navIconPath = (href: string) => BY_PATH[href] ?? P.dot;

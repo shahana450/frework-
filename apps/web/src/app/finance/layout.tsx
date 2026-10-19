@@ -88,6 +88,7 @@ const TOP_ICONS = [
   { href: "/finance/gst/returns", label: "GST" },
   { href: "/finance/shelf", label: "Shelf" },
   { href: "/finance/tally", label: "Tally" },
+  { href: "/finance/help", label: "Help" },
 ];
 
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {

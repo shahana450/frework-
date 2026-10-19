@@ -172,7 +172,12 @@ export default function HelpCenter({ inApp = false }: { inApp?: boolean }) {
         @media (prefers-reduced-motion:reduce){.hc-item{transition:none}}
       `}</style>
 
-      <section className="hc-hero" style={inApp ? { paddingTop: 36 } : undefined}>
+      <div style={{ maxWidth: 980, margin: "0 auto", padding: inApp ? "18px 16px 0" : "96px 16px 0" }}>
+        <Link href={inApp ? "/finance" : "/"} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 999, background: "#FFFFFF", border: `1px solid ${LINE}`, color: NAVY, fontWeight: 700, fontSize: 13.5, textDecoration: "none" }}>
+          ← Back to {inApp ? "FreBook home" : "home"}
+        </Link>
+      </div>
+      <section className="hc-hero" style={{ paddingTop: inApp ? 20 : 28 }}>
         <h1>How can we help?</h1>
         <p>Answers to common questions about FreBook — bookkeeping, WhatsApp, invoices, GST, bank, reports and plans.</p>
         <label className="hc-search">
