@@ -99,8 +99,8 @@ function FootingBanner({ problems }: { problems: string[] }) {
 
 export default function ReportsPage() {
   const router = useRouter();
-  const [tab, setTabState] = useState<ReportTab>("profit_loss");
   const searchParams = useSearchParams();
+  const [tab, setTabState] = useState<ReportTab>(() => { const t = searchParams.get("tab"); return t === "trial_balance" || t === "balance_sheet" || t === "cash_flow" ? t : "profit_loss"; });
   // The URL is the source of truth: links (?tab=) switch the view, and clicking a tab updates the URL
   useEffect(() => {
     const t = searchParams.get("tab");
@@ -141,24 +141,22 @@ export default function ReportsPage() {
     });
   }, []);
 
+  // TB, P&L and Balance Sheet come from one load per year; switching tabs is instant
+  const [loadedFy, setLoadedFy] = useState("");
   useEffect(() => {
-    if (bizId && fyId) fetchReport(tab, bizId, fyId);
+    if (bizId && fyId && tab !== "cash_flow" && loadedFy !== fyId) fetchAll(bizId, fyId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, bizId, fyId]);
 
-  async function fetchReport(r: ReportTab, bid: string, fy: string) {
+  async function fetchAll(bid: string, fy: string) {
     setLoading(true); setError("");
     try {
-      // Cash flow is derived from the P&L plus cash movements, so it loads the P&L first
-      if (r === "cash_flow") { setLoading(false); return; }   // the cash flow card loads itself
-      const report = r;
       const p = financialYears.find(f => f.id === fy);
       const range = p ? `&from=${p.start_date}&to=${p.end_date}` : "";
-      const res = await fetch(`/api/finance/reports?business_id=${bid}${fy.startsWith("auto-") ? "" : `&fy_id=${fy}`}${range}&report=${report}`);
+      const res = await fetch(`/api/finance/reports?business_id=${bid}${fy.startsWith("auto-") ? "" : `&fy_id=${fy}`}${range}&report=all`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "We couldn't load this report right now.");
-      if (report === "profit_loss") setPlData(json);
-      if (r === "balance_sheet") setBsData(json);
-      if (r === "trial_balance") setTbData(json);
+      setTbData(json.trial_balance); setPlData(json.profit_loss); setBsData(json.balance_sheet); setLoadedFy(fy);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load report");
     } finally {

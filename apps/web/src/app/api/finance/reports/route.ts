@@ -38,31 +38,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ report: "cash_flow", ...computeCashFlow(books.accounts, books.journals, start, end) });
   }
 
-  const { lines, accounts, error } = await loadBookLines(supabase, bizId!, end);
+  const [{ lines, accounts, error }, { data: codes }] = await Promise.all([
+    loadBookLines(supabase, bizId!, end),
+    supabase.from("fw_fin_chart_of_accounts").select("id,code").eq("business_id", bizId!),
+  ]);
   if (error) { console.error("reports load failed", bizId, error); return NextResponse.json({ error: "We couldn't load your reports right now. Please try again." }, { status: 500 }); }
 
   const tb = buildTrialBalance(accounts, lines, start, end);
   // Account codes for the Trial Balance "Code" column
-  const { data: codes } = await supabase.from("fw_fin_chart_of_accounts").select("id,code").eq("business_id", bizId!);
   const codeOf = new Map(((codes ?? []) as { id: string; code: string | null }[]).map(a => [a.id, a.code ?? ""]));
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const row = (r: TBRow) => ({ id: r.id, code: codeOf.get(r.id) ?? "", name: r.name, type: GROUP_LABEL[r.group], sub_type: r.group, dr: r.dr, cr: r.cr,
     opening: r2(r.balance - r.periodDr + r.periodCr), period_dr: r2(r.periodDr), period_cr: r2(r.periodCr) });
 
-  if (report === "trial_balance") {
-    return NextResponse.json({
-      from: start, to: end,
+  const tbJson = () => ({
       report: "trial_balance",
       // Accounts with nothing on either side are left out (no "Bank Charges — —" rows)
       accounts: tb.filter(r => Math.abs(r.dr) >= 0.005 || Math.abs(r.cr) >= 0.005).map(row),
       total_dr: tb.reduce((s, r) => s + r.dr, 0),
       total_cr: tb.reduce((s, r) => s + r.cr, 0),
-    });
-  }
+  });
+  if (report === "trial_balance") return NextResponse.json({ from: start, to: end, ...tbJson() });
 
   const pl = buildPL(tb);
-  if (report === "profit_loss") {
-    return NextResponse.json({
+  const plJson = () => ({
       report: "profit_loss",
       direct_income: pl.sales.map(row),
       indirect_income: pl.indirectIncome.map(row),
@@ -73,12 +72,12 @@ export async function GET(req: NextRequest) {
       total_expense: pl.cogs + pl.expenses,
       net_profit: pl.netProfit,
       presented: presentPL(pl),
-    });
-  }
+  });
+  if (report === "profit_loss") return NextResponse.json(plJson());
 
-  if (report === "balance_sheet") {
+  const bsJson = () => {
     const bs = buildBS(tb, pl.netProfit);
-    return NextResponse.json({
+    return {
       report: "balance_sheet",
       current_assets: bs.currentAssets.map(row),
       fixed_assets: bs.fixedAssets.map(row),
@@ -90,8 +89,11 @@ export async function GET(req: NextRequest) {
       total_liabilities_equity: bs.totalLiabEq,
       // Signed, reclassified (overdrafts → liabilities) and footed — what the page and exports show
       presented: presentBalanceSheet(bs, tb.map(r => ({ ...r, sub_type: accounts.find(a => a.id === r.id)?.sub_type ?? null }))),
-    });
-  }
+    };
+  };
+  if (report === "balance_sheet") return NextResponse.json(bsJson());
+  // All three from one load — the Reports page switches tabs without reloading
+  if (report === "all") return NextResponse.json({ trial_balance: tbJson(), profit_loss: plJson(), balance_sheet: bsJson() });
 
   return NextResponse.json({ error: "Unknown report type" }, { status: 400 });
 }

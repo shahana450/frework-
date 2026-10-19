@@ -129,21 +129,31 @@ export const statementAmount = natural;
 
 // Every posted line up to `end`, with its journal date. Paged so nothing is silently cut off.
 export async function loadBookLines(sb: SupabaseClient, businessId: string, end: string): Promise<{ lines: BookLine[]; accounts: Account[]; error?: string }> {
-  const journals: { id: string; date: string }[] = [];
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await sb.from("fw_fin_journals").select("id,date").eq("business_id", businessId).eq("status", "posted").lte("date", end).order("date").range(from, from + 999);
-    if (error) return { lines: [], accounts: [], error: error.message };
-    journals.push(...(data ?? []));
-    if (!data || data.length < 1000) break;
-  }
+  const accountsP = (async () => {
+    const out: Account[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await sb.from("fw_fin_chart_of_accounts").select("id,name,type,sub_type").eq("business_id", businessId).range(from, from + 999);
+      if (error) return { out, error: error.message };
+      out.push(...((data ?? []) as Account[]));
+      if (!data || data.length < 1000) return { out };
+    }
+  })();
+  const jq = () => sb.from("fw_fin_journals").select("id,date", { count: "exact" }).eq("business_id", businessId).eq("status", "posted").lte("date", end).order("date").order("id");
+  const first = await jq().range(0, 999);
+  if (first.error) return { lines: [], accounts: [], error: first.error.message };
+  const journals: { id: string; date: string }[] = [...(first.data ?? [])];
+  const total = first.count ?? journals.length;
+  // The remaining pages at once — the count says how many there are
+  const pages = await Promise.all(Array.from({ length: Math.max(0, Math.ceil(total / 1000) - 1) }, (_, i) => jq().range((i + 1) * 1000, (i + 2) * 1000 - 1)));
+  for (const p of pages) { if (p.error) return { lines: [], accounts: [], error: p.error.message }; journals.push(...(p.data ?? [])); }
   const dateOf = new Map(journals.map(j => [j.id, String(j.date).slice(0, 10)]));
   const ids = journals.map(j => j.id);
   const lines: BookLine[] = [];
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += 150) chunks.push(ids.slice(i, i + 150));
   // A few chunks in parallel keeps large books quick without flooding the API
-  for (let c = 0; c < chunks.length; c += 4) {
-    const results = await Promise.all(chunks.slice(c, c + 4).map(async chunk => {
+  for (let c = 0; c < chunks.length; c += 8) {
+    const results = await Promise.all(chunks.slice(c, c + 8).map(async chunk => {
       const got: BookLine[] = [];
       for (let from = 0; ; from += 1000) {
         const { data, error } = await sb.from("fw_fin_journal_lines").select("journal_id,account_id,dr_amount,cr_amount").in("journal_id", chunk).range(from, from + 999);
@@ -155,12 +165,6 @@ export async function loadBookLines(sb: SupabaseClient, businessId: string, end:
     }));
     results.forEach(r => lines.push(...r));
   }
-  const accounts: Account[] = [];
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await sb.from("fw_fin_chart_of_accounts").select("id,name,type,sub_type").eq("business_id", businessId).range(from, from + 999);
-    if (error) return { lines, accounts, error: error.message };
-    accounts.push(...((data ?? []) as Account[]));
-    if (!data || data.length < 1000) break;
-  }
-  return { lines, accounts };
+  const acc = await accountsP;
+  return acc.error ? { lines, accounts: acc.out, error: acc.error } : { lines, accounts: acc.out };
 }
