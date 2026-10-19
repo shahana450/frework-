@@ -56,7 +56,7 @@ export default function RefundPolicyPage() {
             <ul className="list-disc list-inside space-y-2.5 text-white/50">
               <li>
                 <span className="text-white/70 font-medium">WhatsApp:</span>{" "}
-                <a href="https://wa.me/918590874681?text=Hi%20FreWork%2C%20I%20want%20to%20request%20a%20refund." className="text-emerald-400 hover:text-emerald-300 transition-colors" target="_blank" rel="noopener noreferrer">+91 85908 74681</a>
+                <a href="https://wa.me/919539028318?text=Hi%20FreWork%2C%20I%20want%20to%20request%20a%20refund." className="text-emerald-400 hover:text-emerald-300 transition-colors" target="_blank" rel="noopener noreferrer">+91 95390 28318</a>
               </li>
               <li>
                 <span className="text-white/70 font-medium">Email:</span>{" "}
@@ -93,7 +93,7 @@ export default function RefundPolicyPage() {
             <h2 className="text-lg font-semibold text-white mb-3">9. Contact Us</h2>
             <p>
               For any refund queries, reach us on WhatsApp at{" "}
-              <a href="https://wa.me/918590874681" className="text-emerald-400 hover:text-emerald-300 transition-colors" target="_blank" rel="noopener noreferrer">+91 85908 74681</a>{" "}
+              <a href="https://wa.me/919539028318" className="text-emerald-400 hover:text-emerald-300 transition-colors" target="_blank" rel="noopener noreferrer">+91 95390 28318</a>{" "}
               or email{" "}
               <a href="mailto:support@frework.online" className="text-blue-400 hover:text-blue-300 transition-colors">support@frework.online</a>.
             </p>

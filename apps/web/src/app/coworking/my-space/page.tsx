@@ -179,7 +179,7 @@ export default function MySpaceDashboard() {
         )}
         {listing?.status === "rejected" && (
           <div className="rounded-2xl border p-4 mb-6 text-sm" style={{ background: "rgba(248,113,113,0.07)", borderColor: "rgba(248,113,113,0.2)", color: "#F87171" }}>
-            Your listing was not approved. Please edit and resubmit, or WhatsApp us at +91 85908 74681 for help.
+            Your listing was not approved. Please edit and resubmit, or WhatsApp us at +91 95390 28318 for help.
           </div>
         )}
 

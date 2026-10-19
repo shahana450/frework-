@@ -105,7 +105,7 @@ export default function ServicesDashboardPage() {
   const sendQuery = () => {
     if (!queryText.trim()) return;
     const msg = encodeURIComponent(`Hi FreWork CA Team,\n\nI have a query:\n\n${queryText}\n\n— ${userName} (${userEmail})`);
-    window.open(`https://wa.me/918590874681?text=${msg}`, "_blank");
+    window.open(`https://wa.me/919539028318?text=${msg}`, "_blank");
     setQuerySent(true);
     setQueryText("");
   };
@@ -344,7 +344,7 @@ export default function ServicesDashboardPage() {
 
                           {/* Contact CA */}
                           <div className="flex gap-3">
-                            <a href={`https://wa.me/918590874681?text=Hi%20FreWork%20CA%2C%20I%20have%20a%20query%20about%20my%20${encodeURIComponent(req.service_name)}%20request%20(ID%3A%20${req.id.slice(0,8)})%20`}
+                            <a href={`https://wa.me/919539028318?text=Hi%20FreWork%20CA%2C%20I%20have%20a%20query%20about%20my%20${encodeURIComponent(req.service_name)}%20request%20(ID%3A%20${req.id.slice(0,8)})%20`}
                               target="_blank" rel="noopener noreferrer"
                               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:opacity-90"
                               style={{ background: "rgba(37,211,102,0.1)", color: "#25D366", border: "1px solid rgba(37,211,102,0.25)" }}>
@@ -467,7 +467,7 @@ export default function ServicesDashboardPage() {
 
             {/* Direct contact */}
             <div className="grid sm:grid-cols-2 gap-4">
-              <a href="https://wa.me/918590874681" target="_blank" rel="noopener noreferrer"
+              <a href="https://wa.me/919539028318" target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-4 p-5 rounded-2xl border transition-all hover:scale-[1.02]"
                 style={{ background: "#0C1428", borderColor: "rgba(37,211,102,0.2)" }}>
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -476,7 +476,7 @@ export default function ServicesDashboardPage() {
                 </div>
                 <div>
                   <p className="font-black text-sm" style={{ color: "#EDE8DC" }}>WhatsApp</p>
-                  <p className="text-xs" style={{ color: "#25D366" }}>+91 85908 74681</p>
+                  <p className="text-xs" style={{ color: "#25D366" }}>+91 95390 28318</p>
                   <p className="text-[11px]" style={{ color: "#4A5A72" }}>Mon–Sat, 9 AM–7 PM</p>
                 </div>
               </a>

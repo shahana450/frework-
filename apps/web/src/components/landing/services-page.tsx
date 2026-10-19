@@ -299,7 +299,7 @@ export function ServicesPage() {
               style={{ background: "linear-gradient(135deg, #E8C97A, #B8903A)", color: L.bgDark, boxShadow: "0 6px 28px rgba(184,144,58,0.4)" }}>
               Book Free Consultation <ArrowUpRight size={15} />
             </Link>
-            <a href="https://wa.me/918590874681?text=Hi%20FreWork%2C%20I%20need%20help%20choosing%20a%20service"
+            <a href="https://wa.me/919539028318?text=Hi%20FreWork%2C%20I%20need%20help%20choosing%20a%20service"
               target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl font-black text-sm transition-all hover:scale-[1.02]"
               style={{ background: "rgba(37,211,102,0.12)", color: "#25D366", border: "1px solid rgba(37,211,102,0.25)" }}>

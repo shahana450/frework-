@@ -196,7 +196,7 @@ function DocsUploadInner() {
         <p className="text-xs mb-8" style={{ color: "#4A5A72" }}>We will contact you on <strong style={{ color: "#EDE8DC" }}>{phone}</strong></p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/dashboard" className="px-6 py-3 rounded-xl text-sm font-bold text-white text-center" style={{ background: "linear-gradient(135deg,#C9A84C,#A07C2E)" }}>Back to Dashboard</Link>
-          <a href={"https://wa.me/918590874681?text=Hi%20FreWork%2C%20I%20submitted%20documents%20for%20" + encodeURIComponent(service.label) + ".%20My%20number%20is%20" + phone + "."}
+          <a href={"https://wa.me/919539028318?text=Hi%20FreWork%2C%20I%20submitted%20documents%20for%20" + encodeURIComponent(service.label) + ".%20My%20number%20is%20" + phone + "."}
             target="_blank" rel="noopener noreferrer"
             className="px-6 py-3 rounded-xl text-sm font-bold text-white text-center"
             style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}>WhatsApp Us</a>

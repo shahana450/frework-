@@ -220,7 +220,7 @@ function OrderForm() {
               <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 text-center">
                 <p className="text-xs text-slate-500 mb-2">Have a question before paying?</p>
                 <a
-                  href={`https://wa.me/918590874681?text=${encodeURIComponent(`Hi FreWork, I want to know more about ${meta.name} (₹${meta.price}) before paying.`)}`}
+                  href={`https://wa.me/919539028318?text=${encodeURIComponent(`Hi FreWork, I want to know more about ${meta.name} (₹${meta.price}) before paying.`)}`}
                   target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:underline">
                   <Phone className="w-3 h-3" /> Ask on WhatsApp

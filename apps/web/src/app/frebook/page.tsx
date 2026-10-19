@@ -9,7 +9,7 @@ import { FB_CSS, FbHeader, FbFooter, FbRelated } from "@/components/frebook/shel
 
 const PAGE_URL = "https://frework.online/frebook";
 const APP = "/finance/chat-book";
-const DEMO = "https://wa.me/918590874681?text=Hi%20FreWork%2C%20I%20want%20a%20FreBook%20demo";
+const DEMO = "https://wa.me/919539028318?text=Hi%20FreWork%2C%20I%20want%20a%20FreBook%20demo";
 
 const TITLE = "FreBook – AI Accountant & Bookkeeping Software with Tally | India";
 const DESCRIPTION =
@@ -251,7 +251,7 @@ export default function FreBookLandingPage() {
             <p>Move your bookkeeping to an AI accountant built for India.</p>
             <div className="fb-cta" style={{ justifyContent: "center" }}>
               <Link className="fb-btn fb-gold" href={APP}>Start FreBook</Link>
-              <a className="fb-btn fb-ghost" href={DEMO} target="_blank" rel="noopener">WhatsApp +91 85908 74681</a>
+              <a className="fb-btn fb-ghost" href={DEMO} target="_blank" rel="noopener">WhatsApp +91 95390 28318</a>
             </div>
           </div>
         </section>

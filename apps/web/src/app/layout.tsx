@@ -125,7 +125,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 "priceRange": "₹₹",
                 "currenciesAccepted": "INR",
                 "paymentAccepted": "Cash, Credit Card, UPI, Net Banking",
-                "telephone": "+918590874681",
+                "telephone": "+919539028318",
                 "email": "support@frework.online",
                 "sameAs": ["https://frework.online"],
                 "hasOfferCatalog": {

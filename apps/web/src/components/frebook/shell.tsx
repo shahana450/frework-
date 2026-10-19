@@ -3,7 +3,7 @@ import Link from "next/link";
 // Shared look for the FreBook marketing pages (/frebook and its keyword pages).
 
 export const FB_APP = "/finance/chat-book";
-export const FB_DEMO = "https://wa.me/918590874681?text=Hi%20FreWork%2C%20I%20want%20a%20FreBook%20demo";
+export const FB_DEMO = "https://wa.me/919539028318?text=Hi%20FreWork%2C%20I%20want%20a%20FreBook%20demo";
 
 export function FbHeader() {
   return (

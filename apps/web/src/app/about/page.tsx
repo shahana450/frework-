@@ -60,7 +60,7 @@ const orgJsonLd = {
     },
     "contactPoint": {
       "@type": "ContactPoint",
-      "telephone": "+91-85908-74681",
+      "telephone": "+91-95390-28318",
       "contactType": "customer service",
       "areaServed": "IN",
       "availableLanguage": ["English", "Hindi"]

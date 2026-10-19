@@ -16,8 +16,8 @@ import {
   Coffee, Wifi, Car, Printer, AirVent, Lock,
 } from "lucide-react";
 
-const SUPPORT_PHONE = (process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 85908 74681").replace(/^ï»¿/, "");
-const SUPPORT_WA = `918590874681`;
+const SUPPORT_PHONE = (process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 95390 28318").replace(/^ï»¿/, "");
+const SUPPORT_WA = `919539028318`;
 
 const L = {
   bg: "#F2F3F6",

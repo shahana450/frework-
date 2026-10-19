@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Twitter, Linkedin, Instagram, Youtube, Phone } from "lucide-react";
 
-const SUPPORT_WA = "918590874681";
-const SUPPORT_PHONE = "+91 85908 74681";
+const SUPPORT_WA = "919539028318";
+const SUPPORT_PHONE = "+91 95390 28318";
 
 const footerLinks = {
   Services: [

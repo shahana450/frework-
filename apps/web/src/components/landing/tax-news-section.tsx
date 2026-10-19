@@ -4,7 +4,7 @@ import type { TaxNewsItem } from "@/app/api/tax-news/route";
 import { TaxNewsClient } from "./tax-news-client";
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://frework.online").replace(/^﻿/, "");
-const SUPPORT_WA = "918590874681";
+const SUPPORT_WA = "919539028318";
 
 // Fetch on the server — ISR revalidates every hour
 async function fetchTaxNews(): Promise<{ items: TaxNewsItem[]; fetchedAt: string }> {

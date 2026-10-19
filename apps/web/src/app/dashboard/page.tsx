@@ -99,7 +99,7 @@ const PLATFORM_CARDS: AdminCard[] = [
   { icon: "📂", title: "Service Requests", desc: "Review uploaded docs and grant service packages to users", href: "/dashboard/service-requests", color: "#B45309", border: "rgba(240,102,43,0.25)", bg: "rgba(240,102,43,0.07)", badge: "Approve Packages" },
   { icon: "👥", title: "Freelancer Profiles", desc: "Review and approve freelancer profile submissions", href: "/dashboard/freelancer", color: "#047857", border: "rgba(5,150,105,0.25)", bg: "rgba(5,150,105,0.07)", badge: "Review Profiles" },
   { icon: "🚀", title: "Startup Listings", desc: "Manage startup profiles and funding listings", href: "/dashboard/startup", color: "#5B4BC4", border: "rgba(124,58,237,0.25)", bg: "rgba(124,58,237,0.07)", badge: "View Startups" },
-  { icon: "💬", title: "Support Messages", desc: "Customer queries and WhatsApp conversations", href: "https://wa.me/918590874681", color: "#0B7A55", border: "rgba(37,211,102,0.25)", bg: "rgba(37,211,102,0.07)", badge: "Open WhatsApp", external: true },
+  { icon: "💬", title: "Support Messages", desc: "Customer queries and WhatsApp conversations", href: "https://wa.me/919539028318", color: "#0B7A55", border: "rgba(37,211,102,0.25)", bg: "rgba(37,211,102,0.07)", badge: "Open WhatsApp", external: true },
   { icon: "🌐", title: "Live Website", desc: "View the public-facing FreWork website", href: "/", color: "#0E6B7A", border: "rgba(8,145,178,0.25)", bg: "rgba(8,145,178,0.07)", badge: "Open Site" },
 ];
 
@@ -700,7 +700,7 @@ export default function DashboardPage() {
           </section>
 
           {/* WhatsApp */}
-          <a href="https://wa.me/918590874681?text=Hi%20FreBook" target="_blank" rel="noopener noreferrer" className="dbx-wa">
+          <a href="https://wa.me/919539028318?text=Hi%20FreBook" target="_blank" rel="noopener noreferrer" className="dbx-wa">
             <span style={{ width: 42, height: 42, borderRadius: 12, background: "#25D366", display: "grid", placeItems: "center", flexShrink: 0 }}>
               <svg viewBox="0 0 24 24" width="22" height="22" fill="#FFFFFF" aria-hidden="true"><path d="M12.04 2a9.93 9.93 0 0 0-8.6 14.9L2 22l5.25-1.38A9.94 9.94 0 1 0 12.04 2zm5.8 14.06c-.24.68-1.42 1.32-1.96 1.36-.5.05-1.13.07-1.82-.11a16.6 16.6 0 0 1-1.65-.61 12.9 12.9 0 0 1-4.94-4.37c-.36-.49-.87-1.46-.87-2.79 0-1.33.7-1.99.95-2.26.24-.27.53-.34.71-.34h.51c.16 0 .38-.06.6.46.22.53.75 1.83.82 1.96.07.13.11.29.02.47-.09.18-.13.29-.27.45-.13.16-.28.36-.4.48-.13.13-.27.28-.12.55.16.27.69 1.14 1.48 1.84 1.02.9 1.88 1.18 2.15 1.32.27.13.42.11.58-.07.16-.18.67-.78.85-1.05.18-.27.36-.22.6-.13.25.09 1.56.74 1.83.87.27.13.45.2.51.31.07.11.07.64-.17 1.32z"/></svg>
             </span>

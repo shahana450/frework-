@@ -187,7 +187,7 @@ export default function ContactClient() {
 
                 <div className="space-y-4 relative z-10">
                   {[
-                    { Icon: Phone, title: "+91 8590874681", sub: "Call us Mon–Sat, 9am–7pm", href: "tel:+918590874681" },
+                    { Icon: Phone, title: "+91 9539028318", sub: "Call us Mon–Sat, 9am–7pm", href: "tel:+919539028318" },
                     { Icon: Mail,  title: "contact.frework@gmail.com", sub: "Email us anytime", href: "mailto:contact.frework@gmail.com" },
                     { Icon: MapPin,title: "Mumbai, Maharashtra", sub: "Serving businesses across India", href: undefined },
                   ].map(({ Icon, title, sub, href }) => (
@@ -205,7 +205,7 @@ export default function ContactClient() {
                 </div>
 
                 {/* WhatsApp */}
-                <a href="https://wa.me/918590874681?text=Hi%20FreWork%2C%20I%20need%20a%20consultation"
+                <a href="https://wa.me/919539028318?text=Hi%20FreWork%2C%20I%20need%20a%20consultation"
                   target="_blank" rel="noopener noreferrer"
                   className="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-2xl font-bold text-sm transition-all hover:scale-[1.02] relative z-10"
                   style={{ background: "linear-gradient(135deg, #25D366, #128C7E)", color: "#fff", boxShadow: "0 4px 20px rgba(37,211,102,0.3)" }}>

@@ -319,7 +319,7 @@ export function Navbar() {
         <div className="flex items-center gap-2">
 
           {/* WhatsApp — desktop only */}
-          <a href="https://wa.me/918590874681?text=Hi%20FreWork%2C%20I%20need%20help%20with%20my%20business"
+          <a href="https://wa.me/919539028318?text=Hi%20FreWork%2C%20I%20need%20help%20with%20my%20business"
             target="_blank" rel="noopener noreferrer"
             className="hidden lg:flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.04] hover:shadow-lg"
             style={{ background: "linear-gradient(135deg,#25D366,#128C7E)", boxShadow: "0 2px 12px rgba(37,211,102,0.35)" }}>
@@ -438,7 +438,7 @@ export function Navbar() {
 
               <div className="border-t border-slate-100 pt-4 mt-2 flex flex-col gap-2">
                 {/* WhatsApp — always first in mobile menu */}
-                <a href="https://wa.me/918590874681?text=Hi%20FreWork%2C%20I%20need%20business%20help.%20Please%20guide%20me."
+                <a href="https://wa.me/919539028318?text=Hi%20FreWork%2C%20I%20need%20business%20help.%20Please%20guide%20me."
                   target="_blank" rel="noopener noreferrer"
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white"
                   style={{ background: "linear-gradient(135deg,#25D366,#128C7E)", boxShadow: "0 2px 12px rgba(37,211,102,0.35)" }}

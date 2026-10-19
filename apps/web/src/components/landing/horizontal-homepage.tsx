@@ -470,8 +470,8 @@ export function HorizontalHomepage() {
 
             {/* Contact info */}
             <div className="flex flex-wrap justify-center gap-8 text-sm text-white/30">
-              <a href="tel:+918590874681" className="flex items-center gap-2 hover:text-white transition-colors">
-                <Phone className="w-4 h-4" /> +91 8590874681
+              <a href="tel:+919539028318" className="flex items-center gap-2 hover:text-white transition-colors">
+                <Phone className="w-4 h-4" /> +91 9539028318
               </a>
               <a href="mailto:contact.frework@gmail.com" className="flex items-center gap-2 hover:text-white transition-colors">
                 <Mail className="w-4 h-4" /> contact.frework@gmail.com
