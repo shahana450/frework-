@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import BulkImport from "@/components/finance/BulkImport";
 
 type Contact = {
   id: string; name: string; type: string; gstin: string | null; pan: string | null;
@@ -19,6 +20,8 @@ const blank = (): Omit<Contact, "id" | "is_active"> => ({ name: "", type: "vendo
 export default function ContactsPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "customer" | "vendor">("all");
@@ -39,7 +42,8 @@ export default function ContactsPage() {
       setContacts(data ?? []);
       setLoading(false);
     });
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadKey]);
 
   const set = (k: string, v: string | number) => setForm(f => ({ ...f, [k]: v }));
 
@@ -92,6 +96,7 @@ export default function ContactsPage() {
         <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
         <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Contacts</span>
         <div style={{ flex: 1 }} />
+        <button onClick={() => setImporting(true)} style={{ background: "#FFFFFF", border: "1px solid rgba(35,42,99,0.3)", color: "#232A63", padding: "6px 14px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>⇪ Import from Excel</button>
         <button onClick={() => { setForm(blank()); setEditId(null); setShowForm(true); }} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "6px 16px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>
           + New Contact
         </button>
@@ -231,6 +236,7 @@ export default function ContactsPage() {
           </div>
         </div>
       )}
+      {importing && bizId && <BulkImport kind="customers" bizId={bizId} onClose={() => setImporting(false)} onDone={() => setReloadKey(k => k + 1)} />}
     </div>
   );
 }

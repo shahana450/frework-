@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { saveEntry } from "@/lib/postEntry";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import { billTotals, isInterState, stateFromGstin, type BillLine } from "@/lib/billing";
+import BulkImport from "@/components/finance/BulkImport";
 
 type Contact = { id: string; name: string; gstin: string | null; phone: string | null; state: string | null };
 type Account = { id: string; code: string; name: string; type: string; sub_type: string | null };
@@ -45,6 +46,8 @@ export default function NewSalesInvoicePage() {
   const [roundOff, setRoundOff] = useState(true);
   const [more, setMore] = useState(false);
   const [lines, setLines] = useState<BillLine[]>([blankLine()]);
+  const [importing, setImporting] = useState<"customers" | "items" | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);   // bumped after a bulk import, to load the new customers / items
   const rowRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -53,12 +56,13 @@ export default function NewSalesInvoicePage() {
       const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
-      const [bizRes, contactsRes, accountsRes, pastRes, countRes] = await Promise.all([
+      const [bizRes, contactsRes, accountsRes, pastRes, countRes, itemsRes] = await Promise.all([
         supabase.from("fw_fin_businesses").select("state").eq("id", saved).single(),
         supabase.from("fw_fin_contacts").select("id,name,gstin,phone,state").eq("business_id", saved).eq("type", "customer").order("name"),
         supabase.from("fw_fin_chart_of_accounts").select("id,code,name,type,sub_type").eq("business_id", saved).eq("is_group", false).order("code"),
         supabase.from("fw_fin_journals").select("metadata").eq("business_id", saved).eq("type", "sales").order("date", { ascending: false }).limit(200),
         supabase.from("fw_fin_journals").select("id", { count: "exact", head: true }).eq("business_id", saved).eq("type", "sales"),
+        supabase.from("fw_fin_items").select("name,hsn,rate,gst_rate").eq("business_id", saved).eq("is_active", true).order("name"),
       ]);
       setBizState(bizRes.data?.state ?? "");
       setContacts((contactsRes.data ?? []) as Contact[]);
@@ -69,6 +73,9 @@ export default function NewSalesInvoicePage() {
       const bank = accs.find(a => a.sub_type === "bank"); if (bank) setBankAccountId(bank.id);
       // Items sold before, newest first: typing a name fills HSN, price and GST rate
       const seen = new Map<string, PastItem>();
+      // The saved item list comes first; items only seen on past invoices fill in after
+      for (const it of (itemsRes.data ?? []) as { name: string; hsn: string | null; rate: number | null; gst_rate: number | null }[])
+        seen.set(it.name.trim().toLowerCase(), { desc: it.name.trim(), hsn: it.hsn ?? "", rate: Number(it.rate) || 0, gst: it.gst_rate === null ? 18 : Number(it.gst_rate) });
       for (const j of (pastRes.data ?? []) as { metadata: { gst_invoice?: { items?: { desc?: string; hsn?: string; qty?: number; taxable?: number; gst_rate?: number }[] } } | null }[])
         for (const it of j.metadata?.gst_invoice?.items ?? []) {
           const d = (it.desc ?? "").trim(); if (!d || seen.has(d.toLowerCase())) continue;
@@ -77,7 +84,7 @@ export default function NewSalesInvoicePage() {
       setPastItems([...seen.values()]);
       setInvoiceNo(`INV-${String((countRes.count ?? 0) + 1).padStart(4, "0")}`);
     });
-  }, [router]);
+  }, [router, reloadKey]);
 
   const customer = contacts.find(c => c.id === customerId);
   const interState = isInterState(bizState, customerState);
@@ -215,7 +222,10 @@ export default function NewSalesInvoicePage() {
         <section style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 18, marginBottom: 14 }}>
           <div className="bill-top">
             <div style={{ position: "relative" }}>
-              <label style={label} htmlFor="cust">Bill to</label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <label style={label} htmlFor="cust">Bill to</label>
+                <button type="button" onClick={() => setImporting("customers")} style={{ border: "none", background: "none", color: C.navy, fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: 0 }}>⇪ Import customers</button>
+              </div>
               <input id="cust" className="bill-input" style={field} placeholder="Search customer name or phone…" autoComplete="off"
                 value={customerQuery} onFocus={() => setCustomerOpen(true)} onBlur={() => setTimeout(() => setCustomerOpen(false), 150)}
                 onChange={e => { setCustomerQuery(e.target.value); setCustomerId(""); setCustomerOpen(true); }} />
@@ -280,6 +290,7 @@ export default function NewSalesInvoicePage() {
           ))}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
             <button onClick={() => addLine()} style={{ height: 38, padding: "0 14px", borderRadius: 10, border: `1px dashed ${C.navy}`, background: "none", color: C.navy, fontWeight: 800, cursor: "pointer" }}>+ Add item</button>
+            <button type="button" onClick={() => setImporting("items")} style={{ border: "none", background: "none", color: C.navy, fontWeight: 700, fontSize: 13, cursor: "pointer", marginLeft: 12 }}>⇪ Import items</button>
             <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13.5, color: C.muted, cursor: "pointer" }}>
               <input type="checkbox" checked={lines.every(l => l.priceIncludesGst)} onChange={e => setLines(prev => prev.map(l => ({ ...l, priceIncludesGst: e.target.checked })))} />
               Prices include GST
@@ -341,6 +352,7 @@ export default function NewSalesInvoicePage() {
           <button onClick={() => save("post")} disabled={saving} style={{ height: 46, padding: "0 26px", borderRadius: 12, border: "none", background: C.navy, color: "#fff", fontWeight: 800, fontSize: 16, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.7 : 1 }}>{saving ? "Saving…" : "Save invoice"}</button>
         </div>
       </div>
+      {importing && bizId && <BulkImport kind={importing} bizId={bizId} onClose={() => setImporting(null)} onDone={() => setReloadKey(k => k + 1)} />}
     </div>
   );
 }
