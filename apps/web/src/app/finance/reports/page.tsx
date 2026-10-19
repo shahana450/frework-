@@ -8,30 +8,21 @@ import { signedMoney, type PresentedBS, type PresentedPL, type StmtSection } fro
 import { plExportRows, bsExportRows, type ExportMeta, type Cell } from "@/lib/statementExport";
 import { bsS3Rows, plS3Rows, notesRows, tbRows, cfRows, allStatementsFileName, type CFExport } from "@/lib/s3Export";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import { writeStyledWorkbook, type SheetSpec } from "@/lib/styledWorkbook";
 import type { Schedule3BS, Schedule3PL, S3Head } from "@/lib/schedule3";
 
 // Excel: every statement in one workbook, the same lines and signs as the screen (and as Print → PDF)
 async function downloadAllStatements({ tb, pl, bs, cf, meta }: { tb: TBData; pl: PLData; bs: BSData; cf: CFExport | null; meta: ExportMeta }) {
-  const XLSX = await import("xlsx");
-  const wb = XLSX.utils.book_new();
-  const add = (name: string, rows: Cell[][], widths: number[], moneyFrom: number, noteCol = -1) => {
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws["!cols"] = widths.map(wch => ({ wch }));
-    for (let r = 0; r < rows.length; r++) for (let c = moneyFrom; c < (rows[r]?.length ?? 0); c++) {
-      if (c === noteCol) continue;
-      const cell = ws[XLSX.utils.encode_cell({ r, c })];
-      if (cell && typeof cell.v === "number") cell.z = "#,##,##0.00;-#,##,##0.00";
-    }
-    XLSX.utils.book_append_sheet(wb, ws, name);
-  };
-  if (bs.schedule3) add("Balance Sheet", bsS3Rows(bs.schedule3, meta), [58, 8, 20], 2);
-  else if (bs.presented) add("Balance Sheet", bsExportRows(bs.presented, meta), [58, 20], 1);
-  if (pl.schedule3) add("Profit & Loss", plS3Rows(pl.schedule3, meta), [58, 8, 20], 2);
-  else if (pl.presented) add("Profit & Loss", plExportRows(pl.presented, meta), [58, 20], 1);
-  if (bs.schedule3 || pl.schedule3) add("Notes", notesRows(bs.schedule3, pl.schedule3, meta), [64, 4, 20], 2);
-  add("Trial Balance", tbRows(tb.accounts, meta), [10, 44, 16, 16, 16, 16, 16, 16], 2);
-  if (cf) add("Cash Flow", cfRows(cf, meta), [60, 20], 1);
-  XLSX.writeFile(wb, allStatementsFileName(meta));
+  const sheets: SheetSpec[] = [];
+  const add = (name: string, rows: Cell[][], widths: number[], moneyFrom: number, noteCol?: number) => sheets.push({ name, rows, widths, moneyFrom, noteCol });
+  if (bs.schedule3) add("Balance Sheet", bsS3Rows(bs.schedule3, meta), [62, 9, 22], 2, 1);
+  else if (bs.presented) add("Balance Sheet", bsExportRows(bs.presented, meta), [62, 22], 1);
+  if (pl.schedule3) add("Profit & Loss", plS3Rows(pl.schedule3, meta), [62, 9, 22], 2, 1);
+  else if (pl.presented) add("Profit & Loss", plExportRows(pl.presented, meta), [62, 22], 1);
+  if (bs.schedule3 || pl.schedule3) add("Notes", notesRows(bs.schedule3, pl.schedule3, meta), [66, 4, 22], 2);
+  add("Trial Balance", tbRows(tb.accounts, meta), [10, 42, 16, 16, 16, 16, 16, 16], 2);
+  if (cf) add("Cash Flow", cfRows(cf, meta), [62, 22], 1);
+  await writeStyledWorkbook(sheets, allStatementsFileName(meta), `Prepared with FreBook · ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`);
 }
 
 type ReportTab = "trial_balance" | "profit_loss" | "balance_sheet" | "cash_flow";
