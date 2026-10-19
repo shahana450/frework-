@@ -137,7 +137,7 @@ export default function RegisterPage() {
             </div>
           )}
           <div className="space-y-3">
-            {[["✅", "verified expert professionals"], ["⚡", "24-hour turnaround"], ["🔒", "100% data privacy"], ["📞", "Dedicated account manager"]].map(([icon, text]) => (
+            {[["✅", "Verified professionals for CA services"], ["💬", "Support on WhatsApp from real people"], ["🔒", "Encrypted, and private to your business"], ["🎁", "14 days free, no card needed"]].map(([icon, text]) => (
               <div key={text} className="flex items-center gap-3 text-white/70 text-sm">
                 <span>{icon}</span><span>{text}</span>
               </div>

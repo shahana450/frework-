@@ -10,8 +10,8 @@ export const LEGAL = {
   grievanceEmail: "legal@frework.online",
   supportEmail: "support@frework.online",
   billingEmail: "billing@frework.online",
-  effective: "11 October 2026",
-  version: "1.0",
+  effective: "19 October 2026",
+  version: "1.1",   // 1.1: email provider (Resend) listed; WhatsApp alerts, bank-statement reading and page-allowance use described
 } as const;
 
 export const fill = (v: string) => v.trim() || "[to be added]";
@@ -24,5 +24,6 @@ export const SUBPROCESSORS: { name: string; purpose: string; data: string; locat
   { name: "Anthropic PBC (Claude API)", purpose: "AI drafting (backup model)", data: "Same as above, only when used", location: "United States" },
   { name: "Sandbox (Quicko Infosoft Pvt Ltd)", purpose: "GST filing status and tax document reading", data: "GSTIN, uploaded Form 168 / 130 PDFs", location: "India" },
   { name: "PhonePe Pvt Ltd / Razorpay Software Pvt Ltd", purpose: "Payments", data: "Order amount, name, email, phone (never card or UPI credentials)", location: "India" },
-  { name: "Meta Platforms (WhatsApp Business)", purpose: "WhatsApp messages you choose to send or receive", data: "Phone number and message text", location: "Global" },
+  { name: "Meta Platforms (WhatsApp Business)", purpose: "WhatsApp messages you choose to send or receive, and alerts you switch on (e.g. overdue reminders to your own number)", data: "Phone number and message text", location: "Global" },
+  { name: "Resend Inc.", purpose: "Service emails (account and system alerts)", data: "Email address and message content", location: "United States" },
 ];

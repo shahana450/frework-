@@ -24,8 +24,8 @@ export default function PrivacyPage() {
           "Business: business name, GSTIN, PAN, address, and the documents you upload.",
           "Accounting data: entries, ledgers, invoices, bank statements, bills, Form 168 / 130 PDFs and the like.",
           "Payments: order amounts and transaction IDs. Card and UPI details are handled by the payment gateway; we never see them.",
-          "Messages: WhatsApp messages and emails you send us or send through FreWork.",
-          "Usage: pages visited, device and browser, and error logs.",
+          "Messages: WhatsApp messages and emails you send us or send through FreWork, alerts you switch on (such as overdue-payment reminders sent to your own linked number), and one-time sign-in links we send to that number at your request.",
+          "Usage: pages visited, device and browser, error logs, and counts we need to run your plan (such as how many bank-statement pages the AI has read this month).",
         ]} />
         <p>We do <b className="text-white">not</b> collect or store passwords for the GST portal, the Income-tax portal or your bank.</p>
       </Section>
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
       </Section>
 
       <Section n="3" title="AI processing">
-        <p>When you use FreBook chat or upload a document, the text or document and the ledger names needed for the draft are sent to an AI provider listed below to produce a draft. Providers are used under API terms that do not permit training on this data. See the <Link href="/ai-disclaimer" className={a}>AI Disclaimer</Link>.</p>
+        <p>When you use FreBook chat, WhatsApp bookkeeping, or upload a bill, invoice or bank statement, the text or document and the ledger names needed for the draft are sent to an AI provider listed below to produce a draft. Long PDF statements are split in your browser and sent in small batches of pages; Excel and CSV statements are read by FreWork itself, without an AI provider. Nothing is posted to your books until you confirm it. Providers are used under API terms that do not permit training on this data. See the <Link href="/ai-disclaimer" className={a}>AI Disclaimer</Link>.</p>
       </Section>
 
       <Section n="4" title="Who we share it with">
