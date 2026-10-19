@@ -10,6 +10,7 @@ import { readActiveBusiness } from "@/lib/activeBusiness";
 type Account = { id: string; code: string; name: string; type: string };
 type LedgerEntry = {
   id: string;
+  journal_id: string;
   date: string;
   entry_no: string;
   narration: string;
@@ -32,6 +33,10 @@ function LedgerContent() {
   const [search, setSearch] = useState("");
   const [openingBal, setOpeningBal] = useState(0);
   const [openingType, setOpeningType] = useState<"Dr" | "Cr">("Dr");
+  // Period from the report that linked here (?from=&to=); none = the whole ledger
+  const [from, setFrom] = useState(searchParams.get("from") ?? "");
+  const [to, setTo] = useState(searchParams.get("to") ?? "");
+  const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -48,12 +53,14 @@ function LedgerContent() {
     if (selectedAccId && bizId) {
       const acc = accounts.find(a => a.id === selectedAccId);
       setSelectedAcc(acc ?? null);
-      fetchLedger(selectedAccId, bizId);
+      fetchLedger(selectedAccId, bizId, acc?.type ?? "");
     }
-  }, [selectedAccId, bizId, accounts]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccId, bizId, accounts, from, to]);
 
-  async function fetchLedger(accId: string, bid: string) {
+  async function fetchLedger(accId: string, bid: string, accType: string) {
     setLoading(true);
+    const f = isDate(from) ? from : "", t = isDate(to) ? to : "";
     const { data } = await supabase
       .from("fw_fin_journal_lines")
       .select(`
@@ -63,6 +70,7 @@ function LedgerContent() {
       .eq("account_id", accId)
       .eq("fw_fin_journals.business_id", bid)
       .eq("fw_fin_journals.status", "posted")
+      .lte("fw_fin_journals.date", t || "9999-12-31")
       .order("fw_fin_journals(date)");
 
     type RawLine = {
@@ -76,9 +84,15 @@ function LedgerContent() {
       } | null;
     };
 
-    const rows = (data as unknown as RawLine[]) ?? [];
-    let runningBal = openingBal;
-    let balType: "Dr" | "Cr" = openingType;
+    const all = ((data as unknown as RawLine[]) ?? []).sort((a, b) => (a.fw_fin_journals?.date ?? "").localeCompare(b.fw_fin_journals?.date ?? ""));
+    // Opening = everything before the period. Income and expense accounts start each year at nil.
+    const plAcc = accType === "income" || accType === "expense";
+    const before = f ? all.filter(r => (r.fw_fin_journals?.date ?? "") < f) : [];
+    const openNet = plAcc ? 0 : before.reduce((s, r) => s + (r.dr_amount ?? 0) - (r.cr_amount ?? 0), 0);
+    setOpeningBal(Math.abs(openNet)); setOpeningType(openNet >= 0 ? "Dr" : "Cr");
+    const rows = f ? all.filter(r => (r.fw_fin_journals?.date ?? "") >= f) : all;
+    let runningBal = Math.abs(openNet);
+    let balType: "Dr" | "Cr" = openNet >= 0 ? "Dr" : "Cr";
 
     const ledgerRows: LedgerEntry[] = rows.map(row => {
       const j = row.fw_fin_journals;
@@ -98,6 +112,7 @@ function LedgerContent() {
 
       return {
         id: row.id,
+        journal_id: j?.id ?? "",
         date: j?.date ?? "",
         entry_no: j?.entry_no ?? "",
         narration: row.narration ?? j?.narration ?? "",
@@ -114,8 +129,9 @@ function LedgerContent() {
 
   const totalDr = entries.reduce((s, e) => s + e.dr, 0);
   const totalCr = entries.reduce((s, e) => s + e.cr, 0);
-  const closingBalance = Math.abs(totalDr - totalCr);
-  const closingType: "Dr" | "Cr" = totalDr >= totalCr ? "Dr" : "Cr";
+  const closingNet = (openingType === "Dr" ? openingBal : -openingBal) + totalDr - totalCr;
+  const closingBalance = Math.abs(closingNet);
+  const closingType: "Dr" | "Cr" = closingNet >= 0 ? "Dr" : "Cr";
   const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   const filteredAccounts = search
@@ -124,6 +140,7 @@ function LedgerContent() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <style>{`.lg-row:hover{background:rgba(35,42,99,0.06)}`}</style>
       <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
         <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
@@ -180,11 +197,20 @@ function LedgerContent() {
               <div style={{ marginBottom: "1.5rem" }}>
                 <h2 style={{ margin: "0 0 0.25rem", fontSize: "1.2rem", fontWeight: 800 }}>{selectedAcc.name}</h2>
                 <div style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.65)" }}>Account Code: {selectedAcc.code} · Type: {selectedAcc.type}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 10, fontSize: "0.8rem", color: "rgba(20,26,58,0.7)" }}>
+                  Period
+                  <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ border: "1px solid rgba(20,26,58,0.17)", borderRadius: 6, padding: "4px 8px", fontSize: "0.8rem", color: "#141A3A", background: "#FFFFFF" }} />
+                  to
+                  <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ border: "1px solid rgba(20,26,58,0.17)", borderRadius: 6, padding: "4px 8px", fontSize: "0.8rem", color: "#141A3A", background: "#FFFFFF" }} />
+                  {(from || to) && <button onClick={() => { setFrom(""); setTo(""); }} style={{ border: "none", background: "none", color: "#232A63", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}>All dates</button>}
+                  <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "rgba(20,26,58,0.55)" }}>Click an entry to view it</span>
+                </div>
               </div>
 
               {/* Summary cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: "0.75rem", marginBottom: "1.5rem" }}>
                 {[
+                  { label: `Opening Balance (${openingType})`, value: openingBal, color: "rgba(20,26,58,0.75)" },
                   { label: "Total Debit", value: totalDr, color: "#C2321F" },
                   { label: "Total Credit", value: totalCr, color: "#0B7A55" },
                   { label: `Closing Balance (${closingType})`, value: closingBalance, color: "#232A63" },
@@ -199,7 +225,7 @@ function LedgerContent() {
               {loading ? (
                 <div style={{ textAlign: "center", padding: "3rem", color: "rgba(20,26,58,0.55)" }}>Loading ledger…</div>
               ) : entries.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "3rem", color: "rgba(20,26,58,0.55)" }}>No posted transactions for this account.</div>
+                <div style={{ textAlign: "center", padding: "3rem", color: "rgba(20,26,58,0.55)" }}>No posted transactions for this account{from || to ? " in this period" : ""}.</div>
               ) : (
                 <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, overflow: "hidden" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -224,7 +250,7 @@ function LedgerContent() {
                         </td>
                       </tr>
                       {entries.map((e, i) => (
-                        <tr key={i} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
+                        <tr key={i} className="lg-row" onClick={() => e.journal_id && router.push(`/finance/journals?id=${e.journal_id}`)} title="View this entry" style={{ borderTop: "1px solid rgba(20,26,58,0.08)", cursor: e.journal_id ? "pointer" : undefined }}>
                           <td style={{ padding: "0.5rem 0.85rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.75)", whiteSpace: "nowrap" }}>
                             {new Date(e.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
                           </td>
@@ -242,7 +268,7 @@ function LedgerContent() {
                         </tr>
                       ))}
                       <tr style={{ borderTop: "2px solid rgba(35,42,99,0.3)", background: "rgba(35,42,99,0.06)" }}>
-                        <td colSpan={3} style={{ padding: "0.6rem 0.85rem", fontWeight: 800, fontSize: "0.85rem" }}>Closing Balance</td>
+                        <td colSpan={3} style={{ padding: "0.6rem 0.85rem", fontWeight: 800, fontSize: "0.85rem" }}>Closing Balance <span style={{ fontWeight: 500, fontSize: "0.75rem", color: "rgba(20,26,58,0.6)" }}>(debits and credits in the period)</span></td>
                         <td style={{ padding: "0.6rem 0.85rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#C2321F" }}>{fmt(totalDr)}</td>
                         <td style={{ padding: "0.6rem 0.85rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "#0B7A55" }}>{fmt(totalCr)}</td>
                         <td style={{ padding: "0.6rem 0.85rem", textAlign: "right", fontWeight: 800, color: "#232A63", fontVariantNumeric: "tabular-nums" }}>

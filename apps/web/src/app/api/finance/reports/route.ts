@@ -45,10 +45,13 @@ export async function GET(req: NextRequest) {
   // Account codes for the Trial Balance "Code" column
   const { data: codes } = await supabase.from("fw_fin_chart_of_accounts").select("id,code").eq("business_id", bizId!);
   const codeOf = new Map(((codes ?? []) as { id: string; code: string | null }[]).map(a => [a.id, a.code ?? ""]));
-  const row = (r: TBRow) => ({ code: codeOf.get(r.id) ?? "", name: r.name, type: GROUP_LABEL[r.group], sub_type: r.group, dr: r.dr, cr: r.cr });
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const row = (r: TBRow) => ({ id: r.id, code: codeOf.get(r.id) ?? "", name: r.name, type: GROUP_LABEL[r.group], sub_type: r.group, dr: r.dr, cr: r.cr,
+    opening: r2(r.balance - r.periodDr + r.periodCr), period_dr: r2(r.periodDr), period_cr: r2(r.periodCr) });
 
   if (report === "trial_balance") {
     return NextResponse.json({
+      from: start, to: end,
       report: "trial_balance",
       // Accounts with nothing on either side are left out (no "Bank Charges — —" rows)
       accounts: tb.filter(r => Math.abs(r.dr) >= 0.005 || Math.abs(r.cr) >= 0.005).map(row),

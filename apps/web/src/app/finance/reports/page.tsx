@@ -21,7 +21,15 @@ async function downloadStatementExcel(kind: "pl" | "bs", presented: PresentedPL 
 }
 
 type ReportTab = "trial_balance" | "profit_loss" | "balance_sheet" | "cash_flow";
-type AccRow = { code?: string; name: string; type: string; sub_type: string | null; dr: number; cr: number };
+type AccRow = { id?: string; code?: string; name: string; type: string; sub_type: string | null; dr: number; cr: number; opening?: number; period_dr?: number; period_cr?: number };
+
+// Ledger drill-down for a line, in the report's period (built-in lines like brought-forward profit have no ledger)
+let PERIOD = { from: "", to: "" };
+const ledgerHref = (id?: string) => id && !id.startsWith("__") ? `/finance/ledger?account=${id}${PERIOD.from ? `&from=${PERIOD.from}&to=${PERIOD.to}` : ""}` : null;
+function Drill({ id, children, style }: { id?: string; children: React.ReactNode; style?: React.CSSProperties }) {
+  const href = ledgerHref(id);
+  return href ? <Link href={href} className="rp-drill" title="Open ledger" style={{ color: "inherit", textDecoration: "none", ...style }}>{children}</Link> : <span style={style}>{children}</span>;
+}
 
 type PLData = {
   direct_income: AccRow[]; indirect_income: AccRow[];
@@ -53,8 +61,8 @@ function SectionTable({ title, rows, drLabel = "Debit", crLabel = "Credit", netL
       <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, padding: "0.5rem 1rem", background: "#FFFFFF" }}>{title}</div>
       {rows.map(r => (
         <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 1rem", borderTop: "1px solid rgba(20,26,58,0.08)", fontSize: "0.85rem" }}>
-          <span style={{ color: "rgba(20,26,58,0.95)" }}>{r.name}</span>
-          <span style={{ fontVariantNumeric: "tabular-nums" }}>{signedMoney(/Assets|Expenses|Cost/i.test(title) ? r.dr - r.cr : r.cr - r.dr)}</span>
+          <Drill id={r.id} style={{ color: "rgba(20,26,58,0.95)" }}>{r.name}</Drill>
+          <Drill id={r.id} style={{ fontVariantNumeric: "tabular-nums" }}>{signedMoney(/Assets|Expenses|Cost/i.test(title) ? r.dr - r.cr : r.cr - r.dr)}</Drill>
         </div>
       ))}
       {netLabel && netValue !== undefined && (
@@ -74,8 +82,8 @@ function Section({ s }: { s: StmtSection }) {
       <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, padding: "0.5rem 1rem", background: "#FFFFFF" }}>{s.title}</div>
       {s.lines.map(l => (
         <div key={l.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0.5rem 1rem", borderTop: "1px solid rgba(20,26,58,0.08)", fontSize: "0.85rem" }}>
-          <span style={{ color: "rgba(20,26,58,0.95)" }}>{l.name}{l.note && <span style={{ marginLeft: 8, fontSize: "0.72rem", color: "#8A5A00" }}>({l.note})</span>}</span>
-          <span style={{ fontVariantNumeric: "tabular-nums", color: l.amount < 0 ? "#C2321F" : undefined }}>{signedMoney(l.amount)}</span>
+          <Drill id={l.id} style={{ color: "rgba(20,26,58,0.95)" }}>{l.name}{l.note && <span style={{ marginLeft: 8, fontSize: "0.72rem", color: "#8A5A00" }}>({l.note})</span>}</Drill>
+          <Drill id={l.id} style={{ fontVariantNumeric: "tabular-nums", color: l.amount < 0 ? "#C2321F" : undefined }}>{signedMoney(l.amount)}</Drill>
         </div>
       ))}
       <div style={{ display: "flex", justifyContent: "space-between", padding: "0.45rem 1rem", borderTop: "1px solid rgba(20,26,58,0.15)", fontSize: "0.82rem", fontWeight: 700 }}>
@@ -109,6 +117,8 @@ export default function ReportsPage() {
   const [tbData, setTbData] = useState<TBData | null>(null);
   const [error, setError] = useState("");
   const [bizName, setBizName] = useState("");
+  const [tbDetail, setTbDetail] = useState(false);   // TB: opening balance + this period's debits/credits + closing
+  PERIOD = period ? { from: period.start_date, to: period.end_date } : { from: "", to: "" };
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -165,6 +175,7 @@ export default function ReportsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <style>{`.rp-drill{cursor:pointer}.rp-drill:hover{color:#232A63 !important;text-decoration:underline !important}`}</style>
       <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
         <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
         <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
@@ -272,9 +283,19 @@ export default function ReportsPage() {
             {tab === "trial_balance" && tbData && (
               <>
                 <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(20,26,58,0.11)" }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem" }}>Trial Balance</div>
-                  <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>FY {financialYears.find(f => f.id === fyId)?.label}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: "1rem" }}>Trial Balance</div>
+                      <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>FY {financialYears.find(f => f.id === fyId)?.label} · click an account to open its ledger</div>
+                    </div>
+                    <div role="radiogroup" aria-label="Trial balance view" style={{ display: "flex", border: "1px solid rgba(20,26,58,0.15)", borderRadius: 8, overflow: "hidden" }}>
+                      {([[false, "Closing balances"], [true, "Opening & transactions"]] as const).map(([v, l]) => (
+                        <button key={l} role="radio" aria-checked={tbDetail === v} onClick={() => setTbDetail(v)} style={{ border: "none", padding: "6px 12px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", background: tbDetail === v ? "#232A63" : "#FFFFFF", color: tbDetail === v ? "#FFFFFF" : "rgba(20,26,58,0.75)" }}>{l}</button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
+                {tbDetail ? <TBDetail data={tbData} /> : <>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#FFFFFF" }}>
@@ -285,14 +306,14 @@ export default function ReportsPage() {
                   </thead>
                   <tbody>
                     {tbData.accounts.map(a => (
-                      <tr key={a.name} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
+                      <tr key={a.id ?? a.name} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
                         <td style={{ padding: "0.55rem 1rem", fontSize: "0.78rem", fontFamily: "monospace", color: "rgba(20,26,58,0.65)" }}>{a.code}</td>
-                        <td style={{ padding: "0.55rem 1rem", fontSize: "0.85rem" }}>{a.name}</td>
+                        <td style={{ padding: "0.55rem 1rem", fontSize: "0.85rem" }}><Drill id={a.id}>{a.name}</Drill></td>
                         <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", color: a.dr > 0 ? "#141A3A" : "rgba(20,26,58,0.35)" }}>
-                          {a.dr > 0 ? fmt(a.dr) : "—"}
+                          {a.dr > 0 ? <Drill id={a.id}>{fmt(a.dr)}</Drill> : "—"}
                         </td>
                         <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", color: a.cr > 0 ? "#141A3A" : "rgba(20,26,58,0.35)" }}>
-                          {a.cr > 0 ? fmt(a.cr) : "—"}
+                          {a.cr > 0 ? <Drill id={a.id}>{fmt(a.cr)}</Drill> : "—"}
                         </td>
                       </tr>
                     ))}
@@ -309,7 +330,7 @@ export default function ReportsPage() {
                       </td>
                     </tr>
                   </tfoot>
-                </table>
+                </table></>}
                 {tbData.accounts.length === 0 && (
                   <div style={{ padding: "3rem", textAlign: "center", color: "rgba(20,26,58,0.55)", fontSize: "0.88rem" }}>No posted entries yet.</div>
                 )}
@@ -323,6 +344,39 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Trial balance with opening balance, this period's debits and credits, and closing balance (Dr / Cr)
+function TBDetail({ data }: { data: TBData }) {
+  const drcr = (n: number) => Math.abs(n) < 0.005 ? "—" : <>{fmt(n)} <span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.55)" }}>{n > 0 ? "Dr" : "Cr"}</span></>;
+  const tot = data.accounts.reduce((t, a) => ({ op: t.op + (a.opening ?? 0), dr: t.dr + (a.period_dr ?? 0), cr: t.cr + (a.period_cr ?? 0), cl: t.cl + (a.dr - a.cr) }), { op: 0, dr: 0, cr: 0, cl: 0 });
+  const td: React.CSSProperties = { padding: "0.55rem 0.8rem", textAlign: "right", fontSize: "0.83rem", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" };
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+        <thead>
+          <tr>{["Account", "Opening", "Debit", "Credit", "Closing"].map(h => <th key={h} style={{ padding: "0.6rem 0.8rem", textAlign: h === "Account" ? "left" : "right", fontSize: "0.7rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>)}</tr>
+        </thead>
+        <tbody>
+          {data.accounts.map(a => (
+            <tr key={a.id ?? a.name} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
+              <td style={{ padding: "0.55rem 0.8rem", fontSize: "0.85rem" }}><Drill id={a.id}>{a.name}</Drill></td>
+              <td style={td}><Drill id={a.id}>{drcr(a.opening ?? 0)}</Drill></td>
+              <td style={td}><Drill id={a.id}>{a.period_dr ? fmt(a.period_dr) : "—"}</Drill></td>
+              <td style={td}><Drill id={a.id}>{a.period_cr ? fmt(a.period_cr) : "—"}</Drill></td>
+              <td style={{ ...td, fontWeight: 700 }}><Drill id={a.id}>{drcr(a.dr - a.cr)}</Drill></td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr style={{ borderTop: "2px solid rgba(35,42,99,0.3)", background: "rgba(35,42,99,0.06)", fontWeight: 800 }}>
+            <td style={{ padding: "0.75rem 0.8rem" }}>Total</td>
+            <td style={td}>{drcr(tot.op)}</td><td style={td}>{fmt(tot.dr)}</td><td style={td}>{fmt(tot.cr)}</td><td style={td}>{drcr(tot.cl)}</td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
   );
 }
