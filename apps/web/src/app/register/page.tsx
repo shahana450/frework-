@@ -133,7 +133,7 @@ export default function RegisterPage() {
           <p className="text-white/45 text-sm mb-10 leading-relaxed">Expert Professional Services, coworking spaces, and freelancers — all in one place.</p>
           {refCode && (
             <div className="mb-8 rounded-2xl border border-[#C9A84C]/40 bg-[#C9A84C]/10 px-4 py-3 text-sm text-[#F2DDA4]">
-              🎁 Referral applied — a <b>free week</b>, then <b>50% off</b> your first FreBook month.
+              🎁 Referral applied — a <b>14-day free trial</b>, then <b>half off</b> your first FreBook month.
             </div>
           )}
           <div className="space-y-3">

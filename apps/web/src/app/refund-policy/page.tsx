@@ -34,10 +34,10 @@ export default function RefundPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">3. FreBook Plans (Basic ₹699 · Pro ₹999 · Unlimited ₹1,499 per month + GST)</h2>
+            <h2 className="text-lg font-semibold text-white mb-3">3. FreBook Plans (Starter ₹399 · Basic ₹699 · Pro ₹999 · CA Practice ₹2,499 per month + GST, or yearly)</h2>
             <ul className="list-disc list-inside space-y-2.5 text-white/50">
               <li><span className="text-white/70 font-medium">7-day rule:</span> Full refund of your first payment if you ask within 7 days of it.</li>
-              <li><span className="text-white/70 font-medium">After 7 days:</span> Cancel any time. Access continues until the end of the month you paid for. No partial refunds.</li>
+              <li><span className="text-white/70 font-medium">After 7 days:</span> Cancel any time. Access continues until the end of the month or year you paid for. No partial refunds.</li>
             </ul>
           </section>
 

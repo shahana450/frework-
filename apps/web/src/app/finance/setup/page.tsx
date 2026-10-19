@@ -87,12 +87,16 @@ export default function BusinessSetup() {
 
   async function handleSubmit() {
     if (!userId) { setError("Your session has expired. Please sign in again, then press Create Business."); return; }
-    // Plan limit: Basic keeps 2 businesses, Pro 5, Unlimited any number
-    const lim = await fetch("/api/finance/plan-limit").then(r => r.ok ? r.json() : null).catch(() => null) as { can_add: boolean; limit: number | null; used: number; plan_label: string; upgrade_to: { name: string; price: number; businesses: number | null } | null } | null;
+    // Plan limit: Starter keeps 1 business, Basic 2, Pro 5, CA Practice 15 — over it, offer the plan that fits
+    const lim = await fetch("/api/finance/plan-limit").then(r => r.ok ? r.json() : null).catch(() => null) as { can_add: boolean; limit: number | null; used: number; plan_label: string; upgrade_to: { id: string; name: string; price: number; yearly: number; businesses: number | null } | null } | null;
     if (lim && !lim.can_add) {
       const up = lim.upgrade_to;
-      if (lim.plan_label === "No plan") { setError("To add another business, start your free week or choose a plan on the Pricing page."); return; }
-      setError(`Your ${lim.plan_label} plan keeps ${lim.limit} business${lim.limit === 1 ? "" : "es"} and you have ${lim.used}. ${up ? `Move to ${up.name} (₹${up.price.toLocaleString("en-IN")}/month + GST, ${up.businesses ?? "unlimited"} businesses) on the Pricing page to add more.` : "Upgrade on the Pricing page to add more."}`);
+      const head = lim.plan_label === "No plan" ? "Choose a plan to add another business" : `Your ${lim.plan_label} plan keeps ${lim.limit} business${lim.limit === 1 ? "" : "es"}`;
+      const body = lim.plan_label === "No plan"
+        ? "Your first business is free to set up. To add more, start the free trial or choose a plan."
+        : `You have ${lim.used}. ${up ? `Upgrade to ${up.name} — up to ${up.businesses ?? "unlimited"} businesses for ₹${up.price.toLocaleString("en-IN")}/month (or ₹${up.yearly.toLocaleString("en-IN")}/year) + GST.` : "Write to us for a plan sized to your practice."}`;
+      setError(`${head}. ${body}`);
+      if (await askInApp(head, body, up ? `Upgrade to ${up.name}` : "See plans", "Not now")) router.push("/finance/pricing");
       return;
     }
     const gate = canCreate(step, form);

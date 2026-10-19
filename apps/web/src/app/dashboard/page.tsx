@@ -665,7 +665,7 @@ export default function DashboardPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "#FFD9C7" }}>FreBook · AI accountant</span>
                 <span className="dbx-plan" style={{ background: finActive ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.14)", color: finActive ? "#86EFAC" : "#FFFFFF" }}>
-                  {finActive ? `Active · till ${new Date(finSub!.subscription_ends_at!).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : "7 days free"}
+                  {finActive ? `Active · till ${new Date(finSub!.subscription_ends_at!).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : "14 days free"}
                 </span>
               </div>
               <h2 style={{ margin: "16px 0 6px", fontSize: "clamp(1.5rem,2.6vw,2rem)", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.02em", lineHeight: 1.1 }}>Chat in. Books out.</h2>
@@ -673,7 +673,7 @@ export default function DashboardPage() {
                 Entries drafted for you · GST-ready invoices · bank &amp; bill import · live P&amp;L · two-way Tally sync.
               </p>
               <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
-                <span className="dbx-cta">{finActive ? "Open FreBook" : "Start your free week"} <ArrowRight className="w-4 h-4" /></span>
+                <span className="dbx-cta">{finActive ? "Open FreBook" : "Start your free trial"} <ArrowRight className="w-4 h-4" /></span>
               </div>
             </Link>
           </section>

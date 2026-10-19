@@ -47,7 +47,7 @@ const FAQS = [
   { q: "Does it work with Tally?",
     a: "Yes. FreBook can push entries into Tally Prime and import your Tally ledgers and vouchers." },
   { q: "How much does it cost?",
-    a: `FreBook starts at ${FREBOOK_PRICE_LABEL} per month plus GST (Basic, 2 businesses); Pro is ₹999 for 5 businesses and Unlimited ₹1,499.` },
+    a: `FreBook plans: Starter ₹399 (1 business), Basic ₹699 (2), Pro ₹999 (5) and CA Practice ₹2,499 (15) per month plus GST — or pay yearly and get 2 months free. Every plan starts with a 14-day free trial.` },
 ];
 
 const JSON_LD = {

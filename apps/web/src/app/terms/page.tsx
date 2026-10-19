@@ -40,7 +40,7 @@ export default function TermsPage() {
 
       <Section n="3" title="Plans, trial and payment">
         <List items={[
-          "FreBook is billed per login, per month, plus GST: Basic ₹699 (up to 2 businesses), Pro ₹999 (up to 5 businesses) and Unlimited ₹1,499 (any number of businesses), unless the pricing page shows otherwise at the time you subscribe. A new account gets one free 7-day trial.",
+          "FreBook is billed per login, monthly or yearly, plus GST: Starter ₹399 a month or ₹3,999 a year (1 business), Basic ₹699 or ₹6,999 (up to 2 businesses), Pro ₹999 or ₹9,999 (up to 5 businesses) and CA Practice ₹2,499 or ₹24,999 (up to 15 businesses), unless the pricing page shows otherwise at the time you subscribe. Each plan includes a monthly allowance of PDF bank-statement pages read by AI, shown on the pricing page. Subscribers on the earlier Unlimited plan keep it on the same terms. A new account gets one free 14-day trial.",
           "The first month is free when claimed on the pricing page. No charge is made for the trial; the plan continues only if you pay for it.",
           "Fees are billed in advance through our payment partners and are exclusive of GST unless stated.",
           "Professional services are priced separately on each service and paid when ordered.",

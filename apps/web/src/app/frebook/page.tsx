@@ -47,7 +47,7 @@ const FAQS: { q: string; a: string }[] = [
   { q: "Is FreBook built for GST and TDS?",
     a: "Yes. FreBook handles GST invoicing, purchase bills, GSTR-1 and GSTR-3B preparation, and section-wise TDS tracking." },
   { q: "How much does FreBook cost?",
-    a: `FreBook starts at ${FREBOOK_PRICE_LABEL} per month plus GST (Basic, 2 businesses); Pro is ₹999 for 5 businesses and Unlimited ₹1,499.` },
+    a: `FreBook plans: Starter ₹399 (1 business), Basic ₹699 (2), Pro ₹999 (5) and CA Practice ₹2,499 (15) per month plus GST — or pay yearly and get 2 months free. Every plan starts with a 14-day free trial.` },
   { q: "Will FreBook replace my CA or accountant?",
     a: "No. FreBook removes day-to-day data entry so your CA can spend time on review, tax planning and filing. Every AI-drafted entry is confirmed before it posts." },
   { q: "What is FreBook AI?",

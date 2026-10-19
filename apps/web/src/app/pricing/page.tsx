@@ -33,8 +33,8 @@ const PLANS: Plan[] = FREBOOK_PLANS_LIST.map(p => ({
     name: p.name,
     icon: BookOpen,
     price: p.price,
-    tagline: p.businesses === null ? "Unlimited businesses · one login" : `Up to ${p.businesses} businesses · one login`,
-    desc: "Every FreBook feature. Plans differ only in how many businesses you keep under one login.",
+    tagline: `${p.businesses === 1 ? "1 business" : `Up to ${p.businesses} businesses`} · ${p.pages.toLocaleString("en-IN")} PDF statement pages/month`,
+    desc: `${p.audience}. Every FreBook feature · ₹${p.yearly.toLocaleString("en-IN")}/year (2 months free).`,
     popular: !!p.badge,
     color: {
       badge: p.badge,
@@ -51,12 +51,12 @@ const PLANS: Plan[] = FREBOOK_PLANS_LIST.map(p => ({
 }));
 
 const FAQS = [
-  { q: "What's the difference between the plans?", a: "Only the number of businesses one login can keep: Basic up to 2, Pro up to 5, Unlimited any number. Every plan has every FreBook feature — chat bookkeeping, invoicing, ledgers, bank import, GST returns preparation, TDS tracker, Tally push and import, and reports." },
+  { q: "What's the difference between the plans?", a: "How many businesses one login can keep (Starter 1, Basic 2, Pro 5, CA Practice 15) and how many PDF bank-statement pages the AI reads each month (100, 500, 2,000 and 6,000; Excel/CSV statements are free). Every plan has every FreBook feature — chat bookkeeping, invoicing, ledgers, bank import, GST returns preparation, TDS tracker, Tally push and import, and reports." },
   { q: "Is there a free trial?", a: `Yes — ${TRIAL_DAYS} days with every feature and any number of businesses. No card needed.` },
   { q: "Is there a referral discount?", a: `Yes. Share your link from the Plans page: your friend gets ${REFERRAL_DISCOUNT_PCT}% off their first month, and when they pay, your next month is ${REFERRAL_DISCOUNT_PCT}% off too.` },
   { q: "Are professional services included?", a: "No. GST registration, ITR filing, ROC filings and audits are ordered separately, at the price shown on each service. Audits are performed by an independent Chartered Accountant." },
-  { q: "Is GST extra?", a: "Yes. Plan prices are per month plus 18% GST, billed monthly." },
-  { q: "Can I cancel?", a: "Yes, anytime. Access continues until the end of the month you paid for. See the Refund Policy for the 7-day refund rule." },
+  { q: "Is GST extra?", a: "Yes. Plan prices are plus 18% GST. Pay monthly, or yearly and get 2 months free." },
+  { q: "Can I cancel?", a: "Yes, anytime. Access continues until the end of the period you paid for. See the Refund Policy for the 7-day refund rule." },
   { q: "What payment methods do you accept?", a: "UPI, cards and net banking." },
 ];
 
@@ -70,7 +70,7 @@ const TRUST = [
 export default function PricingPage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [trialUsed, setTrialUsed] = useState(false);   // any subscription row (paid, trial or expired) means the free week is gone
+  const [trialUsed, setTrialUsed] = useState(false);   // any subscription row (paid, trial or expired) means the free trial is gone
   const [claiming, setClaiming] = useState(false);
   const [claimMsg, setClaimMsg] = useState("");
   const router = useRouter();
@@ -84,21 +84,21 @@ export default function PricingPage() {
     });
   }, []);
 
-  // One free week, once per account. The server refuses a second claim with 409.
+  // One free trial, once per account. The server refuses a second claim with 409.
   async function claimFreeMonth() {
     setClaiming(true); setClaimMsg("");
     try {
       const r = await fetch("/api/finance/subscription/claim-trial", { method: "POST" });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
-        setClaimMsg(d.error ?? "Couldn't start your free week. Please try again.");
+        setClaimMsg(d.error ?? "Couldn't start your free trial. Please try again.");
         if (r.status === 409) { setTrialUsed(true); setTimeout(() => router.push("/finance/pricing"), 1800); }
         return;
       }
-      setClaimMsg(`✓ Your free week has started — FreBook is yours until ${new Date(d.ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}.`);
+      setClaimMsg(`✓ Your free trial has started — FreBook is yours until ${new Date(d.ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}.`);
       setTimeout(() => router.push("/finance/start"), 1800);
     } catch {
-      setClaimMsg("Couldn't start your free week. Please try again.");
+      setClaimMsg("Couldn't start your free trial. Please try again.");
     } finally { setClaiming(false); }
   }
 
@@ -111,7 +111,7 @@ export default function PricingPage() {
 
   const ctaLabel = (plan: Plan) => {
     if (loggedIn && trialUsed) return "Subscribe Now";
-    return claiming ? "Starting your free week…" : `🎁 Start ${TRIAL_DAYS} days free`;
+    return claiming ? "Starting your free trial…" : `🎁 Start ${TRIAL_DAYS} days free`;
   };
 
   return (
@@ -133,7 +133,7 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="text-white/45 text-lg mb-10 leading-relaxed">
-            Start with {TRIAL_DAYS} days free. Then FreBook from {FREBOOK_PRICE_LABEL}/month + GST — Basic, Pro or Unlimited by number of businesses.<br className="hidden sm:block" /> Professional services are ordered separately when you need them.
+            Start with {TRIAL_DAYS} days free. Then FreBook from {FREBOOK_PRICE_LABEL}/month + GST — Starter, Basic, Pro or CA Practice by number of businesses. Yearly plans get 2 months free.<br className="hidden sm:block" /> Professional services are ordered separately when you need them.
           </p>
 
           {/* Trust pills */}
@@ -288,7 +288,7 @@ export default function PricingPage() {
           style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.06),rgba(201,168,76,0.02))" }}>
           <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/6">
             {[
-              { val: "₹699", label: "From, per month + GST", sub: "Basic · Pro · Unlimited" },
+              { val: FREBOOK_PRICE_LABEL, label: "From, per month + GST", sub: "Starter · Basic · Pro · CA Practice" },
               { val: "7 days", label: "Refund window", sub: "See Refund Policy" },
               { val: "< 4 hrs", label: "Avg. support response", sub: "For paid plans" },
               { val: "Zero", label: "Lock-in or exit fees", sub: "Cancel anytime" },

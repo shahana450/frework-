@@ -84,7 +84,7 @@ const MODULES = [
       heading: "Your finance team, built in",
       why: "Most SMEs lose money due to poor bookkeeping and late invoicing. FreWork gives you professional-grade finance tools without hiring a full-time accountant.",
       steps: ["Connect your bank account", "Auto-categorize transactions", "Generate GST-ready invoices", "Get monthly P&L reports"],
-      pricing: "FreBook from ₹699/mo + GST",
+      pricing: "FreBook from ₹399/mo + GST",
       time: "Real-time updates",
       features: [
         { icon: FileText, text: "GST-compliant invoicing in seconds" },
@@ -318,7 +318,7 @@ export function BusinessOSHomepage() {
                 </button>
               </div>
               <p className="mt-4 text-[13.5px] font-medium" style={{ color:"#5A6080" }}>
-                <b style={{ color:"#0B7A55" }}>7 days free</b> · then from ₹699/month + GST · cancel anytime · no card to start
+                <b style={{ color:"#0B7A55" }}>14 days free</b> · then from ₹399/month + GST · cancel anytime · no card to start
               </p>
               <div className="mt-9">
                 <p className="text-[11px] font-bold tracking-[0.18em] uppercase mb-3" style={{ color:"#8A90AE" }}>Works with what you already use</p>

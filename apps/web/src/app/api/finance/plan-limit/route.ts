@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, serverError, isAdminEmail } from "@/lib/apiAuth";
-import { businessLimit, planLabel, planById, FREBOOK_PLANS_LIST } from "@/lib/plans";
+import { businessLimit, planLabel, upgradeFor } from "@/lib/plans";
 
 // How many businesses this login may keep on its plan, and how many it has. Used before adding a business.
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
@@ -18,11 +18,12 @@ export async function GET(req: NextRequest) {
     // No plan yet (or expired): the first business is always allowed, so anyone can start
     const limit = isAdminEmail(user.email) ? null : live ? businessLimit(sub!.plan, sub!.status) : 1;   // FreWork staff: no limit
     const used = count ?? 0;
-    const next = limit === null ? null : FREBOOK_PLANS_LIST.find(p => p.businesses === null || p.businesses > used);
+    // The cheapest plan above the current one that fits one more business
+    const next = limit === null ? null : upgradeFor(used + 1, live ? sub!.plan : null);
     return NextResponse.json({
       plan: live ? sub!.plan : null, plan_label: live ? planLabel(sub!.plan) : "No plan", status: live ? sub!.status : null,
       limit, used, can_add: limit === null || used < limit,
-      upgrade_to: next && next.id !== (live ? planById(sub!.plan)?.id : null) ? { id: next.id, name: next.name, price: next.price, businesses: next.businesses } : null,
+      upgrade_to: next ? { id: next.id, name: next.name, price: next.price, yearly: next.yearly, businesses: next.businesses } : null,
     });
   } catch (e) {
     return serverError("plan-limit", e, "Couldn't check your plan.");

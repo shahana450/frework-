@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireUser, serverError } from "@/lib/apiAuth";
 import { claimTrial, type TrialStore } from "@/lib/claimTrial";
 
-// One free week of FreBook, once per account. The user claims it themselves from the pricing page.
+// One free trial of FreBook (TRIAL_DAYS), once per account. The user claims it themselves from the pricing page.
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 const store: TrialStore = {

@@ -154,8 +154,10 @@ export default function BankingPage() {
   /* ── Parse PDF (server-side via Claude) ── */
   async function parsePDF(file: File, stopAnim: () => void) {
     // Long PDFs are read in page batches with real progress
-    const json = await readBankStatement(file, { onProgress: p => { if (p.total > 1) { stopAnim(); setParseProgress(Math.round(5 + (p.done / p.total) * 90)); setParseStep(p.label); } } });
-    if (json.missingPages.length) setParseError(`Some pages couldn't be read (pages ${json.missingPages.join(", ")}). Everything else is below — upload those pages again, or the Excel statement, to fill the gap.`);
+    // The page files the full statement on the Shelf itself, so the reader doesn't
+    const json = await readBankStatement(file, { bizId: bizId ?? undefined, shelf: false, onProgress: p => { if (p.total > 1) { stopAnim(); setParseProgress(Math.round(5 + (p.done / p.total) * 90)); setParseStep(p.label); } } });
+    if (json.stoppedReason) setParseError(`Read part of the statement, then stopped: ${json.stoppedReason}`);
+    else if (json.missingPages.length) setParseError(`Some pages couldn't be read (pages ${json.missingPages.join(", ")}). Everything else is below — upload those pages again, or the Excel statement, to fill the gap.`);
     return (json.transactions as Omit<TxRow, "id" | "ledger_id" | "ledger_name" | "pushed">[]).map(t => ({
       ...t, id: uid(), ledger_id: null, ledger_name: null, pushed: false,
     }));

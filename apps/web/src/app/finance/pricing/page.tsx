@@ -1,10 +1,11 @@
 "use client";
-// Choose a FreBook plan: one free week, then Basic ₹699 (2 businesses) · Pro ₹999 (5) · Unlimited ₹1,499. Referral link below.
+// Choose a FreBook plan: free trial, then Starter ₹399 (1 business) · Basic ₹699 (2) · Pro ₹999 (5) · CA Practice ₹2,499 (15),
+// monthly or yearly (2 months free). Referral link below.
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { FREBOOK_PLANS_LIST, isLegacyPlan, planLabel, planById, REFERRAL_DISCOUNT_PCT, SUBSCRIPTION_GST_RATE, type FreBookPlan } from "@/lib/plans";
+import { FREBOOK_PLANS_LIST, type Billing, isLegacyPlan, planLabel, planById, REFERRAL_DISCOUNT_PCT, SUBSCRIPTION_GST_RATE, type FreBookPlan } from "@/lib/plans";
 import { TRIAL_DAYS } from "@/lib/claimTrial";
 
 declare global {
@@ -23,24 +24,25 @@ export default function PricingPage() {
   const [currentSub, setCurrentSub] = useState<{ plan: string; status: string; ends_at: string } | null>(null);
   const [paying, setPaying] = useState<string | null>(null);
   const [claimMsg, setClaimMsg] = useState("");
-  const [trialUsed, setTrialUsed] = useState(false);   // any past subscription row means the free week is gone
+  const [trialUsed, setTrialUsed] = useState(false);   // any past subscription row means the free trial is gone
   const [ref, setRef] = useState<Referral | null>(null);
   const [copied, setCopied] = useState(false);
+  const [billing, setBilling] = useState<Billing>("yearly");
   const canClaim = !currentSub && !trialUsed;
   const disc = ref?.next_payment_discount ?? 0;
 
-  // One free week, once per account: the server refuses a second claim with 409.
+  // One free trial, once per account: the server refuses a second claim with 409.
   async function claimTrial() {
     setPaying("trial"); setClaimMsg("");
     try {
       const r = await fetch("/api/finance/subscription/claim-trial", { method: "POST" });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) { if (r.status === 409) setTrialUsed(true); setClaimMsg(d.error ?? "Couldn't start your free week."); return; }
-      setCurrentSub({ plan: "frebook", status: "trial", ends_at: d.ends_at });
-      setClaimMsg(`✓ Your free week has started — every feature, any number of businesses, until ${new Date(d.ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}.`);
+      if (!r.ok) { if (r.status === 409) setTrialUsed(true); setClaimMsg(d.error ?? "Couldn't start your free trial."); return; }
+      setCurrentSub({ plan: "fb_ca", status: "trial", ends_at: d.ends_at });
+      setClaimMsg(`✓ Your free trial has started — every feature, any number of businesses, until ${new Date(d.ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}.`);
       setTimeout(() => router.push("/finance/start"), 1800);
     } catch {
-      setClaimMsg("Couldn't start your free week. Please try again.");
+      setClaimMsg("Couldn't start your free trial. Please try again.");
     } finally { setPaying(null); }
   }
 
@@ -66,7 +68,7 @@ export default function PricingPage() {
     if (!user) return;
     setPaying(plan.id);
     try {
-      const res = await fetch("/api/finance/subscription/create-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: plan.id }) });
+      const res = await fetch("/api/finance/subscription/create-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: plan.id, billing }) });
       const started = await res.json();
       if (!res.ok || !(started.order_id || started.subscription_id)) throw new Error(started.error ?? "Couldn't start the payment.");
       const auto = started.mode === "subscription";
@@ -74,7 +76,7 @@ export default function PricingPage() {
       const off = started.discount_pct ? ` · ${started.discount_pct}% referral discount` : "";
       const rzp = new window.Razorpay({
         key: started.key_id, name: "FreWork",
-        description: `FreBook ${plan.name} — ₹${total} incl. GST${off}${auto ? " · renews automatically" : " · one month"}`,
+        description: `FreBook ${plan.name} — ₹${total} incl. GST${off}${auto ? " · renews automatically" : billing === "yearly" ? " · one year" : " · one month"}`,
         ...(auto ? { subscription_id: started.subscription_id } : { order_id: started.order_id, amount: started.amount_paise, currency: "INR" }),
         prefill: { name: user.name, email: user.email }, theme: { color: C.navy },
         handler: async (response: Record<string, string>) => {
@@ -102,8 +104,9 @@ export default function PricingPage() {
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.ink, fontFamily: "'Manrope',system-ui,sans-serif" }}>
       <style>{`
-        .pr-grid { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0,1fr)); align-items: stretch; }
-        @media (max-width: 900px) { .pr-grid { grid-template-columns: minmax(0,1fr); max-width: 440px; margin: 0 auto; } }
+        .pr-grid { display: grid; gap: 16px; grid-template-columns: repeat(4, minmax(0,1fr)); align-items: stretch; }
+        @media (max-width: 1100px) { .pr-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+        @media (max-width: 620px) { .pr-grid { grid-template-columns: minmax(0,1fr); max-width: 440px; margin: 0 auto; } }
         .pr-card { transition: transform .15s, box-shadow .15s; }
         .pr-card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -24px rgba(35,42,99,.45); }
         @media (prefers-reduced-motion: reduce) { .pr-card { transition: none } }
@@ -116,28 +119,35 @@ export default function PricingPage() {
         {user && <span style={{ fontSize: "0.78rem", color: C.muted }}>{user.email}</span>}
       </nav>
 
-      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "2.5rem 1.25rem 4rem", display: "flex", flexDirection: "column", gap: 22 }}>
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "2.5rem 1.25rem 4rem", display: "flex", flexDirection: "column", gap: 22 }}>
         <header style={{ textAlign: "center" }}>
           <h1 style={{ fontSize: "clamp(1.7rem,3.4vw,2.4rem)", fontWeight: 900, margin: "0 0 0.4rem", letterSpacing: "-0.03em" }}>
             Every feature on every plan. <span style={{ color: C.pos }}>Pick by number of businesses.</span>
           </h1>
-          <p style={{ color: C.muted, margin: 0 }}>Prices + {SUBSCRIPTION_GST_RATE}% GST, billed monthly, cancel anytime.</p>
+          <p style={{ color: C.muted, margin: 0 }}>Prices + {SUBSCRIPTION_GST_RATE}% GST. Pay monthly, or yearly and get 2 months free.</p>
+          <div role="radiogroup" aria-label="Billing" style={{ display: "inline-flex", marginTop: 16, padding: 4, borderRadius: 999, background: "#FFFFFF", border: `1px solid ${C.line}` }}>
+            {(["monthly", "yearly"] as const).map(b => (
+              <button key={b} role="radio" aria-checked={billing === b} onClick={() => setBilling(b)} style={{ height: 38, padding: "0 18px", borderRadius: 999, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 14, background: billing === b ? C.navy : "transparent", color: billing === b ? "#FFFFFF" : C.muted }}>
+                {b === "monthly" ? "Monthly" : <>Yearly <span style={{ marginLeft: 6, fontSize: 11, padding: "2px 7px", borderRadius: 999, background: billing === b ? C.gold : C.posSoft, color: billing === b ? "#1B2A22" : C.pos }}>2 months free</span></>}
+              </button>
+            ))}
+          </div>
         </header>
 
         {currentSub && (
           <div style={{ background: C.posSoft, color: C.pos, borderRadius: 12, padding: "0.8rem 1.2rem", textAlign: "center", fontSize: "0.9rem" }}>
-            You&apos;re on <b>{currentSub.status === "trial" ? "the free week" : planLabel(currentSub.plan)}</b>{currentSub.ends_at ? ` until ${new Date(currentSub.ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""}.
+            You&apos;re on <b>{currentSub.status === "trial" ? "the free trial" : planLabel(currentSub.plan)}</b>{currentSub.ends_at ? ` until ${new Date(currentSub.ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""}.
             <Link href="/finance" style={{ color: C.navy, marginLeft: 12, fontWeight: 800, textDecoration: "none" }}>Go to FreBook →</Link>
           </div>
         )}
 
-        {/* Free week */}
+        {/* Free trial */}
         {canClaim && (
           <section style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "18px 20px", borderRadius: 18, background: "linear-gradient(120deg,#0F2B25,#1B4237)", color: "#FFFFFF" }}>
             <span aria-hidden="true" style={{ fontSize: 30 }}>🎁</span>
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={{ fontWeight: 900, fontSize: 18 }}>Try everything free for {TRIAL_DAYS} days</div>
-              <div style={{ color: "#C9D3CE", fontSize: 14 }}>All features and any number of businesses. No card needed. Choose a plan when the week ends.</div>
+              <div style={{ color: "#C9D3CE", fontSize: 14 }}>All features and any number of businesses. No card needed. Choose a plan when the trial ends.</div>
             </div>
             <button onClick={claimTrial} disabled={paying !== null} style={{ height: 44, padding: "0 20px", borderRadius: 12, border: "none", background: C.gold, color: "#1B2A22", fontWeight: 900, cursor: "pointer" }}>
               {paying === "trial" ? "Starting…" : `Start free ${TRIAL_DAYS}-day trial`}
@@ -158,7 +168,10 @@ export default function PricingPage() {
           {FREBOOK_PLANS_LIST.map(plan => {
             const isCurrent = paidCurrent === plan.id;
             const popular = !!plan.badge;
-            const now = disc ? Math.round(plan.price * (1 - disc / 100)) : null;
+            const base = billing === "yearly" ? plan.yearly : plan.price;
+            // A referral takes half of one month's price off (on a yearly plan too)
+            const now = disc ? Math.round(base - plan.price * disc / 100) : null;
+            const perMonth = Math.round(plan.yearly / 12);
             return (
               <div key={plan.id} className="pr-card" style={{ position: "relative", display: "flex", flexDirection: "column", gap: 14, padding: 22, borderRadius: 20,
                 background: popular ? "linear-gradient(170deg,#FFFFFF 0%,#F3F5FF 100%)" : "#FFFFFF", border: `${popular ? 2 : 1}px solid ${popular ? C.navy : C.line}` }}>
@@ -166,16 +179,22 @@ export default function PricingPage() {
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: C.navy }}>{plan.name}</div>
                   <div style={{ marginTop: 6, display: "flex", alignItems: "baseline", gap: 6 }}>
-                    {now !== null && <span style={{ fontSize: 18, color: C.muted, textDecoration: "line-through" }}>₹{fmt(plan.price)}</span>}
-                    <span style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.04em", fontVariantNumeric: "tabular-nums" }}>₹{fmt(now ?? plan.price)}</span>
-                    <span style={{ fontSize: 13, color: C.muted }}>/month + GST</span>
+                    {now !== null && <span style={{ fontSize: 16, color: C.muted, textDecoration: "line-through" }}>₹{fmt(base)}</span>}
+                    <span style={{ fontSize: 36, fontWeight: 900, letterSpacing: "-0.04em", fontVariantNumeric: "tabular-nums" }}>₹{fmt(now ?? base)}</span>
+                    <span style={{ fontSize: 13, color: C.muted }}>/{billing === "yearly" ? "year" : "month"} + GST</span>
                   </div>
-                  {now !== null && <div style={{ fontSize: 12, fontWeight: 700, color: "#8A5A00" }}>first month with referral · then ₹{fmt(plan.price)}</div>}
+                  {billing === "yearly" && <div style={{ fontSize: 12, fontWeight: 700, color: C.pos }}>₹{fmt(perMonth)}/month · save ₹{fmt(plan.price * 12 - plan.yearly)}</div>}
+                  {now !== null && <div style={{ fontSize: 12, fontWeight: 700, color: "#8A5A00" }}>with your referral discount · then ₹{fmt(base)}</div>}
+                  <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>{plan.audience}</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, background: C.bg }}>
                   <span aria-hidden="true" style={{ fontSize: 20 }}>🏢</span>
-                  <span style={{ fontWeight: 900, fontSize: 15 }}>{plan.businesses === null ? "Unlimited businesses" : `Up to ${plan.businesses} businesses`}</span>
+                  <span style={{ fontWeight: 900, fontSize: 15 }}>{plan.businesses === null ? "Unlimited businesses" : plan.businesses === 1 ? "1 business" : `Up to ${plan.businesses} businesses`}</span>
                   <span style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>one login</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, background: C.bg, marginTop: -6 }}>
+                  <span aria-hidden="true" style={{ fontSize: 20 }}>📄</span>
+                  <span style={{ fontWeight: 800, fontSize: 14 }}>{fmt(plan.pages)} PDF statement pages / month</span>
                 </div>
                 <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
                   {plan.features.map(f => <li key={f} style={{ display: "flex", gap: 8, fontSize: 13.5 }}><span style={{ color: C.pos, fontWeight: 900 }}>✓</span>{f}</li>)}
@@ -195,7 +214,7 @@ export default function PricingPage() {
           <div>
             <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: C.gold }}>Refer & save</div>
             <h2 style={{ margin: "4px 0 6px", fontSize: 20 }}>{REFERRAL_DISCOUNT_PCT}% off for your friend — and {REFERRAL_DISCOUNT_PCT}% off for you</h2>
-            <p style={{ margin: 0, color: C.muted, fontSize: 14, lineHeight: 1.55 }}>A new account made with your link gets the free week, then half price on its first month. When they pay, your next payment is half price too.</p>
+            <p style={{ margin: 0, color: C.muted, fontSize: 14, lineHeight: 1.55 }}>A new account made with your link gets the free trial, then half off its first month. When they pay, you get half a month off your next payment too.</p>
           </div>
           {ref?.setup_needed ? <div style={{ color: "#8A5A00", fontSize: 13 }}>Referrals are being set up — check back soon.</div> : ref ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -214,6 +233,7 @@ export default function PricingPage() {
         </section>
 
         <div style={{ textAlign: "center", fontSize: "0.78rem", color: C.muted, lineHeight: 1.8 }}>
+          Excel / CSV bank statements are read free, without using your page allowance. Need more than 15 businesses? Write to us for a CA plan sized to your practice.<br />
           Payments secured by Razorpay · GST invoice for every payment · Cancel anytime · Data stored in India
         </div>
       </div>

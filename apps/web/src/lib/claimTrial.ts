@@ -1,7 +1,7 @@
 // One free FreBook week per account, claimed by the user. Pure logic over a small store so it can be tested without a database.
 import { FREBOOK_PLAN } from "./plans";
 
-export const TRIAL_DAYS = 7;   // was 30; trials already running keep their end date
+export const TRIAL_DAYS = 14;   // was 7; trials already running keep their end date
 
 export type SubscriptionRow = { status: string | null; plan: string | null; subscription_ends_at: string | null };
 

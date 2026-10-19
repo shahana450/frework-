@@ -22,11 +22,12 @@ const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const PRICES = FREBOOK_PLANS_LIST.map(p => inr(p.price));
 
 test("plans: Basic ₹699 (2 businesses) · Pro ₹999 (5) · Unlimited ₹1,499 (any) — the server sells exactly these", () => {
-  assert.deepEqual(PLAN_PRICES, { fb_basic: 699, fb_pro: 999, frebook: 1499 });
-  assert.deepEqual(PLAN_PAISE, { fb_basic: 69900, fb_pro: 99900, frebook: 149900 });
-  assert.deepEqual(FREBOOK_PLANS_LIST.map(p => [p.name, p.businesses]), [["Basic", 2], ["Pro", 5], ["Unlimited", null]]);
-  assert.equal(FREBOOK_PLAN.id, "frebook");          // existing ₹1,499 subscribers stay on Unlimited
-  assert.equal(FREBOOK_PRICE_LABEL, "₹699");         // pages say "from ₹699"
+  // 19 Oct 2026: Starter ₹399 (1) · Basic ₹699 (2) · Pro ₹999 (5) · CA Practice ₹2,499 (15); Unlimited ₹1,499 kept for existing subscribers, not sold
+  assert.deepEqual(PLAN_PRICES, { fb_starter: 399, fb_basic: 699, fb_pro: 999, fb_ca: 2499, frebook: 1499 });
+  assert.deepEqual(PLAN_PAISE, { fb_starter: 39900, fb_basic: 69900, fb_pro: 99900, fb_ca: 249900 });
+  assert.deepEqual(FREBOOK_PLANS_LIST.map(p => [p.name, p.businesses]), [["Starter", 1], ["Basic", 2], ["Pro", 5], ["CA Practice", 15]]);
+  assert.equal(FREBOOK_PLAN.id, "fb_ca");
+  assert.equal(FREBOOK_PRICE_LABEL, "₹399");         // pages say "from ₹399"
 });
 
 test("plans: business limits — trial and earlier paid plans are unlimited", () => {
@@ -40,7 +41,7 @@ test("plans: business limits — trial and earlier paid plans are unlimited", ()
 test("plans: GST is added at checkout, and a referral halves the price before GST", () => {
   assert.equal(chargePaise("fb_basic"), 82482);        // ₹699 + 18% = ₹824.82
   assert.equal(chargePaise("fb_pro"), 117882);         // ₹999 + 18% = ₹1,178.82
-  assert.equal(chargePaise("frebook"), 176882);        // ₹1,499 + 18% = ₹1,768.82
+  assert.equal(chargePaise("frebook"), 176882);        // ₹1,499 + 18% = ₹1,768.82 (existing Unlimited renewals)
   assert.equal(chargePaise("fb_basic", 50), 41241);    // ₹349.50 + 18% = ₹412.41
   assert.equal(chargePaise("nope"), null);
 });
@@ -55,6 +56,10 @@ test("T1: no page shows a monthly price other than FreBook's, except the listed 
     "finance/payroll/page.tsx|₹200",    // Kerala professional tax
     "services/compliance/page.tsx|₹999", // compliance service
     "components/landing/business-os-homepage.tsx|₹3,999", // FreBook Managed — done-for-you service, not the FreBook plan
+    "dashboard/docs-upload/page.tsx|₹1,499",          // Accounting & Bookkeeping service
+    "dashboard/service-requests/page.tsx|₹1,499",     // Accounting & Bookkeeping service
+    "dashboard/services/page.tsx|₹1,499",             // Accounting & Bookkeeping service
+    "services/accounting/page.tsx|₹1,499",            // Accounting & Bookkeeping service
   ]);
   const monthly = /₹\s?([\d,]+[kKL]?)"?\s*,?\s*["']?\s*(?:\/\s*mo(?:nth)?\b|per month|Per Month|Starting per month|\/ month|Starting \/ month)/g;
   const bad: string[] = [];
@@ -98,11 +103,11 @@ test("T1: no page mentions FrePilot, its tagline, or a platform fee", () => {
   assert.deepEqual(hits(/platform[ -]fees?|platform charges?|convenience fees?/i), []);
 });
 
-test("T1: no yearly toggle or extra tiers on the pricing pages", () => {
-  for (const f of ["app/pricing/page.tsx", "app/finance/pricing/page.tsx"]) {
-    const s = read(join(SRC, f));
-    assert.ok(!/setYearly|billed yearly|Contact Sales|"enterprise"/i.test(s), f);
-  }
+test("T1: pricing pages offer monthly or yearly (2 months free), and no enterprise / contact-sales tier", () => {
+  // 19 Oct 2026: the owner chose yearly billing with 2 months free (replaces "monthly only")
+  const s = read(join(SRC, "app/finance/pricing/page.tsx"));
+  assert.ok(/2 months free/.test(s) && /billing: Billing|useState<Billing>/.test(s));
+  for (const f of ["app/pricing/page.tsx", "app/finance/pricing/page.tsx"]) assert.ok(!/Contact Sales|"enterprise"/i.test(read(join(SRC, f))), f);
 });
 
 test("T1: subscription rows with old plan ids display without errors", () => {
@@ -110,7 +115,8 @@ test("T1: subscription rows with old plan ids display without errors", () => {
     const label = planLabel(id);
     assert.match(label, /^FreBook \(earlier plan: \w+\)$/, id);
   }
-  assert.equal(planLabel(FREBOOK_PLAN.id), "FreBook Unlimited");
+  assert.equal(planLabel("frebook"), "FreBook Unlimited");      // existing Unlimited subscribers
+  assert.equal(planLabel(FREBOOK_PLAN.id), "FreBook CA Practice");
   assert.equal(planLabel("fb_basic"), "FreBook Basic");
   assert.equal(planLabel("fb_pro"), "FreBook Pro");
   assert.equal(planLabel(null), "Free");

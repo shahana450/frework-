@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, serverError } from "@/lib/apiAuth";
-import { PLAN_PRICES, chargePaise } from "@/lib/plans";
+import { PLAN_PRICES, chargePaise, billingDays, type Billing } from "@/lib/plans";
 import { afterPayment } from "@/lib/referrals";
 
 const supabaseAdmin = createClient(
@@ -51,12 +51,16 @@ export async function POST(req: NextRequest) {
       if (order.notes?.user_id !== user.id) return NextResponse.json({ error: "This payment belongs to a different account." }, { status: 403 });
       // A referral discount was decided on the server when the order was made; it travels in the order's notes
       const pct = Number(order.notes?.discount_pct ?? 0);
-      const due = chargePaise(plan, pct === 50 ? 50 : 0);
+      const billing: Billing = order.notes?.billing === "yearly" ? "yearly" : "monthly";
+      const due = chargePaise(plan, pct === 50 ? 50 : 0, billing);
       if (!due || order.amount_paid < due) return NextResponse.json({ error: "Payment amount doesn't match the plan. Contact support." }, { status: 400 });
       if (pct) applied = { kind: order.notes?.ref_kind, referralId: order.notes?.ref_id };
       paid = order.amount_paid;
       ref = razorpay_order_id;
-      endsAt = new Date(Date.now() + 30 * 86400000);
+      // Paying again before the period ends adds on to it, so no paid days are lost
+      const { data: cur } = await supabaseAdmin.from("fw_fin_subscriptions").select("plan,status,subscription_ends_at").eq("user_id", user.id).maybeSingle();
+      const from = cur?.status === "active" && cur.plan === plan && cur.subscription_ends_at && Date.parse(cur.subscription_ends_at) > Date.now() ? Date.parse(cur.subscription_ends_at) : Date.now();
+      endsAt = new Date(from + billingDays(billing) * 86400000);
     }
 
     await supabaseAdmin.from("fw_fin_subscriptions").upsert({

@@ -28,7 +28,7 @@ test("claim-trial: first claim starts a 30-day FreBook trial", async () => {
   const r = await claimTrial(db.store, "u1", NOW);
   assert.equal(r.status, 200);
   assert.equal(db.rows.length, 1);
-  assert.equal(db.rows[0].plan, "frebook");
+  assert.equal(db.rows[0].plan, "fb_ca");             // the top plan on sale; a trial keeps any number of businesses
   assert.equal(db.rows[0].status, "trial");
   const ends = new Date(NOW.getTime() + TRIAL_DAYS * 86400000).toISOString();
   if (r.status === 200) assert.equal(r.body.ends_at, ends);
@@ -85,5 +85,5 @@ test("pricing pages: the free-week button calls claim-trial and goes to /finance
     // old tiers by id or as a plan name ("Professional services" is fine — that's the services line)
     assert.ok(!/["'](starter|professional|enterprise)["']|\b(Starter|Professional|Enterprise)\s+(plan|tier)\b|name:\s*["'](Starter|Professional|Enterprise)/i.test(s), `${f} shows an old plan`);
   }
-  assert.equal(TRIAL_DAYS, 7);
+  assert.equal(TRIAL_DAYS, 14);
 });

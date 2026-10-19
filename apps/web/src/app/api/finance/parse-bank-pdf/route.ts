@@ -3,6 +3,7 @@ import { requireUser, requireBusiness } from "@/lib/apiAuth";
 import { createClient } from "@supabase/supabase-js";
 import { fileToShelf, fyOfDate } from "@/lib/shelf";
 import { parseStatementGrid } from "@/lib/bankExcel";
+import { checkStatementPages, addStatementPages } from "@/lib/statementQuota";
 
 export const maxDuration = 300;
 import { getAI, aiConfigured } from "@/lib/ai";
@@ -24,12 +25,17 @@ export async function POST(req: NextRequest) {
     const bytes = Buffer.from(await file.arrayBuffer());
     const lower = file.name.toLowerCase();
 
+    const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    // The business it's for: its owner's plan sets the monthly page allowance. Only a business this user can open counts.
+    const bizIdRaw = (form.get("business_id") as string) || "";
+    const bizGate = bizIdRaw ? await requireBusiness(req, bizIdRaw) : null;
+    const quotaBiz = bizGate && !(bizGate instanceof NextResponse) ? bizIdRaw : null;
     // Keep a copy on the business's Shelf (Bank rack). Best effort — never blocks reading the statement.
-    const shelfBiz = (form.get("business_id") as string) || "";
+    // Big PDFs arrive in page batches; only the first batch is filed (shelf=0 on the rest).
+    const shelfBiz = form.get("shelf") === "0" ? "" : bizIdRaw;
     if (shelfBiz) {
       const gate = await requireBusiness(req, shelfBiz, { write: true });
       if (!(gate instanceof NextResponse)) {
-        const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
         await fileToShelf(sb, { businessId: shelfBiz, actorId: gate.user.id, rack: "bank", title: `Bank statement · ${file.name}`, fileName: file.name, mime: file.type, bytes: new Uint8Array(bytes), source: "statement", docType: "Bank statement", fy: fyOfDate(new Date().toISOString().slice(0, 10)) });
       }
     }
@@ -51,6 +57,13 @@ export async function POST(req: NextRequest) {
     } else {
       docBlock = { type: "document", source: { type: "base64", media_type: "application/pdf", data: bytes.toString("base64") } };
     }
+
+    // Pages the AI will read count against the month's allowance (spreadsheets above never reach here unless their layout is odd)
+    let pages = 0;
+    if (docBlock?.type === "image") pages = 1;
+    else if (docBlock) { try { const { PDFDocument } = await import("pdf-lib"); pages = (await PDFDocument.load(bytes, { ignoreEncryption: true })).getPageCount(); } catch { pages = 1; } }
+    const quota = await checkStatementPages(sb, quotaBiz, user.email, pages);
+    if (!quota.ok) return NextResponse.json({ error: quota.error, code: "page_limit", upgrade: quota.upgrade, used: quota.used, allowance: quota.allowance }, { status: 402 });
 
     const prompt = `This is a bank statement. Extract ALL transaction rows from it.
 Return ONLY a valid JSON array — no markdown fences, no explanation, nothing else before or after.
@@ -99,7 +112,8 @@ Rules:
       return NextResponse.json({ error: "No transactions found in this PDF. Try downloading the statement as Excel from your bank portal." }, { status: 422 });
     }
 
-    return NextResponse.json({ transactions });
+    await addStatementPages(sb, quota.ownerId, pages);
+    return NextResponse.json({ transactions, pages });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     // Surface meaningful errors
