@@ -12,6 +12,8 @@ type Kind = "part" | "block" | "total" | "grand" | "noteHead" | "line" | "blank"
 function kindOf(r: Cell[]): Kind {
   const t = String(r.find(c => typeof c === "string" && c.trim()) ?? "").trim();
   if (!r.length || r.every(c => c === null || c === "")) return "blank";
+  if (/^Closing Balance$/.test(t)) return "grand";
+  if (/^Opening Balance$/.test(t)) return "total";
   if (/^(TOTAL|Grand Total)$/i.test(t) || /for the year$/i.test(t) || /^Closing cash/i.test(t)) return "grand";
   if (/^(Total\b|III\.|V\.|Net cash|Net change|Opening cash)/i.test(t) || /before tax/i.test(t)) return "total";
   if (/^(BS|P&L) Note \d+:/.test(t)) return "noteHead";

@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Suspense } from "react";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import { writeStyledWorkbook } from "@/lib/styledWorkbook";
+import type { Cell } from "@/lib/statementExport";
 
 type Account = { id: string; code: string; name: string; type: string };
 type LedgerEntry = {
@@ -33,6 +35,8 @@ function LedgerContent() {
   const [search, setSearch] = useState("");
   const [openingBal, setOpeningBal] = useState(0);
   const [openingType, setOpeningType] = useState<"Dr" | "Cr">("Dr");
+  const [bizName, setBizName] = useState("");
+  const [xlBusy, setXlBusy] = useState(false);
   // Period from the report that linked here (?from=&to=); none = the whole ledger
   const [from, setFrom] = useState(searchParams.get("from") ?? "");
   const [to, setTo] = useState(searchParams.get("to") ?? "");
@@ -48,6 +52,7 @@ function LedgerContent() {
       const saved = (readActiveBusiness(user.id) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
+      supabase.from("fw_fin_businesses").select("name").eq("id", saved).maybeSingle().then(({ data }) => setBizName(data?.name ?? ""));
       const { data } = await supabase.from("fw_fin_chart_of_accounts").select("id,code,name,type").eq("business_id", saved).eq("is_group", false).order("code");
       setAccounts(data ?? []);
     });
@@ -152,6 +157,26 @@ function LedgerContent() {
         <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
         <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Ledger{selectedAcc ? ` · ${selectedAcc.name}` : ""}</span>
         <div style={{ flex: 1 }} />
+        {selectedAcc && entries.length > 0 && (
+          <button disabled={xlBusy} onClick={async () => {
+            setXlBusy(true);
+            try {
+              const dmy = (d: string) => d ? new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
+              const period = from || to ? `${from ? dmy(from) : "Start"} to ${to ? dmy(to) : "date"}` : "All dates";
+              const rows: Cell[][] = [
+                [`Ledger — ${selectedAcc.name}`], [bizName || "Business"], [`${period} · Account code ${selectedAcc.code || "—"}`], [],
+                ["Date", "Entry No", "Narration", "Debit", "Credit", "Balance", "Dr/Cr"],
+                [null, null, "Opening Balance", openingType === "Dr" && openingBal ? openingBal : null, openingType === "Cr" && openingBal ? openingBal : null, openingBal, openingType],
+                ...entries.map(e => [dmy(e.date), e.entry_no, e.narration, e.dr || null, e.cr || null, e.balance, e.balance_type] as Cell[]),
+                [null, null, "Closing Balance", totalDr, totalCr, closingBalance, closingType],
+              ];
+              const name = `Ledger-${selectedAcc.name}-${bizName}-${period}`.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/-+/g, "-").slice(0, 120) + ".xlsx";
+              await writeStyledWorkbook([{ name: "Ledger", rows, widths: [14, 16, 48, 16, 16, 18, 7], moneyFrom: 3 }], name, `Prepared with FreBook · ${dmy(new Date().toISOString().slice(0, 10))}`);
+            } finally { setXlBusy(false); }
+          }} style={{ background: "#0B7A55", border: "none", color: "#FFFFFF", padding: "5px 14px", borderRadius: 6, cursor: xlBusy ? "wait" : "pointer", fontSize: "0.8rem", fontWeight: 700 }}>
+            {xlBusy ? "Preparing…" : "⬇ Excel"}
+          </button>
+        )}
         <button onClick={() => window.print()} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "#141A3A", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
           🖨 Print
         </button>
