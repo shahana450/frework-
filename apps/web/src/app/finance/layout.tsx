@@ -68,7 +68,7 @@ const SHORT: Record<string, string> = {
 };
 const shortLabel = (l: string) => SHORT[l] ?? l;
 
-const UNGUARDED = ["/finance/pricing", "/finance/setup", "/finance/admin"];
+const UNGUARDED = ["/finance/pricing", "/finance/setup", "/finance/admin", "/finance/help"];
 
 const TOP_ICONS = [
   { href: "/finance", label: "Home" },

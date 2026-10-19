@@ -72,6 +72,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "🫂", label: "Team & Access", href: "/finance/team" },
     { icon: "🔌", label: "Tally", href: "/finance/tally" },
     { icon: "🏢", label: "CA Dashboard", href: "/finance/ca-dashboard", accountant: true },
+    { icon: "❓", label: "Help & FAQ", href: "/finance/help" },
   ] },
 ];
 

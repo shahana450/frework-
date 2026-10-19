@@ -27,6 +27,7 @@ const footerLinks = {
   Company: [
     { label: "About FreWork", href: "/about" },
     { label: "Pricing", href: "/pricing" },
+    { label: "Help & FAQ", href: "/help" },
     { label: "Blog", href: "/blog" },
     { label: "Contact", href: "/contact" },
     { label: "Privacy Notice", href: "/privacy" },
