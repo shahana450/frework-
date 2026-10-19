@@ -5,20 +5,33 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { signedMoney, type PresentedBS, type PresentedPL, type StmtSection } from "@/lib/statements";
-import { plExportRows, bsExportRows, exportFileName, type ExportMeta } from "@/lib/statementExport";
+import { plExportRows, bsExportRows, type ExportMeta, type Cell } from "@/lib/statementExport";
+import { bsS3Rows, plS3Rows, notesRows, tbRows, cfRows, allStatementsFileName, type CFExport } from "@/lib/s3Export";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import type { Schedule3BS, Schedule3PL, S3Head } from "@/lib/schedule3";
 
-// Excel export of the presented statement — the same lines and signs as the screen (and as Print → PDF)
-async function downloadStatementExcel(kind: "pl" | "bs", presented: PresentedPL | PresentedBS, meta: ExportMeta) {
+// Excel: every statement in one workbook, the same lines and signs as the screen (and as Print → PDF)
+async function downloadAllStatements({ tb, pl, bs, cf, meta }: { tb: TBData; pl: PLData; bs: BSData; cf: CFExport | null; meta: ExportMeta }) {
   const XLSX = await import("xlsx");
-  const rows = kind === "pl" ? plExportRows(presented as PresentedPL, meta) : bsExportRows(presented as PresentedBS, meta);
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"] = [{ wch: 52 }, { wch: 18 }];
-  for (let r = 0; r < rows.length; r++) { const c = ws[XLSX.utils.encode_cell({ r, c: 1 })]; if (c && typeof c.v === "number") c.z = "#,##,##0.00;-#,##,##0.00"; }
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, kind === "pl" ? "Profit & Loss" : "Balance Sheet");
-  XLSX.writeFile(wb, exportFileName(kind === "pl" ? "Profit-and-Loss" : "Balance-Sheet", meta));
+  const add = (name: string, rows: Cell[][], widths: number[], moneyFrom: number, noteCol = -1) => {
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = widths.map(wch => ({ wch }));
+    for (let r = 0; r < rows.length; r++) for (let c = moneyFrom; c < (rows[r]?.length ?? 0); c++) {
+      if (c === noteCol) continue;
+      const cell = ws[XLSX.utils.encode_cell({ r, c })];
+      if (cell && typeof cell.v === "number") cell.z = "#,##,##0.00;-#,##,##0.00";
+    }
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  };
+  if (bs.schedule3) add("Balance Sheet", bsS3Rows(bs.schedule3, meta), [58, 8, 20], 2);
+  else if (bs.presented) add("Balance Sheet", bsExportRows(bs.presented, meta), [58, 20], 1);
+  if (pl.schedule3) add("Profit & Loss", plS3Rows(pl.schedule3, meta), [58, 8, 20], 2);
+  else if (pl.presented) add("Profit & Loss", plExportRows(pl.presented, meta), [58, 20], 1);
+  if (bs.schedule3 || pl.schedule3) add("Notes", notesRows(bs.schedule3, pl.schedule3, meta), [64, 4, 20], 2);
+  add("Trial Balance", tbRows(tb.accounts, meta), [10, 44, 16, 16, 16, 16, 16, 16], 2);
+  if (cf) add("Cash Flow", cfRows(cf, meta), [60, 20], 1);
+  XLSX.writeFile(wb, allStatementsFileName(meta));
 }
 
 type ReportTab = "trial_balance" | "profit_loss" | "balance_sheet" | "cash_flow";
@@ -120,7 +133,8 @@ export default function ReportsPage() {
   const [tbData, setTbData] = useState<TBData | null>(null);
   const [error, setError] = useState("");
   const [bizName, setBizName] = useState("");
-  const [tbDetail, setTbDetail] = useState(false);   // TB: opening balance + this period's debits/credits + closing
+  const [tbDetail, setTbDetail] = useState(false);
+  const [xlBusy, setXlBusy] = useState(false);   // TB: opening balance + this period's debits/credits + closing
   PERIOD = period ? { from: period.start_date, to: period.end_date, tab } : { from: "", to: "", tab };
 
   useEffect(() => {
@@ -188,10 +202,18 @@ export default function ReportsPage() {
             {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
           </select>
         )}
-        {((tab === "profit_loss" && plData?.presented) || (tab === "balance_sheet" && bsData?.presented)) && (
-          <button onClick={() => downloadStatementExcel(tab === "profit_loss" ? "pl" : "bs", (tab === "profit_loss" ? plData!.presented : bsData!.presented)!, { business: bizName || "Business", period: period ? `FY ${period.label} (${period.start_date} to ${period.end_date})` : "" })}
-            style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "#141A3A", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
-            ⬇ Excel
+        {tbData && plData && bsData && (
+          <button disabled={xlBusy} title="One workbook: Balance Sheet, P&L, Notes, Trial Balance and Cash Flow"
+            onClick={async () => {
+              setXlBusy(true);
+              try {
+                const meta = { business: bizName || "Business", period: period ? `FY ${period.label} (${period.start_date} to ${period.end_date})` : "" };
+                const cf = period && bizId ? await fetch(`/api/finance/reports?business_id=${bizId}&from=${period.start_date}&to=${period.end_date}&report=cash_flow`).then(r => r.ok ? r.json() : null).catch(() => null) : null;
+                await downloadAllStatements({ tb: tbData, pl: plData, bs: bsData, cf, meta });
+              } finally { setXlBusy(false); }
+            }}
+            style={{ background: "#0B7A55", border: "none", color: "#FFFFFF", padding: "6px 14px", borderRadius: 6, cursor: xlBusy ? "wait" : "pointer", fontSize: "0.8rem", fontWeight: 700 }}>
+            {xlBusy ? "Preparing…" : "⬇ Excel — all statements"}
           </button>
         )}
         <button onClick={() => window.print()} title="Print, or choose 'Save as PDF' — the printout is the presented statement shown on screen" style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "#141A3A", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>

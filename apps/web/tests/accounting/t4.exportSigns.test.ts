@@ -52,7 +52,10 @@ test("T4: P&L export matches the screen, including the reversed bank charge and 
 
 test("T4: the Reports page exports from the presented statements only", () => {
   const page = readFileSync(join(process.cwd(), "src/app/finance/reports/page.tsx"), "utf8");
-  assert.match(page, /plExportRows\(presented as PresentedPL/);
-  assert.match(page, /bsExportRows\(presented as PresentedBS/);
+  // Schedule III sheets are built from the presented statements on the server; the fallback uses presented too
+  assert.match(page, /bsS3Rows\(bs\.schedule3/);
+  assert.match(page, /plS3Rows\(pl\.schedule3/);
+  assert.match(page, /plExportRows\(pl\.presented/);
+  assert.match(page, /bsExportRows\(bs\.presented/);
   assert.equal(exportFileName("Balance-Sheet", meta), "Balance-Sheet-AUDIT-TEST-TRADERS-FY-2026-27.xlsx");
 });
