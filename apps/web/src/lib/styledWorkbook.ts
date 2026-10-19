@@ -15,8 +15,10 @@ function kindOf(r: Cell[]): Kind {
   if (/^(TOTAL|Grand Total)$/i.test(t) || /for the year$/i.test(t) || /^Closing cash/i.test(t)) return "grand";
   if (/^(Total\b|III\.|V\.|Net cash|Net change|Opening cash)/i.test(t) || /before tax/i.test(t)) return "total";
   if (/^(BS|P&L) Note \d+:/.test(t)) return "noteHead";
-  if (/^(I|II|IV)\.\s/.test(t) && t === t.toUpperCase()) return "part";
-  if (/^(I|II|IV)\.\s/.test(t) || /^[A-Z &]+$/.test(t)) return "part";
+  // Section headings carry no amount; ledger names in capitals are not headings
+  const hasNum = r.some(c => typeof c === "number");
+  if (!hasNum && (/^(I|II|IV)\.\s/.test(t) || /^(BALANCE SHEET|PROFIT AND LOSS|[A-Z]+ ACTIVITIES)$/.test(t))) return "part";
+  if (hasNum && /^(I|II)\.\s/.test(t)) return "total";
   if (/^\(\d+\)\s/.test(t)) return "block";
   return "line";
 }
