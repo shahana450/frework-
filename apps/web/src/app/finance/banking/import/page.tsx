@@ -1,4 +1,5 @@
 "use client";
+import { readBankStatement } from "@/lib/readStatement";
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
@@ -151,12 +152,10 @@ export default function BankingPage() {
   }
 
   /* ── Parse PDF (server-side via Claude) ── */
-  async function parsePDF(file: File) {
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch("/api/finance/parse-bank-pdf", { method: "POST", body: form });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error ?? "PDF parse failed");
+  async function parsePDF(file: File, stopAnim: () => void) {
+    // Long PDFs are read in page batches with real progress
+    const json = await readBankStatement(file, { onProgress: p => { if (p.total > 1) { stopAnim(); setParseProgress(Math.round(5 + (p.done / p.total) * 90)); setParseStep(p.label); } } });
+    if (json.missingPages.length) setParseError(`Some pages couldn't be read (pages ${json.missingPages.join(", ")}). Everything else is below — upload those pages again, or the Excel statement, to fill the gap.`);
     return (json.transactions as Omit<TxRow, "id" | "ledger_id" | "ledger_name" | "pushed">[]).map(t => ({
       ...t, id: uid(), ledger_id: null, ledger_name: null, pushed: false,
     }));
@@ -190,7 +189,7 @@ export default function BankingPage() {
       if (["xlsx", "xls", "csv"].includes(ext)) {
         txs = await parseExcel(file);
       } else if (ext === "pdf") {
-        txs = await parsePDF(file);
+        txs = await parsePDF(file, () => { if (progressInterval) { clearInterval(progressInterval); progressInterval = null; } });
       } else {
         throw new Error("Unsupported file type. Upload PDF, Excel (.xlsx/.xls), or CSV.");
       }

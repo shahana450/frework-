@@ -1,4 +1,5 @@
 "use client";
+import { readBankStatement } from "@/lib/readStatement";
 import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
@@ -66,11 +67,10 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
       }
       if (!cancelled) setHistory(learnHistory(learned));
 
-      const fd = new FormData(); fd.append("file", file); fd.append("business_id", bizId);
-      const res = await fetch("/api/finance/parse-bank-pdf", { method: "POST", body: fd });
-      const data = await res.json().catch(() => ({}));
+      let data: { transactions: { date: string; description: string; debit: number; credit: number }[] };
+      try { data = await readBankStatement(file, { bizId }); }
+      catch (e) { if (!cancelled) { setError(e instanceof Error ? e.message : "Could not read this statement."); setPhase("error"); } return; }
       if (cancelled) return;
-      if (!res.ok || !Array.isArray(data.transactions)) { setError(data.error ?? "Could not read this statement."); setPhase("error"); return; }
       const parsed: Row[] = (data.transactions as { date: string; description: string; debit: number; credit: number }[])
         .filter(t => (Number(t.debit) || 0) > 0 || (Number(t.credit) || 0) > 0)
         .map((t, i) => ({ id: `r${i}`, date: String(t.date ?? "").slice(0, 10), description: String(t.description ?? ""), debit: Number(t.debit) || 0, credit: Number(t.credit) || 0, ledger: "", aiLedger: "", aiType: "", confidence: 0, state: "open" }));

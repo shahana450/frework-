@@ -1,4 +1,5 @@
 "use client";
+import { readBankStatement } from "@/lib/readStatement";
 import { cur, activeMoney } from "@/lib/money";
 // Smart Inbox — drop every statement, bill, invoice and Excel at once. FreWork reads each file,
 // drafts the entries, marks each "Ready" or "Needs a look", posts the ready ones in one click
@@ -105,10 +106,7 @@ export default function SmartInbox() {
     }));
 
   async function readStatement(job: FileJob, file: File, card = CARD_NAME.test(file.name)) {
-    const fd = new FormData(); fd.append("file", file); fd.append("business_id", bizId);
-    const res = await fetch("/api/finance/parse-bank-pdf", { method: "POST", body: fd });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !Array.isArray(data.transactions)) throw new Error(data.error ?? "Couldn't read this statement.");
+    const data = await readBankStatement(file, { bizId, onProgress: p => { if (p.total > 1) setJob(job.id, { note: p.label }); } });
     const rows = (data.transactions as { date: string; description: string; debit: number; credit: number }[])
       .filter(t => (Number(t.debit) || 0) > 0 || (Number(t.credit) || 0) > 0)
       .map((t, i) => ({ id: `${job.id}-${i}`, date: String(t.date ?? "").slice(0, 10), description: String(t.description ?? ""), debit: Number(t.debit) || 0, credit: Number(t.credit) || 0 }));
