@@ -5,7 +5,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Rocket, Crown, Users, ArrowRight,
-  Sparkles, ShieldCheck, Clock, BadgeCheck, Headphones,
+  ShieldCheck, Clock, BadgeCheck, Headphones,
   BookOpen, ChevronDown,
   MessageCircle, Landmark, Receipt, Calculator, RefreshCw, BarChart3, FileSpreadsheet, Store,
 } from "lucide-react";
@@ -100,52 +100,53 @@ export default function PricingPage() {
     return claiming ? "Starting your free trial…" : `🎁 Start ${TRIAL_DAYS} days free`;
   };
 
+  // Site palette (same as the homepage): soft grey ground, navy, ink, orange highlight, green for savings
+  const NAVY = "#232A63", INK = "#141A3A", MUTED = "#5A6080", LINE = "#E1E4EE", ORANGE = "#F0662B", GREEN = "#0B7A55";
+
   return (
-    <div className="min-h-screen bg-[#060C18]">
+    <div className="min-h-screen" style={{ background: "#F4F5FA", color: INK, fontFamily: "var(--font-plus-jakarta),var(--font-inter),system-ui,sans-serif" }}>
       <Navbar />
 
       {/* ── Hero ── */}
-      <section className="pt-32 pb-16 px-4 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_40%_at_50%_0%,rgba(201,168,76,0.07),transparent)]" />
+      <section className="pt-32 pb-12 px-4 text-center relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 60% 45% at 50% 0%, rgba(35,42,99,0.08), transparent 70%)" }} />
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/20 text-[#C9A84C] text-xs font-semibold tracking-widest uppercase mb-6">
-            <Sparkles className="w-3 h-3" /> Transparent Pricing · No Hidden Fees
-          </div>
-          <h1 className="text-5xl sm:text-7xl font-bold text-white leading-[1.05] mb-5"
-            style={{ fontFamily: "var(--font-cormorant), serif" }}>
-            CA Compliance +<br />
-            <span style={{ background: "linear-gradient(135deg,#F0D78A,#C9A84C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              FreBook Accounting
-            </span>
+          <span className="inline-flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 text-[12px] font-bold rounded-full mb-6" style={{ background: "#FFFFFF", border: `1px solid ${LINE}`, color: NAVY }}>
+            <span className="px-2 py-0.5 rounded-full text-[10.5px] font-extrabold tracking-wide" style={{ background: ORANGE, color: "#FFFFFF" }}>{TRIAL_DAYS} DAYS FREE</span>
+            Simple pricing · no hidden fees
+          </span>
+          <h1 className="text-4xl sm:text-6xl font-extrabold leading-[1.08] mb-5" style={{ color: INK, letterSpacing: "-0.03em", textWrap: "balance" }}>
+            Bookkeeping that runs itself, <span style={{ color: NAVY }}>priced for Indian businesses</span>
           </h1>
-          <p className="text-white/45 text-lg mb-10 leading-relaxed">
-            Start with {TRIAL_DAYS} days free. Then FreBook from {FREBOOK_PRICE_LABEL}/month + GST — Starter, Basic, Pro or CA Practice by number of businesses. Yearly plans get 2 months free.<br className="hidden sm:block" /> Professional services are ordered separately when you need them.
+          <p className="text-lg mb-8 leading-relaxed" style={{ color: MUTED }}>
+            Every FreBook feature on every plan — choose by how many businesses you keep. From {FREBOOK_PRICE_LABEL}/month + GST, and yearly plans get 2 months free.
           </p>
 
-          {/* Trust pills */}
-          <div className="flex flex-wrap justify-center gap-3 mb-12">
-            {TRUST.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/8 text-white/50 text-xs">
-                <Icon className="w-3.5 h-3.5 text-[#C9A84C]/70" /> {label}
-              </div>
-            ))}
-          </div>
-          <div role="radiogroup" aria-label="Billing" className="inline-flex p-1 rounded-full border border-[#C9A84C]/25 bg-white/[0.03]">
+          <div role="radiogroup" aria-label="Billing" className="inline-flex p-1 rounded-full mb-8" style={{ background: "#FFFFFF", border: `1px solid ${LINE}`, boxShadow: "0 6px 20px -12px rgba(20,26,58,0.25)" }}>
             {(["monthly", "yearly"] as const).map(b => (
               <button key={b} role="radio" aria-checked={billing === b} onClick={() => setBilling(b)}
-                className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${billing === b ? "text-[#0B1120]" : "text-white/55 hover:text-white"}`}
-                style={billing === b ? { background: "linear-gradient(135deg,#F0D78A,#C9A84C)" } : undefined}>
-                {b === "monthly" ? "Monthly" : <>Yearly <span className={`ml-1.5 text-[10px] px-2 py-0.5 rounded-full ${billing === b ? "bg-[#0B1120]/15" : "bg-emerald-500/15 text-emerald-300"}`}>2 months free</span></>}
+                className="px-5 py-2 rounded-full text-sm font-bold transition-all"
+                style={billing === b ? { background: NAVY, color: "#FFFFFF" } : { color: MUTED }}>
+                {b === "monthly" ? "Monthly" : <>Yearly <span className="ml-1.5 text-[10.5px] px-2 py-0.5 rounded-full font-extrabold" style={billing === b ? { background: ORANGE, color: "#FFFFFF" } : { background: "#E3F6EE", color: GREEN }}>2 months free</span></>}
               </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-2.5">
+            {TRUST.map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium" style={{ background: "#FFFFFF", border: `1px solid ${LINE}`, color: MUTED }}>
+                <Icon className="w-3.5 h-3.5" style={{ color: NAVY }} /> {label}
+              </div>
             ))}
           </div>
         </motion.div>
       </section>
 
       {/* ── Plan Cards ── */}
-      <section className="px-4 pb-16">
+      <section className="px-4 pb-14">
         {claimMsg && (
-          <div role="status" className={`max-w-xl mx-auto mb-6 rounded-xl px-4 py-3 text-sm font-semibold text-center ${claimMsg.startsWith("✓") ? "bg-emerald-500/10 text-emerald-300" : "bg-red-500/10 text-red-300"}`}>{claimMsg}</div>
+          <div role="status" className="max-w-xl mx-auto mb-6 rounded-xl px-4 py-3 text-sm font-semibold text-center"
+            style={claimMsg.startsWith("✓") ? { background: "#E3F6EE", color: GREEN } : { background: "#FDECEA", color: "#C2321F" }}>{claimMsg}</div>
         )}
         <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
           {FREBOOK_PLANS_LIST.map((plan, i) => {
@@ -157,79 +158,75 @@ export default function PricingPage() {
             const saving = plan.price * 12 - plan.yearly;
             return (
               <motion.div key={plan.id}
-                initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                 className={`relative flex flex-col rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 ${isPopular ? "xl:-mt-3 xl:mb-3" : ""}`}
                 style={{
-                  background: isPopular ? "linear-gradient(165deg,#221A06 0%,#120F05 45%,#0A0B10 100%)" : "linear-gradient(165deg,#0C1426 0%,#070D1A 100%)",
-                  border: isPopular ? "1.5px solid rgba(232,201,122,0.65)" : "1px solid rgba(255,255,255,0.08)",
-                  boxShadow: isPopular ? "0 0 0 1px rgba(201,168,76,0.15), 0 30px 80px -30px rgba(201,168,76,0.45)" : "0 20px 60px -35px rgba(0,0,0,0.8)",
+                  background: isPopular ? NAVY : "#FFFFFF",
+                  color: isPopular ? "#FFFFFF" : INK,
+                  border: isPopular ? `1px solid ${NAVY}` : `1px solid ${LINE}`,
+                  boxShadow: isPopular ? "0 30px 70px -30px rgba(35,42,99,0.6)" : "0 18px 50px -34px rgba(20,26,58,0.35)",
                 }}>
                 {isPopular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[10px] font-black tracking-[0.2em] uppercase text-[#0B1120] whitespace-nowrap"
-                    style={{ background: "linear-gradient(135deg,#F0D78A,#C9A84C)" }}>{plan.badge}</div>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full text-[10.5px] font-extrabold tracking-[0.12em] uppercase whitespace-nowrap" style={{ background: ORANGE, color: "#FFFFFF" }}>{plan.badge}</div>
                 )}
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border ${isPopular ? "bg-[#C9A84C]/15 border-[#C9A84C]/35" : "bg-white/[0.04] border-white/10"}`}>
-                    <Icon className={`w-5 h-5 ${isPopular ? "text-[#E8C97A]" : "text-[#C9A84C]"}`} />
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: isPopular ? "rgba(255,255,255,0.12)" : "#EEF0FA" }}>
+                    <Icon className="w-5 h-5" style={{ color: isPopular ? "#FFFFFF" : NAVY }} />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-white leading-none" style={{ fontFamily: "var(--font-cormorant), serif" }}>{plan.name}</h3>
-                    <p className="text-[11px] text-white/40 mt-1">{plan.audience}</p>
+                    <h3 className="text-xl font-extrabold leading-none" style={{ letterSpacing: "-0.01em" }}>{plan.name}</h3>
+                    <p className="text-[12px] mt-1" style={{ color: isPopular ? "rgba(255,255,255,0.65)" : MUTED }}>{plan.audience}</p>
                   </div>
                 </div>
-                <p className="text-sm text-white/55 leading-relaxed mb-5 min-h-[40px]">{look.line}</p>
+                <p className="text-sm leading-relaxed mb-5 min-h-[40px]" style={{ color: isPopular ? "rgba(255,255,255,0.8)" : MUTED }}>{look.line}</p>
 
                 <div className="mb-1 flex items-end gap-1.5">
-                  <span className="text-[44px] leading-none font-black text-white tabular-nums" style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", letterSpacing: "-0.03em" }}>
-                    ₹{shown.toLocaleString("en-IN")}
-                  </span>
-                  <span className="pb-1.5 text-xs text-white/35">/{billing === "yearly" ? "year" : "month"} + GST</span>
+                  <span className="text-[42px] leading-none font-extrabold tabular-nums" style={{ letterSpacing: "-0.03em" }}>₹{shown.toLocaleString("en-IN")}</span>
+                  <span className="pb-1.5 text-xs" style={{ color: isPopular ? "rgba(255,255,255,0.6)" : MUTED }}>/{billing === "yearly" ? "year" : "month"} + GST</span>
                 </div>
-                <p className={`text-xs font-semibold mb-5 min-h-[16px] ${billing === "yearly" ? "text-emerald-300/90" : "text-white/35"}`}>
+                <p className="text-xs font-semibold mb-5 min-h-[16px]" style={{ color: billing === "yearly" ? (isPopular ? "#9FE3C4" : GREEN) : (isPopular ? "rgba(255,255,255,0.6)" : MUTED) }}>
                   {billing === "yearly" ? `₹${perMonth.toLocaleString("en-IN")}/month · you save ₹${saving.toLocaleString("en-IN")}` : `or ₹${plan.yearly.toLocaleString("en-IN")} a year — 2 months free`}
                 </p>
 
                 <div className="grid grid-cols-2 gap-2 mb-6">
-                  <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] px-3 py-2.5">
-                    <p className="text-lg font-black text-white leading-none tabular-nums">{plan.businesses ?? "∞"}</p>
-                    <p className="text-[10px] uppercase tracking-wider text-white/40 mt-1">{plan.businesses === 1 ? "business" : "businesses"}</p>
-                  </div>
-                  <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] px-3 py-2.5">
-                    <p className="text-lg font-black text-white leading-none tabular-nums">{plan.pages.toLocaleString("en-IN")}</p>
-                    <p className="text-[10px] uppercase tracking-wider text-white/40 mt-1">PDF pages / month</p>
-                  </div>
+                  {[[plan.businesses ?? "∞", plan.businesses === 1 ? "business" : "businesses"], [plan.pages.toLocaleString("en-IN"), "PDF pages / month"]].map(([v, l]) => (
+                    <div key={String(l)} className="rounded-2xl px-3 py-2.5" style={{ background: isPopular ? "rgba(255,255,255,0.08)" : "#F4F5FA" }}>
+                      <p className="text-lg font-extrabold leading-none tabular-nums">{v}</p>
+                      <p className="text-[10px] uppercase tracking-wider mt-1 font-semibold" style={{ color: isPopular ? "rgba(255,255,255,0.6)" : MUTED }}>{l}</p>
+                    </div>
+                  ))}
                 </div>
 
                 <button onClick={() => handlePlanClick(plan)} disabled={claiming}
-                  className={`mt-auto w-full py-3.5 px-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 group cursor-pointer transition-all active:scale-[0.98] ${isPopular ? "text-[#0B1120]" : "text-white border border-white/15 hover:border-[#C9A84C]/60 hover:bg-white/[0.03]"}`}
-                  style={isPopular ? { background: "linear-gradient(135deg,#F0D78A,#C9A84C,#A8883A)" } : undefined}>
+                  className="mt-auto w-full py-3.5 px-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 group cursor-pointer transition-all hover:-translate-y-0.5 active:scale-[0.98]"
+                  style={isPopular ? { background: ORANGE, color: "#FFFFFF", boxShadow: "0 8px 22px -10px rgba(240,102,43,0.7)" } : { background: NAVY, color: "#FFFFFF" }}>
                   {ctaLabel()}
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </button>
-                {!trialUsed && <p className="text-center text-[11px] text-white/35 mt-2.5">No card needed · ₹0 for {TRIAL_DAYS} days</p>}
+                {!trialUsed && <p className="text-center text-[11px] mt-2.5" style={{ color: isPopular ? "rgba(255,255,255,0.6)" : MUTED }}>No card needed · ₹0 for {TRIAL_DAYS} days</p>}
               </motion.div>
             );
           })}
         </div>
-        <p className="text-center text-xs text-white/35 mt-6">Excel and CSV bank statements are read free — they don&apos;t use your PDF pages. Prices are in ₹, plus 18% GST.</p>
+        <p className="text-center text-xs mt-6" style={{ color: MUTED }}>Excel and CSV bank statements are read free — they don&apos;t use your PDF pages. Prices are in ₹, plus 18% GST.</p>
       </section>
 
       {/* ── Every plan includes ── */}
-      <section className="px-4 pb-20">
+      <section className="px-4 py-16" style={{ background: "#FFFFFF", borderTop: `1px solid ${LINE}`, borderBottom: `1px solid ${LINE}` }}>
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <p className="text-xs font-bold tracking-widest uppercase text-[#C9A84C]/70 mb-3">Same features on every plan</p>
-            <h2 className="text-4xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>Everything a small business needs</h2>
+            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ORANGE }}>Same features on every plan</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold" style={{ color: INK, letterSpacing: "-0.02em" }}>Everything a small business needs</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {INCLUDED.map(({ icon: I, title, text }) => (
-              <div key={title} className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 hover:border-[#C9A84C]/30 transition-colors">
-                <div className="w-9 h-9 rounded-xl bg-[#C9A84C]/10 border border-[#C9A84C]/20 flex items-center justify-center mb-3">
-                  <I className="w-4 h-4 text-[#E8C97A]" />
+              <div key={title} className="rounded-2xl p-5 transition-all hover:-translate-y-0.5" style={{ background: "#F7F8FC", border: `1px solid ${LINE}` }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: "#EEF0FA" }}>
+                  <I className="w-4 h-4" style={{ color: NAVY }} />
                 </div>
-                <p className="text-sm font-semibold text-white/90 mb-1">{title}</p>
-                <p className="text-xs text-white/45 leading-relaxed">{text}</p>
+                <p className="text-sm font-bold mb-1" style={{ color: INK }}>{title}</p>
+                <p className="text-xs leading-relaxed" style={{ color: MUTED }}>{text}</p>
               </div>
             ))}
           </div>
@@ -237,116 +234,102 @@ export default function PricingPage() {
       </section>
 
       {/* ── Compare ── */}
-      <section className="px-4 pb-20">
-        <div className="max-w-4xl mx-auto rounded-3xl border border-white/[0.08] bg-[#070D1A] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[560px]">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wider text-white/40 border-b border-white/[0.08]">
-                  <th className="px-5 py-4 font-semibold">Plan</th>
-                  <th className="px-5 py-4 font-semibold text-right">Businesses</th>
-                  <th className="px-5 py-4 font-semibold text-right">PDF pages / month</th>
-                  <th className="px-5 py-4 font-semibold text-right">Monthly</th>
-                  <th className="px-5 py-4 font-semibold text-right">Yearly</th>
-                </tr>
-              </thead>
-              <tbody>
-                {FREBOOK_PLANS_LIST.map(p => (
-                  <tr key={p.id} className={`border-b border-white/[0.05] last:border-0 ${p.badge ? "bg-[#C9A84C]/[0.06]" : ""}`}>
-                    <td className="px-5 py-3.5 font-semibold text-white">{p.name}{p.badge && <span className="ml-2 text-[10px] text-[#E8C97A]">★</span>}</td>
-                    <td className="px-5 py-3.5 text-right text-white/70 tabular-nums">{p.businesses ?? "Any"}</td>
-                    <td className="px-5 py-3.5 text-right text-white/70 tabular-nums">{p.pages.toLocaleString("en-IN")}</td>
-                    <td className="px-5 py-3.5 text-right text-white/70 tabular-nums">₹{p.price.toLocaleString("en-IN")}</td>
-                    <td className="px-5 py-3.5 text-right text-[#E8C97A] font-semibold tabular-nums">₹{p.yearly.toLocaleString("en-IN")}</td>
+      <section className="px-4 py-16">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-extrabold text-center mb-6" style={{ color: INK }}>Compare plans</h2>
+          <div className="rounded-3xl overflow-hidden" style={{ background: "#FFFFFF", border: `1px solid ${LINE}` }}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[560px]">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wider" style={{ color: MUTED, background: "#F7F8FC", borderBottom: `1px solid ${LINE}` }}>
+                    <th className="px-5 py-4 font-bold">Plan</th>
+                    <th className="px-5 py-4 font-bold text-right">Businesses</th>
+                    <th className="px-5 py-4 font-bold text-right">PDF pages / month</th>
+                    <th className="px-5 py-4 font-bold text-right">Monthly</th>
+                    <th className="px-5 py-4 font-bold text-right">Yearly</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {FREBOOK_PLANS_LIST.map(p => (
+                    <tr key={p.id} style={{ borderBottom: `1px solid ${LINE}`, background: p.badge ? "#EEF0FA" : undefined }}>
+                      <td className="px-5 py-3.5 font-bold" style={{ color: INK }}>{p.name}{p.badge && <span className="ml-2 text-[10px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: ORANGE, color: "#FFFFFF" }}>POPULAR</span>}</td>
+                      <td className="px-5 py-3.5 text-right tabular-nums" style={{ color: MUTED }}>{p.businesses ?? "Any"}</td>
+                      <td className="px-5 py-3.5 text-right tabular-nums" style={{ color: MUTED }}>{p.pages.toLocaleString("en-IN")}</td>
+                      <td className="px-5 py-3.5 text-right tabular-nums" style={{ color: INK }}>₹{p.price.toLocaleString("en-IN")}</td>
+                      <td className="px-5 py-3.5 text-right tabular-nums font-bold" style={{ color: NAVY }}>₹{p.yearly.toLocaleString("en-IN")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── Done for you ── */}
-      <section className="px-4 pb-20">
-        <div className="max-w-5xl mx-auto rounded-3xl p-8 md:p-10 grid md:grid-cols-[1fr_auto] gap-6 items-center border border-[#C9A84C]/25"
-          style={{ background: "radial-gradient(ellipse 80% 120% at 0% 0%, rgba(201,168,76,0.14), transparent 60%), #0A0F1C" }}>
+      <section className="px-4 pb-16">
+        <div className="max-w-5xl mx-auto rounded-3xl p-8 md:p-10 grid md:grid-cols-[1fr_auto] gap-6 items-center" style={{ background: INK, color: "#FFFFFF" }}>
           <div>
-            <p className="text-xs font-bold tracking-widest uppercase text-[#C9A84C] mb-2">Rather not do it yourself?</p>
-            <h3 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: "var(--font-cormorant), serif" }}>FreBook Managed</h3>
-            <p className="text-sm text-white/55 max-w-xl leading-relaxed">Our accounting team keeps your books in FreBook every month — entries, bank reconciliation, GST working and statements — and you see everything live.</p>
+            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: "#FFB08A" }}>Rather not do it yourself?</p>
+            <h3 className="text-3xl font-extrabold mb-2" style={{ letterSpacing: "-0.02em" }}>FreBook Managed</h3>
+            <p className="text-sm max-w-xl leading-relaxed" style={{ color: "rgba(255,255,255,0.7)" }}>Our accounting team keeps your books in FreBook every month — entries, bank reconciliation, GST working and statements — and you see everything live.</p>
           </div>
           <div className="text-left md:text-right">
-            <p className="text-4xl font-black text-white tabular-nums">₹{MANAGED_PRICE.toLocaleString("en-IN")}<span className="text-sm font-medium text-white/40"> /month + GST</span></p>
-            <Link href="/contact" className="inline-flex mt-3 items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-[#0B1120]" style={{ background: "linear-gradient(135deg,#F0D78A,#C9A84C)" }}>
+            <p className="text-4xl font-extrabold tabular-nums">₹{MANAGED_PRICE.toLocaleString("en-IN")}<span className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}> /month + GST</span></p>
+            <Link href="/contact" className="inline-flex mt-3 items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold" style={{ background: ORANGE, color: "#FFFFFF" }}>
               Talk to us <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ── Stats bar ── */}
-      <section className="px-4 pb-20">
-        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="max-w-4xl mx-auto rounded-3xl border border-white/6 overflow-hidden"
-          style={{ background: "linear-gradient(135deg,rgba(201,168,76,0.06),rgba(201,168,76,0.02))" }}>
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/6">
-            {[
-              { val: FREBOOK_PRICE_LABEL, label: "From, per month + GST", sub: "Starter · Basic · Pro · CA Practice" },
-              { val: "7 days", label: "Refund window", sub: "See Refund Policy" },
-              { val: "< 4 hrs", label: "Avg. support response", sub: "For paid plans" },
-              { val: "Zero", label: "Lock-in or exit fees", sub: "Cancel anytime" },
-            ].map(({ val, label, sub }) => (
-              <div key={label} className="py-7 px-6 text-center">
-                <p className="text-3xl font-black mb-1"
-                  style={{ fontFamily: "var(--font-cormorant), serif", background: "linear-gradient(135deg,#F0D78A,#C9A84C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                  {val}
-                </p>
-                <p className="text-xs font-semibold text-white/60 mb-0.5">{label}</p>
-                <p className="text-[10px] text-white/25">{sub}</p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+      {/* ── Stats ── */}
+      <section className="px-4 pb-16">
+        <div className="max-w-4xl mx-auto rounded-3xl overflow-hidden grid grid-cols-2 md:grid-cols-4" style={{ background: "#FFFFFF", border: `1px solid ${LINE}` }}>
+          {[
+            { val: FREBOOK_PRICE_LABEL, label: "From, per month + GST", sub: "Starter · Basic · Pro · CA Practice" },
+            { val: "7 days", label: "Refund window", sub: "See Refund Policy" },
+            { val: "< 4 hrs", label: "Avg. support response", sub: "For paid plans" },
+            { val: "Zero", label: "Lock-in or exit fees", sub: "Cancel anytime" },
+          ].map(({ val, label, sub }, i) => (
+            <div key={label} className="py-7 px-6 text-center" style={{ borderLeft: i % 2 ? `1px solid ${LINE}` : undefined }}>
+              <p className="text-3xl font-extrabold mb-1" style={{ color: NAVY }}>{val}</p>
+              <p className="text-xs font-bold mb-0.5" style={{ color: INK }}>{label}</p>
+              <p className="text-[11px]" style={{ color: MUTED }}>{sub}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* ── FAQ ── */}
       <section className="px-4 pb-24">
         <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-xs font-bold tracking-widest uppercase text-[#C9A84C]/60 mb-3">Got questions?</p>
-            <h2 className="text-4xl font-bold text-white" style={{ fontFamily: "var(--font-cormorant), serif" }}>
-              Frequently asked
-            </h2>
+          <div className="text-center mb-10">
+            <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: ORANGE }}>Got questions?</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold" style={{ color: INK, letterSpacing: "-0.02em" }}>Frequently asked</h2>
           </div>
           <div className="space-y-2">
             {FAQS.map((faq, i) => (
-              <motion.div key={i} initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-                className="rounded-2xl border border-white/8 overflow-hidden bg-[#070D1A]">
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-6 py-4 text-left">
-                  <span className="text-sm font-semibold text-white/80 pr-4">{faq.q}</span>
-                  <ChevronDown className={`w-4 h-4 text-[#C9A84C] flex-shrink-0 transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`} />
+              <div key={i} className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: `1px solid ${LINE}` }}>
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full flex items-center justify-between px-6 py-4 text-left">
+                  <span className="text-sm font-bold pr-4" style={{ color: INK }}>{faq.q}</span>
+                  <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`} style={{ color: NAVY }} />
                 </button>
                 <AnimatePresence>
                   {openFaq === i && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}>
-                      <p className="px-6 pb-5 text-sm text-white/40 leading-relaxed border-t border-white/6 pt-4">{faq.a}</p>
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}>
+                      <p className="px-6 pb-5 pt-4 text-sm leading-relaxed" style={{ color: MUTED, borderTop: `1px solid ${LINE}` }}>{faq.a}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             ))}
           </div>
 
-          <div className="mt-12 text-center rounded-3xl border border-white/6 bg-white/[0.02] p-8">
-            <p className="text-white/50 text-sm mb-2">Need something custom?</p>
-            <p className="text-white font-semibold mb-5">Our team will build a plan around your requirements.</p>
-            <Link href="/contact"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-[#0B1120] transition-all hover:scale-[1.02] active:scale-[0.98]"
-              style={{ background: "linear-gradient(135deg,#F0D78A,#C9A84C)" }}>
+          <div className="mt-12 text-center rounded-3xl p-8" style={{ background: "#FFFFFF", border: `1px solid ${LINE}` }}>
+            <p className="text-sm mb-2" style={{ color: MUTED }}>Need something custom?</p>
+            <p className="font-bold mb-5" style={{ color: INK }}>Our team will build a plan around your requirements.</p>
+            <Link href="/contact" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all hover:-translate-y-0.5" style={{ background: NAVY, color: "#FFFFFF" }}>
               Talk to us <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
