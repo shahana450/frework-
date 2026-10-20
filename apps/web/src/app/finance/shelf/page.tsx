@@ -1,4 +1,5 @@
 "use client";
+import GstPortalDownload from "@/components/finance/GstPortalDownload";
 import { cur, activeMoney, activeCountry } from "@/lib/money";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -224,6 +225,9 @@ export default function ShelfPage() {
           })}
         </div>
 
+        {/* GST rack: download returns from the portal (OTP), filed here by month */}
+        {india && rack === "gst" && bizId && <GstPortalDownload bizId={bizId} onSaved={() => load(bizId)} />}
+
         {/* Filters */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <button style={chip(fy === "all")} onClick={() => setFy("all")}>All years</button>
@@ -296,7 +300,7 @@ export default function ShelfPage() {
 
         <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6, display: "flex", gap: 8 }}>
           <span aria-hidden="true">🔒</span>
-          <span>Files are stored privately and opened through short-lived links.{india ? " Automatic download of returns and notices from the GST and Income-tax portals needs a licensed GSP/ERI connection — until then, download them from the portal and drop them here; the AI reads the period, reference number and reply date for you." : ""}</span>
+          <span>Files are stored privately and opened through short-lived links.{india ? " GST returns can be downloaded from the portal on the GST rack (OTP from the GST portal). Notices and Income-tax documents: download them from the portal and drop them here — the AI reads the period, reference number and reply date for you." : ""}</span>
         </p>
       </div>
     </div>
