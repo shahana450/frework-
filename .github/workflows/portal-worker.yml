@@ -2,7 +2,7 @@
 # Runs on GitHub's machines — nothing to install locally. Needs one repository secret:
 #   FLY_API_TOKEN  (Fly.io dashboard → Account → Access Tokens → create a deploy token)
 # The worker's own secret WORKER_KEY is set on Fly (dashboard → app → Secrets), never here.
-# Every step's output (never secrets) is copied to the run summary so failures can be read without logging in.
+# Each step reports its result as an annotation (never secrets), visible on the run page without signing in.
 name: Deploy portal worker
 
 on:
@@ -26,19 +26,19 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Check the token
         run: |
-          set -o pipefail
-          if [ -z "$FLY_API_TOKEN" ]; then echo "### FLY_API_TOKEN secret is missing" >> "$GITHUB_STEP_SUMMARY"; exit 1; fi
-          o=$(flyctl orgs list 2>&1 || true); echo "::notice title=Token check::$(echo "$o" | tr '
-' ' ' | cut -c1-600)"
+          if [ -z "$FLY_API_TOKEN" ]; then echo "::error title=Token::FLY_API_TOKEN secret is missing"; exit 1; fi
+          o=$(flyctl orgs list 2>&1 || true)
+          echo "::notice title=Token check::$(printf '%s' "$o" | tr '\n' ' ' | cut -c1-600)"
       - name: Create the app the first time
         run: |
           out=$(flyctl apps create frebook-portal-worker --org personal 2>&1) && status=ok || status=fail
-          echo "::notice title=Create app ($status)::$(echo "$out" | tr '
-' ' ' | cut -c1-600)"
-          if [ "$status" = fail ] && ! echo "$out" | grep -qiE "already (been )?taken|already exists"; then exit 1; fi
+          echo "::notice title=Create app ($status)::$(printf '%s' "$out" | tr '\n' ' ' | cut -c1-600)"
+          if [ "$status" = fail ] && ! printf '%s' "$out" | grep -qiE "already (been )?taken|already exists"; then exit 1; fi
       - name: Deploy
         run: |
           set -o pipefail
-          flyctl deploy --remote-only --ha=false 2>&1 | tee deploy.log || { echo "::error title=Deploy failed::$(grep -iE 'error|fail|denied|unauthor|not found' deploy.log | tail -n 8 | tr '
-' ' ' | cut -c1-900)"; exit 1; }
-          echo "### Deployed — https://frebook-portal-worker.fly.dev/health" >> "$GITHUB_STEP_SUMMARY"
+          if ! flyctl deploy --remote-only --ha=false 2>&1 | tee deploy.log; then
+            echo "::error title=Deploy failed::$(grep -iE 'error|fail|denied|unauthor|not found' deploy.log | tail -n 8 | tr '\n' ' ' | cut -c1-900)"
+            exit 1
+          fi
+          echo "::notice title=Deployed::https://frebook-portal-worker.fly.dev/health"
