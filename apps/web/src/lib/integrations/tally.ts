@@ -29,26 +29,37 @@ export function ledgerMastersXml(ledgers: { name: string; group: string }[], com
 export type PushLine = { dr: number; cr: number; account: { name: string; type: string; sub_type: string | null } | null };
 export type PushEntry = { id?: string; entry_no: string; date: string; narration: string; type: string; lines: PushLine[] };
 
+// Sales / Purchase / Credit Note / Debit Note go in as accounting-mode vouchers (no stock items), with the party marked
 const VOUCHER_TYPE: Record<string, string> = {
   journal: "Journal", payment: "Payment", receipt: "Receipt", contra: "Contra",
-  // Sales/Purchase vouchers need party and inventory details in Tally; post as Journal
-  sales: "Journal", purchase: "Journal", expense: "Payment", debit_note: "Journal", credit_note: "Journal",
+  sales: "Sales", purchase: "Purchase", expense: "Payment", debit_note: "Debit Note", credit_note: "Credit Note",
 };
 const isCashBank = (a: PushLine["account"]) => !!a && (["bank", "cash"].includes(a.type) || ["bank", "cash"].includes(a.sub_type ?? "") || ["Bank Accounts", "Cash-in-Hand"].includes(tallyGroupFor(a.name, a.type, a.sub_type)));
+const isParty = (a: PushLine["account"]) => !!a && (isCashBank(a) || ["debtor", "creditor"].includes(a.type) || ["trade_receivables", "trade_payables"].includes(a.sub_type ?? "")
+  || ["Sundry Debtors", "Sundry Creditors"].includes(tallyGroupFor(a.name, a.type, a.sub_type)));
+/** The party side: who is billed (sales, debit note) or who bills us (purchase, credit note). */
+const partySide: Record<string, "dr" | "cr"> = { Sales: "dr", "Debit Note": "dr", Purchase: "cr", "Credit Note": "cr" };
 
 /** A FreWork entry as a Tally voucher. The narration carries [FW entry-no] so it can be found again. */
 export function voucherXml(e: PushEntry, company?: string | null): string {
   let vtype = VOUCHER_TYPE[e.type] ?? "Journal";
   if ((vtype === "Payment" || vtype === "Receipt") && !e.lines.some(l => isCashBank(l.account))) vtype = "Journal";
+  // A Sales / Purchase / note voucher needs exactly one party (customer, supplier, cash or bank) on its side; otherwise Journal
+  const side = partySide[vtype];
+  const parties = side ? e.lines.filter(l => (side === "dr" ? l.dr : l.cr) > 0 && isParty(l.account)) : [];
+  if (side && parties.length !== 1) vtype = "Journal";
+  const party = partySide[vtype] ? parties[0] : null;
   const entries = e.lines.flatMap(l => {
     const name = xmlEsc(l.account?.name ?? "Suspense A/c");
+    const isP = l === party ? "Yes" : "No";
     const out: string[] = [];
-    if (l.dr > 0) out.push(`<ALLLEDGERENTRIES.LIST><LEDGERNAME>${name}</LEDGERNAME><ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE><ISPARTYLEDGER>No</ISPARTYLEDGER><AMOUNT>-${Number(l.dr).toFixed(2)}</AMOUNT></ALLLEDGERENTRIES.LIST>`);
-    if (l.cr > 0) out.push(`<ALLLEDGERENTRIES.LIST><LEDGERNAME>${name}</LEDGERNAME><ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE><ISPARTYLEDGER>No</ISPARTYLEDGER><AMOUNT>${Number(l.cr).toFixed(2)}</AMOUNT></ALLLEDGERENTRIES.LIST>`);
+    if (l.dr > 0) out.push(`<ALLLEDGERENTRIES.LIST><LEDGERNAME>${name}</LEDGERNAME><ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE><ISPARTYLEDGER>${isP}</ISPARTYLEDGER><AMOUNT>-${Number(l.dr).toFixed(2)}</AMOUNT></ALLLEDGERENTRIES.LIST>`);
+    if (l.cr > 0) out.push(`<ALLLEDGERENTRIES.LIST><LEDGERNAME>${name}</LEDGERNAME><ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE><ISPARTYLEDGER>${isP}</ISPARTYLEDGER><AMOUNT>${Number(l.cr).toFixed(2)}</AMOUNT></ALLLEDGERENTRIES.LIST>`);
     return out;
   }).join("");
+  const partyXml = party?.account?.name ? `<PARTYLEDGERNAME>${xmlEsc(party.account.name)}</PARTYLEDGERNAME>` : "";
   const narration = xmlEsc(`${(e.narration ?? "").replace(/[₹—]/g, "").slice(0, 80)} [FW ${e.entry_no}]`);
-  return `<?xml version="1.0" encoding="utf-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME>${company ? `<STATICVARIABLES>${companyVar(company)}</STATICVARIABLES>` : ""}</REQUESTDESC><REQUESTDATA><TALLYMESSAGE xmlns:UDF="TallyUDF"><VOUCHER${e.id ? ` REMOTEID="frework-${e.id}"` : ""} VCHTYPE="${vtype}" ACTION="Create" OBJVIEW="Accounting Voucher View"><DATE>${tallyDate(e.date)}</DATE><EFFECTIVEDATE>${tallyDate(e.date)}</EFFECTIVEDATE><ISINVOICE>No</ISINVOICE><VOUCHERTYPENAME>${vtype}</VOUCHERTYPENAME><NARRATION>${narration}</NARRATION>${entries}</VOUCHER></TALLYMESSAGE></REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
+  return `<?xml version="1.0" encoding="utf-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME>${company ? `<STATICVARIABLES>${companyVar(company)}</STATICVARIABLES>` : ""}</REQUESTDESC><REQUESTDATA><TALLYMESSAGE xmlns:UDF="TallyUDF"><VOUCHER${e.id ? ` REMOTEID="frework-${e.id}"` : ""} VCHTYPE="${vtype}" ACTION="Create" OBJVIEW="Accounting Voucher View"><DATE>${tallyDate(e.date)}</DATE><EFFECTIVEDATE>${tallyDate(e.date)}</EFFECTIVEDATE><ISINVOICE>No</ISINVOICE><VOUCHERTYPENAME>${vtype}</VOUCHERTYPENAME>${partyXml}<NARRATION>${narration}</NARRATION>${entries}</VOUCHER></TALLYMESSAGE></REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
 }
 
 /**
