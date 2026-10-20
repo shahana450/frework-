@@ -2,6 +2,7 @@
 # Runs on GitHub's machines — nothing to install locally. Needs one repository secret:
 #   FLY_API_TOKEN  (Fly.io dashboard → Account → Access Tokens → create a deploy token)
 # The worker's own secret WORKER_KEY is set on Fly (dashboard → app → Secrets), never here.
+# Every step's output (never secrets) is copied to the run summary so failures can be read without logging in.
 name: Deploy portal worker
 
 on:
@@ -18,14 +19,23 @@ jobs:
     defaults:
       run:
         working-directory: services/portal-worker
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Check the token
+        run: |
+          set -o pipefail
+          if [ -z "$FLY_API_TOKEN" ]; then echo "### FLY_API_TOKEN secret is missing" >> "$GITHUB_STEP_SUMMARY"; exit 1; fi
+          { echo "### Token check"; echo '```'; flyctl orgs list 2>&1 || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Create the app the first time
-        run: flyctl apps create frebook-portal-worker --org personal || echo "app already exists"
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          out=$(flyctl apps create frebook-portal-worker --org personal 2>&1) && status=ok || status=fail
+          { echo "### Create app ($status)"; echo '```'; echo "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" = fail ] && ! echo "$out" | grep -qiE "already (been )?taken|already exists"; then exit 1; fi
       - name: Deploy
-        run: flyctl deploy --remote-only --ha=false
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -o pipefail
+          flyctl deploy --remote-only --ha=false 2>&1 | tee deploy.log || { { echo "### Deploy failed"; echo '```'; tail -n 60 deploy.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; exit 1; }
+          echo "### Deployed — https://frebook-portal-worker.fly.dev/health" >> "$GITHUB_STEP_SUMMARY"
