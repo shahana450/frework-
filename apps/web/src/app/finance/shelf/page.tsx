@@ -16,6 +16,13 @@ type Item = {
 const C = { bg: "#F5F6FA", surface: "#FFFFFF", line: "#E1E4EE", strong: "#C9CEDF", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", soft: "#E6E8F4", gold: "#C9A24A", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const ICON: Record<RackKey, string> = { gst: "🧾", income_tax: "🏛", tds: "🔖", notices: "📮", bank: "🏦", bills: "📄", payroll: "👥", registrations: "📜", others: "🗂" };
+// Each rack has its own colour: icon tile, active card and count badge
+const TINT: Record<RackKey | "all", { c: string; b: string }> = {
+  all: { c: "#232A63", b: "#E6E8F4" }, gst: { c: "#0B7A55", b: "#E3F6EE" }, income_tax: { c: "#1F5EFF", b: "#EAF2FF" }, tds: { c: "#C2410C", b: "#FFF1E8" },
+  notices: { c: "#C2321F", b: "#FDECEA" }, bank: { c: "#0E7490", b: "#E0F5F9" }, bills: { c: "#7C3AED", b: "#F1EBFE" }, payroll: { c: "#B45309", b: "#FEF3E2" },
+  registrations: { c: "#8A5A00", b: "#FFF4DB" }, others: { c: "#5A6080", b: "#EEF0F5" },
+};
+const MONTHS = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
 const SOURCE: Record<string, string> = { upload: "Uploaded", frebook: "From FreBook", statement: "Bank statement", gstr1: "Auto-filed", system: "Auto-filed" };
 const kb = (n: number | null) => !n ? "" : n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
 const day = (d: string) => new Date(d.length > 10 ? d : d + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -33,6 +40,9 @@ export default function ShelfPage() {
   const [drag, setDrag] = useState(false);
   const [uploadRack, setUploadRack] = useState<RackKey | "auto">("auto");
   const [editing, setEditing] = useState<string | null>(null);
+  const [sort, setSort] = useState<"new" | "old" | "az" | "size">("new");
+  const [ftype, setFtype] = useState<"all" | "PDF" | "XLS" | "IMG">("all");
+  const [view, setView] = useState<"list" | "grid">("list");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (biz: string) => {
@@ -88,11 +98,27 @@ export default function ShelfPage() {
   const fys = useMemo(() => [...new Set((items ?? []).map(i => i.fy).filter(Boolean) as string[])].sort().reverse(), [items]);
   const counts = useMemo(() => Object.fromEntries(RACKS.map(r => [r.key, (items ?? []).filter(i => i.rack === r.key && (fy === "all" || i.fy === fy)).length])), [items, fy]);
   const openNotices = (items ?? []).filter(i => i.rack === "notices" && i.status === "open");
+  const typeOf = (i: Item) => { const n = (i.file_name ?? i.mime ?? "").toLowerCase(); return /pdf/.test(n) ? "PDF" : /xls|csv|sheet/.test(n) ? "XLS" : /png|jpe?g|webp|heic|image/.test(n) ? "IMG" : "OTHER"; };
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return (items ?? []).filter(i => (rack === "all" || i.rack === rack) && (fy === "all" || i.fy === fy)
+    const list = (items ?? []).filter(i => (rack === "all" || i.rack === rack) && (fy === "all" || i.fy === fy) && (ftype === "all" || typeOf(i) === ftype)
       && (!s || [i.title, i.doc_type, i.period, i.reference, i.authority, i.file_name, i.ai_summary, i.notes].some(x => x?.toLowerCase().includes(s))));
-  }, [items, rack, fy, q]);
+    const by = { new: (a: Item, b: Item) => b.created_at.localeCompare(a.created_at), old: (a: Item, b: Item) => a.created_at.localeCompare(b.created_at),
+      az: (a: Item, b: Item) => a.title.localeCompare(b.title), size: (a: Item, b: Item) => (b.size_bytes ?? 0) - (a.size_bytes ?? 0) }[sort];
+    return [...list].sort(by);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, rack, fy, q, ftype, sort]);
+  // GST return calendar for one financial year: which months have GSTR-1 / 3B / 2B on the shelf
+  const calFy = fy !== "all" ? fy : (fys[0] ?? null);
+  const calendar = useMemo(() => {
+    if (!calFy) return null;
+    const y0 = Number(calFy.slice(0, 4)); if (!y0) return null;
+    const months = MONTHS.map((m, i) => ({ label: m, ym: `${i < 9 ? y0 : y0 + 1}-${String(((i + 3) % 12) + 1).padStart(2, "0")}` }));
+    const has = (form: RegExp, ym: string) => (items ?? []).some(i => i.rack === "gst" && i.period?.startsWith(ym) && form.test(`${i.doc_type ?? ""} ${i.title}`));
+    return { months, rows: [["GSTR-1", /GSTR-?1(?!\d)/i], ["GSTR-3B", /GSTR-?3B/i], ["GSTR-2B", /GSTR-?2B/i]].map(([label, re]) => ({ label: label as string, cells: months.map(m => has(re as RegExp, m.ym)) })) };
+  }, [items, calFy]);
+  const totalBytes = (items ?? []).reduce((s, i) => s + (i.size_bytes ?? 0), 0);
+  const lastAdded = (items ?? []).reduce<string | null>((m, i) => (!m || i.created_at > m ? i.created_at : m), null);
 
   const chip = (on: boolean): React.CSSProperties => ({ height: 34, padding: "0 12px", borderRadius: 999, border: `1px solid ${on ? C.primary : C.line}`, background: on ? C.primary : C.surface, color: on ? "#FFFFFF" : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" });
   const btn: React.CSSProperties = { height: 32, padding: "0 11px", borderRadius: 9, border: `1px solid ${C.line}`, background: C.surface, color: C.ink, fontWeight: 700, fontSize: 12.5, cursor: "pointer", whiteSpace: "nowrap" };
@@ -119,7 +145,7 @@ export default function ShelfPage() {
       onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={e => { if (e.currentTarget === e.target) setDrag(false); }}
       onDrop={e => { e.preventDefault(); setDrag(false); if (e.dataTransfer.files?.length) upload(e.dataTransfer.files); }}>
       <style>{`
-        .sh-racks{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+        .sh-racks{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
         .sh-rack{transition:transform .15s,box-shadow .15s,border-color .15s}
         .sh-rack:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(35,42,99,.10)}
         .sh-item{transition:border-color .15s,box-shadow .15s}
@@ -127,7 +153,13 @@ export default function ShelfPage() {
         .sh-drop{transition:background .15s,border-color .15s}
         .sh-drop:hover{background:#FBFAF5!important;border-color:${C.gold}!important}
         .sh-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-        @media (max-width:760px){.sh-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        .sh-stat{transition:transform .15s,box-shadow .15s}.sh-stat:hover{transform:translateY(-2px);box-shadow:0 12px 26px -16px rgba(35,42,99,.35)}
+        .sh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+        .sh-grid .sh-item{flex-direction:column}
+        .sh-grid .sh-item > div:last-child{width:100%;justify-content:flex-end}
+        @media (prefers-reduced-motion:reduce){.sh-rack,.sh-stat,.sh-item{transition:none}}
+        @media (max-width:980px){.sh-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media (max-width:520px){.sh-stats{grid-template-columns:minmax(0,1fr)}}
         @keyframes sh-pulse{0%,100%{opacity:.55}50%{opacity:1}}
         .sh-skel{animation:sh-pulse 1.2s ease-in-out infinite}
         button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid ${C.gold};outline-offset:2px}
@@ -186,14 +218,19 @@ export default function ShelfPage() {
         {/* At a glance */}
         <div className="sh-stats">
           {[
-            { label: "Files on the shelf", value: (items ?? []).length, tone: C.primary, bg: C.surface },
-            { label: "Added this month", value: thisMonth, tone: C.pos, bg: C.surface },
-            { label: "Open notices", value: openNotices.length, tone: openNotices.length ? C.warn : C.muted, bg: openNotices.length ? C.warnSoft : C.surface },
-            { label: overdueN.length ? "Replies overdue" : "Replies due in 7 days", value: overdueN.length || soon.length, tone: overdueN.length ? C.neg : soon.length ? C.warn : C.muted, bg: overdueN.length ? C.negSoft : C.surface },
+            { label: "Files on the shelf", value: (items ?? []).length, tone: C.primary, tint: "#E6E8F4", icon: "🗄", sub: totalBytes ? `${kb(totalBytes)} stored` : "Nothing stored yet" },
+            { label: "Added this month", value: thisMonth, tone: C.pos, tint: C.posSoft, icon: "📥", sub: lastAdded ? `Last added ${day(lastAdded)}` : "Drop your first file above" },
+            { label: "Open notices", value: openNotices.length, tone: openNotices.length ? C.warn : C.muted, tint: C.warnSoft, icon: "📮", sub: openNotices.length ? "Waiting for a reply" : "All clear" },
+            { label: overdueN.length ? "Replies overdue" : "Replies due in 7 days", value: overdueN.length || soon.length, tone: overdueN.length ? C.neg : soon.length ? C.warn : C.muted, tint: overdueN.length ? C.negSoft : "#EEF0F5", icon: "⏰", sub: overdueN.length ? "Reply as soon as you can" : soon.length ? "Coming up this week" : "Nothing due" },
           ].map(s => (
-            <div key={s.label} style={{ background: s.bg, border: `1px solid ${C.line}`, borderRadius: 14, padding: "14px 16px" }}>
-              <div style={{ fontSize: 26, fontWeight: 800, color: s.tone, fontVariantNumeric: "tabular-nums" }}>{items === null ? "–" : s.value}</div>
-              <div style={{ fontSize: 12.5, color: C.muted, fontWeight: 600 }}>{s.label}</div>
+            <div key={s.label} className="sh-stat" style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 18, padding: "16px 18px", display: "flex", gap: 14, alignItems: "center", position: "relative", overflow: "hidden" }}>
+              <span aria-hidden="true" style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: s.tone, opacity: s.value ? 1 : 0.25 }} />
+              <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 14, background: s.tint, display: "grid", placeItems: "center", fontSize: 22, flexShrink: 0 }}>{s.icon}</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 28, lineHeight: 1, fontWeight: 800, color: s.tone, fontVariantNumeric: "tabular-nums" }}>{items === null ? "–" : s.value}</div>
+                <div style={{ fontSize: 13, color: C.ink, fontWeight: 700, marginTop: 4 }}>{s.label}</div>
+                <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{items === null ? "" : s.sub}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -211,15 +248,19 @@ export default function ShelfPage() {
           {[{ key: "all" as const, label: "Whole shelf", hint: "Everything" }, ...racks].map(r => {
             const on = rack === r.key;
             const n = r.key === "all" ? inYear.length : counts[r.key] ?? 0;
+            const t = TINT[r.key];
+            const last = (items ?? []).filter(i => r.key === "all" || i.rack === r.key).reduce<string | null>((m, i) => (!m || i.created_at > m ? i.created_at : m), null);
             return (
               <button key={r.key} className="sh-rack" onClick={() => setRack(r.key)} title={r.hint} aria-pressed={on}
-                style={{ textAlign: "left", padding: "14px 16px", borderRadius: 16, border: `1.5px solid ${on ? C.primary : C.line}`, background: on ? C.primary : C.surface, cursor: "pointer", color: on ? "#FFFFFF" : C.ink, display: "flex", flexDirection: "column", gap: 6, font: "inherit", position: "relative" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span aria-hidden="true" style={{ width: 38, height: 38, borderRadius: 11, display: "grid", placeItems: "center", fontSize: 19, background: on ? "rgba(255,255,255,0.12)" : C.bg }}>{r.key === "all" ? "🗄" : ICON[r.key]}</span>
-                  <span style={{ minWidth: 26, height: 22, padding: "0 8px", borderRadius: 999, display: "grid", placeItems: "center", fontSize: 12, fontWeight: 800, fontVariantNumeric: "tabular-nums", background: on ? C.gold : n ? C.soft : "transparent", color: on ? "#1B2152" : n ? C.primary : C.muted, border: n || on ? "none" : `1px solid ${C.line}` }}>{n}</span>
+                style={{ textAlign: "left", padding: "16px", borderRadius: 18, border: `1.5px solid ${on ? t.c : C.line}`, background: on ? `linear-gradient(150deg, ${t.c} 0%, ${C.primary} 140%)` : C.surface, cursor: "pointer", color: on ? "#FFFFFF" : C.ink, display: "flex", flexDirection: "column", gap: 8, font: "inherit", position: "relative", overflow: "hidden", boxShadow: on ? `0 14px 30px -14px ${t.c}` : "none" }}>
+                {!on && <span aria-hidden="true" style={{ position: "absolute", right: -26, top: -26, width: 80, height: 80, borderRadius: "50%", background: t.b, opacity: 0.7 }} />}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+                  <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: 13, display: "grid", placeItems: "center", fontSize: 20, background: on ? "rgba(255,255,255,0.16)" : t.b, border: on ? "1px solid rgba(255,255,255,0.2)" : "none" }}>{r.key === "all" ? "🗄" : ICON[r.key]}</span>
+                  <span style={{ minWidth: 28, height: 24, padding: "0 9px", borderRadius: 999, display: "grid", placeItems: "center", fontSize: 12.5, fontWeight: 800, fontVariantNumeric: "tabular-nums", background: on ? "#FFFFFF" : n ? t.b : "transparent", color: on ? t.c : n ? t.c : C.muted, border: n || on ? "none" : `1px solid ${C.line}` }}>{n}</span>
                 </div>
-                <div style={{ fontWeight: 800, fontSize: 15 }}>{r.label}</div>
-                <div style={{ fontSize: 11.5, color: on ? "#C9CEEA" : C.muted, lineHeight: 1.35, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.hint}</div>
+                <div style={{ fontWeight: 800, fontSize: 15.5, position: "relative" }}>{r.label}</div>
+                <div style={{ fontSize: 11.5, color: on ? "rgba(255,255,255,0.75)" : C.muted, lineHeight: 1.35, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.hint}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: on ? "rgba(255,255,255,0.85)" : t.c, opacity: last ? 1 : 0.5 }}>{last ? `Updated ${day(last)}` : "Empty"}</div>
               </button>
             );
           })}
@@ -228,10 +269,47 @@ export default function ShelfPage() {
         {/* GST rack: download returns from the portal (OTP), filed here by month */}
         {india && rack === "gst" && bizId && <GstPortalDownload bizId={bizId} onSaved={() => load(bizId)} />}
 
+        {/* GST return calendar: a tick for every month whose return is on the shelf */}
+        {india && (rack === "gst" || rack === "all") && calendar && (
+          <section aria-label="GST return calendar" style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 18, padding: "16px 18px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ fontWeight: 800, fontSize: 16 }}>GST returns on the shelf · FY {calFy}</div>
+              <div style={{ display: "flex", gap: 12, fontSize: 12, color: C.muted }}>
+                <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: C.pos, marginRight: 5 }} />On the shelf</span>
+                <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: C.soft, marginRight: 5, border: `1px solid ${C.line}` }} />Missing</span>
+              </div>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ borderCollapse: "separate", borderSpacing: 4, minWidth: 620, width: "100%" }}>
+                <thead><tr><th />{calendar.months.map(m => <th key={m.ym} style={{ fontSize: 11.5, fontWeight: 700, color: C.muted, textAlign: "center" }}>{m.label}</th>)}</tr></thead>
+                <tbody>
+                  {calendar.rows.map(r => (
+                    <tr key={r.label}>
+                      <th scope="row" style={{ textAlign: "left", fontSize: 12.5, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", paddingRight: 8 }}>{r.label}</th>
+                      {r.cells.map((ok, i) => (
+                        <td key={i} title={`${r.label} ${calendar.months[i].label}: ${ok ? "on the shelf" : "missing"}`}
+                          style={{ height: 30, borderRadius: 8, background: ok ? C.pos : C.soft, color: ok ? "#FFFFFF" : C.strong, textAlign: "center", fontSize: 13, fontWeight: 800 }}>{ok ? "✓" : "·"}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
         {/* Filters */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <button style={chip(fy === "all")} onClick={() => setFy("all")}>All years</button>
           {fys.map(y => <button key={y} style={chip(fy === y)} onClick={() => setFy(y)}>FY {y}</button>)}
+          <span aria-hidden="true" style={{ width: 1, height: 22, background: C.line, margin: "0 2px" }} />
+          {([["all", "All files"], ["PDF", "PDF"], ["XLS", "Excel"], ["IMG", "Images"]] as const).map(([k, l]) => <button key={k} style={chip(ftype === k)} onClick={() => setFtype(k)}>{l}</button>)}
+          <select value={sort} onChange={e => setSort(e.target.value as typeof sort)} aria-label="Sort files" style={{ height: 34, borderRadius: 999, border: `1px solid ${C.line}`, padding: "0 10px", fontSize: 13, fontWeight: 700, color: C.ink, background: C.surface }}>
+            <option value="new">Newest first</option><option value="old">Oldest first</option><option value="az">Name A–Z</option><option value="size">Largest first</option>
+          </select>
+          <div role="radiogroup" aria-label="View" style={{ display: "inline-flex", border: `1px solid ${C.line}`, borderRadius: 999, overflow: "hidden" }}>
+            {([["list", "☰ List"], ["grid", "▦ Grid"]] as const).map(([k, l]) => <button key={k} role="radio" aria-checked={view === k} onClick={() => setView(k)} style={{ height: 32, padding: "0 12px", border: "none", background: view === k ? C.primary : C.surface, color: view === k ? "#FFFFFF" : C.muted, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>{l}</button>)}
+          </div>
           <div style={{ marginLeft: "auto", position: "relative", minWidth: 260, flex: "0 1 340px" }}>
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" style={{ position: "absolute", left: 12, top: 11 }}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
             <input value={q} onChange={e => setQ(e.target.value)} placeholder={india ? "Search title, ARN, DIN, notice no…" : "Search title, reference, notice no…"} aria-label="Search the shelf" style={{ width: "100%", boxSizing: "border-box", height: 38, borderRadius: 999, border: `1px solid ${C.line}`, padding: "0 14px 0 36px", fontSize: 14, background: C.surface, color: C.ink }} />
@@ -239,7 +317,7 @@ export default function ShelfPage() {
         </div>
 
         {/* Files */}
-        <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <section className={view === "grid" && shown.length ? "sh-grid" : undefined} style={view === "grid" && shown.length ? undefined : { display: "flex", flexDirection: "column", gap: 8 }}>
           {items === null ? [0, 1, 2].map(k => (
             <div key={k} className="sh-skel" style={{ height: 68, borderRadius: 14, background: C.surface, border: `1px solid ${C.line}` }} />
           )) : shown.length === 0 ? (
