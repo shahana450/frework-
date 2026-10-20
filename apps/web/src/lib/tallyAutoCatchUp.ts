@@ -6,6 +6,8 @@ import { tallyAutoPushOn, tallyAutoPushSince, type TallyState } from "@/lib/tall
 import { pushToTally, loadPushStatus } from "@/lib/tallyPushRun";
 
 let running = false;
+const lastTry = new Map<string, number>();   // a failed entry is retried, but at most every 10 minutes
+const RETRY_MS = 10 * 60 * 1000;
 const announced = new Set<string>();
 export const AUTO_PUSH_EVENT = "fw:tally-autopush";   // detail: { text: string; ok: boolean }
 
@@ -20,8 +22,12 @@ async function catchUp(bizId: string, t: TallyState) {
     const d = await res.json().catch(() => ({}));
     if (!res.ok) { say(false, `Auto-push couldn't check for new entries: ${d.error ?? res.status}`); return; }
     const status = await loadPushStatus(bizId);
-    const todo = ((d.todo ?? []) as { id: string; date: string; entry_no: string }[]).filter(r => !status[r.id]);
+    const now = Date.now();
+    // Skip entries already in Tally; retry failed ones after a pause, so a lasting problem isn't repeated every 45 s
+    const todo = ((d.todo ?? []) as { id: string; date: string; entry_no: string }[])
+      .filter(r => !(status[r.id] && "at" in status[r.id]) && now - (lastTry.get(r.id) ?? 0) > RETRY_MS);
     if (!todo.length) return;
+    todo.forEach(r => lastTry.set(r.id, now));
     const r = await pushToTally({ bizId, ids: todo.map(x => x.id), dates: Object.fromEntries(todo.map(x => [x.id, x.date])), company: t.company, port: t.port, educational: t.educational });
     const what = todo.length === 1 ? todo[0].entry_no : `${todo.length} entries`;
     say(r.ok > 0 && !r.failed, r.ok && !r.failed ? `Auto-push: ${what} sent to Tally (${t.company}).` : `Auto-push (${what}): ${r.message}`);
