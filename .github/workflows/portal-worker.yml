@@ -28,14 +28,17 @@ jobs:
         run: |
           set -o pipefail
           if [ -z "$FLY_API_TOKEN" ]; then echo "### FLY_API_TOKEN secret is missing" >> "$GITHUB_STEP_SUMMARY"; exit 1; fi
-          { echo "### Token check"; echo '```'; flyctl orgs list 2>&1 || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          o=$(flyctl orgs list 2>&1 || true); echo "::notice title=Token check::$(echo "$o" | tr '
+' ' ' | cut -c1-600)"
       - name: Create the app the first time
         run: |
           out=$(flyctl apps create frebook-portal-worker --org personal 2>&1) && status=ok || status=fail
-          { echo "### Create app ($status)"; echo '```'; echo "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Create app ($status)::$(echo "$out" | tr '
+' ' ' | cut -c1-600)"
           if [ "$status" = fail ] && ! echo "$out" | grep -qiE "already (been )?taken|already exists"; then exit 1; fi
       - name: Deploy
         run: |
           set -o pipefail
-          flyctl deploy --remote-only --ha=false 2>&1 | tee deploy.log || { { echo "### Deploy failed"; echo '```'; tail -n 60 deploy.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; exit 1; }
+          flyctl deploy --remote-only --ha=false 2>&1 | tee deploy.log || { echo "::error title=Deploy failed::$(grep -iE 'error|fail|denied|unauthor|not found' deploy.log | tail -n 8 | tr '
+' ' ' | cut -c1-900)"; exit 1; }
           echo "### Deployed — https://frebook-portal-worker.fly.dev/health" >> "$GITHUB_STEP_SUMMARY"
