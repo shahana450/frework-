@@ -1,5 +1,6 @@
 "use client";
 import GstPortalDownload from "@/components/finance/GstPortalDownload";
+import ItPortalFetch from "@/components/finance/ItPortalFetch";
 import { cur, activeMoney, activeCountry } from "@/lib/money";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -268,6 +269,7 @@ export default function ShelfPage() {
 
         {/* GST rack: download returns from the portal (OTP), filed here by month */}
         {india && rack === "gst" && bizId && <GstPortalDownload bizId={bizId} onSaved={() => load(bizId)} />}
+        {india && (rack === "income_tax" || rack === "notices") && bizId && <ItPortalFetch bizId={bizId} onSaved={() => load(bizId)} />}
 
         {/* GST return calendar: a tick for every month whose return is on the shelf */}
         {india && (rack === "gst" || rack === "all") && calendar && (

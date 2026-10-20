@@ -27,7 +27,7 @@ export default function PrivacyPage() {
           "Messages: WhatsApp messages and emails you send us or send through FreWork, alerts you switch on (such as overdue-payment reminders sent to your own linked number), and one-time sign-in links we send to that number at your request.",
           "Usage: pages visited, device and browser, error logs, and counts we need to run your plan (such as how many bank-statement pages the AI has read this month).",
         ]} />
-        <p>We do <b className="text-white">not</b> collect or store passwords for the GST portal, the Income-tax portal or your bank.</p>
+        <p>We do <b className="text-white">not</b> store passwords for the GST portal, the Income-tax portal or your bank. If you ask FreBook to fetch documents live from the Income-tax portal, the PAN, password and OTP you type are passed once to FreWork&apos;s own portal service to log in for that fetch, then discarded — never saved to disk or to our database.</p>
       </Section>
 
       <Section n="2" title="Why we use it, and on what basis">
