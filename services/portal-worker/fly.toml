@@ -1,9 +1,9 @@
-# Fly.io deployment for the FreBook portal worker — Mumbai region, always on (sessions live in memory).
+# Fly.io deployment for the FreBook portal worker — Singapore (Fly no longer offers Mumbai), always on (sessions live in memory).
 # First time:  fly launch --copy-config --no-deploy   (keep this file; pick a unique app name)
 #              fly secrets set WORKER_KEY=<long random secret>
 #              fly deploy
 app = "frebook-portal-worker"
-primary_region = "bom"
+primary_region = "sin"
 
 [build]
   dockerfile = "Dockerfile"
