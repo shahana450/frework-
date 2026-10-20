@@ -1,0 +1,31 @@
+# Deploys the FreBook portal worker (services/portal-worker) to Fly.io, Mumbai.
+# Runs on GitHub's machines — nothing to install locally. Needs one repository secret:
+#   FLY_API_TOKEN  (Fly.io dashboard → Account → Access Tokens → create a deploy token)
+# The worker's own secret WORKER_KEY is set on Fly (dashboard → app → Secrets), never here.
+name: Deploy portal worker
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/launch-blockers, main]
+    paths: ["services/portal-worker/**", ".github/workflows/portal-worker.yml"]
+
+concurrency: portal-worker
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/portal-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Create the app the first time
+        run: flyctl apps create frebook-portal-worker --org personal || echo "app already exists"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Deploy
+        run: flyctl deploy --remote-only --ha=false
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
