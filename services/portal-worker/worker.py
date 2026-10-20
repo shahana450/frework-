@@ -229,8 +229,10 @@ async def it_start(body: StartBody, x_worker_key: str | None = Header(default=No
     if not re.fullmatch(r"[A-Z]{5}\d{4}[A-Z]", pan):
         raise HTTPException(400, "Enter a valid PAN.")
     pw = await async_playwright().start()
-    # System Chrome (signed) — some office PCs block Playwright's bundled Chromium
-    browser = await pw.chromium.launch(headless=True, channel="chrome", args=["--disable-blink-features=AutomationControlled"])
+    # BROWSER_CHANNEL=chrome uses the installed Google Chrome (office PCs that block Playwright's own Chromium);
+    # in the cloud image the bundled Chromium is used.
+    channel = os.environ.get("BROWSER_CHANNEL") or None
+    browser = await pw.chromium.launch(headless=True, channel=channel, args=["--disable-blink-features=AutomationControlled", "--no-sandbox"])
     ctx = await browser.new_context(user_agent=USER_AGENT, viewport={"width": 1366, "height": 768}, accept_downloads=True)
     ctx.set_default_timeout(60000)
     page = await ctx.new_page()
