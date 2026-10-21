@@ -23,7 +23,9 @@ export async function waPost(body: unknown): Promise<Response | null> {
 /** The bytes of a photo or PDF a user sent. Gupshup puts a direct `url` on the media; Meta gives an id to look up. */
 export async function waMedia(media: { id?: string; url?: string } | undefined, maxBytes = 15 * 1024 * 1024): Promise<{ bytes: Buffer; mime: string } | null> {
   if (!media) return null;
-  let url = media.url ?? "", mime = "", headers: Record<string, string> = {};
+  let url = media.url ?? "", mime = "";
+  // Meta's media links (now also sent inside the webhook) need the access token too, or they answer 401
+  let headers: Record<string, string> = usingGupshup() ? {} : { Authorization: `Bearer ${env("WHATSAPP_ACCESS_TOKEN")}` };
   if (!url && media.id) {
     if (usingGupshup()) {
       const base = env("GUPSHUP_MEDIA_URL") || `https://partner.gupshup.io/partner/app/${env("GUPSHUP_APP_ID")}/media`;
