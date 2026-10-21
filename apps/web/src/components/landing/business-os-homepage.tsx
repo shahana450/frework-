@@ -553,6 +553,47 @@ export function BusinessOSHomepage() {
       </section>
 
 
+      {/* --- WHAT FREBOOK DOES --- */}
+      <section id="frebook-features" aria-labelledby="fb-features-h" className="py-16 md:py-20 px-4" style={{ background: "#F6F7FB", borderTop: "1px solid rgba(20,26,58,0.07)" }}>
+        <div className="max-w-6xl mx-auto flex flex-col gap-10">
+          <div className="flex flex-wrap items-end justify-between gap-5">
+            <div className="flex flex-col gap-3 max-w-[40rem]">
+              <span className="text-[12px] font-extrabold tracking-[0.16em] uppercase" style={{ color: "#F0662B" }}>What FreBook does</span>
+              <h2 id="fb-features-h" className="font-extrabold" style={{ margin: 0, fontSize: "clamp(1.9rem,3.6vw,2.75rem)", lineHeight: 1.08, letterSpacing: "-0.03em", color: "#141A3A", textWrap: "balance" }}>
+                Send it any way. <span style={{ color: "#F0662B" }}>FreBook keeps the books.</span>
+              </h2>
+              <p style={{ margin: 0, fontSize: "1.05rem", lineHeight: 1.6, color: "#5A6080" }}>Type it, say it or snap it. FreBook drafts the entry, you reply YES.</p>
+            </div>
+            <button onClick={handleFreBookClick} className="group flex items-center gap-2 px-6 py-3.5 rounded-xl text-[15px] font-bold transition-all hover:-translate-y-0.5"
+              style={{ background: "#232A63", color: "#fff", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
+              {loggedIn ? "Open FreBook" : "Start free"} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { t: "Voice notes", d: "Speak in English, Hindi, Malayalam or Hinglish. FreBook writes it down and drafts the entry.", isNew: true, p: "M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3" },
+              { t: "Bill photos", d: "Every line goes to the right ledger — stock, asset or expense — with its own GST.", p: "M4 8h3l2-3h6l2 3h3v11H4zM12 9.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 0 0 0-7" },
+              { t: "Bank statements", d: "PDF, Excel or CSV — long or password-protected. A ledger suggested for every line.", p: "M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18" },
+              { t: "WhatsApp", d: "Record entries, ask about your numbers and get reminders for who owes you.", p: "M4 20l1.5-4A8 8 0 1 1 9 19.2z" },
+              { t: "GST & TDS", d: "GSTR-1, 3B and 2B prepared and downloaded. TDS on the entry, with due-date reminders.", p: "M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5" },
+              { t: "Income-tax notices", d: "Notices, 26AS, AIS and TIS fetched from the portal and filed for you.", p: "M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7zM12 8v5M12 16h.01" },
+            ].map(f => (
+              <article key={f.t} className="flex flex-col gap-2.5 rounded-[18px] p-6" style={{ background: "#FFFFFF", border: "1px solid #E6E8F0" }}>
+                <span aria-hidden="true" className="w-11 h-11 rounded-xl grid place-items-center" style={{ background: "#FFF1EA", color: "#F0662B" }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={f.p} /></svg>
+                </span>
+                {f.isNew && <span className="text-[10.5px] font-extrabold tracking-[0.08em] uppercase" style={{ color: "#F0662B" }}>New</span>}
+                <h3 className="text-[18px] font-extrabold" style={{ margin: f.isNew ? 0 : "6px 0 0", color: "#141A3A", letterSpacing: "-0.01em" }}>{f.t}</h3>
+                <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: "#5A6080" }}>{f.d}</p>
+              </article>
+            ))}
+          </div>
+          <p className="pt-2" style={{ margin: 0, borderTop: "1px solid #E6E8F0", fontSize: 14.5, lineHeight: 1.6, color: "#5A6080" }}>
+            <b style={{ color: "#141A3A" }}>Also included:</b> Tally sync · live P&amp;L and Balance Sheet · Smart Inbox · document Shelf
+          </p>
+        </div>
+      </section>
+
       {/* --- FREBOOK MANAGED --- */}
       <section id="frebook-managed" className="py-16 px-4" style={{ background: "#FFFFFF", borderTop: "1px solid rgba(20,26,58,0.07)" }}>
         <div className="container max-w-6xl mx-auto">
