@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { fileFetchedDoc, type FetchedFile } from "@/lib/itShelf";
@@ -18,9 +18,14 @@ export async function POST(req: NextRequest) {
   if (job.status !== "running") return NextResponse.json({ error: "Job already finished" }, { status: 409 });
 
   if (body.file) {
-    const ok = await fileFetchedDoc(sb, job.business_id, job.user_id, body.file, job.fy);
-    if (ok) await sb.from("fw_fin_it_jobs").update({ saved: job.saved + 1 }).eq("id", job.id);
-    return NextResponse.json({ ok });
+    // Save now and reply at once; the AI reading of a notice runs after the reply
+    const saved = await fileFetchedDoc(sb, job.business_id, job.user_id, body.file, job.fy);
+    if (saved) {
+      const { data: cur } = await sb.from("fw_fin_it_jobs").select("saved").eq("id", job.id).maybeSingle();
+      await sb.from("fw_fin_it_jobs").update({ saved: (cur?.saved ?? job.saved) + 1 }).eq("id", job.id);
+      if (saved.enrich) after(() => saved.enrich!().catch(e => console.error("notice enrich", e)));
+    }
+    return NextResponse.json({ ok: !!saved });
   }
   if (body.done) {
     const report = Array.isArray(body.report) ? body.report.slice(0, 20) : [];

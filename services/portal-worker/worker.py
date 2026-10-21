@@ -575,11 +575,14 @@ async def _post(url: str, payload: dict) -> None:
     def go() -> None:
         req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
                                      headers={"Content-Type": "application/json", "x-worker-key": WORKER_KEY})
-        try:
-            urllib.request.urlopen(req, timeout=120).read()
-            trace(str(payload.get("job_id", "")), "callback ok" + (" (done)" if payload.get("done") else ""))
-        except Exception as e:  # noqa: BLE001
-            trace(str(payload.get("job_id", "")), f"callback FAILED: {str(e)[:120]}")
+        for attempt in range(3):                       # a slow or busy FreBook gets two more tries
+            try:
+                urllib.request.urlopen(req, timeout=90).read()
+                trace(str(payload.get("job_id", "")), "callback ok" + (" (done)" if payload.get("done") else ""))
+                return
+            except Exception as e:  # noqa: BLE001
+                trace(str(payload.get("job_id", "")), f"callback try {attempt + 1} failed: {str(e)[:100]}")
+                time.sleep(5 * (attempt + 1))
     await asyncio.to_thread(go)
 
 
