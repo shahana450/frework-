@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
       else if (msg.type === "image") { text = msg.image?.caption ?? ""; media = await downloadMedia(msg.image ?? {}, `whatsapp-${msg.id.slice(-8)}.jpg`); }
       else if (msg.type === "document") { text = msg.document?.caption ?? ""; media = await downloadMedia(msg.document ?? {}, msg.document?.filename ?? `whatsapp-${msg.id.slice(-8)}.pdf`); }
       else { await send(msg.from, "I can read text, photos and PDFs. Voice notes aren't supported yet — please type it."); return; }
+      if ((msg.type === "image" || msg.type === "document") && !media) { await send(msg.from, "⚠️ I couldn't open that file from WhatsApp. Please send it again, or upload it in FreBook (Bank → Import for statements)."); return; }
       if (!text && !media) return;
       // Never leave the sender with silence: if the AI is still reading near the time limit, say so
       const late = setTimeout(() => { void send(msg.from, media ? "⏳ This file is taking long to read. If no reply comes in a minute, upload it in FreBook instead (Bank → Import for statements)." : "⏳ Still working on it…"); }, 95000);

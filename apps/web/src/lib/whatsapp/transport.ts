@@ -31,13 +31,13 @@ export async function waMedia(media: { id?: string; url?: string } | undefined, 
     } else {
       headers = { Authorization: `Bearer ${env("WHATSAPP_ACCESS_TOKEN")}` };
       const meta = await fetch(`${GRAPH}/${media.id}`, { headers }).then(r => r.json()).catch(() => null);
-      if (!meta?.url || (meta.file_size && meta.file_size > maxBytes)) return null;
+      if (!meta?.url || (meta.file_size && meta.file_size > maxBytes)) { console.error("waMedia: no media url", JSON.stringify(meta?.error ?? { size: meta?.file_size ?? null }).slice(0, 300)); return null; }
       url = meta.url; mime = meta.mime_type ?? "";
     }
   }
   if (!url) return null;
   const res = await fetch(url, { headers }).catch(() => null);
-  if (!res?.ok) return null;
+  if (!res?.ok) { console.error("waMedia: download failed", res?.status ?? "no response"); return null; }
   const bytes = Buffer.from(new Uint8Array(await res.arrayBuffer()));
   if (bytes.length > maxBytes) return null;
   return { bytes, mime: mime || res.headers.get("content-type") || "application/octet-stream" };
