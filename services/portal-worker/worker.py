@@ -349,6 +349,38 @@ async def _fetch_notices(page: Page) -> tuple[list[dict], list[tuple[str, bytes]
     return found, files
 
 
+async def _open_external(page: Page, words: str, timeout_s: int = 40):
+    """After a menu click, the portal either shows a pop-up ('Proceed' / 'Confirm' / 'Continue' / 'OK') before
+    opening the AIS or TRACES site in a new tab, or opens the new tab straight away. Handles both: clicks the
+    first visible element whose text matches `words`, and returns the new tab once it appears."""
+    ctx = page.context
+    before = len(ctx.pages)
+    pat = re.compile(rf"^\s*({words})\s*$", re.I)
+    deadline = time.time() + timeout_s
+    clicked = False
+    while time.time() < deadline:
+        if len(ctx.pages) > before:
+            tab = ctx.pages[-1]
+            await tab.wait_for_load_state("domcontentloaded")
+            await tab.wait_for_timeout(4000)
+            return tab
+        if not clicked:
+            for loc in (page.get_by_role("button", name=pat), page.get_by_role("link", name=pat), page.get_by_text(pat)):
+                try:
+                    for i in range(await loc.count()):
+                        el = loc.nth(i)
+                        if await el.is_visible():
+                            await el.click(timeout=5000)
+                            clicked = True
+                            break
+                except Exception:
+                    continue
+                if clicked:
+                    break
+        await page.wait_for_timeout(1000)
+    return None
+
+
 async def _fetch_ais_tis(page: Page, fy: str | None, want: set[str]) -> tuple[list[str], list[tuple[str, bytes]]]:
     """UNVERIFIED: Services → Annual Information Statement (AIS) → Proceed → new tab (AIS portal) → AIS / TIS download."""
     notes: list[str] = []
@@ -357,12 +389,9 @@ async def _fetch_ais_tis(page: Page, fy: str | None, want: set[str]) -> tuple[li
     if not await _go(page, "AIS") and not await _go(page, "Services", "Annual Information Statement"):
         return ["AIS menu not found"], files
     try:
-        async with page.context.expect_page(timeout=30000) as newp:
-            proceed = page.get_by_role("button", name=re.compile("Proceed", re.I)).first
-            await proceed.click(timeout=10000)
-        ais = await newp.value
-        await ais.wait_for_load_state("domcontentloaded")
-        await ais.wait_for_timeout(4000)
+        ais = await _open_external(page, "Proceed|Continue|OK|Yes|Confirm")
+        if ais is None:
+            return ["The AIS site didn't open (no Proceed pop-up or new tab seen)"], files
         if fy:
             sel = ais.locator("select").first
             if await sel.count():
@@ -404,11 +433,9 @@ async def _fetch_26as(page: Page, fy: str | None) -> tuple[list[str], list[tuple
     if not await _go(page, "e-File", "Income Tax Returns", "View Form 26AS"):
         return ["26AS menu not found"], files
     try:
-        async with page.context.expect_page(timeout=30000) as newp:
-            await page.get_by_role("button", name=re.compile("Confirm", re.I)).first.click(timeout=10000)
-        tr = await newp.value
-        await tr.wait_for_load_state("domcontentloaded")
-        await tr.wait_for_timeout(3000)
+        tr = await _open_external(page, "Confirm|Proceed|Continue|OK|Yes")
+        if tr is None:
+            return ["The TRACES site didn't open (no Confirm pop-up or new tab seen)"], files
         box = tr.locator("input[type='checkbox']").first
         if await box.count():
             await box.check()
