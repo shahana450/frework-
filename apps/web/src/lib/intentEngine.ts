@@ -33,7 +33,13 @@ FIELDS:
 - reason: one or two sentences explaining WHY you chose the action and counter_account, quoting the words from the message/document you relied on. Do not invent facts.
 - missing: list facts that are genuinely unknown and needed: "amount", "payment_account" (paid/received how?), "expense_account" (what was it for?). Never list ledger choice when you can infer it.
 
-DOCUMENTS: read date, party, GSTIN, invoice number, taxable value, GST and total from the document; supplier bills are purchases/expenses; invoices issued by this business are sales. If the document does not show whether it was paid or is on credit and the user didn't say, put "payment_account" in missing.
+- items: for a SUPPLIER BILL / INVOICE with item lines, list EVERY line: [{"account","kind","taxable","rate"}]. "taxable" = that line's value before GST after its share of any bill-level discount (the items' taxable values must add up to the bill's taxable value); "rate" = its GST %. Lines with the same ledger may be combined. Else null.
+  Pick each line's ledger by what the item IS for this business:
+  · kind "purchase" — ONLY goods bought to resell, or raw material for goods it makes (its stock-in-trade). Ledger "Purchases" (or an existing purchase ledger). GST-rate ledgers like "Purchase @18%" are for stock only.
+  · kind "asset" — durable items used in the business for more than a year (laptops, computers, printers, furniture, AC, machinery, vehicles, mobile phones). Ledger e.g. "Computers", "Furniture & Fixtures", "Office Equipment", "Plant & Machinery". Installation / setup charges of an asset go to that same asset ledger.
+  · kind "expense" — things used up or services (stationery, consumables, small accessories like a mouse, cable or charger, repairs, software subscriptions, freight, professional fees). A specific ledger e.g. "Computer Accessories", "Printing & Stationery", "Repairs & Maintenance".
+  If the business's nature (from its ledgers and past entries) shows it sells these goods, they are "purchase"; when unsure, prefer "expense"/"asset" and say why in "reason". Set action to "purchase" only if every line is stock; "asset_purchase" if the bill is mainly assets; else "expense_payment".
+DOCUMENTS: read date, party, GSTIN, invoice number, taxable value, GST and total from the document; supplier bills are purchases/expenses (see "items"); invoices issued by this business are sales. If the document does not show whether it was paid or is on credit and the user didn't say, put "payment_account" in missing.
 BANK STATEMENTS / PASSBOOKS with many rows: set "document_kind":"bank_statement" and nothing else needs filling.
 
 OUTPUT:
@@ -42,7 +48,7 @@ OUTPUT:
   "counter_account": null, "party_name": null, "invoice_number": null,
   "gst": {"applicable": false, "rate": 0, "inclusive": true, "supply": "intra"},
   "tds": {"applicable": false, "section": null, "rate": 0, "amount": 0, "amount_is_net": false},
-  "manual_lines": null, "splits": null, "currency": null, "exchange_rate": null, "narrative": "one plain sentence describing the transaction",
+  "manual_lines": null, "splits": null, "items": null, "currency": null, "exchange_rate": null, "narrative": "one plain sentence describing the transaction",
   "reason": "...", "confidence": 0.9, "account_confidence": 0.9, "alternatives": [], "missing": [],
   "document_summary": null, "document_kind": null
 }
@@ -139,7 +145,7 @@ export type AiIntent = {
   kind?: "record" | "query"; tool?: string; params?: Record<string, unknown>; period?: unknown; period2?: unknown;
   action?: string; transaction_date?: string; amount?: number; payment_mode?: "cash" | "bank" | "credit" | null;
   payment_account?: string | null; counter_account?: string | null; party_name?: string | null; invoice_number?: string | null;
-  gst?: Intent["gst"]; tds?: Intent["tds"]; manual_lines?: Intent["manual_lines"]; splits?: Intent["splits"]; narrative?: string; reason?: string;
+  gst?: Intent["gst"]; tds?: Intent["tds"]; manual_lines?: Intent["manual_lines"]; splits?: Intent["splits"]; items?: Intent["items"]; narrative?: string; reason?: string;
   confidence?: number; account_confidence?: number; alternatives?: string[]; missing?: string[];
   document_summary?: string | null; document_kind?: string | null;
   currency?: string | null; exchange_rate?: number | null;
@@ -239,6 +245,7 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
     payment_account: paymentAccount, counter_account: counter, party_name: partyName,
     gst: ai.gst ?? null, tds: ai.tds ?? null, manual_lines: ai.manual_lines?.map(l => ({ ...l, account: canon(l.account) ?? l.account })) ?? null,
     splits: SPEND_ACTIONS.has(action) && Array.isArray(ai.splits) ? ai.splits.filter(s => s?.account && Number(s.amount) > 0).map(s => ({ account: canon(s.account) ?? s.account, amount: Number(s.amount) })) : null,
+    items: SPEND_ACTIONS.has(action) && Array.isArray(ai.items) ? ai.items.filter(i => i?.account && Number(i.taxable) > 0).map(i => ({ account: canon(i.account) ?? i.account, kind: (["purchase", "expense", "asset"].includes(i.kind) ? i.kind : "expense") as "purchase" | "expense" | "asset", taxable: Number(i.taxable), rate: Number(i.rate) || 0 })) : null,
     currency: ai.currency ?? null, exchange_rate: ai.exchange_rate ?? null,
   };
   // An Indian business without a GSTIN is not GST-registered: GST goes into the cost, none is charged

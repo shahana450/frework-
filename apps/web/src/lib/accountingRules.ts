@@ -27,6 +27,9 @@ export type Intent = {
   tds?: { applicable: boolean; section: string | null; rate: number; amount?: number | null; amount_is_net?: boolean | null } | null;
   manual_lines?: { account: string; debit: number; credit: number }[] | null; // journal_adjustment only
   splits?: { account: string; amount: number; date?: string | null }[] | null;  // several expense heads paid together (one line each)
+  // A supplier bill read line by line: each item its own ledger (stock / expense / fixed asset) with its own GST rate.
+  // taxable = the line's value before GST, after its share of any bill discount.
+  items?: { account: string; kind: "purchase" | "expense" | "asset"; taxable: number; rate: number }[] | null;
   currency?: string | null;                        // transaction currency when not the base currency
   exchange_rate?: number | null;                   // base units per 1 unit of `currency` — never guessed
 };
@@ -152,8 +155,42 @@ function buildLocal(intent: Intent, tax: TaxModule, registered = true): RuleResu
     case "expense_payment":
     case "purchase":
     case "asset_purchase": {
+      // A bill read item by item: one debit per ledger, GST worked out per line at its own rate
+      const items = (intent.items ?? []).filter(i => i.account?.trim() && Number(i.taxable) > 0);
+      if (items.length && !tdsAmt) {
+        const byAcc = new Map<string, { amt: number; kind: string }>();
+        const taxBy = new Map<string, { ledger: string; code: string; amt: number }>();
+        const rated = intent.gst?.applicable && tax.taxName && g !== null;
+        const totalTaxable = items.reduce((s, i) => s + Number(i.taxable), 0);
+        for (const it of items) {
+          let cost = Number(it.taxable);
+          if (rated) {
+            const s = tax.split(cost, Number(it.rate) || 0, false, g?.supply ?? "intra");
+            for (const c of s.components) if (c.amount) {
+              const t = taxBy.get(c.inputLedger) ?? { ledger: c.inputLedger, code: c.code, amt: 0 };
+              t.amt = r2(t.amt + c.amount); taxBy.set(c.inputLedger, t);
+            }
+          } else if (stated > 0 && totalTaxable > 0) cost = cost / totalTaxable * stated;   // no GST claim: the bill total is the cost
+          const k = it.account.trim();
+          const cur = byAcc.get(k) ?? { amt: 0, kind: it.kind };
+          cur.amt = r2(cur.amt + cost); byAcc.set(k, cur);
+        }
+        for (const [acc, v] of byAcc) lines.push(DR(acc, r2(v.amt), v.kind === "asset" ? "Fixed asset" : v.kind === "purchase" ? "Purchases (stock for sale)" : "Expense", v.kind === "asset" ? "asset" : "expense"));
+        for (const t of taxBy.values()) lines.push(DR(t.ledger, t.amt, `Input ${t.code}`, "asset"));
+        let total = r2(lines.reduce((s, l) => s + l.debit, 0));
+        // Paise rounding on the bill (up to ₹1) goes to Round Off so the entry matches the bill total
+        const diff = stated > 0 ? r2(stated - total) : 0;
+        if (diff && Math.abs(diff) <= 1) { lines.push(diff > 0 ? DR("Round Off", diff, "Rounding on bill", "expense") : CR("Round Off", -diff, "Rounding on bill", "expense")); total = stated; }
+        else if (diff) warnings.push(`The bill lines add up to ${total}, not ${stated} — check the items before posting.`);
+        const supplier = credit ? partyLedger("supplier") : "";
+        lines.push(credit ? CR(supplier, total, `Payable to ${supplier || "supplier"}`, "creditors") : CR(settle ?? "", total, "Paid from", "asset"));
+        rule = `Bill booked item-wise: Dr ${[...byAcc.keys()].join(", ")}${taxBy.size ? " + Input GST" : ""} — Cr ${credit ? `${supplier || "supplier"} (unpaid)` : settle}`;
+        const sum = (code: string) => r2([...taxBy.values()].filter(t => t.code === code).reduce((s, t) => s + t.amt, 0));
+        const itemGst = { ...gstOut, taxable_value: r2(totalTaxable), cgst: sum("CGST"), sgst: sum("SGST"), igst: sum("IGST") };
+        return { lines, rule, gst: rated ? itemGst : gstOut, tds: tdsOut(total), missing: missing.filter(m => m !== "expense_account" && m !== "asset_account"), warnings };
+      }
       // Several heads paid together ("wages 1000, salary 2500, cleaning 3200 in cash"): one debit line each
-      const parts = (intent.splits ?? []).filter(s => s.account?.trim() && Number(s.amount) > 0);
+      const parts =(intent.splits ?? []).filter(s => s.account?.trim() && Number(s.amount) > 0);
       if (parts.length >= 2 && !g && !tdsAmt) {
         const type = intent.action === "asset_purchase" ? "asset" : "expense";
         const total = r2(parts.reduce((s, p) => s + Number(p.amount), 0));

@@ -25,7 +25,7 @@ export function normPhone(p: string): string {
   return d.length === 10 ? `91${d}` : d;
 }
 
-export const money = (n: number, cur = "INR") => (cur === "INR" ? "₹" : cur + " ") + Number(n).toLocaleString(cur === "INR" ? "en-IN" : "en-US", { maximumFractionDigits: 2 });
+export const money = (n: number, cur = "INR") => (cur === "INR" ? "₹" : cur + " ") + Number(n).toLocaleString(cur === "INR" ? "en-IN" : "en-US", Number.isInteger(Number(n)) ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 });   // ₹3,676.50, not ₹3,676.5
 
 export function helpText(bizName: string): string {
   return [
