@@ -141,251 +141,234 @@ export default function ShelfPage() {
     return { t: "FILE", c: C.muted, b: C.soft };
   };
 
+  const rackList = [{ key: "all" as const, label: "Whole shelf", hint: "Everything" }, ...racks];
+  const current = rackList.find(r => r.key === rack) ?? rackList[0];
+  const curTint = TINT[current.key];
+
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.ink }}
       onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={e => { if (e.currentTarget === e.target) setDrag(false); }}
       onDrop={e => { e.preventDefault(); setDrag(false); if (e.dataTransfer.files?.length) upload(e.dataTransfer.files); }}>
       <style>{`
-        .sh-racks{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
-        .sh-rack{transition:transform .15s,box-shadow .15s,border-color .15s}
-        .sh-rack:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(35,42,99,.10)}
-        .sh-item{transition:border-color .15s,box-shadow .15s}
-        .sh-item:hover{border-color:${C.strong}!important;box-shadow:0 6px 18px rgba(35,42,99,.07)}
-        .sh-drop{transition:background .15s,border-color .15s}
-        .sh-drop:hover{background:#FBFAF5!important;border-color:${C.gold}!important}
-        .sh-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-        .sh-stat{transition:transform .15s,box-shadow .15s}.sh-stat:hover{transform:translateY(-2px);box-shadow:0 12px 26px -16px rgba(35,42,99,.35)}
-        .sh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-        .sh-grid .sh-item{flex-direction:column}
-        .sh-grid .sh-item > div:last-child{width:100%;justify-content:flex-end}
-        @media (prefers-reduced-motion:reduce){.sh-rack,.sh-stat,.sh-item{transition:none}}
-        @media (max-width:980px){.sh-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-        @media (max-width:520px){.sh-stats{grid-template-columns:minmax(0,1fr)}}
+        .sh-wrap{max-width:1240px;margin:0 auto;padding:22px 20px 90px;display:flex;flex-direction:column;gap:16px}
+        .sh-body{display:grid;grid-template-columns:232px minmax(0,1fr);gap:20px;align-items:start}
+        .sh-side{position:sticky;top:16px;display:flex;flex-direction:column;gap:2px;background:${C.surface};border:1px solid ${C.line};border-radius:18px;padding:8px}
+        .sh-nav{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:12px;border:none;background:transparent;cursor:pointer;font:inherit;color:${C.ink};text-align:left;transition:background .12s}
+        .sh-nav:hover{background:${C.bg}}
+        .sh-nav[aria-pressed=true]{background:${C.soft}}
+        .sh-row{transition:background .12s}
+        .sh-row:hover{background:#FAFBFE}
+        .sh-row .sh-acts{opacity:.55;transition:opacity .12s}
+        .sh-row:hover .sh-acts,.sh-row:focus-within .sh-acts{opacity:1}
+        .sh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+        .sh-grid .sh-row{flex-direction:column;align-items:stretch;border:1px solid ${C.line}!important;border-radius:14px}
+        .sh-grid .sh-acts{opacity:1;justify-content:flex-end}
+        @media (max-width:900px){
+          .sh-body{grid-template-columns:minmax(0,1fr)}
+          .sh-side{position:static;flex-direction:row;overflow-x:auto;padding:6px}
+          .sh-nav{width:auto;white-space:nowrap;flex-shrink:0}
+          .sh-nav .sh-hint{display:none}
+        }
         @keyframes sh-pulse{0%,100%{opacity:.55}50%{opacity:1}}
         .sh-skel{animation:sh-pulse 1.2s ease-in-out infinite}
+        @media (prefers-reduced-motion:reduce){.sh-nav,.sh-row,.sh-row .sh-acts{transition:none}.sh-skel{animation:none}}
         button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid ${C.gold};outline-offset:2px}
       `}</style>
-      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "28px 20px 100px", display: "flex", flexDirection: "column", gap: 20 }}>
 
-        {/* Hero: title + drop zone */}
-        <section style={{ display: "grid", gridTemplateColumns: "minmax(0,1.1fr) minmax(0,1fr)", gap: 18, background: "linear-gradient(135deg,#1B2152 0%,#232A63 60%,#2E3680 100%)", borderRadius: 22, padding: 24, color: "#FFFFFF", position: "relative", overflow: "hidden" }} className="sh-hero">
-          <style>{`@media (max-width:820px){.sh-hero{grid-template-columns:1fr!important}}`}</style>
-          <div aria-hidden="true" style={{ position: "absolute", right: -60, top: -60, width: 220, height: 220, borderRadius: "50%", background: "radial-gradient(circle,rgba(201,162,74,.28),transparent 70%)" }} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
-            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: C.gold }}>Document shelf</span>
-            <h1 style={{ margin: 0, fontFamily: SERIF, fontSize: 38, lineHeight: 1.1, textWrap: "balance" }}>Every record, filed and findable.</h1>
-            <p style={{ margin: 0, color: "#C9CEEA", fontSize: 15, lineHeight: 1.55, maxWidth: 460 }}>
-              Drop {india ? "returns, notices, " : "notices, "}statements, bills and registrations. The AI reads each one, files it in the right rack and year, and pulls out the reference number and reply date.
-            </p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
-              {["Auto-filed by AI", "Private links", "Searchable by ref no."].map(t => (
-                <span key={t} style={{ fontSize: 12, fontWeight: 700, padding: "5px 11px", borderRadius: 999, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "#E6E8F4" }}>✓ {t}</span>
-              ))}
+      {/* Drop anywhere: a full-page target while dragging */}
+      {drag && (
+        <div aria-hidden="true" style={{ position: "fixed", inset: 12, zIndex: 60, borderRadius: 24, border: `3px dashed ${C.gold}`, background: "rgba(35,42,99,0.78)", display: "grid", placeItems: "center", color: "#FFFFFF", pointerEvents: "none" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontFamily: SERIF, fontSize: 34 }}>Drop to file them</div>
+            <div style={{ marginTop: 6, color: "#C9CEEA" }}>{uploadRack === "auto" ? "The AI reads each one and picks the rack and year" : `Into ${RACKS.find(r => r.key === uploadRack)?.label}`}</div>
+          </div>
+        </div>
+      )}
+      <input ref={fileRef} type="file" multiple accept=".pdf,image/*,.xlsx,.xls,.csv,.json,.doc,.docx,.txt,.zip" style={{ display: "none" }} onChange={e => { if (e.target.files?.length) upload(e.target.files); e.target.value = ""; }} />
+
+      <div className="sh-wrap">
+        {/* Header: title, search, upload */}
+        <header style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ marginRight: "auto" }}>
+            <h1 style={{ margin: 0, fontFamily: SERIF, fontSize: 32, lineHeight: 1.1 }}>Shelf</h1>
+            <div style={{ fontSize: 13.5, color: C.muted, marginTop: 4 }}>
+              {items === null ? "Loading…" : <>{(items ?? []).length} files · {kb(totalBytes) || "0 KB"} · {thisMonth} added this month{lastAdded ? ` · last ${day(lastAdded)}` : ""}</>}
             </div>
           </div>
-          <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 10 }}>
-            <input ref={fileRef} type="file" multiple accept=".pdf,image/*,.xlsx,.xls,.csv,.json,.doc,.docx,.txt,.zip" style={{ display: "none" }} onChange={e => { if (e.target.files?.length) upload(e.target.files); e.target.value = ""; }} />
-            <button className="sh-drop" onClick={() => fileRef.current?.click()} disabled={!bizId || !!setup}
-              style={{ flex: 1, minHeight: 150, borderRadius: 16, border: `2px dashed ${drag ? C.gold : "rgba(255,255,255,0.35)"}`, background: drag ? "rgba(201,162,74,0.16)" : "#FFFFFF", color: C.ink, cursor: setup ? "not-allowed" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: 18, opacity: setup ? 0.6 : 1, font: "inherit" }}>
-              <span aria-hidden="true" style={{ width: 48, height: 48, borderRadius: 14, background: C.soft, display: "grid", placeItems: "center", color: C.primary }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
-              </span>
-              <span style={{ fontWeight: 800, fontSize: 16 }}>{drag ? "Drop to file them" : "Drop files here or click to add"}</span>
-              <span style={{ fontSize: 12.5, color: C.muted }}>PDF, photos, Excel, Word, ZIP · up to 20 at a time</span>
-            </button>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#C9CEEA" }}>
-              File into
-              <select value={uploadRack} onChange={e => setUploadRack(e.target.value as RackKey | "auto")} aria-label="Where to file uploads" style={{ flex: 1, height: 36, borderRadius: 10, border: "1px solid rgba(255,255,255,0.2)", padding: "0 10px", fontSize: 13.5, color: C.ink, background: "#FFFFFF", fontWeight: 600 }}>
-                <option value="auto">✨ Let the AI choose the rack</option>
-                {racks.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
-              </select>
-            </label>
+          <div style={{ position: "relative", flex: "0 1 320px", minWidth: 220 }}>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" style={{ position: "absolute", left: 13, top: 12 }}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input id="sh-search" value={q} onChange={e => setQ(e.target.value)} placeholder={india ? "Search title, ARN, DIN, notice no…" : "Search title, reference, notice no…"} aria-label="Search the shelf" style={{ width: "100%", boxSizing: "border-box", height: 40, borderRadius: 12, border: `1px solid ${C.line}`, padding: "0 14px 0 38px", fontSize: 14, background: C.surface, color: C.ink }} />
           </div>
-        </section>
+          <div style={{ display: "flex", alignItems: "stretch", borderRadius: 12, overflow: "hidden", boxShadow: "0 8px 20px -12px rgba(35,42,99,.6)" }}>
+            <button onClick={() => fileRef.current?.click()} disabled={!bizId || !!setup} style={{ height: 40, padding: "0 16px", border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
+              Upload
+            </button>
+            <select id="sh-into" value={uploadRack} onChange={e => setUploadRack(e.target.value as RackKey | "auto")} aria-label="Where to file uploads" title="Where uploads go" style={{ height: 40, border: "none", borderLeft: "1px solid rgba(255,255,255,0.2)", background: "#2E3680", color: "#FFFFFF", fontSize: 13, fontWeight: 700, padding: "0 8px", cursor: "pointer" }}>
+              <option value="auto">✨ AI files it</option>
+              {racks.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+            </select>
+          </div>
+        </header>
 
         {setup && <div style={{ background: C.warnSoft, color: C.warn, borderRadius: 12, padding: "12px 16px", fontWeight: 600 }}>{setup}</div>}
+
         {uploads.length > 0 && (
-          <section aria-live="polite" style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-            {uploads.slice(0, 6).map((u, i) => (
-              <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 13 }}>
-                <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: 999, display: "grid", placeItems: "center", flexShrink: 0, fontSize: 12, fontWeight: 800, background: u.state === "error" ? C.negSoft : u.state === "done" ? C.posSoft : C.soft, color: u.state === "error" ? C.neg : u.state === "done" ? C.pos : C.primary }} className={u.state === "filing" ? "sh-skel" : ""}>{u.state === "filing" ? "…" : u.state === "done" ? "✓" : "!"}</span>
-                <b style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</b>
-                <span style={{ color: u.state === "error" ? C.neg : u.state === "done" ? C.pos : C.muted }}>{u.text}</span>
+          <section aria-live="polite" style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 14, padding: "10px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+            {uploads.slice(0, 5).map((u, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 13, minWidth: 0 }}>
+                <span aria-hidden="true" className={u.state === "filing" ? "sh-skel" : ""} style={{ width: 20, height: 20, borderRadius: 999, display: "grid", placeItems: "center", flexShrink: 0, fontSize: 11, fontWeight: 800, background: u.state === "error" ? C.negSoft : u.state === "done" ? C.posSoft : C.soft, color: u.state === "error" ? C.neg : u.state === "done" ? C.pos : C.primary }}>{u.state === "filing" ? "…" : u.state === "done" ? "✓" : "!"}</span>
+                <b style={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</b>
+                <span style={{ color: u.state === "error" ? C.neg : u.state === "done" ? C.pos : C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.text}</span>
               </div>
             ))}
           </section>
         )}
 
-        {/* At a glance */}
-        <div className="sh-stats">
-          {[
-            { label: "Files on the shelf", value: (items ?? []).length, tone: C.primary, tint: "#E6E8F4", icon: "🗄", sub: totalBytes ? `${kb(totalBytes)} stored` : "Nothing stored yet" },
-            { label: "Added this month", value: thisMonth, tone: C.pos, tint: C.posSoft, icon: "📥", sub: lastAdded ? `Last added ${day(lastAdded)}` : "Drop your first file above" },
-            { label: "Open notices", value: openNotices.length, tone: openNotices.length ? C.warn : C.muted, tint: C.warnSoft, icon: "📮", sub: openNotices.length ? "Waiting for a reply" : "All clear" },
-            { label: overdueN.length ? "Replies overdue" : "Replies due in 7 days", value: overdueN.length || soon.length, tone: overdueN.length ? C.neg : soon.length ? C.warn : C.muted, tint: overdueN.length ? C.negSoft : "#EEF0F5", icon: "⏰", sub: overdueN.length ? "Reply as soon as you can" : soon.length ? "Coming up this week" : "Nothing due" },
-          ].map(s => (
-            <div key={s.label} className="sh-stat" style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 18, padding: "16px 18px", display: "flex", gap: 14, alignItems: "center", position: "relative", overflow: "hidden" }}>
-              <span aria-hidden="true" style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: s.tone, opacity: s.value ? 1 : 0.25 }} />
-              <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 14, background: s.tint, display: "grid", placeItems: "center", fontSize: 22, flexShrink: 0 }}>{s.icon}</span>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 28, lineHeight: 1, fontWeight: 800, color: s.tone, fontVariantNumeric: "tabular-nums" }}>{items === null ? "–" : s.value}</div>
-                <div style={{ fontSize: 13, color: C.ink, fontWeight: 700, marginTop: 4 }}>{s.label}</div>
-                <div style={{ fontSize: 11.5, color: C.muted, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{items === null ? "" : s.sub}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
+        {/* Notices needing a reply: the one thing that may need action */}
         {openNotices.length > 0 && (
-          <section style={{ background: C.surface, border: `1px solid #E8A59B`, borderLeft: `5px solid ${C.neg}`, borderRadius: 14, padding: "12px 16px", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            <b style={{ color: C.neg }}>📮 {openNotices.length} open notice{openNotices.length > 1 ? "s" : ""} need a reply</b>
-            <span style={{ fontSize: 13.5, color: C.ink }}>{openNotices.slice(0, 3).map(n => `${n.title}${n.reply_due ? ` (by ${day(n.reply_due)})` : ""}`).join(" · ")}</span>
-            <button onClick={() => setRack("notices")} style={{ ...btn, marginLeft: "auto", borderColor: C.neg, color: C.neg }}>See notices →</button>
+          <section style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", padding: "12px 16px", borderRadius: 14, background: overdueN.length ? C.negSoft : C.warnSoft, color: overdueN.length ? C.neg : C.warn }}>
+            <b>{overdueN.length ? `${overdueN.length} notice${overdueN.length > 1 ? "s" : ""} overdue` : `${openNotices.length} open notice${openNotices.length > 1 ? "s" : ""}`}{soon.length ? ` · ${soon.length} due this week` : ""}</b>
+            <span style={{ fontSize: 13.5, color: C.ink, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{openNotices.slice(0, 3).map(n => `${n.title}${n.reply_due ? ` (by ${day(n.reply_due)})` : ""}`).join(" · ")}</span>
+            <button onClick={() => setRack("notices")} style={{ ...btn, borderColor: "currentColor", color: "inherit", background: "transparent" }}>Review →</button>
           </section>
         )}
 
-        {/* Racks */}
-        <div className="sh-racks">
-          {[{ key: "all" as const, label: "Whole shelf", hint: "Everything" }, ...racks].map(r => {
-            const on = rack === r.key;
-            const n = r.key === "all" ? inYear.length : counts[r.key] ?? 0;
-            const t = TINT[r.key];
-            const last = (items ?? []).filter(i => r.key === "all" || i.rack === r.key).reduce<string | null>((m, i) => (!m || i.created_at > m ? i.created_at : m), null);
-            return (
-              <button key={r.key} className="sh-rack" onClick={() => setRack(r.key)} title={r.hint} aria-pressed={on}
-                style={{ textAlign: "left", padding: "16px", borderRadius: 18, border: `1.5px solid ${on ? t.c : C.line}`, background: on ? `linear-gradient(150deg, ${t.c} 0%, ${C.primary} 140%)` : C.surface, cursor: "pointer", color: on ? "#FFFFFF" : C.ink, display: "flex", flexDirection: "column", gap: 8, font: "inherit", position: "relative", overflow: "hidden", boxShadow: on ? `0 14px 30px -14px ${t.c}` : "none" }}>
-                {!on && <span aria-hidden="true" style={{ position: "absolute", right: -26, top: -26, width: 80, height: 80, borderRadius: "50%", background: t.b, opacity: 0.7 }} />}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
-                  <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: 13, display: "grid", placeItems: "center", fontSize: 20, background: on ? "rgba(255,255,255,0.16)" : t.b, border: on ? "1px solid rgba(255,255,255,0.2)" : "none" }}>{r.key === "all" ? "🗄" : ICON[r.key]}</span>
-                  <span style={{ minWidth: 28, height: 24, padding: "0 9px", borderRadius: 999, display: "grid", placeItems: "center", fontSize: 12.5, fontWeight: 800, fontVariantNumeric: "tabular-nums", background: on ? "#FFFFFF" : n ? t.b : "transparent", color: on ? t.c : n ? t.c : C.muted, border: n || on ? "none" : `1px solid ${C.line}` }}>{n}</span>
-                </div>
-                <div style={{ fontWeight: 800, fontSize: 15.5, position: "relative" }}>{r.label}</div>
-                <div style={{ fontSize: 11.5, color: on ? "rgba(255,255,255,0.75)" : C.muted, lineHeight: 1.35, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.hint}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: on ? "rgba(255,255,255,0.85)" : t.c, opacity: last ? 1 : 0.5 }}>{last ? `Updated ${day(last)}` : "Empty"}</div>
-              </button>
-            );
-          })}
-        </div>
+        <div className="sh-body">
+          {/* Racks */}
+          <nav className="sh-side" aria-label="Racks">
+            {rackList.map(r => {
+              const on = rack === r.key;
+              const n = r.key === "all" ? inYear.length : counts[r.key] ?? 0;
+              const t = TINT[r.key];
+              return (
+                <button key={r.key} className="sh-nav" onClick={() => setRack(r.key)} aria-pressed={on} title={r.hint}>
+                  <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: 9, display: "grid", placeItems: "center", fontSize: 15, background: on ? t.c : t.b, flexShrink: 0, filter: on ? "none" : "saturate(.9)" }}>{r.key === "all" ? "🗄" : ICON[r.key]}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 14, fontWeight: on ? 800 : 600 }}>{r.label}</span>
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 800, fontVariantNumeric: "tabular-nums", color: n ? (on ? t.c : C.muted) : C.strong }}>{n}</span>
+                </button>
+              );
+            })}
+          </nav>
 
-        {/* GST rack: download returns from the portal (OTP), filed here by month */}
-        {india && rack === "gst" && bizId && <GstPortalDownload bizId={bizId} onSaved={() => load(bizId)} />}
-        {india && (rack === "income_tax" || rack === "notices") && bizId && <ItPortalFetch bizId={bizId} onSaved={() => load(bizId)} />}
-
-        {/* GST return calendar: a tick for every month whose return is on the shelf */}
-        {india && (rack === "gst" || rack === "all") && calendar && (
-          <section aria-label="GST return calendar" style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 18, padding: "16px 18px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-              <div style={{ fontWeight: 800, fontSize: 16 }}>GST returns on the shelf · FY {calFy}</div>
-              <div style={{ display: "flex", gap: 12, fontSize: 12, color: C.muted }}>
-                <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: C.pos, marginRight: 5 }} />On the shelf</span>
-                <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background: C.soft, marginRight: 5, border: `1px solid ${C.line}` }} />Missing</span>
+          {/* Rack content */}
+          <main style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span aria-hidden="true" style={{ width: 6, height: 34, borderRadius: 3, background: curTint.c }} />
+              <div style={{ minWidth: 0 }}>
+                <h2 style={{ margin: 0, fontSize: 21, fontWeight: 800 }}>{current.label}</h2>
+                <div style={{ fontSize: 13, color: C.muted }}>{current.hint}</div>
               </div>
             </div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ borderCollapse: "separate", borderSpacing: 4, minWidth: 620, width: "100%" }}>
-                <thead><tr><th />{calendar.months.map(m => <th key={m.ym} style={{ fontSize: 11.5, fontWeight: 700, color: C.muted, textAlign: "center" }}>{m.label}</th>)}</tr></thead>
-                <tbody>
-                  {calendar.rows.map(r => (
-                    <tr key={r.label}>
-                      <th scope="row" style={{ textAlign: "left", fontSize: 12.5, fontWeight: 800, color: C.ink, whiteSpace: "nowrap", paddingRight: 8 }}>{r.label}</th>
-                      {r.cells.map((ok, i) => (
-                        <td key={i} title={`${r.label} ${calendar.months[i].label}: ${ok ? "on the shelf" : "missing"}`}
-                          style={{ height: 30, borderRadius: 8, background: ok ? C.pos : C.soft, color: ok ? "#FFFFFF" : C.strong, textAlign: "center", fontSize: 13, fontWeight: 800 }}>{ok ? "✓" : "·"}</td>
+
+            {india && rack === "gst" && bizId && <GstPortalDownload bizId={bizId} onSaved={() => load(bizId)} />}
+            {india && (rack === "income_tax" || rack === "notices") && bizId && <ItPortalFetch bizId={bizId} onSaved={() => load(bizId)} />}
+
+            {india && rack === "gst" && calendar && (
+              <section aria-label="GST return calendar" style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: "14px 16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                  <div style={{ fontWeight: 800, fontSize: 15 }}>Returns on the shelf · FY {calFy}</div>
+                  <div style={{ fontSize: 12, color: C.muted }}><span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 3, background: C.pos, marginRight: 5 }} />on the shelf · <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 3, background: C.soft, margin: "0 5px 0 6px", border: `1px solid ${C.line}` }} />missing</div>
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ borderCollapse: "separate", borderSpacing: 4, minWidth: 600, width: "100%" }}>
+                    <thead><tr><th />{calendar.months.map(m => <th key={m.ym} style={{ fontSize: 11.5, fontWeight: 700, color: C.muted, textAlign: "center" }}>{m.label}</th>)}</tr></thead>
+                    <tbody>
+                      {calendar.rows.map(r => (
+                        <tr key={r.label}>
+                          <th scope="row" style={{ textAlign: "left", fontSize: 12.5, fontWeight: 800, whiteSpace: "nowrap", paddingRight: 8 }}>{r.label}</th>
+                          {r.cells.map((ok, i) => <td key={i} title={`${r.label} ${calendar.months[i].label}: ${ok ? "on the shelf" : "missing"}`} style={{ height: 26, borderRadius: 7, background: ok ? C.pos : C.soft, color: ok ? "#FFFFFF" : C.strong, textAlign: "center", fontSize: 12, fontWeight: 800 }}>{ok ? "✓" : ""}</td>)}
+                        </tr>
                       ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
 
-        {/* Filters */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <button style={chip(fy === "all")} onClick={() => setFy("all")}>All years</button>
-          {fys.map(y => <button key={y} style={chip(fy === y)} onClick={() => setFy(y)}>FY {y}</button>)}
-          <span aria-hidden="true" style={{ width: 1, height: 22, background: C.line, margin: "0 2px" }} />
-          {([["all", "All files"], ["PDF", "PDF"], ["XLS", "Excel"], ["IMG", "Images"]] as const).map(([k, l]) => <button key={k} style={chip(ftype === k)} onClick={() => setFtype(k)}>{l}</button>)}
-          <select value={sort} onChange={e => setSort(e.target.value as typeof sort)} aria-label="Sort files" style={{ height: 34, borderRadius: 999, border: `1px solid ${C.line}`, padding: "0 10px", fontSize: 13, fontWeight: 700, color: C.ink, background: C.surface }}>
-            <option value="new">Newest first</option><option value="old">Oldest first</option><option value="az">Name A–Z</option><option value="size">Largest first</option>
-          </select>
-          <div role="radiogroup" aria-label="View" style={{ display: "inline-flex", border: `1px solid ${C.line}`, borderRadius: 999, overflow: "hidden" }}>
-            {([["list", "☰ List"], ["grid", "▦ Grid"]] as const).map(([k, l]) => <button key={k} role="radio" aria-checked={view === k} onClick={() => setView(k)} style={{ height: 32, padding: "0 12px", border: "none", background: view === k ? C.primary : C.surface, color: view === k ? "#FFFFFF" : C.muted, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>{l}</button>)}
-          </div>
-          <div style={{ marginLeft: "auto", position: "relative", minWidth: 260, flex: "0 1 340px" }}>
-            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" style={{ position: "absolute", left: 12, top: 11 }}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder={india ? "Search title, ARN, DIN, notice no…" : "Search title, reference, notice no…"} aria-label="Search the shelf" style={{ width: "100%", boxSizing: "border-box", height: 38, borderRadius: 999, border: `1px solid ${C.line}`, padding: "0 14px 0 36px", fontSize: 14, background: C.surface, color: C.ink }} />
-          </div>
+            {/* Toolbar */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <select id="sh-fy" value={fy} onChange={e => setFy(e.target.value)} aria-label="Financial year" style={{ height: 34, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 10px", fontSize: 13, fontWeight: 700, color: C.ink, background: C.surface }}>
+                <option value="all">All years</option>
+                {fys.map(y => <option key={y} value={y}>FY {y}</option>)}
+              </select>
+              <div role="radiogroup" aria-label="File type" style={{ display: "inline-flex", border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden", background: C.surface }}>
+                {([["all", "All"], ["PDF", "PDF"], ["XLS", "Excel"], ["IMG", "Images"]] as const).map(([k, l]) => <button key={k} role="radio" aria-checked={ftype === k} onClick={() => setFtype(k)} style={{ height: 32, padding: "0 12px", border: "none", background: ftype === k ? C.soft : "transparent", color: ftype === k ? C.primary : C.muted, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>{l}</button>)}
+              </div>
+              <span style={{ marginLeft: "auto", fontSize: 12.5, color: C.muted }}>{items ? `${shown.length} file${shown.length === 1 ? "" : "s"}` : ""}</span>
+              <select id="sh-sort" value={sort} onChange={e => setSort(e.target.value as typeof sort)} aria-label="Sort files" style={{ height: 34, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 8px", fontSize: 13, fontWeight: 600, color: C.ink, background: C.surface }}>
+                <option value="new">Newest first</option><option value="old">Oldest first</option><option value="az">Name A–Z</option><option value="size">Largest first</option>
+              </select>
+              <div role="radiogroup" aria-label="View" style={{ display: "inline-flex", border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden", background: C.surface }}>
+                {([["list", "☰"], ["grid", "▦"]] as const).map(([k, l]) => <button key={k} role="radio" aria-checked={view === k} aria-label={k === "list" ? "List view" : "Grid view"} onClick={() => setView(k)} style={{ height: 32, width: 36, border: "none", background: view === k ? C.primary : "transparent", color: view === k ? "#FFFFFF" : C.muted, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>{l}</button>)}
+              </div>
+            </div>
+
+            {/* Files */}
+            {items === null ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{[0, 1, 2].map(k => <div key={k} className="sh-skel" style={{ height: 64, borderRadius: 14, background: C.surface, border: `1px solid ${C.line}` }} />)}</div>
+            ) : shown.length === 0 ? (
+              <button onClick={() => fileRef.current?.click()} disabled={!bizId || !!setup} style={{ font: "inherit", cursor: "pointer", background: C.surface, border: `1.5px dashed ${C.strong}`, borderRadius: 18, padding: "44px 24px", textAlign: "center", color: C.muted, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                <span aria-hidden="true" style={{ width: 54, height: 54, borderRadius: 16, display: "grid", placeItems: "center", fontSize: 26, background: curTint.b }}>{rack === "all" ? "🗄" : ICON[rack]}</span>
+                <b style={{ color: C.ink, fontSize: 16 }}>{items.length === 0 ? "Your shelf is empty" : q ? "No file matches your search" : "Nothing here yet"}</b>
+                <span style={{ maxWidth: 460, lineHeight: 1.55, fontSize: 13.5 }}>{q ? "Try another word, or clear the search." : "Drop files anywhere on this page, or click here to choose them. The AI reads each one and files it in the right rack and year."}</span>
+              </button>
+            ) : (
+              <section className={view === "grid" ? "sh-grid" : undefined} style={view === "grid" ? undefined : { background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}>
+                {shown.map((it, idx) => {
+                  const overdue = it.reply_due && it.status === "open" && it.reply_due < today();
+                  const k = kind(it);
+                  const sel: React.CSSProperties = { height: 30, border: `1px solid ${C.line}`, borderRadius: 8, fontSize: 12, color: C.muted, background: C.surface, padding: "0 4px" };
+                  return (
+                    <article key={it.id} className="sh-row" style={{ display: "flex", gap: 14, alignItems: "center", padding: "12px 16px", borderTop: view === "list" && idx ? `1px solid ${C.line}` : "none", background: view === "grid" ? C.surface : undefined, flexWrap: "wrap" }}>
+                      <span aria-hidden="true" style={{ width: 40, height: 46, borderRadius: 9, background: k.b, color: k.c, display: "grid", placeItems: "center", fontSize: 10.5, fontWeight: 900, letterSpacing: "0.04em", flexShrink: 0 }}>{k.t}</span>
+                      <div style={{ flex: 1, minWidth: 220, display: "flex", flexDirection: "column", gap: 3 }}>
+                        {editing === it.id
+                          ? <input autoFocus defaultValue={it.title} onBlur={e => { setEditing(null); if (e.target.value.trim() && e.target.value !== it.title) patch(it.id, { title: e.target.value.trim() }); }} onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} style={{ fontSize: 14.5, fontWeight: 700, border: `1px solid ${C.strong}`, borderRadius: 8, padding: "3px 8px" }} />
+                          : <button onClick={() => open(it)} style={{ all: "unset", cursor: "pointer", fontSize: 14.5, fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis" }}>{it.title}</button>}
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", fontSize: 12, color: C.muted }}>
+                          {rack === "all" && <span style={{ fontWeight: 700, color: TINT[it.rack]?.c }}>{RACKS.find(r => r.key === it.rack)?.label}</span>}
+                          {it.fy && <span style={{ padding: "1px 7px", borderRadius: 999, background: "#FBF4E2", color: "#7A5A12", fontWeight: 700 }}>FY {it.fy}</span>}
+                          {it.doc_type && <span>{it.doc_type}</span>}
+                          {it.reference && <span>· Ref <b style={{ color: C.ink, fontWeight: 600 }}>{it.reference}</b></span>}
+                          <span>· {day(it.created_at)}{it.size_bytes ? ` · ${kb(it.size_bytes)}` : ""}</span>
+                        </div>
+                        {it.ai_summary && <div style={{ fontSize: 12.5, color: C.ink, opacity: 0.8, lineHeight: 1.45 }}>{it.ai_summary}</div>}
+                        {it.rack === "notices" && (
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 3, fontSize: 12.5 }}>
+                            <span style={{ fontWeight: 700, padding: "2px 9px", borderRadius: 999, background: it.status !== "open" ? C.posSoft : overdue ? C.negSoft : C.warnSoft, color: it.status !== "open" ? C.pos : overdue ? C.neg : C.warn }}>{it.status !== "open" ? (it.status === "replied" ? "Replied" : "Closed") : it.reply_due ? `Reply by ${day(it.reply_due)}${overdue ? " — overdue" : ""}` : "No reply date"}</span>
+                            {it.amount ? <span style={{ fontWeight: 700 }}>Demand {cur()}{Number(it.amount).toLocaleString(activeMoney().locale)}</span> : null}
+                            <input type="date" aria-label="Reply-by date" value={it.reply_due ?? ""} onChange={e => patch(it.id, { reply_due: e.target.value || null })} style={{ ...sel, padding: "0 6px" }} />
+                            <select value={it.status} onChange={e => patch(it.id, { status: e.target.value })} aria-label="Notice status" style={sel}>
+                              <option value="open">Open</option><option value="replied">Replied</option><option value="closed">Closed</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                      <div className="sh-acts" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                        <select value={it.fy ?? ""} onChange={e => patch(it.id, { fy: e.target.value || null })} aria-label="Financial year" title="Financial year" style={sel}>
+                          <option value="">No FY</option>
+                          {Array.from({ length: 10 }, (_, n) => { const y = new Date().getFullYear() - n; return `${y}-${String(y + 1).slice(2)}`; }).map(v => <option key={v} value={v}>FY {v}</option>)}
+                        </select>
+                        <select value={it.rack} onChange={e => patch(it.id, { rack: e.target.value as RackKey })} aria-label="Move to rack" title="Move to another rack" style={sel}>
+                          {RACKS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+                        </select>
+                        <button onClick={() => open(it)} style={{ ...btn, height: 30, background: C.primary, color: "#FFFFFF", border: "none" }}>Open</button>
+                        <button onClick={() => open(it, true)} style={{ ...btn, height: 30 }} aria-label="Download" title="Download">⬇</button>
+                        <button onClick={() => setEditing(it.id)} aria-label="Rename" title="Rename" style={{ ...btn, height: 30 }}>✎</button>
+                        <button onClick={() => remove(it)} aria-label="Remove" title="Remove" style={{ ...btn, height: 30, color: C.neg }}>×</button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </section>
+            )}
+
+            <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, margin: 0 }}>🔒 Files are private and open through short-lived links. Drop files anywhere on this page to add them.</p>
+          </main>
         </div>
-
-        {/* Files */}
-        <section className={view === "grid" && shown.length ? "sh-grid" : undefined} style={view === "grid" && shown.length ? undefined : { display: "flex", flexDirection: "column", gap: 8 }}>
-          {items === null ? [0, 1, 2].map(k => (
-            <div key={k} className="sh-skel" style={{ height: 68, borderRadius: 14, background: C.surface, border: `1px solid ${C.line}` }} />
-          )) : shown.length === 0 ? (
-            <div style={{ background: C.surface, border: `1px dashed ${C.strong}`, borderRadius: 18, padding: "36px 24px", textAlign: "center", color: C.muted, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-              <span aria-hidden="true" style={{ fontSize: 34 }}>{rack === "all" ? "🗄" : ICON[rack]}</span>
-              {items.length === 0 ? <>
-                <b style={{ color: C.ink, fontSize: 16 }}>Your shelf is empty</b>
-                <span style={{ maxWidth: 520, lineHeight: 1.55, fontSize: 14 }}>Drop {india ? "GST returns, ITR acknowledgements, " : ""}notices, statements or certificates above — each one is filed in the right rack and year. Bills and bank statements you give FreBook land here automatically.</span>
-                <button onClick={() => fileRef.current?.click()} disabled={!bizId || !!setup} style={{ ...btn, height: 40, padding: "0 18px", background: C.primary, color: "#FFFFFF", border: "none", marginTop: 4 }}>＋ Add your first file</button>
-              </> : <><b style={{ color: C.ink }}>Nothing here yet</b><span style={{ fontSize: 13.5 }}>{q ? "No file matches your search." : "No files in this rack for the chosen year."}</span></>}
-            </div>
-          ) : shown.map(it => {
-            const overdue = it.reply_due && it.status === "open" && it.reply_due < today();
-            const k = kind(it);
-            return (
-              <article key={it.id} className="sh-item" style={{ background: C.surface, border: `1px solid ${overdue ? "#E8A59B" : C.line}`, borderRadius: 14, padding: "12px 14px", display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
-                <span aria-hidden="true" style={{ width: 44, height: 52, borderRadius: 9, background: k.b, color: k.c, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 900, letterSpacing: "0.04em", flexShrink: 0, position: "relative" }}>
-                  {k.t}<span style={{ position: "absolute", right: -4, bottom: -4, fontSize: 14 }}>{ICON[it.rack] ?? "📄"}</span>
-                </span>
-                <div style={{ flex: 1, minWidth: 240, display: "flex", flexDirection: "column", gap: 4 }}>
-                  {editing === it.id
-                    ? <input autoFocus defaultValue={it.title} onBlur={e => { setEditing(null); if (e.target.value.trim() && e.target.value !== it.title) patch(it.id, { title: e.target.value.trim() }); }} onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} style={{ fontSize: 15, fontWeight: 700, border: `1px solid ${C.strong}`, borderRadius: 8, padding: "3px 8px" }} />
-                    : <button onClick={() => open(it)} style={{ all: "unset", cursor: "pointer", fontSize: 15, fontWeight: 700, color: C.ink }}>{it.title}</button>}
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", fontSize: 12 }}>
-                    {it.doc_type && <span style={{ padding: "2px 8px", borderRadius: 999, background: C.soft, color: C.primary, fontWeight: 700 }}>{it.doc_type}</span>}
-                    {it.fy && <span style={{ padding: "2px 8px", borderRadius: 999, background: "#FBF4E2", color: "#7A5A12", fontWeight: 700 }}>FY {it.fy}</span>}
-                    {it.period && <span style={{ color: C.muted }}>{it.period}</span>}
-                    {it.reference && <span style={{ color: C.muted }}>· Ref <b style={{ color: C.ink, fontWeight: 600 }}>{it.reference}</b></span>}
-                    <span style={{ color: C.muted }}>· {SOURCE[it.source] ?? it.source} {day(it.created_at)}</span>
-                    {it.size_bytes ? <span style={{ color: C.muted }}>· {kb(it.size_bytes)}</span> : null}
-                  </div>
-                  {it.ai_summary && <div style={{ fontSize: 13, color: C.ink, opacity: 0.85, lineHeight: 1.5 }}>{it.ai_summary}</div>}
-                  {it.notes && <div style={{ fontSize: 12.5, color: C.muted, fontStyle: "italic" }}>{it.notes}</div>}
-                  {it.rack === "notices" && (
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 4, fontSize: 13 }}>
-                      <span style={{ fontWeight: 700, padding: "2px 9px", borderRadius: 999, background: overdue ? C.negSoft : C.warnSoft, color: overdue ? C.neg : C.warn }}>{it.reply_due ? `Reply by ${day(it.reply_due)}${overdue ? " — overdue" : ""}` : "No reply date"}</span>
-                      <input type="date" aria-label="Reply-by date" value={it.reply_due ?? ""} onChange={e => patch(it.id, { reply_due: e.target.value || null })} style={{ border: `1px solid ${C.line}`, borderRadius: 7, padding: "2px 6px", fontSize: 12.5 }} />
-                      {it.amount ? <span>· Demand {cur()}{Number(it.amount).toLocaleString(activeMoney().locale)}</span> : null}
-                      <select value={it.status} onChange={e => patch(it.id, { status: e.target.value })} aria-label="Notice status" style={{ border: `1px solid ${C.line}`, borderRadius: 7, padding: "2px 6px", fontSize: 12.5 }}>
-                        <option value="open">Open</option><option value="replied">Replied</option><option value="closed">Closed</option>
-                      </select>
-                    </div>
-                  )}
-                </div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                  <select value={it.fy ?? ""} onChange={e => patch(it.id, { fy: e.target.value || null })} aria-label="Financial year" title="Financial year this file belongs to" style={{ height: 32, border: `1px solid ${C.line}`, borderRadius: 9, fontSize: 12.5, color: C.muted, background: C.surface, padding: "0 6px" }}>
-                    <option value="">No FY</option>
-                    {Array.from({ length: 10 }, (_, k) => { const y = new Date().getFullYear() - k; return `${y}-${String(y + 1).slice(2)}`; }).map(v => <option key={v} value={v}>FY {v}</option>)}
-                  </select>
-                  <select value={it.rack} onChange={e => patch(it.id, { rack: e.target.value as RackKey })} aria-label="Move to rack" title="Move to another rack" style={{ height: 32, border: `1px solid ${C.line}`, borderRadius: 9, fontSize: 12.5, color: C.muted, background: C.surface, padding: "0 6px" }}>
-                    {RACKS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
-                  </select>
-                  <button onClick={() => open(it)} style={{ ...btn, background: C.primary, color: "#FFFFFF", border: "none" }}>Open</button>
-                  <button onClick={() => open(it, true)} style={btn} aria-label="Download">⬇</button>
-                  <button onClick={() => setEditing(it.id)} aria-label="Rename" title="Rename" style={btn}>✎</button>
-                  <button onClick={() => remove(it)} aria-label="Remove" title="Remove" style={{ ...btn, color: C.neg }}>×</button>
-                </div>
-              </article>
-            );
-          })}
-        </section>
-
-        <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6, display: "flex", gap: 8 }}>
-          <span aria-hidden="true">🔒</span>
-          <span>Files are stored privately and opened through short-lived links.{india ? " GST returns can be downloaded from the portal on the GST rack (OTP from the GST portal). Notices and Income-tax documents: download them from the portal and drop them here — the AI reads the period, reference number and reply date for you." : ""}</span>
-        </p>
       </div>
     </div>
   );

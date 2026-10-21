@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       const files = (d.files ?? []) as { kind: string; name: string; data: string }[];
       let saved = 0;
       for (const f of files) {
+        if (f.kind === "notice_text") continue;   // the portal page text is only for diagnosis, not a document
         const bytes = new Uint8Array(Buffer.from(f.data, "base64"));
         const isText = /\.txt$/i.test(f.name);
         const rack = f.kind === "notice" || f.kind === "notice_text" ? "notices" : "income_tax";
