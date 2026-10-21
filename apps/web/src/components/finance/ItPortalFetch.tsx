@@ -118,6 +118,7 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
           <div style={{ fontSize: 17, fontWeight: 800, color: C.ink }}>Fetch from the Income-tax portal</div>
           <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>Notices, Form 26AS, AIS, TIS and filed returns — saved on the Shelf</div>
         </div>
+        {job?.status === "running" && <button onClick={() => { if (poll.current) clearInterval(poll.current); try { localStorage.removeItem(jobKey); } catch { /* */ } setJob(null); }} style={{ border: "none", background: "none", color: C.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", marginLeft: "auto" }} title="Stop showing this job here (it keeps running on the server if it is alive)">Dismiss</button>}
         <span style={{ fontSize: 12.5, fontWeight: 800, padding: "5px 12px", borderRadius: 999, background: state === "logged_in" ? C.goodSoft : C.soft, color: state === "logged_in" ? C.good : C.navy }}>
           {job?.status === "running" ? `⟳ Running in background · ${job.saved} saved` : state === "logged_in" ? "● Logged in" : state === "otp_required" ? "Waiting for OTP" : "🔒 Encrypted"}
         </span>
@@ -141,7 +142,7 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
               <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 3 }} />
               I am this taxpayer, or authorised by them, to access their Income-tax account.
             </label>
-            <div><button onClick={start} disabled={!/^[A-Z]{5}\d{4}[A-Z]$/.test(pan) || (!password && !hasSaved) || !consent || !!busy || job?.status === "running"} style={btn(true)}>{busy === "start" ? "Opening the portal…" : "Log in to the portal"}</button></div>
+            <div><button onClick={start} disabled={!/^[A-Z]{5}\d{4}[A-Z]$/.test(pan) || (!password && !hasSaved) || !consent || !!busy} style={btn(true)}>{busy === "start" ? "Opening the portal…" : "Log in to the portal"}</button></div>
           </div>
         ) : state === "otp_required" ? (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
