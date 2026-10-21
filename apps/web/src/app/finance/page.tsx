@@ -662,26 +662,21 @@ export default function FinanceDashboard() {
             <>
               <HomeDesk dash={dash} bizName={activeBiz.name} greeting={greeting} dashErr={dashErr} onRetry={() => setDashTick(t => t + 1)}
                 controls={<>
-                  <select value={activeBiz?.id ?? ""} onChange={e => { const b = businesses.find(x => x.id === e.target.value); if (b) switchBiz(b); }} title="Business"
-                    style={{ height: 40, background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 10px", fontSize: 13, color: "#141A3A", maxWidth: 200 }}>
-                    {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
                   <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} title="Financial year"
-                    style={{ height: 40, background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 10px", fontSize: 13, color: "#141A3A" }}>
+                    style={{ height: 36, background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: 10, padding: "0 10px", fontSize: 12.5, color: "#10241F" }}>
                     {financialYears.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
                     {financialYears.length === 0 && <option value="">FY {fyLabel}</option>}
                     {missingFy && <option value="__create">＋ FY {missingFy.label} — create</option>}
                   </select>
                   <select value={periodKey} onChange={e => setPeriodKey(e.target.value)} title="Period"
-                    style={{ height: 40, background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 10px", fontSize: 13, color: "#141A3A" }}>
+                    style={{ height: 36, background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: 10, padding: "0 10px", fontSize: 12.5, color: "#10241F" }}>
                     {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
                   </select>
                   {periodKey === "custom" && <>
                     <input type="date" aria-label="From" value={custom.from} onChange={e => setCustom(c => ({ ...c, from: e.target.value }))} style={{ height: 40, border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 8px", fontSize: 13, color: "#141A3A", background: "#FFFFFF" }} />
                     <input type="date" aria-label="To" value={custom.to} min={custom.from || undefined} onChange={e => setCustom(c => ({ ...c, to: e.target.value }))} style={{ height: 40, border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 8px", fontSize: 13, color: "#141A3A", background: "#FFFFFF" }} />
                   </>}
-                  <Link href="/finance/tally" style={{ height: 40, padding: "0 14px", borderRadius: 11, border: "1px solid #C9CEDF", color: "#141A3A", fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", textDecoration: "none" }}>Tally</Link>
-                </>} />
+                                  </>} />
 
               {/* All Modules */}
               <div style={{ position: "relative", zIndex: 1 }}>
