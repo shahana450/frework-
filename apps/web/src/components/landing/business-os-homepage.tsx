@@ -314,7 +314,7 @@ export function BusinessOSHomepage() {
                 <button onClick={handleFreBookClick}
                   className="group flex items-center gap-2 px-6 py-3.5 rounded-2xl text-[15px] font-bold transition-all hover:-translate-y-0.5"
                   style={{ background:"linear-gradient(180deg,#2C3478,#1E2459)", color:"#fff", boxShadow:"0 12px 28px rgba(35,42,99,0.32), inset 0 1px 0 rgba(255,255,255,0.15)", border:"none", cursor:"pointer" }}>
-                  {loggedIn ? "Open FreBook" : "Start your free week"} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                  {loggedIn ? "Open FreBook" : "Start 14 days free"} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                 </button>
               </div>
               <p className="mt-4 text-[13.5px] font-medium" style={{ color:"#5A6080" }}>
