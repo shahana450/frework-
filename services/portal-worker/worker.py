@@ -62,6 +62,13 @@ class Sess:
 
 SESSIONS: dict[str, Sess] = {}
 JOBS: set[asyncio.Task] = set()
+TRACE: list[str] = []   # last 40 step lines, no personal data (job id prefix + step + time) — shown on /health
+
+
+def trace(job: str, step: str) -> None:
+    TRACE.append(f"{time.strftime('%H:%M:%S')} {job[:8]} {step}")
+    del TRACE[:-40]
+    print(TRACE[-1], flush=True)
 
 
 class StepError(Exception):
@@ -222,7 +229,7 @@ class CloseBody(BaseModel):
 
 @app.get("/health")
 async def health() -> dict:
-    return {"ok": True, "sessions": len(SESSIONS)}
+    return {"ok": True, "sessions": len(SESSIONS), "jobs": len(JOBS), "trace": TRACE[-15:]}
 
 
 @app.post("/it/start")
@@ -510,6 +517,7 @@ async def _run_fetch(s: Sess, items: list[str], fy: str | None) -> dict:
             out_files.append({"kind": kind, "name": name, "data": base64.b64encode(data).decode()})
 
     if "notices" in want:
+        trace(s.pan[-4:], "notices…")
         sections, files = await _fetch_notices(page)
         for n, d in files:
             add("notice", n, d)
@@ -523,6 +531,7 @@ async def _run_fetch(s: Sess, items: list[str], fy: str | None) -> dict:
             add("filed_returns", "Filed returns.txt", (await page.locator("body").inner_text())[:20000].encode())
         report.append({"item": "filed_returns", "ok": ok, "note": "Filed return list saved" if ok else "Page not found"})
     if want & {"ais", "tis"}:
+        trace(s.pan[-4:], "AIS/TIS…")
         notes, files = await _fetch_ais_tis(page, body.fy, want)
         for n, d in files:
             add("ais" if n.startswith("AIS") else "tis", n, d)
@@ -532,6 +541,7 @@ async def _run_fetch(s: Sess, items: list[str], fy: str | None) -> dict:
             if sh:
                 shots.append(sh)
     if "26as" in want:
+        trace(s.pan[-4:], "26AS…")
         notes, files = await _fetch_26as(page, body.fy)
         for n, d in files:
             add("26as", n, d)
@@ -567,8 +577,9 @@ async def _post(url: str, payload: dict) -> None:
                                      headers={"Content-Type": "application/json", "x-worker-key": WORKER_KEY})
         try:
             urllib.request.urlopen(req, timeout=120).read()
+            trace(str(payload.get("job_id", "")), "callback ok" + (" (done)" if payload.get("done") else ""))
         except Exception as e:  # noqa: BLE001
-            print("callback failed:", url, e, flush=True)
+            trace(str(payload.get("job_id", "")), f"callback FAILED: {str(e)[:120]}")
     await asyncio.to_thread(go)
 
 
@@ -577,12 +588,14 @@ async def _background(s: Sess, sid: str, b: AsyncFetchBody) -> None:
     try:
         res = await _run_fetch(s, b.items, b.fy)
         report = res["report"]
-        print(f"job {b.job_id}: fetched {len(res['files'])} files", flush=True)
+        trace(b.job_id, f"fetched {len(res['files'])} files; sending to FreBook")
         for f in res["files"]:
             await _post(b.callback_url, {"job_id": b.job_id, "job_token": b.job_token, "file": f})
     except Exception as e:  # noqa: BLE001
+        trace(b.job_id, f"error: {type(e).__name__}: {str(e)[:120]}")
         report.append({"item": "fetch", "ok": False, "note": f"Stopped: {e}"})
     finally:
+        trace(b.job_id, "finished; reporting")
         await _post(b.callback_url, {"job_id": b.job_id, "job_token": b.job_token, "done": True, "report": report})
         SESSIONS.pop(sid, None)
         await _logout_and_close(s)
@@ -602,7 +615,7 @@ async def it_fetch_async(body: AsyncFetchBody, x_worker_key: str | None = Header
     task = asyncio.create_task(_background(s, body.session, body))
     JOBS.add(task)
     task.add_done_callback(JOBS.discard)
-    print(f"job {body.job_id}: started ({', '.join(body.items)})", flush=True)
+    trace(body.job_id, f"started: {', '.join(body.items)}")
     return {"started": True}
 
 
