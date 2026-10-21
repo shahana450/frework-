@@ -1,6 +1,6 @@
 "use client";
 import { cur, activeMoney } from "@/lib/money";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
@@ -58,29 +58,51 @@ function LedgerContent() {
     });
   }, []);
 
+  // Load once the accounts are known; a date being typed waits until it's a full date
+  const reqNo = useRef(0);
   useEffect(() => {
-    if (selectedAccId && bizId) {
-      const acc = accounts.find(a => a.id === selectedAccId);
-      setSelectedAcc(acc ?? null);
-      fetchLedger(selectedAccId, bizId, acc?.type ?? "");
-    }
+    if (!selectedAccId || !bizId || !accounts.length) return;
+    if ((from && !isDate(from)) || (to && !isDate(to))) return;
+    const acc = accounts.find(a => a.id === selectedAccId);
+    setSelectedAcc(acc ?? null);
+    const timer = setTimeout(() => fetchLedger(selectedAccId, bizId, acc?.type ?? ""), 250);
+    return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAccId, bizId, accounts, from, to]);
+  }, [selectedAccId, bizId, accounts.length, from, to]);
 
   async function fetchLedger(accId: string, bid: string, accType: string) {
+    const req = ++reqNo.current;   // a newer request (another account or date) wins over a slower older one
     setLoading(true);
     const f = isDate(from) ? from : "", t = isDate(to) ? to : "";
-    const { data } = await supabase
-      .from("fw_fin_journal_lines")
-      .select(`
-        id, dr_amount, cr_amount, narration,
-        fw_fin_journals!inner(id, entry_no, date, narration, type, status, business_id)
-      `)
-      .eq("account_id", accId)
-      .eq("fw_fin_journals.business_id", bid)
-      .eq("fw_fin_journals.status", "posted")
-      .lte("fw_fin_journals.date", t || "9999-12-31")
-      .order("fw_fin_journals(date)");
+    // Rows in the period, page by page (the database returns at most 1,000 rows per request)
+    const page = async <T,>(make: (a: number, b: number) => PromiseLike<{ data: unknown }>) => {
+      const out: T[] = [];
+      for (let a = 0; ; a += 1000) {
+        const { data } = await make(a, a + 999);
+        const got = (data ?? []) as T[];
+        out.push(...got);
+        if (got.length < 1000) return out;
+      }
+    };
+    const periodQ = (a: number, b: number) => {
+      let q = supabase.from("fw_fin_journal_lines")
+        .select("id, dr_amount, cr_amount, narration, fw_fin_journals!inner(id, entry_no, date, narration, type, status, business_id)")
+        .eq("account_id", accId).eq("fw_fin_journals.business_id", bid).eq("fw_fin_journals.status", "posted")
+        .lte("fw_fin_journals.date", t || "9999-12-31");
+      if (f) q = q.gte("fw_fin_journals.date", f);
+      return q.order("id").range(a, b);
+    };
+    // Opening balance: only the amounts before the period (balance-sheet accounts; P&L accounts open at nil)
+    const plType = accType === "income" || accType === "expense";
+    const openQ = (a: number, b: number) => supabase.from("fw_fin_journal_lines")
+      .select("dr_amount, cr_amount, fw_fin_journals!inner(business_id, status, date)")
+      .eq("account_id", accId).eq("fw_fin_journals.business_id", bid).eq("fw_fin_journals.status", "posted")
+      .lt("fw_fin_journals.date", f).order("id").range(a, b);
+    const [data, opening] = await Promise.all([
+      page<unknown>(periodQ),
+      f && !plType ? page<{ dr_amount: number; cr_amount: number }>(openQ) : Promise.resolve([]),
+    ]);
+    if (req !== reqNo.current) return;
 
     type RawLine = {
       id: string;
@@ -96,10 +118,9 @@ function LedgerContent() {
     const all = ((data as unknown as RawLine[]) ?? []).sort((a, b) => (a.fw_fin_journals?.date ?? "").localeCompare(b.fw_fin_journals?.date ?? ""));
     // Opening = everything before the period. Income and expense accounts start each year at nil.
     const plAcc = accType === "income" || accType === "expense";
-    const before = f ? all.filter(r => (r.fw_fin_journals?.date ?? "") < f) : [];
-    const openNet = plAcc ? 0 : before.reduce((s, r) => s + (r.dr_amount ?? 0) - (r.cr_amount ?? 0), 0);
+    const openNet = plAcc ? 0 : opening.reduce((s, r) => s + (r.dr_amount ?? 0) - (r.cr_amount ?? 0), 0);
     setOpeningBal(Math.abs(openNet)); setOpeningType(openNet >= 0 ? "Dr" : "Cr");
-    const rows = f ? all.filter(r => (r.fw_fin_journals?.date ?? "") >= f) : all;
+    const rows = all;
     let runningBal = Math.abs(openNet);
     let balType: "Dr" | "Cr" = openNet >= 0 ? "Dr" : "Cr";
 
