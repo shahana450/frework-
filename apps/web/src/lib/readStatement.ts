@@ -19,16 +19,42 @@ async function post(file: Blob, name: string, bizId?: string, shelf = true): Pro
   return data;
 }
 
-export async function readBankStatement(file: File, opts: { bizId?: string; shelf?: boolean; onProgress?: (p: ReadProgress) => void } = {}): Promise<{ transactions: StatementTx[]; missingPages: string[]; stoppedReason?: string }> {
+// A password-protected PDF: unlocked in the browser, its text sent in page batches (the password never leaves here)
+async function readLockedPdf(file: File, opts: { bizId?: string; password?: string; onProgress?: (p: ReadProgress) => void }) {
+  const { pdfPagesText } = await import("./pdfUnlock");
+  const pages = await pdfPagesText(await file.arrayBuffer(), opts.password);   // throws PdfPasswordError until the password is right
+  const base = file.name.replace(/\.pdf$/i, "");
+  const out: StatementTx[] = [];
+  const missing: string[] = [];
+  const total = Math.ceil(pages.length / PAGES_PER_BATCH);
+  for (let p = 0; p < pages.length; p += PAGES_PER_BATCH) {
+    const to = Math.min(p + PAGES_PER_BATCH, pages.length);
+    opts.onProgress?.({ done: p / PAGES_PER_BATCH, total: Math.max(total, 2), label: `Reading pages ${p + 1}–${to} of ${pages.length}` });
+    // Pages are separated by a form feed, so the server counts them for the monthly allowance
+    const text = new Blob([pages.slice(p, to).join("\f")], { type: "text/plain" });
+    try { out.push(...(await post(text, `${base}-p${p + 1}-${to}.txt`, opts.bizId, false)).transactions); }
+    catch (e) {
+      const status = (e as { status?: number }).status ?? 0;
+      if (status === 402) { if (!out.length) throw e; return { transactions: out, missingPages: missing, stoppedReason: (e as Error).message }; }
+      if (status !== 422) missing.push(`${p + 1}–${to}`);
+    }
+  }
+  if (!out.length) throw new Error(pages.join("").trim() ? "No transactions found in this statement." : "This PDF has no readable text (it may be a scanned image). Download the statement as Excel from your bank instead.");
+  return { transactions: out, missingPages: missing };
+}
+
+export async function readBankStatement(file: File, opts: { bizId?: string; shelf?: boolean; password?: string; onProgress?: (p: ReadProgress) => void } = {}): Promise<{ transactions: StatementTx[]; missingPages: string[]; stoppedReason?: string }> {
   const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
-  let pageCount = 0, src: import("pdf-lib").PDFDocument | null = null;
+  let pageCount = 0, src: import("pdf-lib").PDFDocument | null = null, encrypted = false;
   if (isPdf) {
     try {
       const { PDFDocument } = await import("pdf-lib");
       src = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
       pageCount = src.getPageCount();
+      encrypted = src.isEncrypted;
     } catch { src = null; }
   }
+  if (encrypted) return readLockedPdf(file, opts);
   // Small files, spreadsheets, images, or PDFs we can't open: one request as before
   if (!src || pageCount <= PAGES_PER_BATCH) {
     opts.onProgress?.({ done: 0, total: 1, label: "Reading statement…" });

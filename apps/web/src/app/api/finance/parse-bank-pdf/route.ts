@@ -52,6 +52,9 @@ export async function POST(req: NextRequest) {
       }
       if (best && best.rows.length) return NextResponse.json({ transactions: best.rows, read_by: "sheet" });
       sheetText = wb.SheetNames.slice(0, 3).map(s => XLSX.utils.sheet_to_csv(wb.Sheets[s], { blankrows: false, dateNF: "yyyy-mm-dd" })).join("\n").slice(0, 200000);
+    } else if (/\.txt$/.test(lower)) {
+      // A password-protected PDF, unlocked and turned into text in the browser
+      sheetText = bytes.toString("utf8").slice(0, 200000);
     } else if (file.type.startsWith("image/")) {
       docBlock = { type: "image", source: { type: "base64", media_type: file.type, data: bytes.toString("base64") } };
     } else {
@@ -61,6 +64,7 @@ export async function POST(req: NextRequest) {
     // Pages the AI will read count against the month's allowance (spreadsheets above never reach here unless their layout is odd)
     let pages = 0;
     if (docBlock?.type === "image") pages = 1;
+    else if (/\.txt$/.test(lower)) pages = sheetText.split("\f").length;
     else if (docBlock) { try { const { PDFDocument } = await import("pdf-lib"); pages = (await PDFDocument.load(bytes, { ignoreEncryption: true })).getPageCount(); } catch { pages = 1; } }
     const quota = await checkStatementPages(sb, quotaBiz, user.email, pages);
     if (!quota.ok) return NextResponse.json({ error: quota.error, code: "page_limit", upgrade: quota.upgrade, used: quota.used, allowance: quota.allowance }, { status: 402 });
@@ -85,7 +89,7 @@ Rules:
         role: "user",
         content: docBlock
           ? [docBlock as never, { type: "text", text: prompt }]
-          : `${prompt}\n\nStatement rows (CSV):\n${sheetText}`,
+          : `${prompt}\n\nStatement ${/\.txt$/.test(lower) ? "text (pages separated by form feeds)" : "rows (CSV)"}:\n${sheetText}`,
       }],
     });
 

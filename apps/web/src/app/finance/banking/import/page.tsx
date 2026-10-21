@@ -1,5 +1,6 @@
 "use client";
 import { readBankStatement } from "@/lib/readStatement";
+import { PdfPasswordError } from "@/lib/pdfUnlock";
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
@@ -155,13 +156,17 @@ export default function BankingPage() {
   async function parsePDF(file: File, stopAnim: () => void) {
     // Long PDFs are read in page batches with real progress
     // The page files the full statement on the Shelf itself, so the reader doesn't
-    const json = await readBankStatement(file, { bizId: bizId ?? undefined, shelf: false, onProgress: p => { if (p.total > 1) { stopAnim(); setParseProgress(Math.round(5 + (p.done / p.total) * 90)); setParseStep(p.label); } } });
+    const json = await readBankStatement(file, { bizId: bizId ?? undefined, shelf: false, password: pdfPassword || undefined, onProgress: p => { if (p.total > 1) { stopAnim(); setParseProgress(Math.round(5 + (p.done / p.total) * 90)); setParseStep(p.label); } } });
     if (json.stoppedReason) setParseError(`Read part of the statement, then stopped: ${json.stoppedReason}`);
     else if (json.missingPages.length) setParseError(`Some pages couldn't be read (pages ${json.missingPages.join(", ")}). Everything else is below — upload those pages again, or the Excel statement, to fill the gap.`);
     return (json.transactions as Omit<TxRow, "id" | "ledger_id" | "ledger_name" | "pushed">[]).map(t => ({
       ...t, id: uid(), ledger_id: null, ledger_name: null, pushed: false,
     }));
   }
+
+  // Password-protected statement waiting for its password (used in this browser only, never sent or saved)
+  const [locked, setLocked] = useState<{ file: File; wrong: boolean } | null>(null);
+  const [pdfPassword, setPdfPassword] = useState("");
 
   // Opened from WhatsApp (?shelf=<id>): load that statement from the Shelf and read it straight away
   const fromShelf = useRef(false);
@@ -174,8 +179,8 @@ export default function BankingPage() {
         const { url } = await fetch(`/api/finance/shelf?business_id=${bizId}&download=${encodeURIComponent(id)}&inline=1`).then(r => r.json());
         if (!url) throw new Error("not found");
         const blob = await fetch(url).then(r => r.blob());
-        const name = decodeURIComponent(new URL(url).pathname.split("/").pop() ?? "statement.pdf").replace(/^d+[-_]/, "");
-        await handleFile(new File([blob], /.(pdf|xlsx?|csv)$/i.test(name) ? name : "statement.pdf", { type: blob.type || "application/pdf" }));
+        const name = decodeURIComponent(new URL(url).pathname.split("/").pop() ?? "statement.pdf").replace(/^\d+[-_]/, "");
+        await handleFile(new File([blob], /\.(pdf|xlsx?|csv)$/i.test(name) ? name : "statement.pdf", { type: blob.type || "application/pdf" }));
       } catch { setParseError("Couldn't load the statement sent on WhatsApp. Upload it below instead."); }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -183,6 +188,7 @@ export default function BankingPage() {
 
   /* ── File drop / select ── */
   async function handleFile(file: File) {
+    setLocked(null);
     setParsing(true); setParseError(""); setRows([]); setSelected(new Set()); setPushResult(null);
     setParseProgress(0); setParseStep("Reading file…");
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
@@ -222,6 +228,8 @@ export default function BankingPage() {
       if (bizId && !fromShelf.current) { const fd = new FormData(); fd.append("business_id", bizId); fd.append("file", file); fd.append("rack", "bank"); void fetch("/api/finance/shelf", { method: "POST", body: fd }).catch(() => null); }
     } catch (e: unknown) {
       if (progressInterval) clearInterval(progressInterval);
+      // Locked statement: ask for its password, then read it again
+      if (e instanceof PdfPasswordError) { setLocked({ file, wrong: e.wrong }); return; }
       setParseError(e instanceof Error ? e.message : String(e));
     } finally {
       setParsing(false); setParseProgress(0); setParseStep("");
@@ -536,6 +544,22 @@ export default function BankingPage() {
               )}
             </div>
             <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={onFileInput} style={{ display: "none" }} />
+
+            {locked && (
+              <form onSubmit={e => { e.preventDefault(); if (pdfPassword) void handleFile(locked.file); }}
+                style={{ marginTop: "1rem", background: "#FFFFFF", border: "1px solid rgba(35,42,99,0.2)", borderRadius: 12, padding: "1.1rem 1.2rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                <div style={{ fontWeight: 800, color: "#141A3A" }}>🔒 {locked.file.name} is password-protected</div>
+                <div style={{ fontSize: "0.8rem", color: "#5A6080", lineHeight: 1.55 }}>
+                  {locked.wrong ? <b style={{ color: "#C2321F" }}>That password didn&apos;t work. </b> : null}
+                  Enter the statement password. Banks usually use your customer ID, or the first letters of your name with your date of birth — check the bank&apos;s email. It&apos;s used only in this browser to open the file and is never sent or saved.
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <input type="password" aria-label="Statement password" autoFocus value={pdfPassword} onChange={e => setPdfPassword(e.target.value)} placeholder="Statement password" autoComplete="off"
+                    style={{ flex: "1 1 220px", height: 42, borderRadius: 10, border: "1px solid rgba(20,26,58,0.2)", padding: "0 12px", fontSize: "0.9rem" }} />
+                  <button type="submit" disabled={!pdfPassword} style={{ height: 42, padding: "0 18px", borderRadius: 10, border: "none", background: "#232A63", color: "#fff", fontWeight: 800, cursor: pdfPassword ? "pointer" : "default", opacity: pdfPassword ? 1 : 0.5 }}>Unlock &amp; read</button>
+                </div>
+              </form>
+            )}
 
             {parseError && (
               <div style={{ marginTop: "1rem", background: "rgba(194,50,31,0.07)", border: "1px solid rgba(194,50,31,0.25)", borderRadius: 10, padding: "1rem 1.1rem" }}>
