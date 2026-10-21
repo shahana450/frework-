@@ -517,7 +517,7 @@ async def _run_fetch(s: Sess, items: list[str], fy: str | None) -> dict:
             out_files.append({"kind": kind, "name": name, "data": base64.b64encode(data).decode()})
 
     if "notices" in want:
-        trace(s.pan[-4:], "notices…")
+        trace("fetch", "notices…")
         sections, files = await _fetch_notices(page)
         for n, d in files:
             add("notice", n, d)
@@ -531,7 +531,7 @@ async def _run_fetch(s: Sess, items: list[str], fy: str | None) -> dict:
             add("filed_returns", "Filed returns.txt", (await page.locator("body").inner_text())[:20000].encode())
         report.append({"item": "filed_returns", "ok": ok, "note": "Filed return list saved" if ok else "Page not found"})
     if want & {"ais", "tis"}:
-        trace(s.pan[-4:], "AIS/TIS…")
+        trace("fetch", "AIS/TIS…")
         notes, files = await _fetch_ais_tis(page, body.fy, want)
         for n, d in files:
             add("ais" if n.startswith("AIS") else "tis", n, d)
@@ -541,7 +541,7 @@ async def _run_fetch(s: Sess, items: list[str], fy: str | None) -> dict:
             if sh:
                 shots.append(sh)
     if "26as" in want:
-        trace(s.pan[-4:], "26AS…")
+        trace("fetch", "26AS…")
         notes, files = await _fetch_26as(page, body.fy)
         for n, d in files:
             add("26as", n, d)
