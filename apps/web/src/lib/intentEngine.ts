@@ -33,7 +33,7 @@ FIELDS:
 - reason: one or two sentences explaining WHY you chose the action and counter_account, quoting the words from the message/document you relied on. Do not invent facts.
 - missing: list facts that are genuinely unknown and needed: "amount", "payment_account" (paid/received how?), "expense_account" (what was it for?). Never list ledger choice when you can infer it.
 
-- items: REQUIRED for every SUPPLIER BILL / INVOICE that shows item lines (even one) — list EVERY line: [{"account","kind","taxable","rate"}]. "taxable" = that line's value before GST after its share of any bill-level discount (the items' taxable values must add up to the bill's taxable value); "rate" = its GST %. Lines with the same ledger may be combined. Else null.
+- items: REQUIRED for every SUPPLIER BILL / INVOICE that shows item lines (even one) — list EVERY line as its own element, in bill order: [{"description","account","kind","taxable","rate"}] ("description" = the item as printed, short). "taxable" = that line's value before GST after its share of any bill-level discount (the items' taxable values must add up to the bill's taxable value); "rate" = its GST %. NEVER merge two bill lines into one element, and judge each line on its own (a mouse is not a computer). Else null.
   Pick each line's ledger by what the item IS for this business:
   · kind "purchase" — ONLY goods bought to resell, or raw material for goods it makes (its stock-in-trade). Ledger "Purchases" (or an existing purchase ledger). GST-rate ledgers like "Purchase @18%" are for stock only.
   · kind "asset" — durable items used in the business for more than a year (laptops, computers, printers, furniture, AC, machinery, vehicles, mobile phones). Ledger e.g. "Computers", "Furniture & Fixtures", "Office Equipment", "Plant & Machinery". Installation / setup charges of an asset go to that same asset ledger.
@@ -80,7 +80,7 @@ export type ParsedTransaction = {
   bank_account_name: string | null;
   gst: { applicable: boolean; rate: number; taxable_value: number; cgst: number; sgst: number; igst: number; transaction_type: string | null };
   tds: { applicable: boolean; section: string | null; rate: number; amount: number; net_payment: number };
-  lines: { account: string; debit: number; credit: number; confidence: number; is_new_account: boolean; suggested_type: string | null; fc_debit?: number; fc_credit?: number }[];
+  lines: { account: string; debit: number; credit: number; confidence: number; is_new_account: boolean; suggested_type: string | null; fc_debit?: number; fc_credit?: number; item?: string | null }[];
   needs_clarification: string[];
   warnings: string[];
   confidence: number;
@@ -250,7 +250,7 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
     payment_account: paymentAccount, counter_account: counter, party_name: partyName,
     gst: ai.gst ?? null, tds: ai.tds ?? null, manual_lines: ai.manual_lines?.map(l => ({ ...l, account: canon(l.account) ?? l.account })) ?? null,
     splits: SPEND_ACTIONS.has(action) && Array.isArray(ai.splits) ? ai.splits.filter(s => s?.account && Number(s.amount) > 0).map(s => ({ account: canon(s.account) ?? s.account, amount: Number(s.amount) })) : null,
-    items: SPEND_ACTIONS.has(action) && Array.isArray(ai.items) ? ai.items.filter(i => i?.account && Number(i.taxable) > 0).map(i => ({ account: canon(i.account) ?? i.account, kind: (["purchase", "expense", "asset"].includes(i.kind) ? i.kind : "expense") as "purchase" | "expense" | "asset", taxable: Number(i.taxable), rate: Number(i.rate) || 0 })) : null,
+    items: SPEND_ACTIONS.has(action) && Array.isArray(ai.items) ? ai.items.filter(i => i?.account && Number(i.taxable) > 0).map(i => ({ description: String(i.description ?? "").slice(0, 60) || null, account: canon(i.account) ?? i.account, kind: (["purchase", "expense", "asset"].includes(i.kind) ? i.kind : "expense") as "purchase" | "expense" | "asset", taxable: Number(i.taxable), rate: Number(i.rate) || 0 })) : null,
     currency: ai.currency ?? null, exchange_rate: ai.exchange_rate ?? null,
   };
   // An Indian business without a GSTIN is not GST-registered: GST goes into the cost, none is charged
@@ -283,7 +283,7 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
   const lines = rr.lines.map(l => ({
     account: l.account, debit: l.debit, credit: l.credit,
     confidence: intent.counter_account && l.account === intent.counter_account ? base.account_confidence : 1,
-    is_new_account: !!l.account && !exists(l.account), suggested_type: l.suggested_type,
+    is_new_account: !!l.account && !exists(l.account), suggested_type: l.suggested_type, item: l.role?.startsWith("Item: ") ? l.role.slice(6) : null,
     ...(rr.fx ? { fc_debit: l.fc_debit ?? 0, fc_credit: l.fc_credit ?? 0 } : {}),
   }));
   const missing = rr.missing;

@@ -14,10 +14,10 @@ const bill: Intent = {
   ],
 };
 
-test("one debit per ledger, IGST per line, supplier credited with the bill total", () => {
+test("one debit per bill item (not merged), IGST per line, supplier credited with the bill total", () => {
   const r = buildEntry(bill);
   assert.deepEqual(r.lines.map(l => [l.account, l.debit, l.credit]), [
-    ["Computers", 16000, 0], ["Computer Accessories", 4425, 0], ["Input IGST", 3676.5, 0], ["TechSupply Solutions Pvt. Ltd.", 0, 24101.5],
+    ["Computers", 12000, 0], ["Computer Accessories", 4425, 0], ["Computers", 4000, 0], ["Input IGST", 3676.5, 0], ["TechSupply Solutions Pvt. Ltd.", 0, 24101.5],
   ]);
   assert.equal(r.lines.find(l => l.account === "Computers")?.suggested_type, "asset");
   assert.deepEqual(r.missing, []);

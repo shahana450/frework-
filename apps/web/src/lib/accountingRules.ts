@@ -29,7 +29,7 @@ export type Intent = {
   splits?: { account: string; amount: number; date?: string | null }[] | null;  // several expense heads paid together (one line each)
   // A supplier bill read line by line: each item its own ledger (stock / expense / fixed asset) with its own GST rate.
   // taxable = the line's value before GST, after its share of any bill discount.
-  items?: { account: string; kind: "purchase" | "expense" | "asset"; taxable: number; rate: number }[] | null;
+  items?: { account: string; kind: "purchase" | "expense" | "asset"; taxable: number; rate: number; description?: string | null }[] | null;
   currency?: string | null;                        // transaction currency when not the base currency
   exchange_rate?: number | null;                   // base units per 1 unit of `currency` — never guessed
 };
@@ -158,7 +158,7 @@ function buildLocal(intent: Intent, tax: TaxModule, registered = true): RuleResu
       // A bill read item by item: one debit per ledger, GST worked out per line at its own rate
       const items = (intent.items ?? []).filter(i => i.account?.trim() && Number(i.taxable) > 0);
       if (items.length && !tdsAmt) {
-        const byAcc = new Map<string, { amt: number; kind: string }>();
+        const itemLines: { acc: string; amt: number; kind: string; desc: string }[] = [];
         const taxBy = new Map<string, { ledger: string; code: string; amt: number }>();
         const rated = intent.gst?.applicable && tax.taxName && g !== null;
         const totalTaxable = items.reduce((s, i) => s + Number(i.taxable), 0);
@@ -171,11 +171,11 @@ function buildLocal(intent: Intent, tax: TaxModule, registered = true): RuleResu
               t.amt = r2(t.amt + c.amount); taxBy.set(c.inputLedger, t);
             }
           } else if (stated > 0 && totalTaxable > 0) cost = cost / totalTaxable * stated;   // no GST claim: the bill total is the cost
-          const k = it.account.trim();
-          const cur = byAcc.get(k) ?? { amt: 0, kind: it.kind };
-          cur.amt = r2(cur.amt + cost); byAcc.set(k, cur);
+          itemLines.push({ acc: it.account.trim(), amt: r2(cost), kind: it.kind, desc: it.description?.trim() || "" });
         }
-        for (const [acc, v] of byAcc) lines.push(DR(acc, r2(v.amt), v.kind === "asset" ? "Fixed asset" : v.kind === "purchase" ? "Purchases (stock for sale)" : "Expense", v.kind === "asset" ? "asset" : "expense"));
+        // One line per bill item (item-wise), labelled with the item
+        for (const v of itemLines) lines.push(DR(v.acc, v.amt, v.desc ? `Item: ${v.desc}` : v.kind === "asset" ? "Fixed asset" : v.kind === "purchase" ? "Purchases (stock for sale)" : "Expense", v.kind === "asset" ? "asset" : "expense"));
+        const byAcc = new Set(itemLines.map(v => v.acc));
         for (const t of taxBy.values()) lines.push(DR(t.ledger, t.amt, `Input ${t.code}`, "asset"));
         let total = r2(lines.reduce((s, l) => s + l.debit, 0));
         // Paise rounding on the bill (up to ₹1) goes to Round Off so the entry matches the bill total

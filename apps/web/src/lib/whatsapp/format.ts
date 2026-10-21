@@ -59,7 +59,7 @@ export function draftText(p: ParsedTransaction, bad: { title: string; detail: st
   }
   out.push(`📝 *Draft* · ${p.transaction_date}`, p.narrative ? `_${p.narrative.slice(0, 160)}_` : "", "");
   for (const l of p.lines) {
-    if (l.debit) out.push(`Dr  ${l.account}  ${money(l.debit, cur)}`);
+    if (l.debit) out.push(`Dr  ${l.account}${l.item ? ` (${l.item})` : ""}  ${money(l.debit, cur)}`);
   }
   for (const l of p.lines) {
     if (l.credit) out.push(`   Cr  ${l.account}  ${money(l.credit, cur)}`);
