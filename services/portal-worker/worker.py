@@ -24,6 +24,8 @@ from __future__ import annotations
 import asyncio
 import base64
 import hmac
+import json
+import urllib.request
 import os
 import re
 import secrets
@@ -494,14 +496,10 @@ async def _fetch_26as(page: Page, fy: str | None) -> tuple[list[str], list[tuple
     return notes, files
 
 
-@app.post("/it/fetch")
-async def it_fetch(body: FetchBody, x_worker_key: str | None = Header(default=None)) -> dict:
-    _auth(x_worker_key)
-    s = SESSIONS.get(body.session)
-    if not s or s.state != "logged_in":
-        raise HTTPException(409, "Not logged in yet.")
+async def _run_fetch(s: Sess, items: list[str], fy: str | None) -> dict:
     page = s.page
-    want = {i.lower() for i in body.items}
+    want = {i.lower() for i in items}
+    body = FetchBody(session="", items=items, fy=fy)
     out_files: list[dict] = []
     report: list[dict] = []
     shots: list[str] = []
@@ -542,6 +540,64 @@ async def it_fetch(body: FetchBody, x_worker_key: str | None = Header(default=No
             if sh:
                 shots.append(sh)
     return {"files": out_files, "report": report, "screenshots": shots[:2]}
+
+
+@app.post("/it/fetch")
+async def it_fetch(body: FetchBody, x_worker_key: str | None = Header(default=None)) -> dict:
+    _auth(x_worker_key)
+    s = SESSIONS.get(body.session)
+    if not s or s.state != "logged_in":
+        raise HTTPException(409, "Not logged in yet.")
+    return await _run_fetch(s, body.items, body.fy)
+
+
+class AsyncFetchBody(BaseModel):
+    session: str
+    items: list[str]
+    fy: str | None = None
+    callback_url: str
+    job_id: str
+    job_token: str
+
+
+async def _post(url: str, payload: dict) -> None:
+    def go() -> None:
+        req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
+                                     headers={"Content-Type": "application/json", "x-worker-key": WORKER_KEY})
+        try:
+            urllib.request.urlopen(req, timeout=120).read()
+        except Exception as e:  # noqa: BLE001
+            print("callback failed:", e)
+    await asyncio.to_thread(go)
+
+
+async def _background(s: Sess, sid: str, b: AsyncFetchBody) -> None:
+    report: list[dict] = []
+    try:
+        res = await _run_fetch(s, b.items, b.fy)
+        report = res["report"]
+        for f in res["files"]:
+            await _post(b.callback_url, {"job_id": b.job_id, "job_token": b.job_token, "file": f})
+    except Exception as e:  # noqa: BLE001
+        report.append({"item": "fetch", "ok": False, "note": f"Stopped: {e}"})
+    finally:
+        await _post(b.callback_url, {"job_id": b.job_id, "job_token": b.job_token, "done": True, "report": report})
+        SESSIONS.pop(sid, None)
+        await _logout_and_close(s)
+
+
+@app.post("/it/fetch_async")
+async def it_fetch_async(body: AsyncFetchBody, x_worker_key: str | None = Header(default=None)) -> dict:
+    """Starts the fetch and returns at once; documents go to FreBook's callback as they are downloaded."""
+    _auth(x_worker_key)
+    if not body.callback_url.startswith("https://"):
+        raise HTTPException(400, "Callback must be HTTPS.")
+    s = SESSIONS.get(body.session)
+    if not s or s.state != "logged_in":
+        raise HTTPException(409, "Not logged in yet.")
+    s.created = time.time()          # give the job the full session time from now
+    asyncio.create_task(_background(s, body.session, body))
+    return {"started": True}
 
 
 @app.post("/it/close")

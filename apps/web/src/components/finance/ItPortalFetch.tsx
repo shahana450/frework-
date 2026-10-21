@@ -1,7 +1,8 @@
 "use client";
 // Shelf → Income Tax / Notices racks: fetch notices, 26AS, AIS, TIS and filed returns live from the Income-tax portal.
-// The PAN, password and OTP are typed each time and stored nowhere; the password field is cleared as soon as it's sent.
-import { useEffect, useState } from "react";
+// The password is saved (encrypted) only when "Remember password" is ticked. After the OTP the fetch runs as a
+// background job on FreWork's worker, so the documents still arrive if this page is closed.
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const C = { ink: "#141A3A", muted: "#5A6080", line: "#E1E4EE", navy: "#1F5EFF", deep: "#232A63", soft: "#EAF2FF", good: "#0B7A55", goodSoft: "#E3F6EE", bad: "#C2321F", warn: "#8A5A00", warnSoft: "#FFF4DB" };
 const ITEMS: [string, string, string][] = [
@@ -27,8 +28,45 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [report, setReport] = useState<{ item: string; ok: boolean; note: string }[]>([]);
   const [shot, setShot] = useState<string | null>(null);
+  const [remember, setRemember] = useState(true);
+  const [savedPans, setSavedPans] = useState<string[]>([]);
+  const [setupMsg, setSetupMsg] = useState("");
+  const [job, setJob] = useState<{ id: string; status: string; saved: number } | null>(null);
+  const poll = useRef<ReturnType<typeof setInterval> | null>(null);
+  const jobKey = `fw_it_job_${bizId}`;
 
-  useEffect(() => { fetch("/api/finance/it-fetch").then(r => r.json()).then(d => setConfigured(!!d.configured)).catch(() => setConfigured(false)); }, []);
+  const watch = useCallback((id: string) => {
+    if (poll.current) clearInterval(poll.current);
+    const tick = async () => {
+      const d = await fetch(`/api/finance/it-fetch?business_id=${bizId}&job=${id}`).then(r => r.json()).catch(() => null);
+      if (!d || d.error) return;
+      setJob({ id, status: d.status, saved: d.saved ?? 0 });
+      if (d.status !== "running") {
+        if (poll.current) clearInterval(poll.current);
+        try { localStorage.removeItem(jobKey); } catch { /* */ }
+        setReport(d.report ?? []);
+        setMsg({ ok: (d.saved ?? 0) > 0, text: d.saved ? `Done — ${d.saved} document${d.saved === 1 ? "" : "s"} saved on the Shelf.` : "Finished, but nothing was saved — see the notes below." });
+        if (d.saved) onSaved();
+      }
+    };
+    void tick();
+    poll.current = setInterval(tick, 4000);
+  }, [bizId, jobKey, onSaved]);
+
+  useEffect(() => {
+    fetch(`/api/finance/it-fetch?business_id=${bizId}`).then(r => r.json()).then(d => {
+      setConfigured(!!d.configured); setSavedPans(d.saved ?? []); setSetupMsg(d.setup_needed ?? "");
+    }).catch(() => setConfigured(false));
+    // A fetch started earlier (maybe before the page was closed) — pick up its progress
+    try { const id = localStorage.getItem(jobKey); if (id) watch(id); } catch { /* */ }
+    return () => { if (poll.current) clearInterval(poll.current); };
+  }, [bizId, jobKey, watch]);
+  const hasSaved = savedPans.includes(pan);
+  async function forget() {
+    await call({ action: "forget", pan });
+    setSavedPans(p => p.filter(x => x !== pan));
+    setMsg({ ok: true, text: `Saved password for ${pan} deleted.` });
+  }
 
   async function call(body: Record<string, unknown>) {
     const r = await fetch("/api/finance/it-fetch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, ...body }) });
@@ -37,9 +75,10 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
   async function start() {
     setBusy("start"); setMsg(null); setShot(null); setReport([]);
     const pw = password; setPassword("");                      // cleared from the page straight away
-    const { ok, d } = await call({ action: "start", pan, password: pw, consent });
+    const { ok, d } = await call({ action: "start", pan, password: pw, consent, remember: remember && !!pw });
     setBusy("");
     if (!ok) { setMsg({ ok: false, text: d.error ?? "Login failed." }); setShot(d.screenshot ?? null); return; }
+    if (remember && pw && !d.warning) setSavedPans(p => [...new Set([...p, pan])]);
     setSession(d.session); setState(d.state);
     setMsg({ ok: true, text: d.state === "otp_required" ? "The portal sent an OTP to the registered mobile / email. Enter it below." : "Logged in to the Income-tax portal." });
   }
@@ -55,10 +94,11 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
     const { ok, d } = await call({ action: "fetch", session, items: Object.keys(items).filter(k => items[k]), fy });
     setBusy("");
     if (!ok) { setMsg({ ok: false, text: d.error ?? "Fetch failed." }); setShot(d.screenshot ?? null); return; }
-    setReport(d.report ?? []); setShot(d.screenshots?.[0] ?? null);
-    setMsg({ ok: d.saved > 0, text: d.saved ? `${d.saved} document${d.saved === 1 ? "" : "s"} saved on the Shelf.` : "Nothing was saved — see the notes below." });
-    if (d.saved) onSaved();
-    await close(false);
+    // The worker carries on by itself and logs out when done
+    setSession(""); setState(""); setReport([]);
+    try { localStorage.setItem(jobKey, d.job); } catch { /* */ }
+    setMsg({ ok: true, text: "Fetching in the background — you can leave this page. Documents appear on the Shelf as they arrive." });
+    watch(d.job);
   }
   async function close(say = true) {
     if (session) await call({ action: "close", session });
@@ -79,7 +119,7 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
           <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>Notices, Form 26AS, AIS, TIS and filed returns — saved on the Shelf</div>
         </div>
         <span style={{ fontSize: 12.5, fontWeight: 800, padding: "5px 12px", borderRadius: 999, background: state === "logged_in" ? C.goodSoft : C.soft, color: state === "logged_in" ? C.good : C.navy }}>
-          {state === "logged_in" ? "● Logged in" : state === "otp_required" ? "Waiting for OTP" : "🔒 Nothing stored"}
+          {job?.status === "running" ? `⟳ Running in background · ${job.saved} saved` : state === "logged_in" ? "● Logged in" : state === "otp_required" ? "Waiting for OTP" : "🔒 Encrypted"}
         </span>
       </div>
 
@@ -88,13 +128,20 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
               <input id="it-pan" aria-label="PAN" placeholder="PAN (user ID)" value={pan} onChange={e => setPan(e.target.value.toUpperCase().slice(0, 10))} style={{ ...input, letterSpacing: 1.5, fontWeight: 700 }} autoComplete="off" />
-              <input id="it-password" aria-label="Income-tax portal password" type="password" placeholder="Income-tax portal password" value={password} onChange={e => setPassword(e.target.value)} style={input} autoComplete="off" />
+              <input id="it-password" aria-label="Income-tax portal password" type="password" placeholder={hasSaved ? "Saved password will be used" : "Income-tax portal password"} value={password} onChange={e => setPassword(e.target.value)} style={input} autoComplete="off" />
             </div>
+            <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", fontSize: 13, color: C.ink }}>
+              <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} /> Remember password for this PAN (saved encrypted)
+              </label>
+              {hasSaved && <button onClick={forget} style={{ border: "none", background: "none", color: C.bad, fontWeight: 700, cursor: "pointer", fontSize: 13, padding: 0 }}>Forget saved password</button>}
+            </div>
+            {setupMsg && <div style={{ fontSize: 12.5, color: C.warn }}>{setupMsg}</div>}
             <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, color: C.ink, lineHeight: 1.45 }}>
               <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 3 }} />
-              I am this taxpayer, or authorised by them, to access their Income-tax account. The password is used once for this login and is not stored.
+              I am this taxpayer, or authorised by them, to access their Income-tax account.
             </label>
-            <div><button onClick={start} disabled={!/^[A-Z]{5}\d{4}[A-Z]$/.test(pan) || !password || !consent || !!busy} style={btn(true)}>{busy === "start" ? "Opening the portal…" : "Log in to the portal"}</button></div>
+            <div><button onClick={start} disabled={!/^[A-Z]{5}\d{4}[A-Z]$/.test(pan) || (!password && !hasSaved) || !consent || !!busy || job?.status === "running"} style={btn(true)}>{busy === "start" ? "Opening the portal…" : "Log in to the portal"}</button></div>
           </div>
         ) : state === "otp_required" ? (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -117,7 +164,7 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
               <select value={fy} onChange={e => setFy(e.target.value)} style={{ ...input, height: 38 }}>
                 {[0, 1, 2, 3].map(n => { const y = Number(fyNow().slice(0, 4)) - n; const v = `${y}-${String(y + 1).slice(2)}`; return <option key={v} value={v}>FY {v}</option>; })}
               </select>
-              <button onClick={fetchDocs} disabled={!!busy || !Object.values(items).some(Boolean)} style={{ ...btn(true), marginLeft: "auto" }}>{busy === "fetch" ? "Fetching… (up to a few minutes)" : "⬇ Fetch now"}</button>
+              <button onClick={fetchDocs} disabled={!!busy || !Object.values(items).some(Boolean)} style={{ ...btn(true), marginLeft: "auto" }}>{busy === "fetch" ? "Starting…" : "⬇ Fetch now"}</button>
               <button onClick={() => close()} style={btn(false)}>Log out</button>
             </div>
           </div>

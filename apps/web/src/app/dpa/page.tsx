@@ -42,7 +42,7 @@ export default function DpaPage() {
           "Separation of each business's data by row-level security in the database.",
           "Role-based access for team members invited by the Customer.",
           "Posted entries cannot be edited; corrections are made by reversal, so there is a full audit trail.",
-          "Service keys kept only on the server; no portal or bank passwords stored.",
+          "Service keys kept only on the server; no GST-portal or bank passwords stored. An Income-tax portal password is stored only when the Customer ticks \"Remember password\", encrypted with AES-256-GCM, and deleted on request.",
           "Backups by the database provider.",
         ]} />
       </Section>

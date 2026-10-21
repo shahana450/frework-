@@ -10,8 +10,8 @@ export const LEGAL = {
   grievanceEmail: "legal@frework.online",
   supportEmail: "support@frework.online",
   billingEmail: "billing@frework.online",
-  effective: "20 October 2026",
-  version: "1.2",   // 1.1: email provider (Resend) listed; WhatsApp alerts, bank-statement reading and page-allowance use described
+  effective: "21 October 2026",
+  version: "1.3",   // 1.1: email provider (Resend) listed; WhatsApp alerts, bank-statement reading and page-allowance use described
 } as const;
 
 export const fill = (v: string) => v.trim() || "[to be added]";
