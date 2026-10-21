@@ -365,6 +365,10 @@ export default function ShelfPage() {
                   )}
                 </div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  <select value={it.fy ?? ""} onChange={e => patch(it.id, { fy: e.target.value || null })} aria-label="Financial year" title="Financial year this file belongs to" style={{ height: 32, border: `1px solid ${C.line}`, borderRadius: 9, fontSize: 12.5, color: C.muted, background: C.surface, padding: "0 6px" }}>
+                    <option value="">No FY</option>
+                    {Array.from({ length: 10 }, (_, k) => { const y = new Date().getFullYear() - k; return `${y}-${String(y + 1).slice(2)}`; }).map(v => <option key={v} value={v}>FY {v}</option>)}
+                  </select>
                   <select value={it.rack} onChange={e => patch(it.id, { rack: e.target.value as RackKey })} aria-label="Move to rack" title="Move to another rack" style={{ height: 32, border: `1px solid ${C.line}`, borderRadius: 9, fontSize: 12.5, color: C.muted, background: C.surface, padding: "0 6px" }}>
                     {RACKS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
                   </select>

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireBusiness, serverError } from "@/lib/apiAuth";
-import { fileToShelf } from "@/lib/shelf";
+import { fileToShelf, fyOfDate } from "@/lib/shelf";
+import { classifyDocument } from "@/lib/shelfClassify";
 
 // Live Income-tax portal fetch through FreWork's portal worker (services/portal-worker).
 // The taxpayer types PAN, password and OTP each time; FreBook passes them straight to the worker and stores
@@ -61,9 +62,16 @@ export async function POST(req: NextRequest) {
         const isText = /\.txt$/i.test(f.name);
         const rack = f.kind === "notice" || f.kind === "notice_text" ? "notices" : "income_tax";
         const docType = { notice: "Income-tax notice", notice_text: "Portal page (text)", "26as": "Form 26AS", ais: "AIS", tis: "TIS", filed_returns: "Filed returns" }[f.kind] ?? "Income-tax document";
-        const ok2 = await fileToShelf(sb, { businessId: bizId, actorId: gate.user.id, rack, title: `${docType} · ${f.name.replace(/\.(pdf|txt|zip|json)$/i, "")}`.slice(0, 180),
-          fileName: f.name, mime: isText ? "text/plain" : /\.zip$/i.test(f.name) ? "application/zip" : /\.json$/i.test(f.name) ? "application/json" : "application/pdf",
-          bytes, source: "system", fy, docType, notes: "Fetched from the Income-tax portal" + (/(AIS|TIS)/.test(docType) ? " · PDF password: PAN in small letters + date of birth (ddmmyyyy)" : f.kind === "26as" ? " · if protected, password is date of birth (ddmmyyyy)" : "") });
+        const mime = isText ? "text/plain" : /\.zip$/i.test(f.name) ? "application/zip" : /\.json$/i.test(f.name) ? "application/json" : "application/pdf";
+        // A notice or demand belongs to its own assessment year, not the year chosen for 26AS / AIS — the AI reads it
+        // (year, reference, amount, reply-by date). Password-protected statements keep the chosen year.
+        const c = f.kind === "notice" && mime === "application/pdf" ? await classifyDocument(new File([bytes], f.name, { type: mime })) : {};
+        const ISO = /^\d{4}-\d{2}-\d{2}$/;
+        const docFy = (c.fy && /^\d{4}-\d{2}$/.test(c.fy) ? c.fy : null) || fyOfDate(c.date) || (f.kind === "notice" || f.kind === "notice_text" ? null : fy);
+        const ok2 = await fileToShelf(sb, { businessId: bizId, actorId: gate.user.id, rack, title: (c.title || `${docType} · ${f.name.replace(/\.(pdf|txt|zip|json)$/i, "")}`).slice(0, 180),
+          fileName: f.name, mime, bytes, source: "system", fy: docFy, docType: c.doc_type || docType, period: c.period ?? null,
+          reference: c.reference ?? null, authority: c.authority ?? null, amount: typeof c.amount === "number" && isFinite(c.amount) ? c.amount : null,
+          replyDue: c.reply_due && ISO.test(c.reply_due) ? c.reply_due : null, aiSummary: c.summary ?? null, notes: "Fetched from the Income-tax portal" + (/(AIS|TIS)/.test(docType) ? " · PDF password: PAN in small letters + date of birth (ddmmyyyy)" : f.kind === "26as" ? " · if protected, password is date of birth (ddmmyyyy)" : "") });
         if (ok2) saved++;
       }
       return NextResponse.json({ report: d.report ?? [], saved, screenshots: d.screenshots ?? [] });
