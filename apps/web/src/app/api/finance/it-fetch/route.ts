@@ -39,7 +39,14 @@ export async function GET(req: NextRequest) {
   const job = req.nextUrl.searchParams.get("job");
   if (job) {
     const { data } = await sb.from("fw_fin_it_jobs").select("status,saved,report,created_at,finished_at").eq("id", job).eq("business_id", bizId).maybeSingle();
-    return data ? NextResponse.json(data) : NextResponse.json({ error: "Job not found" }, { status: 404 });
+    if (!data) return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    // The worker never reported back (restarted, or couldn't reach FreBook): don't show "running" forever
+    if (data.status === "running" && Date.now() - Date.parse(data.created_at) > 20 * 60000) {
+      const report = [{ item: "fetch", ok: false, note: "The background fetch stopped without finishing. Start it again." }];
+      await sb.from("fw_fin_it_jobs").update({ status: data.saved ? "done" : "failed", report, finished_at: new Date().toISOString() }).eq("id", job);
+      return NextResponse.json({ ...data, status: data.saved ? "done" : "failed", report });
+    }
+    return NextResponse.json(data);
   }
   const { data, error } = await sb.from("fw_fin_it_credentials").select("pan,updated_at").eq("business_id", bizId);
   const last = error ? null : (await sb.from("fw_fin_it_jobs").select("id,status,saved,report,created_at").eq("business_id", bizId).order("created_at", { ascending: false }).limit(1).maybeSingle()).data;

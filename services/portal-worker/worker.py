@@ -61,6 +61,7 @@ class Sess:
 
 
 SESSIONS: dict[str, Sess] = {}
+JOBS: set[asyncio.Task] = set()
 
 
 class StepError(Exception):
@@ -567,7 +568,7 @@ async def _post(url: str, payload: dict) -> None:
         try:
             urllib.request.urlopen(req, timeout=120).read()
         except Exception as e:  # noqa: BLE001
-            print("callback failed:", e)
+            print("callback failed:", url, e, flush=True)
     await asyncio.to_thread(go)
 
 
@@ -576,6 +577,7 @@ async def _background(s: Sess, sid: str, b: AsyncFetchBody) -> None:
     try:
         res = await _run_fetch(s, b.items, b.fy)
         report = res["report"]
+        print(f"job {b.job_id}: fetched {len(res['files'])} files", flush=True)
         for f in res["files"]:
             await _post(b.callback_url, {"job_id": b.job_id, "job_token": b.job_token, "file": f})
     except Exception as e:  # noqa: BLE001
@@ -596,7 +598,11 @@ async def it_fetch_async(body: AsyncFetchBody, x_worker_key: str | None = Header
     if not s or s.state != "logged_in":
         raise HTTPException(409, "Not logged in yet.")
     s.created = time.time()          # give the job the full session time from now
-    asyncio.create_task(_background(s, body.session, body))
+    # Keep a reference: an un-referenced asyncio task can be garbage-collected (cancelled) mid-run
+    task = asyncio.create_task(_background(s, body.session, body))
+    JOBS.add(task)
+    task.add_done_callback(JOBS.discard)
+    print(f"job {body.job_id}: started ({', '.join(body.items)})", flush=True)
     return {"started": True}
 
 
