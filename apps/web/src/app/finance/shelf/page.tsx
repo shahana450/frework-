@@ -263,8 +263,9 @@ export default function ShelfPage() {
               </div>
             </div>
 
-            {india && rack === "gst" && bizId && <GstPortalDownload bizId={bizId} onSaved={() => load(bizId)} />}
-            {india && (rack === "income_tax" || rack === "notices") && bizId && <ItPortalFetch bizId={bizId} onSaved={() => load(bizId)} />}
+            {/* Kept mounted while you look at other racks, so a login or download in progress isn't lost; only hidden */}
+            {india && bizId && <div hidden={rack !== "gst"}><GstPortalDownload bizId={bizId} onSaved={() => load(bizId)} /></div>}
+            {india && bizId && <div hidden={rack !== "income_tax" && rack !== "notices"}><ItPortalFetch bizId={bizId} onSaved={() => load(bizId)} /></div>}
 
             {india && rack === "gst" && calendar && (
               <section aria-label="GST return calendar" style={{ background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, padding: "14px 16px" }}>
