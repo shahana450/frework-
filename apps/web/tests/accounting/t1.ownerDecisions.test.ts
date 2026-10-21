@@ -56,6 +56,7 @@ test("T1: no page shows a monthly price other than FreBook's, except the listed 
     "finance/payroll/page.tsx|₹200",    // Kerala professional tax
     "services/compliance/page.tsx|₹999", // compliance service
     "components/landing/business-os-homepage.tsx|₹3,999", // FreBook Managed — done-for-you service, not the FreBook plan
+    "services/accounting/page.tsx|₹3,999",                // the accounting service page sells FreBook Managed
     "dashboard/docs-upload/page.tsx|₹1,499",          // Accounting & Bookkeeping service
     "dashboard/service-requests/page.tsx|₹1,499",     // Accounting & Bookkeeping service
     "dashboard/services/page.tsx|₹1,499",             // Accounting & Bookkeeping service
@@ -82,7 +83,7 @@ test("T1: no page sells FreBook at another price", () => {
       // a ₹ amount within a few words of "FreBook" is a FreBook price
       for (const m of line.matchAll(/FreBook[^₹\n]{0,60}₹\s?([\d,]+)|₹\s?([\d,]+)[^₹\n]{0,40}FreBook/g)) {
         const amount = `₹${m[1] ?? m[2]}`;
-        if (amount === "₹3,999" && rel(f).endsWith("business-os-homepage.tsx")) continue; // FreBook Managed service, priced separately
+        if (amount === "₹3,999" && /business-os-homepage.tsx$|services[\/]accounting[\/]page.tsx$/.test(rel(f))) continue; // FreBook Managed service, priced separately
         if (!PRICES.includes(amount)) bad.push(`${rel(f)}:${i + 1} ${amount}`);
       }
     });
