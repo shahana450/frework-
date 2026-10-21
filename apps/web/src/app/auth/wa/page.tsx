@@ -1,6 +1,6 @@
 "use client";
 // Opens FreWork from a WhatsApp sign-in link (or the WhatsApp OTP on the login page): the one-time token becomes a session.
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -10,17 +10,25 @@ function WaSignIn() {
   const router = useRouter();
   const params = useSearchParams();
   const [error, setError] = useState("");
+  const ran = useRef(false);   // the token works once: never verify it twice (a second run would report "expired")
 
   useEffect(() => {
+    if (ran.current) return;
+    ran.current = true;
     const token = params.get("t");
     if (!token) { setError("This sign-in link is incomplete."); return; }
     // Optional: open a page straight away (only FreWork finance pages) in the business the link was made for
     const next = params.get("next") ?? "", biz = params.get("biz") ?? "";
-    supabase.auth.verifyOtp({ type: "magiclink", token_hash: token }).then(({ data, error: e }) => {
-      if (e) { setError("This sign-in link has expired or was already used. Send LOGIN to FreBook on WhatsApp for a new one."); return; }
-      if (/^\/finance\/[\w\-/]+$/.test(next)) {
+    supabase.auth.verifyOtp({ type: "magiclink", token_hash: token }).then(async ({ data, error: e }) => {
+      let user = data?.user ?? null;
+      if (e) {
+        // Already used (e.g. tapped twice) but this browser is signed in from it: carry on instead of failing
+        user = (await supabase.auth.getUser()).data.user;
+        if (!user) { setError("This sign-in link has expired or was already used. Send LOGIN to FreBook on WhatsApp for a new one."); return; }
+      }
+      if (/^\/finance\/[\w\-/]+(\?[\w=&%\-]*)?$/.test(next)) {
         try { sessionStorage.setItem("fw_from_wa", "1"); } catch { /* */ }
-        if (biz && data.user) setActiveBusiness(data.user.id, biz);
+        if (biz && user) setActiveBusiness(user.id, biz);
         router.replace(next);
         return;
       }
