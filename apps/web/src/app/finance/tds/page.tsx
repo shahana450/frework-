@@ -5,17 +5,20 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 
+// Income-tax Act, 2025 (from 1 April 2026): TDS sits in section 393 (salary in 392). `section` keeps the old
+// 1961 number as the key; `ref` is what the user sees. Thresholds and rates as for tax year 2026-27.
 const TDS_SECTIONS = [
-  { section: "194C", description: "Contractor / Sub-contractor payments", threshold: 30000, rate_individual: 1, rate_company: 2 },
-  { section: "194J", description: "Professional / Technical fees", threshold: 30000, rate_individual: 10, rate_company: 10 },
-  { section: "194I(a)", description: "Rent — Plant, Machinery, Equipment", threshold: 240000, rate_individual: 2, rate_company: 2 },
-  { section: "194I(b)", description: "Rent — Land, Building, Furniture", threshold: 240000, rate_individual: 10, rate_company: 10 },
-  { section: "194A", description: "Interest (other than on securities)", threshold: 40000, rate_individual: 10, rate_company: 10 },
-  { section: "194H", description: "Commission or brokerage", threshold: 15000, rate_individual: 5, rate_company: 5 },
-  { section: "194B", description: "Lottery / game winnings", threshold: 10000, rate_individual: 30, rate_company: 30 },
-  { section: "194Q", description: "Purchase of goods (buyer TDS)", threshold: 5000000, rate_individual: 0.1, rate_company: 0.1 },
-  { section: "192", description: "Salary payments to employees", threshold: 250000, rate_individual: 5, rate_company: 5 },
-  { section: "194M", description: "Payment by individual/HUF to contractor/professional", threshold: 5000000, rate_individual: 5, rate_company: 5 },
+  { section: "194C", ref: "393(1) · contractor", description: "Contractor / Sub-contractor payments (₹30,000 a bill or ₹1 lakh a year)", threshold: 30000, rate_individual: 1, rate_company: 2 },
+  { section: "194J-T", ref: "393(1) · technical", description: "Fees for technical services, call centre", threshold: 50000, rate_individual: 2, rate_company: 2 },
+  { section: "194J", ref: "393(1) · professional", description: "Professional fees", threshold: 50000, rate_individual: 10, rate_company: 10 },
+  { section: "194I(a)", ref: "393(1) · rent (machinery)", description: "Rent — Plant, Machinery, Equipment (over ₹50,000 a month)", threshold: 50000, rate_individual: 2, rate_company: 2 },
+  { section: "194I(b)", ref: "393(1) · rent (property)", description: "Rent — Land, Building, Furniture (over ₹50,000 a month)", threshold: 50000, rate_individual: 10, rate_company: 10 },
+  { section: "194A", ref: "393(1) · interest", description: "Interest other than on securities (₹10,000; banks ₹50,000)", threshold: 10000, rate_individual: 10, rate_company: 10 },
+  { section: "194H", ref: "393(1) · commission", description: "Commission or brokerage", threshold: 20000, rate_individual: 2, rate_company: 2 },
+  { section: "194B", ref: "393(3) · winnings", description: "Lottery / game winnings (per prize)", threshold: 10000, rate_individual: 30, rate_company: 30 },
+  { section: "194Q", ref: "393(1) · purchase of goods", description: "Purchase of goods (buyer TDS, above ₹50 lakh)", threshold: 5000000, rate_individual: 0.1, rate_company: 0.1 },
+  { section: "192", ref: "392 · salary", description: "Salary — slab rates; this is only a rough average", threshold: 1200000, rate_individual: 5, rate_company: 5 },
+  { section: "194M", ref: "393(1) · by individual/HUF", description: "Contract / professional payments by individuals or HUFs not under audit (above ₹50 lakh)", threshold: 5000000, rate_individual: 2, rate_company: 2 },
 ];
 
 const DUE_DATES = [
@@ -200,7 +203,8 @@ export default function TDSTrackerPage() {
                     {TDS_SECTIONS.map(s => (
                       <tr key={s.section} style={{ borderTop: "1px solid rgba(20,26,58,0.08)", cursor: "pointer" }} onClick={() => { setCalcSection(s.section); }}>
                         <td style={{ padding: "0.55rem 0.85rem" }}>
-                          <span style={{ fontWeight: 700, fontSize: "0.8rem", color: "#232A63" }}>{s.section}</span>
+                          <span style={{ fontWeight: 700, fontSize: "0.8rem", color: "#232A63" }}>{s.ref}</span>
+                          <span style={{ display: "block", fontSize: "0.65rem", color: "rgba(20,26,58,0.5)" }}>old {s.section.replace("-T", "")}</span>
                         </td>
                         <td style={{ padding: "0.55rem 0.85rem", fontSize: "0.75rem", color: "rgba(20,26,58,0.85)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.description}</td>
                         <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", fontVariantNumeric: "tabular-nums" }}>
@@ -222,7 +226,7 @@ export default function TDSTrackerPage() {
               <div style={{ marginBottom: "0.85rem" }}>
                 <label style={labelStyle}>TDS Section</label>
                 <select value={calcSection} onChange={e => setCalcSection(e.target.value)} style={inputStyle}>
-                  {TDS_SECTIONS.map(s => <option key={s.section} value={s.section}>{s.section} — {s.description}</option>)}
+                  {TDS_SECTIONS.map(s => <option key={s.section} value={s.section}>{s.ref} (old {s.section.replace("-T", "")}) — {s.description}</option>)}
                 </select>
               </div>
               <div style={{ marginBottom: "0.85rem" }}>
