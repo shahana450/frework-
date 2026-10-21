@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { requireBusiness, serverError } from "@/lib/apiAuth";
 import { seal, open as unseal } from "@/lib/portals/secretBox";
+import { fileFetchedDoc, type FetchedFile } from "@/lib/itShelf";
 
 // Income-tax portal fetch through FreWork's portal worker (services/portal-worker).
 //   GET  ?business_id                → is it switched on, which PANs have a remembered password, the last job
@@ -28,6 +29,8 @@ const errOf = (d: Record<string, unknown>) => {
   const det = d.detail as { message?: string; screenshot?: string } | string | undefined;
   return typeof det === "string" ? { error: det } : { error: det?.message ?? "The portal step failed.", screenshot: det?.screenshot ?? null };
 };
+// The job's token for the worker, derived so nothing secret is stored
+const jobToken = (id: string) => createHmac("sha256", process.env.PORTAL_WORKER_KEY ?? "").update(`it-job:${id}`).digest("base64url");
 const PAN = /^[A-Z]{5}\d{4}[A-Z]$/;
 
 export async function GET(req: NextRequest) {
@@ -38,8 +41,30 @@ export async function GET(req: NextRequest) {
   if (gate instanceof NextResponse) return gate;
   const job = req.nextUrl.searchParams.get("job");
   if (job) {
-    const { data } = await sb.from("fw_fin_it_jobs").select("status,saved,report,created_at,finished_at").eq("id", job).eq("business_id", bizId).maybeSingle();
+    const { data } = await sb.from("fw_fin_it_jobs").select("status,saved,report,created_at,finished_at,user_id,fy").eq("id", job).eq("business_id", bizId).maybeSingle();
     if (!data) return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    // Collect whatever the worker has downloaded so far (the worker hands each file over once)
+    if (data.status === "running") {
+      const w = await worker("/it/job", { job_id: job, job_token: jobToken(job) });
+      if (w.ok) {
+        const files = (w.d.files ?? []) as FetchedFile[];
+        for (const f of files) {
+          const s = await fileFetchedDoc(sb, bizId, data.user_id, f, data.fy);
+          if (s) { data.saved += 1; if (s.enrich) after(() => s.enrich!().catch(e => console.error("notice enrich", e))); }
+        }
+        const upd: Record<string, unknown> = { saved: data.saved };
+        if (w.d.done) {
+          const report = Array.isArray(w.d.report) ? (w.d.report as unknown[]).slice(0, 20) : [];
+          Object.assign(upd, { status: data.saved ? "done" : "failed", report, finished_at: new Date().toISOString() });
+        }
+        await sb.from("fw_fin_it_jobs").update(upd).eq("id", job);
+        Object.assign(data, upd);
+      } else if (w.status === 404) {
+        const report = [{ item: "fetch", ok: false, note: "The download server restarted. Start the fetch again." }];
+        await sb.from("fw_fin_it_jobs").update({ status: data.saved ? "done" : "failed", report, finished_at: new Date().toISOString() }).eq("id", job);
+        return NextResponse.json({ status: data.saved ? "done" : "failed", saved: data.saved, report });
+      }
+    }
     // The worker never reported back (restarted, or couldn't reach FreBook): don't show "running" forever
     if (data.status === "running" && Date.now() - Date.parse(data.created_at) > 20 * 60000) {
       const report = [{ item: "fetch", ok: false, note: "The background fetch stopped without finishing. Start it again." }];
@@ -99,11 +124,11 @@ export async function POST(req: NextRequest) {
     if (body.action === "fetch") {
       const items = (Array.isArray(body.items) ? body.items : []).map(String);
       const fy = /^\d{4}-\d{2}$/.test(String(body.fy ?? "")) ? String(body.fy) : null;
-      const token = randomBytes(24).toString("base64url");
-      const { data: job, error } = await sb.from("fw_fin_it_jobs").insert({ business_id: bizId, user_id: gate.user.id, token_hash: createHash("sha256").update(token).digest("hex"), fy }).select("id").single();
+      const { data: job, error } = await sb.from("fw_fin_it_jobs").insert({ business_id: bizId, user_id: gate.user.id, token_hash: "-", fy }).select("id").single();
       if (error || !job) return NextResponse.json({ error: NEEDS_SQL }, { status: 400 });
-      const callback = `${req.nextUrl.origin}/api/finance/it-fetch/callback`;
-      const { ok, status, d } = await worker("/it/fetch_async", { session: String(body.session ?? ""), items, fy, callback_url: callback, job_id: job.id, job_token: token });
+      const token = jobToken(job.id);
+      await sb.from("fw_fin_it_jobs").update({ token_hash: createHash("sha256").update(token).digest("hex") }).eq("id", job.id);
+      const { ok, status, d } = await worker("/it/fetch_async", { session: String(body.session ?? ""), items, fy, job_id: job.id, job_token: token });
       if (!ok) {
         await sb.from("fw_fin_it_jobs").update({ status: "failed", report: [{ item: "start", ok: false, note: errOf(d).error }], finished_at: new Date().toISOString() }).eq("id", job.id);
         return NextResponse.json(errOf(d), { status });

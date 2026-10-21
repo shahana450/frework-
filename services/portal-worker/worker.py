@@ -566,54 +566,61 @@ class AsyncFetchBody(BaseModel):
     session: str
     items: list[str]
     fy: str | None = None
-    callback_url: str
+    callback_url: str | None = None      # no longer used: FreBook collects results with /it/job
     job_id: str
     job_token: str
 
 
-async def _post(url: str, payload: dict) -> None:
-    def go() -> None:
-        req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
-                                     headers={"Content-Type": "application/json", "x-worker-key": WORKER_KEY})
-        for attempt in range(3):                       # a slow or busy FreBook gets two more tries
-            try:
-                urllib.request.urlopen(req, timeout=90).read()
-                trace(str(payload.get("job_id", "")), "callback ok" + (" (done)" if payload.get("done") else ""))
-                return
-            except Exception as e:  # noqa: BLE001
-                trace(str(payload.get("job_id", "")), f"callback try {attempt + 1} failed: {str(e)[:100]}")
-                time.sleep(5 * (attempt + 1))
-    await asyncio.to_thread(go)
+# Finished downloads wait here until FreBook collects them (/it/job); FreBook polls, the worker never calls out
+RESULTS: dict[str, dict] = {}
 
 
 async def _background(s: Sess, sid: str, b: AsyncFetchBody) -> None:
-    report: list[dict] = []
+    r = RESULTS[b.job_id]
     try:
         res = await _run_fetch(s, b.items, b.fy)
-        report = res["report"]
-        trace(b.job_id, f"fetched {len(res['files'])} files; sending to FreBook")
-        for f in res["files"]:
-            await _post(b.callback_url, {"job_id": b.job_id, "job_token": b.job_token, "file": f})
+        r["files"].extend(res["files"])
+        r["report"] = res["report"]
+        trace(b.job_id, f"fetched {len(res['files'])} files; waiting for FreBook to collect")
     except Exception as e:  # noqa: BLE001
         trace(b.job_id, f"error: {type(e).__name__}: {str(e)[:120]}")
-        report.append({"item": "fetch", "ok": False, "note": f"Stopped: {e}"})
+        r["report"].append({"item": "fetch", "ok": False, "note": f"Stopped: {e}"})
     finally:
-        trace(b.job_id, "finished; reporting")
-        await _post(b.callback_url, {"job_id": b.job_id, "job_token": b.job_token, "done": True, "report": report})
+        r["done"] = True
         SESSIONS.pop(sid, None)
         await _logout_and_close(s)
 
 
+class JobBody(BaseModel):
+    job_id: str
+    job_token: str
+
+
+@app.post("/it/job")
+async def it_job(body: JobBody, x_worker_key: str | None = Header(default=None)) -> dict:
+    """Hands over the files downloaded so far (each only once) and whether the job has finished."""
+    _auth(x_worker_key)
+    r = RESULTS.get(body.job_id)
+    if not r or r["token"] != body.job_token:
+        raise HTTPException(404, "Job not found (the worker may have restarted).")
+    files, r["files"] = r["files"], []
+    if r["done"]:
+        RESULTS.pop(body.job_id, None)
+        trace(body.job_id, f"collected by FreBook ({len(files)} files), done")
+    return {"done": r["done"], "files": files, "report": r["report"]}
+
+
 @app.post("/it/fetch_async")
 async def it_fetch_async(body: AsyncFetchBody, x_worker_key: str | None = Header(default=None)) -> dict:
-    """Starts the fetch and returns at once; documents go to FreBook's callback as they are downloaded."""
+    """Starts the fetch and returns at once; FreBook collects the documents with /it/job."""
     _auth(x_worker_key)
-    if not body.callback_url.startswith("https://"):
-        raise HTTPException(400, "Callback must be HTTPS.")
     s = SESSIONS.get(body.session)
     if not s or s.state != "logged_in":
         raise HTTPException(409, "Not logged in yet.")
     s.created = time.time()          # give the job the full session time from now
+    RESULTS[body.job_id] = {"token": body.job_token, "files": [], "report": [], "done": False, "at": time.time()}
+    for k in [k for k, v in RESULTS.items() if time.time() - v["at"] > 3600]:
+        RESULTS.pop(k, None)
     # Keep a reference: an un-referenced asyncio task can be garbage-collected (cancelled) mid-run
     task = asyncio.create_task(_background(s, body.session, body))
     JOBS.add(task)
