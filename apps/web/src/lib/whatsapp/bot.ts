@@ -194,6 +194,7 @@ Works once and expires soon. Don't forward this link — it signs in as you. Sha
   }
 
   if (!can(role, "post")) return "Your role can view but not post. Ask a question instead, e.g. *Profit this month*.";
+  if (m.media) console.log("wa bill read", JSON.stringify({ action: ai.action, items: (ai.items ?? []).map(i => [i.kind, i.account, i.taxable, i.rate]) }).slice(0, 600));   // no party or amounts beyond the lines
   const parsed = await interpret(sb, ai, accounts ?? [], link.business_id, today, biz);
   if (fy?.is_locked) parsed.warnings.push("This accounting period is locked.");
   if (parsed.status === "needs_clarification" && parsed.needs_clarification.length) {

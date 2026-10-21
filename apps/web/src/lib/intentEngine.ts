@@ -33,7 +33,7 @@ FIELDS:
 - reason: one or two sentences explaining WHY you chose the action and counter_account, quoting the words from the message/document you relied on. Do not invent facts.
 - missing: list facts that are genuinely unknown and needed: "amount", "payment_account" (paid/received how?), "expense_account" (what was it for?). Never list ledger choice when you can infer it.
 
-- items: for a SUPPLIER BILL / INVOICE with item lines, list EVERY line: [{"account","kind","taxable","rate"}]. "taxable" = that line's value before GST after its share of any bill-level discount (the items' taxable values must add up to the bill's taxable value); "rate" = its GST %. Lines with the same ledger may be combined. Else null.
+- items: REQUIRED for every SUPPLIER BILL / INVOICE that shows item lines (even one) — list EVERY line: [{"account","kind","taxable","rate"}]. "taxable" = that line's value before GST after its share of any bill-level discount (the items' taxable values must add up to the bill's taxable value); "rate" = its GST %. Lines with the same ledger may be combined. Else null.
   Pick each line's ledger by what the item IS for this business:
   · kind "purchase" — ONLY goods bought to resell, or raw material for goods it makes (its stock-in-trade). Ledger "Purchases" (or an existing purchase ledger). GST-rate ledgers like "Purchase @18%" are for stock only.
   · kind "asset" — durable items used in the business for more than a year (laptops, computers, printers, furniture, AC, machinery, vehicles, mobile phones). Ledger e.g. "Computers", "Furniture & Fixtures", "Office Equipment", "Plant & Machinery". Installation / setup charges of an asset go to that same asset ledger.
@@ -151,14 +151,16 @@ export type AiIntent = {
   currency?: string | null; exchange_rate?: number | null;
 };
 
-export type BusinessContext = { country: string; baseCurrency: string; tax: TaxModule; state?: string | null; gstin?: string | null };
+export type BusinessContext = { country: string; baseCurrency: string; tax: TaxModule; state?: string | null; gstin?: string | null; sells?: string[] };
 
 /** The AI instructions with this business's country, currency and tax rules added. */
 export function intentSystemFor(ctx: BusinessContext): string {
   return `${INTENT_SYSTEM}
 
 THIS BUSINESS: country ${ctx.country}${ctx.state ? `, state ${ctx.state}` : ""}; base currency ${ctx.baseCurrency}.
-TAX (${ctx.tax.name}): ${ctx.tax.aiRules}`;
+TAX (${ctx.tax.name}): ${ctx.tax.aiRules}
+
+WHAT THIS BUSINESS SELLS (its item list): ${ctx.sells?.length ? ctx.sells.join(", ") : "none recorded"}. On a supplier bill, only goods like these are stock (items kind \"purchase\"). If none are recorded, or the bill's goods are not like them, treat them as fixed assets or expenses unless the user says they are for resale. A ledger such as \"Purchase @18%\" existing in the list is NOT evidence that the business sells these goods.`;
 }
 
 /** Reads country/currency/tax regime, tolerating databases without the Phase 7 columns. */
@@ -166,7 +168,10 @@ export async function loadBusinessContext(sb: SupabaseClient, businessId: string
   let { data, error } = await sb.from("fw_fin_businesses").select("name,state,gstin,currency,country,tax_regime").eq("id", businessId).single();
   if (error && /country|tax_regime/.test(error.message)) ({ data } = await sb.from("fw_fin_businesses").select("name,state,gstin,currency").eq("id", businessId).single());
   const d = (data ?? {}) as { name?: string; state?: string | null; gstin?: string | null; currency?: string | null; country?: string | null; tax_regime?: string | null };
-  return { name: d.name ?? "", gstin: d.gstin ?? null, state: d.state ?? null, country: d.country ?? "IN", baseCurrency: (d.currency ?? "INR").toUpperCase(), tax: getTaxModule(d.tax_regime ?? (d.country && d.country !== "IN" ? "NONE" : "IN_GST")) };
+  // What the business sells (its item master): tells stock apart from things bought for its own use
+  const { data: its } = await sb.from("fw_fin_items").select("name").eq("business_id", businessId).limit(40);
+  const sells = ((its ?? []) as { name: string }[]).map(i => i.name).filter(Boolean);
+  return { sells, name: d.name ?? "", gstin: d.gstin ?? null, state: d.state ?? null, country: d.country ?? "IN", baseCurrency: (d.currency ?? "INR").toUpperCase(), tax: getTaxModule(d.tax_regime ?? (d.country && d.country !== "IN" ? "NONE" : "IN_GST")) };
 }
 
 const BALANCE_SHEET_PLUMBING = /bank|cash|debtor|creditor|receivable|payable|cgst|sgst|igst|gst|tds|capital/i;
