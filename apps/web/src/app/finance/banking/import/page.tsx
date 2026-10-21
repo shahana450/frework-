@@ -163,6 +163,24 @@ export default function BankingPage() {
     }));
   }
 
+  // Opened from WhatsApp (?shelf=<id>): load that statement from the Shelf and read it straight away
+  const fromShelf = useRef(false);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("shelf");
+    if (!bizId || !id || fromShelf.current) return;
+    fromShelf.current = true;
+    (async () => {
+      try {
+        const { url } = await fetch(`/api/finance/shelf?business_id=${bizId}&download=${encodeURIComponent(id)}&inline=1`).then(r => r.json());
+        if (!url) throw new Error("not found");
+        const blob = await fetch(url).then(r => r.blob());
+        const name = decodeURIComponent(new URL(url).pathname.split("/").pop() ?? "statement.pdf").replace(/^d+[-_]/, "");
+        await handleFile(new File([blob], /.(pdf|xlsx?|csv)$/i.test(name) ? name : "statement.pdf", { type: blob.type || "application/pdf" }));
+      } catch { setParseError("Couldn't load the statement sent on WhatsApp. Upload it below instead."); }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bizId]);
+
   /* ── File drop / select ── */
   async function handleFile(file: File) {
     setParsing(true); setParseError(""); setRows([]); setSelected(new Set()); setPushResult(null);
@@ -201,7 +219,7 @@ export default function BankingPage() {
       await new Promise(r => setTimeout(r, 400));
       setRows(txs);
       // Keep the statement itself on the Shelf (Bank rack), so the original is always there
-      if (bizId) { const fd = new FormData(); fd.append("business_id", bizId); fd.append("file", file); fd.append("rack", "bank"); void fetch("/api/finance/shelf", { method: "POST", body: fd }).catch(() => null); }
+      if (bizId && !fromShelf.current) { const fd = new FormData(); fd.append("business_id", bizId); fd.append("file", file); fd.append("rack", "bank"); void fetch("/api/finance/shelf", { method: "POST", body: fd }).catch(() => null); }
     } catch (e: unknown) {
       if (progressInterval) clearInterval(progressInterval);
       setParseError(e instanceof Error ? e.message : String(e));

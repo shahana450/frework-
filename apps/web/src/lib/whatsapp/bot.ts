@@ -91,12 +91,15 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
   // A bank statement: too long to book from chat. File it under Bank and point to the statement import
   if (m.media && /pdf|sheet|excel|csv/i.test(m.media.mime + m.media.name) && /stat+e?m+e?nt|stmt|passbook|acc_?st|account.?st/i.test(m.media.name)) {
     const media = m.media;
-    void fileToShelf(sb, { businessId: link.business_id, actorId: link.user_id, rack: "bank", title: media.name, fileName: media.name, mime: media.mime, bytes: new Uint8Array(media.bytes), source: "upload", fy: fyOfDate(new Date().toLocaleDateString("en-CA")), docType: "Bank statement" }).catch(() => null);
-    const token = await loginToken(sb, link.user_id);
+    const [kept, token] = await Promise.all([
+      fileToShelf(sb, { businessId: link.business_id, actorId: link.user_id, rack: "bank", title: media.name, fileName: media.name, mime: media.mime, bytes: new Uint8Array(media.bytes), source: "upload", fy: fyOfDate(new Date().toLocaleDateString("en-CA")), docType: "Bank statement" }).catch(() => null),
+      loginToken(sb, link.user_id),
+    ]);
+    const path = kept ? `/finance/banking/import?shelf=${kept.id}` : "/finance/banking/import";
     return `🏦 Got your bank statement (*${media.name}*) and saved it on the Shelf under Bank.
 
-To turn it into entries, open the statement import — FreBook reads every line and suggests the ledgers:
-${token ? loginUrl(token, "/finance/banking/import", link.business_id) : "frework.online/finance/banking/import"}`;
+Tap to turn it into entries — the statement opens already loaded, FreBook reads every line and suggests the ledgers:
+${token ? loginUrl(token, path, link.business_id) : `frework.online${path}`}`;
   }
   // INVOICE after a sale was posted here: a sign-in link that opens that invoice (view, edit, print / PDF)
   if (/^(invoice|inv|invoice pdf|send invoice)\s*$/i.test(m.text.trim())) {
