@@ -48,7 +48,7 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
       if (d.status === "running") return;
       if (poll.current) clearInterval(poll.current);
       try { localStorage.removeItem(jobKey); } catch { /* */ }
-      setReport(d.report ?? []); setPhase("done");
+      setReport(d.report ?? []); setShot(d.screenshot ?? null); setPhase("done");
       if (d.saved) onSaved();
     };
     void tick();
@@ -124,7 +124,7 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
               </div>
               <div style={{ fontSize: 13, color: C.muted }}>{phase === "running" ? "This runs on our server. You can leave this page — documents still arrive on the Shelf." : "See the notes below."}</div>
             </div>
-            <button onClick={() => { if (poll.current) clearInterval(poll.current); try { localStorage.removeItem(jobKey); } catch { /* */ } setPhase("form"); }} style={{ border: `1px solid ${C.line}`, background: "#FFFFFF", borderRadius: 10, height: 36, padding: "0 14px", fontWeight: 700, cursor: "pointer", color: C.ink }}>{phase === "running" ? "Hide" : "Fetch again"}</button>
+            <button onClick={() => { if (poll.current) clearInterval(poll.current); try { localStorage.removeItem(jobKey); } catch { /* */ } setShot(null); setPhase("form"); }} style={{ border: `1px solid ${C.line}`, background: "#FFFFFF", borderRadius: 10, height: 36, padding: "0 14px", fontWeight: 700, cursor: "pointer", color: C.ink }}>{phase === "running" ? "Hide" : "Fetch again"}</button>
           </div>
           {report.length > 0 && (
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, display: "flex", flexDirection: "column", gap: 3 }}>

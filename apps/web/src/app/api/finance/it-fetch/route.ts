@@ -59,6 +59,8 @@ export async function GET(req: NextRequest) {
         }
         await sb.from("fw_fin_it_jobs").update(upd).eq("id", job);
         Object.assign(data, upd);
+        // The portal screen at a failed step is shown once and never stored
+        if (w.d.done && w.d.screenshot) return NextResponse.json({ ...data, user_id: undefined, screenshot: w.d.screenshot });
       } else if (w.status === 404) {
         const report = [{ item: "fetch", ok: false, note: "The download server restarted. Start the fetch again." }];
         await sb.from("fw_fin_it_jobs").update({ status: data.saved ? "done" : "failed", report, finished_at: new Date().toISOString() }).eq("id", job);

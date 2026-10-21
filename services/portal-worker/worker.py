@@ -25,6 +25,7 @@ import asyncio
 import base64
 import hmac
 import json
+import urllib.parse
 import urllib.request
 import os
 import re
@@ -457,7 +458,7 @@ async def _fetch_ais_tis(page: Page, fy: str | None, want: set[str]) -> tuple[li
     return notes, files
 
 
-async def _fetch_26as(page: Page, fy: str | None) -> tuple[list[str], list[tuple[str, bytes]]]:
+async def _fetch_26as(page: Page, fy: str | None, shots: list[str]) -> tuple[list[str], list[tuple[str, bytes]]]:
     """UNVERIFIED: e-File → Income Tax Returns → View Form 26AS → Confirm → TRACES → View Tax Credit → AY → PDF."""
     notes: list[str] = []
     files: list[tuple[str, bytes]] = []
@@ -468,6 +469,9 @@ async def _fetch_26as(page: Page, fy: str | None) -> tuple[list[str], list[tuple
         tr = await _open_external(page, "Confirm|Proceed|Continue|OK|Yes")
         if tr is None:
             return ["The TRACES site didn't open (no Confirm pop-up or new tab seen)"], files
+        await tr.wait_for_load_state("domcontentloaded")
+        await tr.wait_for_timeout(3000)
+        trace("26as", f"TRACES open: {urllib.parse.urlparse(tr.url).path}")
         box = tr.locator("input[type='checkbox']").first
         if await box.count():
             await box.check()
@@ -478,7 +482,8 @@ async def _fetch_26as(page: Page, fy: str | None) -> tuple[list[str], list[tuple
         link = tr.get_by_text("View Tax Credit", exact=False).first
         if await link.count():
             await link.click()
-            await tr.wait_for_timeout(2500)
+            await tr.wait_for_timeout(3500)
+        trace("26as", f"tax credit link {'clicked' if await link.count() else 'NOT found'}; at {urllib.parse.urlparse(tr.url).path}")
         if fy:
             ay = f"{int(fy[:4]) + 1}-{str(int(fy[:4]) + 2)[2:]}"
             sel = tr.locator("select#AssessmentYearDropDown, select[name*='ssessment' i]").first
@@ -488,15 +493,20 @@ async def _fetch_26as(page: Page, fy: str | None) -> tuple[list[str], list[tuple
         if await fmt.count():
             await _select_matching(tr, fmt, "^HTML$")
         view = tr.get_by_role("button", name=re.compile(r"View.{0,3}Download", re.I)).first
+        trace("26as", f"view button {'found' if await view.count() else 'NOT found'}")
         if await view.count():
             await view.click()
-            await tr.wait_for_timeout(4000)
+            await tr.wait_for_timeout(5000)
         export = tr.get_by_text("Export as PDF", exact=False).first
         got = await _download_click(tr, export, 45000) if await export.count() else None
         if got:
             files.append((f"26AS - {got[0]}", got[1]))
         else:
-            notes.append("26AS download didn't start (TRACES step) — screenshot attached")
+            trace("26as", f"export button {'found' if await export.count() else 'NOT found'}; no download")
+            notes.append("26AS download didn't start on TRACES — see the screen below")
+            sh = await _shot(tr)
+            if sh:
+                shots.append(sh)
         if tr is not page:
             await tr.close()
     except Exception as e:  # noqa: BLE001
@@ -542,14 +552,10 @@ async def _run_fetch(s: Sess, items: list[str], fy: str | None) -> dict:
                 shots.append(sh)
     if "26as" in want:
         trace("fetch", "26AS…")
-        notes, files = await _fetch_26as(page, body.fy)
+        notes, files = await _fetch_26as(page, body.fy, shots)
         for n, d in files:
             add("26as", n, d)
         report.append({"item": "26as", "ok": bool(files), "note": "; ".join(notes) or "Downloaded"})
-        if not files:
-            sh = await _shot(page)
-            if sh:
-                shots.append(sh)
     return {"files": out_files, "report": report, "screenshots": shots[:2]}
 
 
@@ -581,6 +587,7 @@ async def _background(s: Sess, sid: str, b: AsyncFetchBody) -> None:
         res = await _run_fetch(s, b.items, b.fy)
         r["files"].extend(res["files"])
         r["report"] = res["report"]
+        r["shot"] = (res.get("screenshots") or [None])[0]
         trace(b.job_id, f"fetched {len(res['files'])} files; waiting for FreBook to collect")
     except Exception as e:  # noqa: BLE001
         trace(b.job_id, f"error: {type(e).__name__}: {str(e)[:120]}")
@@ -607,7 +614,7 @@ async def it_job(body: JobBody, x_worker_key: str | None = Header(default=None))
     if r["done"]:
         RESULTS.pop(body.job_id, None)
         trace(body.job_id, f"collected by FreBook ({len(files)} files), done")
-    return {"done": r["done"], "files": files, "report": r["report"]}
+    return {"done": r["done"], "files": files, "report": r["report"], "screenshot": r.get("shot") if r["done"] else None}
 
 
 @app.post("/it/fetch_async")
