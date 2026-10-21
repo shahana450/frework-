@@ -9,7 +9,7 @@ import type { TaxNewsItem } from "@/app/api/tax-news/route";
 
 // Fallback headlines if API hasn't loaded yet
 const FALLBACK_HEADLINES = [
-  { id: "f1", category: "Income Tax" as const, title: "ITR due dates: July 31 for non-audit cases, October 31 for audit cases (unless extended by CBDT) — late filing attracts a fee of up to ₹5,000", url: "#" },
+  { id: "f1", category: "Income Tax" as const, title: "ITR due dates: July 31 for non-audit cases, October 31 for audit cases (extended by CBDT to November 21 for AY 2026-27) — late filing attracts a fee of up to ₹5,000", url: "#" },
   { id: "f2", category: "GST" as const, title: "GSTR-3B Due: 20th each month for monthly filers — Reconcile ITC with GSTR-2B before filing", url: "#" },
   { id: "f3", category: "Compliance" as const, title: "New Tax Regime is default from FY 2024-25 — Submit Form 10-IEA to opt for Old Regime", url: "#" },
   { id: "f4", category: "GST" as const, title: "E-Invoice mandatory above ₹5 Crore turnover — IRP-generated IRN required for all B2B invoices", url: "#" },

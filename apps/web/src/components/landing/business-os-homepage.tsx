@@ -16,7 +16,7 @@ import {
   Coffee, Wifi, Car, Printer, AirVent, Lock,
 } from "lucide-react";
 
-const SUPPORT_PHONE = (process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? "+91 95390 28318").replace(/^ï»¿/, "");
+const SUPPORT_PHONE = "+91 95390 28318";
 const SUPPORT_WA = `919539028318`;
 
 const L = {
@@ -993,7 +993,7 @@ export function BusinessOSHomepage() {
 
           <div className="grid md:grid-cols-3 gap-5">
             {[
-              { n: "01", t: "Tell us what you need", d: "Choose a service or describe your business challenge. Our experts understand Indian business inside-out.", icon: Search, detail: "Browse our 8 modules or simply search. You can also WhatsApp us directly and we'll guide you to the right service within minutes." },
+              { n: "01", t: "Tell us what you need", d: "Choose a service or describe your business challenge. Our experts understand Indian business inside-out.", icon: Search, detail: "Browse our five business essentials or simply search. You can also WhatsApp us directly and we'll guide you to the right service within minutes." },
               { n: "02", t: "Get matched & supported", d: "We connect you with the right verified professional and track your service end-to-end via your dashboard.", icon: UserCheck, detail: "A dedicated expert is assigned to your case. You can track progress in real-time on your dashboard and get WhatsApp updates at every step." },
               { n: "03", t: "Run your business", d: "Stay on top of deadlines, documents, and renewals – all in one place. No more missed filings.", icon: CalendarCheck, detail: "Your compliance calendar tracks every due date automatically. You get reminders 30 days, 7 days and 1 day before each deadline." },
             ].map((step, i) => {

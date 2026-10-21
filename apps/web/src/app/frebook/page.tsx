@@ -98,7 +98,7 @@ const WHY = [
 ];
 
 const FEATURE_TEXT: Record<string, string> = {
-  "FreBook chat bookkeeping — AI drafts, you confirm": "Describe a transaction in plain English. FreBook drafts the entry and you confirm it.",
+  "FreBook chat bookkeeping — AI drafts, you confirm": "Describe a transaction in English or Hinglish — on the web or on WhatsApp. FreBook drafts the entry and you confirm it.",
   "GST invoicing, purchase bills and journals": "GST-ready sales invoices with CGST, SGST and IGST, plus purchase bills and journal entries.",
   "Ledgers, receivables & payables by party": "Party-wise ledgers with clear receivables and payables at any time.",
   "Bank statement import (CSV / Excel) and reconciliation": "Import CSV or Excel bank statements and reconcile them against your books.",
@@ -124,7 +124,7 @@ export default function FreBookLandingPage() {
             <span className="fb-tag">AI Accountant · Built for India</span>
             <h1>AI Bookkeeping &amp; Accounting Software for Indian Businesses</h1>
             <p className="fb-lead">
-              Chat in. Books out. FreBook is your AI accountant: type a transaction in plain English and it drafts the entry,
+              Chat in. Books out. FreBook is your AI accountant: type a transaction in English or Hinglish — on the web or WhatsApp — and it drafts the entry,
               raises the GST invoice and keeps your P&amp;L, Balance Sheet and Tally up to date.
             </p>
             <div className="fb-cta">
@@ -133,7 +133,7 @@ export default function FreBookLandingPage() {
             </div>
             <div className="fb-chat" aria-label="Example conversation with FreBook">
               <div className="fb-msg fb-u">Paid ₹12,000 office rent to Ramesh by bank, TDS 10%</div>
-              <div className="fb-msg fb-b">Draft ready: Rent A/c Dr ₹12,000 · To Bank ₹10,800 · To TDS Payable (194-I) ₹1,200. Confirm?</div>
+              <div className="fb-msg fb-b">Draft ready: Rent A/c Dr ₹60,000 · To Bank ₹54,000 · To TDS Payable (rent, 10%) ₹6,000. Confirm?</div>
               <div className="fb-msg fb-u">What&apos;s my GST payable this month?</div>
               <div className="fb-msg fb-b">Output GST ₹48,600 − ITC ₹31,250 = <strong>₹17,350 payable</strong>.</div>
             </div>

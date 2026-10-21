@@ -209,6 +209,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
       <title>{financeTitle(pathname, search, bizName)}</title>
+      <meta name="robots" content="noindex, nofollow" />
       <meta name="description" content="FreBook: chat bookkeeping, GST, reports and Tally sync for your business." />
       <style>{FINANCE_CSS}</style>
       <UpdatePrompt />

@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Refund & Cancellation Policy — FreWork",
+  title: "Refund & Cancellation Policy",
   description: "FreWork refund and cancellation policy for services, subscriptions, and payments processed via PhonePe.",
+  alternates: { canonical: "/refund-policy" },
+  openGraph: { title: "Refund & Cancellation Policy | FreWork", description: "Refunds and cancellations for FreWork services and FreBook subscriptions.", url: "/refund-policy" },
+  twitter: { card: "summary", title: "Refund & Cancellation Policy | FreWork", description: "Refunds and cancellations for FreWork services and FreBook subscriptions." },
 };
 
 export default function RefundPolicyPage() {

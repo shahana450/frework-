@@ -44,7 +44,7 @@ const socials = [
   { icon: Twitter, href: "https://twitter.com/frework", label: "Twitter" },
   { icon: Linkedin, href: "https://linkedin.com/company/frework", label: "LinkedIn" },
   { icon: Instagram, href: "https://instagram.com/frework", label: "Instagram" },
-  { icon: Youtube, href: "https://youtube.com/frework", label: "YouTube" },
+  { icon: Youtube, href: "https://www.youtube.com/@frework", label: "YouTube" },
 ];
 
 function FreWorkLogo({ size = 32 }: { size?: number }) {

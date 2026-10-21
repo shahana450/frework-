@@ -34,7 +34,7 @@ const FAQS = [
   { q: "Which way does data move between FreBook and Tally?",
     a: "Both ways. FreBook imports ledgers and vouchers from Tally, and pushes entries recorded in FreBook into Tally. Entries FreBook has already pushed are skipped on import, so they are not duplicated." },
   { q: "Does Tally need to be open?",
-    a: "Yes. Live sync needs Tally Prime running on the computer with the FreWork Tally Bridge. If that's not possible, FreBook can give you an XML file to import through Gateway of Tally → Import → Vouchers." },
+    a: "Yes. Live sync needs Tally Prime running on the computer with the FreWork Tally Bridge. If that's not possible, FreBook can give you an XML file to import through Gateway of Tally → Import → Transactions." },
   { q: "Will it create ledgers in Tally for me?",
     a: "Yes. When FreBook pushes entries, it creates any ledgers that don't exist in Tally yet, before posting the vouchers." },
   { q: "Can a CA firm use it for many Tally clients?",
@@ -113,7 +113,7 @@ export default function TallyAiPage() {
               <li><strong>Avoid duplicates.</strong> Entries FreBook has already pushed are skipped when you import from Tally.</li>
               <li><strong>Missing ledgers handled.</strong> FreBook creates ledgers that don&apos;t exist in Tally yet before posting vouchers.</li>
               <li><strong>Several companies.</strong> If more than one company is open in Tally, choose which one FreBook should use.</li>
-              <li><strong>Offline fallback.</strong> Download an XML file and import it through Gateway of Tally → Import → Vouchers.</li>
+              <li><strong>Offline fallback.</strong> Download an XML file and import it through Gateway of Tally → Import → Transactions.</li>
             </ul>
           </div>
         </section>
