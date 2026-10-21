@@ -487,7 +487,7 @@ async def _fetch_26as(page: Page, fy: str | None) -> tuple[list[str], list[tuple
         fmt = tr.locator("select#viewType, select[name*='view' i]").first
         if await fmt.count():
             await _select_matching(tr, fmt, "^HTML$")
-        view = tr.get_by_role("button", name=re.compile(r"ViewW{0,3}Download", re.I)).first
+        view = tr.get_by_role("button", name=re.compile(r"View.{0,3}Download", re.I)).first
         if await view.count():
             await view.click()
             await tr.wait_for_timeout(4000)
