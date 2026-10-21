@@ -5,6 +5,7 @@ import { handleWhatsApp, type Incoming } from "@/lib/whatsapp/bot";
 import { sendContactCard } from "@/lib/whatsapp/contactCard";
 import { waPost, waMedia } from "@/lib/whatsapp/transport";
 import { logUsage } from "@/lib/usage";
+import { transcribeVoice } from "@/lib/transcribe";
 
 export const maxDuration = 120;
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -60,19 +61,28 @@ export async function POST(req: NextRequest) {
       const { count } = await supabase.from("fw_fin_wa_seen").select("message_id", { count: "exact", head: true }).eq("phone", msg.from).gte("seen_at", new Date(Date.now() - 3600000).toISOString());
       if ((count ?? 0) > 60) { await send(msg.from, "⏳ Limit reached: 60 messages an hour. Please try again a little later."); return; }
       void markRead(msg.id);
-      let text = "", media: Incoming["media"];
+      let text = "", media: Incoming["media"], heard: string | null = null;
       if (msg.type === "text") text = msg.text?.body ?? "";
       else if (msg.type === "button") text = msg.button?.text ?? "";
       else if (msg.type === "interactive") text = msg.interactive?.button_reply?.title ?? msg.interactive?.list_reply?.title ?? "";
       else if (msg.type === "image") { text = msg.image?.caption ?? ""; media = await downloadMedia(msg.image ?? {}, `whatsapp-${msg.id.slice(-8)}.jpg`); }
       else if (msg.type === "document") { text = msg.document?.caption ?? ""; media = await downloadMedia(msg.document ?? {}, msg.document?.filename ?? `whatsapp-${msg.id.slice(-8)}.pdf`); }
-      else { await send(msg.from, "I can read text, photos and PDFs. Voice notes aren't supported yet — please type it."); return; }
+      else if (msg.type === "audio") {
+        // Voice note: transcribe, then treat it like a typed message (and show what was heard)
+        const got = await waMedia(msg.audio ?? {}, 8 * 1024 * 1024);
+        heard = got ? await transcribeVoice(got.bytes, got.mime) : null;
+        if (!heard) { await send(msg.from, "🎤 I couldn't make out that voice note. Please try again, or type it."); return; }
+        text = heard;
+      }
+      else { await send(msg.from, "I can read text, voice notes, photos and PDFs. This kind of message isn't supported — please type it."); return; }
       if ((msg.type === "image" || msg.type === "document") && !media) { await send(msg.from, "⚠️ I couldn't open that file from WhatsApp. Please send it again, or upload it in FreBook (Bank → Import for statements)."); return; }
       if (!text && !media) return;
       // Never leave the sender with silence: if the AI is still reading near the time limit, say so
       const late = setTimeout(() => { void send(msg.from, media ? "⏳ This file is taking long to read. If no reply comes in a minute, upload it in FreBook instead (Bank → Import for statements)." : "⏳ Still working on it…"); }, 95000);
       const reply = await handleWhatsApp(supabase, { from: msg.from, id: msg.id, text, media }).finally(() => clearTimeout(late));
-      await send(msg.from, reply);
+      await send(msg.from, heard ? `🎤 _"${heard}"_
+
+${reply}` : reply);
       // Just linked: send FreBook as a contact card, so one tap saves it and the chat shows "FreBook" by name
       if (reply.startsWith("✅ Linked")) await sendContactCard(msg.from);
     } catch (e) {
