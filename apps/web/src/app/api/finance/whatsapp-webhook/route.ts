@@ -68,7 +68,9 @@ export async function POST(req: NextRequest) {
       else if (msg.type === "document") { text = msg.document?.caption ?? ""; media = await downloadMedia(msg.document ?? {}, msg.document?.filename ?? `whatsapp-${msg.id.slice(-8)}.pdf`); }
       else { await send(msg.from, "I can read text, photos and PDFs. Voice notes aren't supported yet — please type it."); return; }
       if (!text && !media) return;
-      const reply = await handleWhatsApp(supabase, { from: msg.from, id: msg.id, text, media });
+      // Never leave the sender with silence: if the AI is still reading near the time limit, say so
+      const late = setTimeout(() => { void send(msg.from, media ? "⏳ This file is taking long to read. If no reply comes in a minute, upload it in FreBook instead (Bank → Import for statements)." : "⏳ Still working on it…"); }, 95000);
+      const reply = await handleWhatsApp(supabase, { from: msg.from, id: msg.id, text, media }).finally(() => clearTimeout(late));
       await send(msg.from, reply);
       // Just linked: send FreBook as a contact card, so one tap saves it and the chat shows "FreBook" by name
       if (reply.startsWith("✅ Linked")) await sendContactCard(msg.from);

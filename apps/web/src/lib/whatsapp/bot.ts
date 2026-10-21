@@ -84,6 +84,20 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
     const r = await loadOverdue(sb, link.business_id, days, new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }));
     return r ? listMessage(r.business || link.name, r.overdue, days) : "❌ Couldn't load receivables right now. Try again in a minute.";
   }
+  // A greeting (or a typo of one, like "Ho") is not a question about the books: say hello, don't run a report
+  if (!m.media && /^(h[ioe]+|hey+|hii+|hello+|helo|hai|namaste|namaskar|goods*(morning|afternoon|evening)|gm)[s!.]*$/i.test(m.text.trim())) {
+    return `👋 Hi! You're in *${link.name}*. Type a transaction (e.g. _paid rent 25000 by bank_), ask about your numbers (_P&L this month_), or send a bill photo or PDF. Reply *HELP* for everything I can do.`;
+  }
+  // A bank statement: too long to book from chat. File it under Bank and point to the statement import
+  if (m.media && /pdf|sheet|excel|csv/i.test(m.media.mime + m.media.name) && /stat+e?m+e?nt|stmt|passbook|acc_?st|account.?st/i.test(m.media.name)) {
+    const media = m.media;
+    void fileToShelf(sb, { businessId: link.business_id, actorId: link.user_id, rack: "bank", title: media.name, fileName: media.name, mime: media.mime, bytes: new Uint8Array(media.bytes), source: "upload", fy: fyOfDate(new Date().toLocaleDateString("en-CA")), docType: "Bank statement" }).catch(() => null);
+    const token = await loginToken(sb, link.user_id);
+    return `🏦 Got your bank statement (*${media.name}*) and saved it on the Shelf under Bank.
+
+To turn it into entries, open the statement import — FreBook reads every line and suggests the ledgers:
+${token ? loginUrl(token, "/finance/banking/import", link.business_id) : "frework.online/finance/banking/import"}`;
+  }
   // INVOICE after a sale was posted here: a sign-in link that opens that invoice (view, edit, print / PDF)
   if (/^(invoice|inv|invoice pdf|send invoice)\s*$/i.test(m.text.trim())) {
     const id = (sess.pending as { lastSale?: string } | null)?.lastSale;
