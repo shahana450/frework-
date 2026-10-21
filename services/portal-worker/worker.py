@@ -349,6 +349,23 @@ async def _fetch_notices(page: Page) -> tuple[list[dict], list[tuple[str, bytes]
     return found, files
 
 
+async def _select_matching(page: Page, select, pattern: str) -> bool:
+    """Chooses the first <option> whose text matches `pattern` (case-insensitive). Returns True if one was chosen."""
+    try:
+        opts = await select.locator("option").all()
+        rx = re.compile(pattern, re.I)
+        for o in opts:
+            text = (await o.inner_text()).strip()
+            if rx.search(text):
+                value = await o.get_attribute("value")
+                await select.select_option(value=value if value is not None else text)
+                await page.wait_for_timeout(800)
+                return True
+    except Exception:
+        return False
+    return False
+
+
 async def _open_external(page: Page, words: str, timeout_s: int = 40):
     """After a menu click, the portal either shows a pop-up ('Proceed' / 'Confirm' / 'Continue' / 'OK') before
     opening the AIS or TRACES site in a new tab, or opens the new tab straight away. Handles both: clicks the
@@ -358,7 +375,13 @@ async def _open_external(page: Page, words: str, timeout_s: int = 40):
     pat = re.compile(rf"^\s*({words})\s*$", re.I)
     deadline = time.time() + timeout_s
     clicked = False
+    start_host = page.url.split("/")[2] if "//" in page.url else ""
     while time.time() < deadline:
+        host = page.url.split("/")[2] if "//" in page.url else ""
+        if host and start_host and host != start_host:
+            await page.wait_for_load_state("domcontentloaded")
+            await page.wait_for_timeout(4000)
+            return page
         if len(ctx.pages) > before:
             tab = ctx.pages[-1]
             await tab.wait_for_load_state("domcontentloaded")
@@ -395,9 +418,7 @@ async def _fetch_ais_tis(page: Page, fy: str | None, want: set[str]) -> tuple[li
         if fy:
             sel = ais.locator("select").first
             if await sel.count():
-                try:
-                    await sel.select_option(label=re.compile(fy.replace("-", r"\s*-\s*")))  # type: ignore[arg-type]
-                except Exception:
+                if not await _select_matching(ais, sel, fy.replace("-", r"\s*-\s*")):
                     notes.append(f"Couldn't choose FY {fy}; downloaded the default year")
         for kind, label in [("tis", "Taxpayer Information Summary"), ("ais", "Annual Information Statement")]:
             if kind not in want:
@@ -419,7 +440,8 @@ async def _fetch_ais_tis(page: Page, fy: str | None, want: set[str]) -> tuple[li
                 files.append((f"{kind.upper()} - {got[0]}", got[1]))
             else:
                 notes.append(f"{kind.upper()} download didn't start")
-        await ais.close()
+        if ais is not page:
+            await ais.close()
     except Exception as e:  # noqa: BLE001
         notes.append(f"AIS portal step failed: {e}")
     return notes, files
@@ -450,14 +472,11 @@ async def _fetch_26as(page: Page, fy: str | None) -> tuple[list[str], list[tuple
         if fy:
             ay = f"{int(fy[:4]) + 1}-{str(int(fy[:4]) + 2)[2:]}"
             sel = tr.locator("select#AssessmentYearDropDown, select[name*='ssessment' i]").first
-            if await sel.count():
-                await sel.select_option(label=re.compile(ay.split('-')[0]))  # type: ignore[arg-type]
+            if await sel.count() and not await _select_matching(tr, sel, ay.split("-")[0]):
+                notes.append(f"Couldn't choose AY {ay} on TRACES")
         fmt = tr.locator("select#viewType, select[name*='view' i]").first
         if await fmt.count():
-            try:
-                await fmt.select_option(label="HTML")
-            except Exception:
-                pass
+            await _select_matching(tr, fmt, "^HTML$")
         view = tr.get_by_role("button", name=re.compile("View ?/ ?Download", re.I)).first
         if await view.count():
             await view.click()
@@ -468,7 +487,8 @@ async def _fetch_26as(page: Page, fy: str | None) -> tuple[list[str], list[tuple
             files.append((f"26AS - {got[0]}", got[1]))
         else:
             notes.append("26AS download didn't start (TRACES step) — screenshot attached")
-        await tr.close()
+        if tr is not page:
+            await tr.close()
     except Exception as e:  # noqa: BLE001
         notes.append(f"TRACES step failed: {e}")
     return notes, files
