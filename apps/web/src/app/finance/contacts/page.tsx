@@ -11,7 +11,10 @@ type Contact = {
   id: string; name: string; type: string; gstin: string | null; pan: string | null;
   email: string | null; phone: string | null; city: string | null; state: string | null;
   credit_days: number; opening_balance: number; opening_balance_type: string; is_active: boolean;
+  msme_type?: "micro" | "small" | "medium" | null; udyam_no?: string | null; msme_written_terms?: boolean | null;
 };
+type Msme = { type: "" | "micro" | "small" | "medium"; udyam: string; written: boolean };
+const noMsme: Msme = { type: "", udyam: "", written: false };
 
 const INDIAN_STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Puducherry","Other"];
 
@@ -28,6 +31,7 @@ export default function ContactsPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(blank());
+  const [msme, setMsme] = useState<Msme>(noMsme);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
@@ -69,14 +73,21 @@ export default function ContactsPage() {
       res = await supabase.from("fw_fin_contacts").insert(payload).select("*").single();
     }
     if (res.error) { setError(res.error.message); setSaving(false); return; }
+    // MSME details saved on their own, so contacts still save before the MSME columns exist
+    if (form.type !== "customer" && (msme.type || msme.udyam || res.data?.msme_type)) {
+      const m = await supabase.from("fw_fin_contacts").update({ msme_type: msme.type || null, udyam_no: msme.udyam.trim().toUpperCase() || null, msme_written_terms: msme.written }).eq("id", res.data.id).select("*").single();
+      if (m.error) { setError(/msme|udyam|column/i.test(m.error.message) ? "Saved, but MSME details need a one-time setup: run 2026-11-04_msme.sql in Supabase." : m.error.message); setSaving(false); return; }
+      res = m;
+    }
     if (editId) setContacts(prev => prev.map(c => c.id === editId ? res.data : c));
     else setContacts(prev => [...prev, res.data]);
-    setShowForm(false); setEditId(null); setForm(blank());
+    setShowForm(false); setEditId(null); setForm(blank()); setMsme(noMsme);
     setSaving(false);
   }
 
   function startEdit(c: Contact) {
     setForm({ name: c.name, type: c.type, gstin: c.gstin ?? "", pan: c.pan ?? "", email: c.email ?? "", phone: c.phone ?? "", city: c.city ?? "", state: c.state ?? "Kerala", credit_days: c.credit_days, opening_balance: c.opening_balance, opening_balance_type: c.opening_balance_type });
+    setMsme({ type: c.msme_type ?? "", udyam: c.udyam_no ?? "", written: !!c.msme_written_terms });
     setEditId(c.id); setShowForm(true);
   }
 
@@ -97,7 +108,7 @@ export default function ContactsPage() {
         <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Contacts</span>
         <div style={{ flex: 1 }} />
         <button onClick={() => setImporting(true)} style={{ background: "#FFFFFF", border: "1px solid rgba(35,42,99,0.3)", color: "#232A63", padding: "6px 14px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>⇪ Import from Excel</button>
-        <button onClick={() => { setForm(blank()); setEditId(null); setShowForm(true); }} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "6px 16px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>
+        <button onClick={() => { setForm(blank()); setMsme(noMsme); setEditId(null); setShowForm(true); }} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "6px 16px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>
           + New Contact
         </button>
       </nav>
@@ -188,6 +199,22 @@ export default function ContactsPage() {
                 <label style={lbl}>GSTIN</label>
                 <input value={form.gstin ?? ""} onChange={e => set("gstin", e.target.value.toUpperCase())} placeholder="22AAAAA0000A1Z5" maxLength={15} style={inp} />
               </div>
+              {form.type !== "customer" && <>
+                <div>
+                  <label style={lbl}>MSME (Udyam)</label>
+                  <select value={msme.type} onChange={e => setMsme(m => ({ ...m, type: e.target.value as Msme["type"] }))} style={inp}>
+                    <option value="">Not MSME / not known</option><option value="micro">Micro</option><option value="small">Small</option><option value="medium">Medium</option>
+                  </select>
+                </div>
+                {msme.type && <div>
+                  <label style={lbl}>Udyam number</label>
+                  <input value={msme.udyam} onChange={e => setMsme(m => ({ ...m, udyam: e.target.value.toUpperCase() }))} placeholder="UDYAM-KL-00-0000000" maxLength={19} style={inp} />
+                </div>}
+                {(msme.type === "micro" || msme.type === "small") && <label style={{ gridColumn: "1 / -1", display: "flex", gap: 8, alignItems: "flex-start", fontSize: "0.8rem", color: "rgba(20,26,58,0.75)", lineHeight: 1.5 }}>
+                  <input type="checkbox" checked={msme.written} onChange={e => setMsme(m => ({ ...m, written: e.target.checked }))} style={{ marginTop: 3 }} />
+                  Credit period agreed in writing (then the credit days below apply, up to 45). Otherwise pay within 15 days — section 43B(h).
+                </label>}
+              </>}
               <div>
                 <label style={lbl}>PAN</label>
                 <input value={form.pan ?? ""} onChange={e => set("pan", e.target.value.toUpperCase())} placeholder="AAAAA0000A" maxLength={10} style={inp} />

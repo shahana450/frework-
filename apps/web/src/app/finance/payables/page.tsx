@@ -7,6 +7,8 @@ import Link from "next/link";
 import { loadBookLines } from "@/lib/books";
 import { partyBalances } from "@/lib/partyBalances";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import { msmeReport, type MsmeReport, type MsmeSupplier } from "@/lib/msme43bh";
+import MsmePanel from "./MsmePanel";
 
 type APEntry = {
   contact_id: string | null;
@@ -26,6 +28,7 @@ export default function PayablesPage() {
   const [loading, setLoading] = useState(true);
   const [totalOutstanding, setTotalOutstanding] = useState(0);
   const [overdueAmount, setOverdueAmount] = useState(0);
+  const [msme, setMsme] = useState<{ report: MsmeReport | null; setup: boolean; marked: number }>({ report: null, setup: false, marked: 0 });
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -55,6 +58,15 @@ export default function PayablesPage() {
     setEntries(result);
     setTotalOutstanding(report.total);
     setOverdueAmount(result.filter(e => e.outstanding > 0 && e.days_pending > 30).reduce((s, e) => s + e.outstanding, 0));
+    // Section 43B(h): MSME suppliers (marked in Customers & Suppliers) matched to their ledgers by name
+    const { data: cs, error: ce } = await supabase.from("fw_fin_contacts").select("name,msme_type,msme_written_terms,credit_days").eq("business_id", bid).not("msme_type", "is", null);
+    if (ce) setMsme({ report: null, setup: /msme|column/i.test(ce.message), marked: 0 });
+    else {
+      const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const byName = new Map(((cs ?? []) as { name: string; msme_type: MsmeSupplier["type"]; msme_written_terms: boolean; credit_days: number | null }[]).map(x => [key(x.name), x]));
+      const sups: MsmeSupplier[] = accounts.filter(a => byName.has(key(a.name))).map(a => { const x = byName.get(key(a.name))!; return { accountId: a.id, name: a.name, type: x.msme_type, creditDays: x.msme_written_terms ? x.credit_days : null }; });
+      setMsme({ report: msmeReport(sups, lines, today), setup: false, marked: (cs ?? []).length });
+    }
     setLoading(false);
   }
 
@@ -82,6 +94,8 @@ export default function PayablesPage() {
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "2rem" }}>
         <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Accounts Payable</h1>
         <p style={{ margin: "0 0 1.5rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Aging report — money you owe to vendors</p>
+
+        {!loading && <MsmePanel report={msme.report} setupNeeded={msme.setup} marked={msme.marked} />}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem", marginBottom: "2rem" }}>
           {[
