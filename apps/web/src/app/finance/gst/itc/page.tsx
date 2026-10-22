@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import { usePortalFilings } from "@/lib/portals/usePortalFilings";
+import SupplierChase from "./SupplierChase";
 import { parse2BJson, parse2BGrid, purchaseRegister, matchItc, table4, taxOf, type TwoBDoc, type BookDoc, type Tax, type ItcRow } from "@/lib/itcMatch";
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", pos: "#0B7A55", posSoft: "#E3F6EE", amber: "#8A5A00", amberSoft: "#FFF4DB", neg: "#C2321F", negSoft: "#FDECEA", blue: "#1F5EFF", blueSoft: "#E8F0FF" };
@@ -222,6 +223,8 @@ export default function ItcMatchPage() {
             </section>
 
             {/* Rows */}
+            <SupplierChase bizId={bizId} month={month} rows={rows} />
+
             <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {shown.slice(0, 500).map((r, i) => (
                 <article key={i} style={{ ...card, padding: "12px 14px", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 10 }} className="itc-row">
