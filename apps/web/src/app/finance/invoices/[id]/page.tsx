@@ -8,6 +8,7 @@ import { amountInWords, invoiceTotals, recalcItem, type InvItem, type InvoiceDoc
 import { stateCode } from "@/lib/gstr1";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import GovFiles from "./GovFiles";
+import NicPanel from "./NicPanel";
 
 const C = { bg: "#F5F6FA", line: "#E1E4EE", strong: "#C9CEDF", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", soft: "#E6E8F4", pos: "#0B7A55", neg: "#C2321F", warn: "#8A5A00", warnSoft: "#FFF4DB" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
@@ -187,6 +188,7 @@ export default function InvoicePage() {
         <button onClick={() => window.print()} style={{ height: 40, padding: "0 18px", borderRadius: 10, border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Print / PDF</button>
       </div>
       {mismatch && <div className="no-print" style={{ maxWidth: 860, margin: "0 auto 14px", background: C.warnSoft, color: C.warn, borderRadius: 10, padding: "10px 14px", fontSize: 13.5, fontWeight: 600 }}>The invoice total ({cur()}{money(tot!.total)}) differs from the posted entry ({cur()}{money(bookTotal!)}). Your books aren&apos;t changed by edits here — post an adjustment if the sale amount was wrong.</div>}
+      {doc && bizId && <div style={{ maxWidth: 860, margin: "0 auto 12px" }}><NicPanel bizId={bizId} journalId={id} doc={doc} /></div>}
       <div className="no-print" style={{ maxWidth: 860, margin: "0 auto 10px", fontSize: 12.5, color: C.muted }}>Click any text on the invoice to edit it. Hover to see editable fields.</div>
 
       <div className="inv-wrap" style={{ display: "flex", justifyContent: "center" }}>
