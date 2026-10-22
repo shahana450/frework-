@@ -12,7 +12,9 @@ import { headByKey } from "../ledgerHeads";
 import { postJournal, voucherTypeFor, postingErrorMessage } from "../posting";
 import { readAttachmentBuffer, type Attachment } from "../attachments";
 import { fileToShelf, fyOfDate } from "../shelf";
-import { parseCommand, helpText, draftText, answerText } from "./format";
+import { parseCommand, helpText, draftText, answerText, money } from "./format";
+import { buildMonthGstr1, fileGstr1, monthLabel } from "../gstr1Export";
+import { monthFromText } from "../monthFromText";
 import { loginToken, loginUrl } from "./loginLink";
 import { loadOverdue, listMessage } from "../collectAlert";
 
@@ -100,6 +102,29 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
 
 Tap to turn it into entries — the statement opens already loaded, FreBook reads every line and suggests the ledgers:
 ${token ? loginUrl(token, path, link.business_id) : `frework.online${path}`}`;
+  }
+  // GSTR-1 JSON for the portal: "GSTR1 JSON August 2026", "gstr-1 file last month". WhatsApp can't carry .json files,
+  // so it's filed on the Shelf and sent as a download link that works for 7 days.
+  if (!m.media && /\bgstr\s*-?\s*1\b/i.test(m.text) && /\b(json|file|download|export|upload)\b/i.test(m.text)) {
+    const month = monthFromText(m.text);
+    if (!month) return "Which month? e.g. *GSTR1 JSON August 2026* or *GSTR1 JSON last month*.";
+    const r = await buildMonthGstr1(sb, link.business_id, month);
+    const docs = r.totals.reduce((s, t) => s + t.count, 0);
+    const errors = r.issues.filter(i => i.level === "error");
+    const shelfId = await fileGstr1(sb, link.business_id, link.user_id, month, r);
+    let url: string | null = null;
+    if (shelfId) {
+      const { data: it } = await sb.from("fw_fin_shelf_items").select("file_path").eq("id", shelfId).maybeSingle();
+      if (it?.file_path) url = (await sb.storage.from("shelf").createSignedUrl(it.file_path, 7 * 86400, { download: r.fileName })).data?.signedUrl ?? null;
+    }
+    const tax = r.totals.reduce((s, t) => s + t.igst + t.cgst + t.sgst, 0), taxable = r.totals.reduce((s, t) => s + t.taxable, 0);
+    return [
+      `🧾 *GSTR-1 · ${monthLabel(month)}*${r.gstin ? ` · ${r.gstin}` : ""}`,
+      docs ? `${docs} document${docs === 1 ? "" : "s"} · taxable ${money(taxable)} · tax ${money(tax)}` : "No sales invoices or credit notes in this month.",
+      ...r.totals.filter(t => t.count).map(t => `• ${t.section}: ${t.count} · ${money(t.taxable)}`),
+      errors.length ? `\n⚠️ *${errors.length} to fix before filing:*\n${errors.slice(0, 4).map(i => `• ${i.text}`).join("\n")}${errors.length > 4 ? `\n…and ${errors.length - 4} more (see the GST page)` : ""}` : r.issues.length ? `\nℹ️ ${r.issues.length} note${r.issues.length === 1 ? "" : "s"} to check on the GST page.` : "",
+      url ? `\n⬇️ *${r.fileName}* (link works 7 days):\n${url}\n\nUpload it on the GST portal: Returns → GSTR-1 → Prepare Offline → Upload.` : "\nSaved on your Shelf (GST rack) — download it from FreBook.",
+    ].filter(Boolean).join("\n");
   }
   // INVOICE after a sale was posted here: a sign-in link that opens that invoice (view, edit, print / PDF)
   if (/^(invoice|inv|invoice pdf|send invoice)\s*$/i.test(m.text.trim())) {

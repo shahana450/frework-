@@ -46,6 +46,7 @@ export function helpText(bizName: string): string {
     "Reply *YES* to post a draft, *NO* to drop it. *SWITCH* to change business.",
     "*LOGIN* — a one-tap link to open your FreBook dashboard.",
     "*LIST* — overdue customers, with ready-to-send reminders.",
+    "*GSTR1 JSON August 2026* — the GSTR-1 file for the portal, as a download link.",
   ].join("\n");
 }
 
