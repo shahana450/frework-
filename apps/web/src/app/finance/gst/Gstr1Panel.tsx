@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { downloadApiFile } from "@/lib/apiAuthClient";
 import type { Gstr1 } from "@/lib/gstr1";
+import Gstr1FilePanel from "./Gstr1FilePanel";
 
 const C = { line: "#E1E4EE", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB" };
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
@@ -82,8 +83,10 @@ export default function Gstr1Panel({ bizId, month, monthLabel }: { bizId: string
         </section>
       )}
 
+      <Gstr1FilePanel bizId={bizId} month={month} monthLabel={monthLabel} ours={data.totals} blocked={errors.length} />
+
       <section style={{ background: "#F7F8FC", border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, fontSize: 13.5, lineHeight: 1.6, color: C.ink }}>
-        <b>How to file:</b> on <a href="https://www.gst.gov.in" target="_blank" rel="noopener noreferrer" style={{ color: C.primary }}>gst.gov.in</a> → Returns Dashboard → choose the period → GSTR-1 → <b>Prepare Offline</b> → Upload → choose this JSON file. Check the summary the portal shows, then <b>File</b> with OTP or DSC. Keep the downloaded file with your records.
+        <b>Or file by upload:</b> on <a href="https://www.gst.gov.in" target="_blank" rel="noopener noreferrer" style={{ color: C.primary }}>gst.gov.in</a> → Returns Dashboard → choose the period → GSTR-1 → <b>Prepare Offline</b> → Upload → choose this JSON file. Check the summary the portal shows, then <b>File</b> with OTP or DSC. Keep the downloaded file with your records.
       </section>
     </div>
   );

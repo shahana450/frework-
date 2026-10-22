@@ -98,3 +98,62 @@ export function monthsBetween(from: string, to: string): string[] {
   while ((y < ty || (y === ty && m <= tm)) && out.length < 24) { out.push(`${y}-${String(m).padStart(2, "0")}`); m++; if (m > 12) { m = 1; y++; } }
   return out;
 }
+
+// ── Filing GSTR-1 (save → proceed to file → summary → EVC OTP → file) ──────────────────────────────────────────
+// Every step is a GSTN call made with the taxpayer's OTP session; filing itself needs a second OTP (EVC) sent to the
+// authorised signatory, typed by them. Nothing here files without that OTP.
+
+export type GstnStatus = { status: "P" | "PE" | "ER" | "IP" | "REC" | string; errorReport: unknown };
+const ref = (d: Gstn) => String((d.data?.data as { reference_id?: string } | undefined)?.reference_id ?? "");
+
+/** Uploads the GSTR-1 JSON as the portal's saved draft. Returns GSTN's reference id. */
+export async function saveGstr1(token: string, period: string, json: unknown): Promise<string> {
+  const r = ref(await call(periodPath("gstr1", period), { method: "POST", token, body: json }));
+  if (!r) throw new PortalError("PROVIDER", "The GST portal didn't confirm the upload. Try again.");
+  return r;
+}
+
+/** Where a save / proceed request stands: P done, PE done with errors, ER failed, IP/REC still running. */
+export async function returnStatus(token: string, period: string, referenceId: string): Promise<GstnStatus> {
+  const [y, m] = period.split("-");
+  const d = await call(`/gst/compliance/tax-payer/gstrs/${y}/${m}/status?reference_id=${encodeURIComponent(referenceId)}`, { method: "GET", token });
+  const s = (d.data?.data ?? {}) as { status_cd?: string; error_report?: unknown };
+  return { status: String(s.status_cd ?? ""), errorReport: s.error_report ?? null };
+}
+
+/** Waits (up to ~45 s) for a save / proceed request to finish. */
+export async function waitForStatus(token: string, period: string, referenceId: string): Promise<GstnStatus> {
+  let last: GstnStatus = { status: "IP", errorReport: null };
+  for (let i = 0; i < 15; i++) {
+    await new Promise(r => setTimeout(r, i === 0 ? 2000 : 3000));
+    last = await returnStatus(token, period, referenceId);
+    if (!["IP", "REC", ""].includes(last.status)) return last;
+  }
+  return last;
+}
+
+/** "Proceed to file": freezes the saved data and makes GSTN compute the summary. */
+export async function proceedToFile(token: string, period: string, nil = false): Promise<string> {
+  const [y, m] = period.split("-");
+  const r = ref(await call(`/gst/compliance/tax-payer/gstrs/gstr-1/${y}/${m}/new-proceed${nil ? "?is_nil=Y" : ""}`, { method: "POST", token }));
+  if (!r) throw new PortalError("PROVIDER", "The GST portal didn't accept 'proceed to file'. Try again.");
+  return r;
+}
+
+export type Gstr1Summary = { chksum?: string; newSumFlag?: boolean; ret_period?: string; sec_sum?: { sec_nm: string; ttl_rec?: number; ttl_val?: number; ttl_tax?: number; ttl_igst?: number; ttl_cgst?: number; ttl_sgst?: number; ttl_cess?: number; chksum?: string }[] };
+/** The portal's own GSTR-1 summary — what will be filed. */
+export async function gstr1Summary(token: string, period: string): Promise<Gstr1Summary> {
+  return ((await call(periodPath("gstr1", period), { method: "GET", token })).data?.data ?? {}) as Gstr1Summary;
+}
+
+/** Sends the EVC OTP to the authorised signatory's mobile / email. */
+export async function sendEvcOtp(token: string, pan: string, form: "gstr-1" | "gstr-3b" = "gstr-1") {
+  await call(`/gst/compliance/tax-payer/evc/otp?gstr=${form}`, { method: "POST", token, body: { pan } });
+}
+
+/** Files GSTR-1 with the EVC OTP. The body is the portal's summary. Returns the acknowledgement (ARN). */
+export async function fileGstr1Evc(token: string, period: string, pan: string, otp: string, summary: Gstr1Summary): Promise<string> {
+  const [y, m] = period.split("-");
+  const d = await call(`/gst/compliance/tax-payer/gstrs/gstr-1/${y}/${m}/file?pan=${encodeURIComponent(pan)}&otp=${encodeURIComponent(otp)}`, { method: "POST", token, body: summary });
+  return String((d.data?.data as { ack_num?: string } | undefined)?.ack_num ?? "");
+}
