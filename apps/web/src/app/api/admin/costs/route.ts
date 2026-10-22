@@ -70,11 +70,30 @@ export async function GET(req: NextRequest) {
     }
     const peakBusinessPerDay = Math.max(0, ...days.map(d => rows.filter(r => r.day === d && r.kind === "wa_business").reduce((s, r) => s + r.calls, 0)));
 
+    // Outside services: is each one set up (its keys are present) and what FreBook used this month
+    const has = (...k: string[]) => k.every(x => !!(process.env[x] ?? "").trim());
+    const todayIst = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const calls = (rs: Row[], p: string) => rs.filter(r => r.kind === "ai" && r.provider === p).reduce((s, r) => s + r.calls, 0);
+    const { count: itJobs } = await sb.from("fw_fin_it_jobs").select("id", { count: "exact", head: true }).gte("created_at", monthStart.toISOString());
+    const services = {
+      vercel: true, supabase: true, github: true,
+      gemini: has("GEMINI_API_KEY"), claude: has("ANTHROPIC_API_KEY"),
+      whatsapp: has("WHATSAPP_ACCESS_TOKEN", "WHATSAPP_PHONE_ID"), gupshup: has("GUPSHUP_APP_TOKEN"),
+      resend: has("RESEND_API_KEY"), fly: has("PORTAL_WORKER_URL", "PORTAL_WORKER_KEY"),
+      sandbox: has("SANDBOX_API_KEY"), deepvue: has("DEEPVUE_CLIENT_ID"), setu: has("SETU_AA_CLIENT_ID"),
+      razorpay: has("RAZORPAY_KEY_ID"), phonepe: has("PHONEPE_MERCHANT_ID"), zoho: has("ZOHO_CLIENT_ID"), qbo: has("QBO_CLIENT_ID"),
+      geminiModel: process.env.GEMINI_MODEL || "gemini-flash-lite-latest",
+      used: {
+        geminiToday: calls(rows.filter(r => r.day === todayIst), "gemini"), geminiMonth: calls(month, "gemini"),
+        claudeMonth: calls(month, "anthropic"), itJobsMonth: itJobs ?? 0,
+      },
+    };
+
     // Days into the month → projection for the whole month
     const dayOfMonth = now.getDate(), daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const mtdInr = aiUsd * USD_INR + waBusiness * WA_BUSINESS_INR;
     return NextResponse.json({
-      setup, usdInr: USD_INR,
+      setup, usdInr: USD_INR, services,
       month: { label: now.toLocaleDateString("en-IN", { month: "long", year: "numeric" }), dayOfMonth, daysInMonth },
       ai: ai.map(m => ({ ...m, inr: Math.round(m.usd * USD_INR) })),
       totals: {

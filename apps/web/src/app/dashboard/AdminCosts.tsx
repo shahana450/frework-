@@ -13,6 +13,7 @@ type Costs = {
   daily: { day: string; ai: number; wa: number; inr: number }[];
   capacity: { dbBytes: number; storageBytes: number; storageFiles: number; users: number; mau: number } | null;
   capacitySetup: string | null;
+  services?: Services;
   whatsapp: { tier: string | null; limit: number | null; quality: string | null; name_status: string | null; peakBusinessPerDay: number } | null;
 };
 
@@ -47,11 +48,48 @@ const num = (n: number) => n.toLocaleString("en-IN");
 const tok = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n);
 const size = (b: number) => b >= 1073741824 ? `${(b / 1073741824).toFixed(2)} GB` : `${Math.round(b / 1048576)} MB`;
 
-// Fixed monthly plans — edit when you change plans
-const FIXED = [
-  { name: "Vercel Pro", inr: 1700, note: "hosting" },
-  { name: "Supabase Pro", inr: 2125, note: "database, logins, files" },
-];
+type Services = Record<"vercel" | "supabase" | "github" | "gemini" | "claude" | "whatsapp" | "gupshup" | "resend" | "fly" | "sandbox" | "deepvue" | "setu" | "razorpay" | "phonepe" | "zoho" | "qbo", boolean>
+  & { geminiModel: string; used: { geminiToday: number; geminiMonth: number; claudeMonth: number; itJobsMonth: number } };
+
+// Fixed monthly plans — follow the plan chosen in the selectors
+const VERCEL = { hobby: { label: "Hobby", inr: 0 }, pro: { label: "Pro", inr: 1700 } } as const;
+const SUPA_INR = { free: 0, pro: 2125 } as const;
+
+// Every outside service FreBook calls: what it's for, the plan's limits (as published — confirm on the provider's page) and where to manage it
+type SvcRow = { key: keyof Omit<Services, "geminiModel" | "used">; name: string; use: string; plan: string; limits: string; used?: string; warn?: string; href: string };
+function serviceRows(s: Services, d: Costs, vercel: keyof typeof VERCEL, supa: "free" | "pro"): SvcRow[] {
+  const lite = /lite/i.test(s.geminiModel);
+  const geminiRpd = lite ? 1000 : 250;
+  return [
+    { key: "vercel", name: "Vercel", use: "Hosts the website and FreBook", plan: VERCEL[vercel].label,
+      limits: vercel === "hobby" ? "100 GB bandwidth/month · functions up to 60 s · non-commercial use only" : "1 TB bandwidth/month · longer functions · team seats billed",
+      warn: vercel === "hobby" ? "Hobby is for non-commercial use — move to Pro before charging customers." : undefined, href: "https://vercel.com/fasalk06-8613s-projects/frework-api/usage" },
+    { key: "supabase", name: "Supabase", use: "Database, sign-in, file storage", plan: supa === "pro" ? "Pro" : "Free",
+      limits: supa === "pro" ? "8 GB database · 100 GB files · 100,000 monthly users · 250 GB egress" : "500 MB database · 1 GB files · 50,000 monthly users · 5 GB egress · pauses after 7 days idle",
+      used: d.capacity ? `${size(d.capacity.dbBytes)} DB · ${size(d.capacity.storageBytes)} files · ${num(d.capacity.mau)} users` : undefined, href: "https://supabase.com/dashboard/project/nmkpjliythusgleozbqi/settings/billing/usage" },
+    { key: "gemini", name: "Google Gemini", use: "Main AI: entries, bills, statements, voice notes", plan: `${s.geminiModel} · free tier unless billing is on`,
+      limits: `Free tier: about ${lite ? "15" : "10"} requests/minute and ${num(geminiRpd)}/day. With billing: pay per token, far higher limits.`,
+      used: `${num(s.used.geminiToday)} today · ${num(s.used.geminiMonth)} this month`,
+      warn: s.used.geminiToday >= geminiRpd * 0.7 ? `Today is at ${Math.round(s.used.geminiToday / geminiRpd * 100)}% of the free daily limit — turn on billing.` : undefined, href: "https://aistudio.google.com/usage" },
+    { key: "claude", name: "Anthropic Claude", use: "AI fallback and bank-statement reading", plan: "Prepaid credit", limits: "Pay per token; rate limits rise with credit spent (tier 1 → 4)",
+      used: `${num(s.used.claudeMonth)} calls this month`, href: "https://console.anthropic.com/settings/billing" },
+    { key: "whatsapp", name: "WhatsApp Cloud API (Meta)", use: "FreBook bot, sign-in codes, reminders", plan: d.whatsapp?.tier ? d.whatsapp.tier.replace("TIER_", "Tier ") : "Business account",
+      limits: `Replies within 24 h free · new chats per day: ${d.whatsapp?.limit ? num(d.whatsapp.limit) : "per tier"} · utility/marketing templates billed per message`,
+      used: `${num(d.totals.waReplies)} replies · ${num(d.totals.waBusiness)} paid templates`, href: "https://business.facebook.com/wa/manage/home/" },
+    { key: "gupshup", name: "Gupshup", use: "WhatsApp backup route", plan: "Pay as you go", limits: "Per-message fee on top of Meta's", href: "https://www.gupshup.io/" },
+    { key: "resend", name: "Resend", use: "Emails (alerts, receipts)", plan: "Free unless upgraded", limits: "Free: 3,000 emails/month, 100/day · 1 domain", href: "https://resend.com/overview" },
+    { key: "fly", name: "Fly.io", use: "Income-tax portal worker (notices, 26AS, AIS)", plan: "Pay as you go (card on file)", limits: "1 small machine in Singapore · billed per second it runs · a few $ a month at low use",
+      used: `${num(s.used.itJobsMonth)} portal fetches this month`, href: "https://fly.io/dashboard" },
+    { key: "sandbox", name: "Sandbox (GSP)", use: "GSTR-1 / 3B / 2B download, GST OTP", plan: "Prepaid wallet", limits: "Charged per API call — keep the wallet topped up", href: "https://dashboard.sandbox.co.in/" },
+    { key: "deepvue", name: "Deepvue", use: "Portal / KYC lookups", plan: "Prepaid", limits: "Charged per API call", href: "https://dashboard.deepvue.tech/" },
+    { key: "setu", name: "Setu Account Aggregator", use: "Live bank feed (consent-based)", plan: "Contract", limits: "Per consent / per fetch pricing", href: "https://bridge.setu.co/" },
+    { key: "razorpay", name: "Razorpay", use: "Subscriptions and payments", plan: "Standard", limits: "About 2% per payment + GST · no monthly fee", href: "https://dashboard.razorpay.com/" },
+    { key: "phonepe", name: "PhonePe PG", use: "Service orders (payments)", plan: "Standard", limits: "Per-payment fee · no monthly fee", href: "https://business.phonepe.com/" },
+    { key: "zoho", name: "Zoho Books", use: "Import from Zoho", plan: "Free API", limits: "Zoho's daily API quota per organisation", href: "https://api-console.zoho.in/" },
+    { key: "qbo", name: "QuickBooks Online", use: "Import from QuickBooks", plan: "Free API", limits: "Intuit's API rate limits", href: "https://developer.intuit.com/" },
+    { key: "github", name: "GitHub Actions", use: "Deploys the portal worker", plan: "Free (public repo)", limits: "Unlimited minutes for public repositories", href: "https://github.com/" },
+  ];
+}
 
 export default function AdminCosts() {
   const [d, setD] = useState<Costs | null>(null);
@@ -66,9 +104,17 @@ export default function AdminCosts() {
     });
   }, []);
 
-  const fixed = FIXED.reduce((s, f) => s + f.inr, 0);
   const [plan, setPlan] = useState<keyof typeof PLANS>("pro");
-  useEffect(() => { try { const p = localStorage.getItem("fw_supabase_plan"); if (p === "free" || p === "pro") setPlan(p); } catch { /* */ } }, []);
+  const [vercel, setVercel] = useState<keyof typeof VERCEL>("hobby");
+  useEffect(() => { try {
+    const p = localStorage.getItem("fw_supabase_plan"); if (p === "free" || p === "pro") setPlan(p);
+    const v = localStorage.getItem("fw_vercel_plan"); if (v === "hobby" || v === "pro") setVercel(v);
+  } catch { /* */ } }, []);
+  const FIXED = [
+    { name: `Vercel ${VERCEL[vercel].label}`, inr: VERCEL[vercel].inr, note: "hosting" },
+    { name: `Supabase ${PLANS[plan].label}`, inr: SUPA_INR[plan], note: "database, logins, files" },
+  ];
+  const fixed = FIXED.reduce((s, f) => s + f.inr, 0);
   const P = PLANS[plan];
   const max = Math.max(1, ...(d?.daily ?? []).map(x => x.inr));
   const perBiz = d && d.books.businesses ? (d.totals.projectedInr + fixed) / d.books.businesses : 0;
@@ -109,6 +155,11 @@ export default function AdminCosts() {
               <option value="free">Free</option><option value="pro">Pro</option>
             </select>
           </label>
+          <label style={{ fontSize: 12, color: C.muted, display: "flex", alignItems: "center", gap: 6 }}>Vercel plan
+            <select value={vercel} onChange={e => { const v = e.target.value as keyof typeof VERCEL; setVercel(v); try { localStorage.setItem("fw_vercel_plan", v); } catch { /* */ } }} style={{ height: 28, borderRadius: 8, border: `1px solid ${C.line}`, padding: "0 6px", fontSize: 12 }}>
+              <option value="hobby">Hobby</option><option value="pro">Pro</option>
+            </select>
+          </label>
           <span style={{ fontSize: 11.5, color: C.muted }}>Amber at 70% · red at 90%</span>
         </div>
         {d.capacitySetup && <div style={{ background: C.warnSoft, color: C.warn, borderRadius: 10, padding: "8px 12px", fontSize: 12.5, fontWeight: 600, marginBottom: 10 }}>{d.capacitySetup}</div>}
@@ -130,6 +181,38 @@ export default function AdminCosts() {
           <a href="https://vercel.com/fasalk06-8613s-projects/frework-api/usage" target="_blank" rel="noreferrer" style={{ color: C.navy, fontWeight: 700 }}>Vercel usage ↗</a>
           <a href="https://supabase.com/dashboard/project/nmkpjliythusgleozbqi/settings/billing/usage" target="_blank" rel="noreferrer" style={{ color: C.navy, fontWeight: 700 }}>Supabase usage ↗</a>
         </div>
+
+        {/* Subscriptions & limits */}
+        {d.services && (() => {
+          const rows = serviceRows(d.services, d, vercel, plan);
+          const on = rows.filter(x => d.services![x.key]), off = rows.filter(x => !d.services![x.key]);
+          return (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 900 }}>Subscriptions &amp; limits</span>
+                <span style={{ fontSize: 11.5, color: C.muted }}>{on.length} in use · limits as published by each provider — confirm on their page before deciding</span>
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", minWidth: 760, fontSize: 12.5, borderCollapse: "collapse" }}>
+                  <thead><tr style={{ color: C.muted, textAlign: "left" }}>
+                    <th style={{ padding: "6px 8px 6px 0" }}>Service</th><th style={{ padding: "6px 8px" }}>Used for</th><th style={{ padding: "6px 8px" }}>Plan &amp; limits</th><th style={{ padding: "6px 8px" }}>This month</th><th style={{ padding: "6px 0" }} />
+                  </tr></thead>
+                  <tbody>{on.map(x => (
+                    <tr key={x.key} style={{ borderTop: `1px solid ${C.line}`, verticalAlign: "top" }}>
+                      <td style={{ padding: "8px 8px 8px 0", fontWeight: 800, whiteSpace: "nowrap" }}>{x.name}</td>
+                      <td style={{ padding: 8, color: C.muted }}>{x.use}</td>
+                      <td style={{ padding: 8 }}><b>{x.plan}</b><div style={{ color: C.muted, marginTop: 2 }}>{x.limits}</div>
+                        {x.warn && <div style={{ marginTop: 4, fontWeight: 700, color: "#C2321F" }}>⚠ {x.warn}</div>}</td>
+                      <td style={{ padding: 8, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{x.used ?? <span style={{ color: C.muted }}>not measured</span>}</td>
+                      <td style={{ padding: "8px 0", whiteSpace: "nowrap" }}><a href={x.href} target="_blank" rel="noreferrer" style={{ color: C.navy, fontWeight: 700 }}>Manage ↗</a></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+              {off.length > 0 && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 6 }}>Not set up (no keys): {off.map(x => x.name).join(" · ")}</div>}
+            </div>
+          );
+        })()}
 
         <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
           {/* Daily cost */}
@@ -174,7 +257,7 @@ export default function AdminCosts() {
             <div style={{ display: "flex", fontSize: 13, padding: "5px 0" }}>
               <span>Journal entries</span><b style={{ marginLeft: "auto" }}>{num(d.books.journals)}</b>
             </div>
-            <div style={{ fontSize: 11.5, color: C.muted, marginTop: 6, lineHeight: 1.5 }}>Supabase Pro includes 100 GB files and 8 GB database. Razorpay fees (~2% + GST) come out of each payment, not counted here.</div>
+            <div style={{ fontSize: 11.5, color: C.muted, marginTop: 6, lineHeight: 1.5 }}>Fixed plans follow the selectors above. Razorpay fees (~2% + GST) come out of each payment, not counted here.</div>
           </div>
         </div>
       </>}
