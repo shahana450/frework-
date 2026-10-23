@@ -76,7 +76,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         @media (max-width: 640px) {
           .hd-glance, .hd-bottom { grid-template-columns: minmax(0, 1fr); }
           .hd-dues { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 72%; overflow-x: auto; scrollbar-width: none; }
-          .hd-entry { flex-wrap: wrap; } .hd-entry input { flex-basis: 100% !important; order: 3; }
+          .hd-entry textarea { min-height: 80px !important; } .hd-entry span { display: none; }
           .hd-h1 { font-size: 26px !important; }
         }
         .hd a.lift, .hd button.lift { transition: transform .15s, box-shadow .15s, border-color .15s; }
@@ -109,23 +109,28 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
 
       {/* Record / Ask */}
       <section aria-label="Record or ask" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div className="hd-entry" style={{ display: "flex", alignItems: "center", gap: 8, background: "#FFFFFF", border: `1.5px solid ${text.trim() ? C.goldLine : C.line}`, borderRadius: 16, padding: 8, boxShadow: "0 14px 30px -24px rgba(18,53,45,0.5)" }}>
-          <div role="tablist" style={{ display: "flex", gap: 2, padding: 3, borderRadius: 11, background: C.ground, flexShrink: 0 }}>
+        <div className="hd-entry" style={{ display: "flex", flexDirection: "column", gap: 6, background: "#FFFFFF", border: `1.5px solid ${text.trim() ? C.goldLine : C.line}`, borderRadius: 20, padding: 12, boxShadow: "0 18px 36px -26px rgba(18,53,45,0.55)", transition: "border-color .15s" }}>
+          <div role="tablist" style={{ display: "flex", gap: 2, padding: 3, borderRadius: 11, background: C.ground, alignSelf: "flex-start" }}>
             {(fromWa ? ["ask"] as const : ["record", "ask"] as const).map(m => (
-              <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} style={{ height: 32, padding: "0 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, background: mode === m ? C.green : "transparent", color: mode === m ? "#FFFFFF" : C.muted }}>
+              <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} style={{ height: 32, padding: "0 16px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, background: mode === m ? C.green : "transparent", color: mode === m ? "#FFFFFF" : C.muted }}>
                 {m === "record" ? "Record" : "Ask"}
               </button>
             ))}
           </div>
-          <input aria-label="Describe a transaction or ask a question" value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === "Enter") go(text); }}
-            placeholder={mode === "record" ? (india ? "Paid office rent ₹25,000 from the bank for October" : `Paid office rent ${cur()}2,500 from the bank for October`) : "Who owes me for more than 60 days?"}
-            style={{ flex: 1, minWidth: 0, height: 40, border: "none", outline: "none", background: "transparent", padding: "0 8px", fontSize: 15, color: C.ink }} />
-          {!fromWa && <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill" style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 10, border: `1px solid ${C.line}`, display: "grid", placeItems: "center", color: C.muted }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-          </Link>}
-          <button onClick={() => go(text)} disabled={!text.trim()} style={{ height: 40, flexShrink: 0, padding: "0 18px", borderRadius: 10, border: "none", background: C.green, color: "#FFFFFF", fontWeight: 800, fontSize: 14, cursor: text.trim() ? "pointer" : "default", opacity: text.trim() ? 1 : 0.6 }}>
-            {mode === "record" ? "Draft entry →" : "Ask →"}
-          </button>
+          <textarea id="hd-chat" aria-label="Describe a transaction or ask a question" rows={3} value={text} onChange={e => setText(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); go(text); } }}
+            placeholder={mode === "record" ? (india ? "Tell FreBook what happened — e.g. Paid office rent ₹25,000 from the bank for October" : `Tell FreBook what happened — e.g. Paid office rent ${cur()}2,500 from the bank for October`) : "Ask about your books — e.g. Who owes me for more than 60 days?"}
+            style={{ width: "100%", minHeight: 96, resize: "vertical", boxSizing: "border-box", border: "none", outline: "none", background: "transparent", padding: "8px 6px", fontSize: 16, lineHeight: 1.55, color: C.ink, fontFamily: "inherit" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {!fromWa && <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill or attach a PDF" style={{ height: 40, padding: "0 12px", flexShrink: 0, borderRadius: 10, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 6, color: C.muted, textDecoration: "none", fontSize: 13, fontWeight: 700 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+              Bill photo / PDF
+            </Link>}
+            <span style={{ fontSize: 12, color: C.muted }}>Enter to {mode === "record" ? "draft" : "ask"} · Shift+Enter for a new line</span>
+            <button onClick={() => go(text)} disabled={!text.trim()} style={{ marginLeft: "auto", height: 42, flexShrink: 0, padding: "0 20px", borderRadius: 12, border: "none", background: C.green, color: "#FFFFFF", fontWeight: 800, fontSize: 14.5, cursor: text.trim() ? "pointer" : "default", opacity: text.trim() ? 1 : 0.6 }}>
+              {mode === "record" ? "Draft entry →" : "Ask →"}
+            </button>
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span style={{ fontSize: 12, color: C.muted }}>Try:</span>
