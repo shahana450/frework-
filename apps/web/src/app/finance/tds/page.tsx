@@ -114,7 +114,8 @@ export default function TDSTrackerPage() {
 
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "2rem" }}>
         <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>TDS Tracker</h1>
-        <p style={{ margin: "0 0 1.5rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Tax Deducted at Source — rates, calculator, deduction history</p>
+        <p style={{ margin: "0 0 0.8rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Tax Deducted at Source — rates, calculator, deduction history</p>
+        <Link href="/finance/tds/return" style={{ display: "inline-block", marginBottom: "1.5rem", padding: "8px 14px", borderRadius: 8, background: "#232A63", color: "#FFFFFF", fontWeight: 700, fontSize: "0.82rem", textDecoration: "none" }}>Quarterly TDS return (Form 140) →</Link>
 
         {/* KPI */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
