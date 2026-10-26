@@ -8,6 +8,7 @@ export const LEDGER_HEADS: LedgerHead[] = [
   { key: "current_asset", label: "Current Assets", type: "asset", sub_type: "current_asset", tally: "Current Assets" },
   { key: "advances", label: "Loans & Advances (Asset)", type: "asset", sub_type: "current_asset", tally: "Loans & Advances (Asset)" },
   { key: "fixed_asset", label: "Fixed Assets", type: "asset", sub_type: "fixed_asset", tally: "Fixed Assets" },
+  { key: "stock", label: "Stock-in-Hand", type: "asset", sub_type: "current_asset", tally: "Stock-in-Hand" },
   { key: "capital", label: "Capital Account", type: "equity", sub_type: "capital", tally: "Capital Account" },
   { key: "creditors", label: "Sundry Creditors (suppliers)", type: "liability", sub_type: "trade_payables", tally: "Sundry Creditors" },
   { key: "duties", label: "Duties & Taxes (GST, TDS)", type: "liability", sub_type: "current_liability", tally: "Duties & Taxes" },

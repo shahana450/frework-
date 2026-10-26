@@ -3,12 +3,14 @@
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
 
 const QUICK: { key: string; label: string }[] = [
-  { key: "debtors", label: "Customer" },
-  { key: "creditors", label: "Supplier" },
+  { key: "debtors", label: "Customer (Debtor)" },
+  { key: "creditors", label: "Supplier (Creditor)" },
   { key: "indirect_expense", label: "Expense" },
   { key: "indirect_income", label: "Income" },
   { key: "sales", label: "Sales" },
   { key: "purchase", label: "Purchase" },
+  { key: "fixed_asset", label: "Fixed asset" },
+  { key: "stock", label: "Stock" },
   { key: "bank", label: "Bank" },
 ];
 
@@ -19,6 +21,9 @@ export function guessGroup(name: string, side?: "in" | "out" | "party" | null): 
   if (/credit\s*card/.test(n)) return "current_liability";
   if (/\b(bank|hdfc|icici|sbi|axis|kotak|federal|canara|pnb|yes bank|idfc|indusind)\b/.test(n)) return "bank";
   if (/\b(gst|cgst|sgst|igst|tds|tcs|cess)\b/.test(n)) return "duties";
+  // Things owned and used for years — before the expense words, so "Furniture & Fixtures" isn't an expense
+  if (/\b(plant|machiner(y|ies)|furniture|fixtures?|fittings|computers?|laptops?|printers?|vehicles?|motor car|car|scooter|building|land|equipments?|air ?conditioners?|\bac\b|generator|inverter|mobile phones?|tools?|moulds?|electrical installations?|office equipment)\b/.test(n) && !/\b(repairs?|maintenance|hire|rent|charges?|expenses?|accessor(y|ies))\b/.test(n)) return "fixed_asset";
+  if (/\b(stock|inventory|stock[- ]in[- ]hand|closing stock|opening stock|raw materials?|finished goods|work in progress|wip)\b/.test(n)) return "stock";
   if (/\b(sales?|revenue)\b|\bb2[bc] ?sales?\b/.test(n)) return "sales";
   if (/\b(purchases?)\b/.test(n)) return "purchase";
   if (/\b(capital|drawings?)\b/.test(n)) return "capital";
