@@ -87,7 +87,13 @@ const SR_STATUS_CFG: Record<string, { label: string; color: string; bg: string }
 
 const SR_STEPS = ["docs_received", "under_review", "approved", "in_progress", "completed"];
 
-const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASS ?? "";
+// Staff only: the server checks the signed-in account against FW_ADMIN_EMAILS; the data never loads in the browser otherwise
+async function consoleCall(body?: Record<string, unknown>) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { ok: false, status: 401, d: { error: "Sign in with your staff account." } as Record<string, unknown> };
+  const r = await fetch("/api/admin/console", { method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${session.access_token}`, ...(body ? { "Content-Type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  return { ok: r.ok, status: r.status, d: (await r.json().catch(() => ({}))) as Record<string, unknown> };
+}
 
 export default function AdminPage() {
   const [users, setUsers] = useState<FwUser[]>([]);
@@ -102,73 +108,50 @@ export default function AdminPage() {
   const [srExpanded, setSrExpanded] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [authed, setAuthed] = useState(false);
-  const [pass, setPass] = useState("");
-  const [passErr, setPassErr] = useState(false);
+  const [gate, setGate] = useState<"checking" | "signin" | "denied">("checking");
   const [filter, setFilter] = useState<"all" | "google" | "email">("all");
   const [approvalFilter, setApprovalFilter] = useState<"pending" | "active" | "rejected">("pending");
   const [loadErr, setLoadErr] = useState("");
 
   const load = async () => {
     setLoadErr("");
-    try {
-      const { data: u, error: ue } = await supabase.from("fw_users").select("*").order("created_at", { ascending: false });
-      if (ue) throw ue;
-      setUsers(u || []);
-      const { data: e, error: ee } = await supabase.from("fw_enquiries").select("*").order("created_at", { ascending: false });
-      if (ee) throw ee;
-      setEnquiries(e || []);
-
-      // Load all listing types
-      const [ws, fl, sv, st] = await Promise.all([
-        supabase.from("fw_workspaces").select("id,name,city,status,created_at,user_id").order("created_at", { ascending: false }),
-        supabase.from("fw_freelancers").select("id,name,city,status,created_at,user_id").order("created_at", { ascending: false }),
-        supabase.from("fw_services").select("id,provider_name,status,created_at,user_id").order("created_at", { ascending: false }),
-        supabase.from("fw_startups").select("id,company_name,city,status,created_at,user_id").order("created_at", { ascending: false }),
-      ]);
-      const combined: Listing[] = [
-        ...(ws.data ?? []).map((r: {id:string;name:string;city?:string;status:string;created_at:string;user_id:string}) => ({ ...r, kind: "workspace" as const })),
-        ...(fl.data ?? []).map((r: {id:string;name:string;city?:string;status:string;created_at:string;user_id:string}) => ({ ...r, kind: "freelancer" as const })),
-        ...(sv.data ?? []).map((r: {id:string;provider_name:string;status:string;created_at:string;user_id:string}) => ({ id:r.id, name:r.provider_name, city:undefined, status:r.status, created_at:r.created_at, user_id:r.user_id, kind: "service" as const })),
-        ...(st.data ?? []).map((r: {id:string;company_name:string;city?:string;status:string;created_at:string;user_id:string}) => ({ id:r.id, name:r.company_name, city:r.city, status:r.status, created_at:r.created_at, user_id:r.user_id, kind: "startup" as const })),
-      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setListings(combined);
-
-      const { data: subs } = await supabase.from("fw_subscriptions").select("*, fw_users(name, email)").order("started_at", { ascending: false });
-      setSubscriptions(subs ?? []);
-
-      const { data: leadsData } = await supabase.from("fw_leads").select("*").order("created_at", { ascending: false });
-      setLeads(leadsData ?? []);
-
-      const { data: srData } = await supabase.from("fw_service_requests").select("*").order("created_at", { ascending: false }).limit(500);
-      const srRows = srData ?? [];
-      setServiceRequests(srRows);
-      const srMap: typeof srEdits = {};
-      srRows.forEach((r: ServiceRequest) => { srMap[r.id] = { status: r.status, admin_notes: r.admin_notes ?? "", package_granted: r.package_granted ?? "" }; });
-      setSrEdits(srMap);
-    } catch (err: unknown) {
-      setLoadErr(err instanceof Error ? err.message : "Failed to load data. Check Supabase env vars.");
-    }
+    const { ok, status, d } = await consoleCall();
+    if (!ok) { if (status === 401) setGate("signin"); else if (status === 403) setGate("denied"); else setLoadErr(String(d.error ?? "Failed to load data.")); setAuthed(false); return; }
+    setAuthed(true);
+    setUsers((d.users as FwUser[]) ?? []);
+    setEnquiries((d.enquiries as FwEnquiry[]) ?? []);
+    const L = (d.listings ?? {}) as Record<string, { id: string; name?: string; provider_name?: string; company_name?: string; city?: string; status: string; created_at: string; user_id: string }[]>;
+    const combined: Listing[] = [
+      ...(L.workspace ?? []).map(r => ({ id: r.id, name: r.name ?? "", city: r.city, status: r.status, created_at: r.created_at, user_id: r.user_id, kind: "workspace" as const })),
+      ...(L.freelancer ?? []).map(r => ({ id: r.id, name: r.name ?? "", city: r.city, status: r.status, created_at: r.created_at, user_id: r.user_id, kind: "freelancer" as const })),
+      ...(L.service ?? []).map(r => ({ id: r.id, name: r.provider_name ?? "", city: undefined, status: r.status, created_at: r.created_at, user_id: r.user_id, kind: "service" as const })),
+      ...(L.startup ?? []).map(r => ({ id: r.id, name: r.company_name ?? "", city: r.city, status: r.status, created_at: r.created_at, user_id: r.user_id, kind: "startup" as const })),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setListings(combined);
+    setSubscriptions((d.subscriptions as FwSubscription[]) ?? []);
+    setLeads((d.leads as FwLead[]) ?? []);
+    const srRows = (d.serviceRequests as ServiceRequest[]) ?? [];
+    setServiceRequests(srRows);
+    const srMap: typeof srEdits = {};
+    srRows.forEach((r: ServiceRequest) => { srMap[r.id] = { status: r.status, admin_notes: r.admin_notes ?? "", package_granted: r.package_granted ?? "" }; });
+    setSrEdits(srMap);
   };
 
   const approveListing = async (listing: Listing) => {
-    await supabase.from(`fw_${listing.kind}s`).update({ status: "active" }).eq("id", listing.id);
+    await consoleCall({ action: "listing_status", kind: listing.kind, id: listing.id, status: "active" });
     setListings(l => l.map(x => x.id === listing.id ? { ...x, status: "active" } : x));
   };
 
   const updateLeadStatus = async (id: string, status: string) => {
-    await supabase.from("fw_leads").update({ status }).eq("id", id);
+    await consoleCall({ action: "lead_status", id, status });
     setLeads(l => l.map(x => x.id === id ? { ...x, status } : x));
   };
 
   const saveSR = async (req: ServiceRequest) => {
     setSrSaving(req.id);
     const e = srEdits[req.id];
-    await supabase.from("fw_service_requests").update({
-      status: e.status,
-      admin_notes: e.admin_notes,
-      package_granted: e.package_granted || null,
-      package_granted_at: e.package_granted && !req.package_granted ? new Date().toISOString() : req.package_granted_at,
-    }).eq("id", req.id);
+    await consoleCall({ action: "sr_update", id: req.id, status: e.status, admin_notes: e.admin_notes, package_granted: e.package_granted || null,
+      package_granted_at: e.package_granted && !req.package_granted ? new Date().toISOString() : req.package_granted_at });
     setSrSaving(null);
     load();
   };
@@ -182,20 +165,15 @@ export default function AdminPage() {
   };
 
   const rejectListing = async (listing: Listing) => {
-    await supabase.from(`fw_${listing.kind}s`).update({ status: "rejected" }).eq("id", listing.id);
+    await consoleCall({ action: "listing_status", kind: listing.kind, id: listing.id, status: "rejected" });
     setListings(l => l.map(x => x.id === listing.id ? { ...x, status: "rejected" } : x));
   };
 
-  useEffect(() => { if (authed) load(); }, [authed]);
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pass === ADMIN_PASS) { setAuthed(true); setPassErr(false); }
-    else { setPassErr(true); }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(); }, []);
 
   const deleteUser = async (id: string) => {
-    await supabase.from("fw_users").delete().eq("id", id);
+    await consoleCall({ action: "delete_user", id });
     setUsers(u => u.filter(x => x.id !== id));
   };
 
@@ -228,16 +206,11 @@ export default function AdminPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Access</h1>
             <p className="text-gray-500 text-sm mt-1">FreWork User Dashboard</p>
           </div>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Admin Password</label>
-              <input type="password" value={pass} onChange={e => { setPass(e.target.value); setPassErr(false); }} placeholder="Enter admin password" className={`w-full border-2 rounded-2xl px-4 py-3 bg-white dark:bg-gray-900 outline-none text-sm dark:text-white transition-all ${passErr ? "border-red-400 focus:border-red-500" : "border-gray-200 dark:border-gray-700 focus:border-violet-500"}`} />
-              {passErr && <p className="text-red-500 text-xs mt-1">Incorrect password</p>}
-            </div>
-            <Button type="submit" className="w-full h-12 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl font-semibold">
-              Access Dashboard
-            </Button>
-          </form>
+          <div className="space-y-4 text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-300">{gate === "checking" ? "Checking your access…" : gate === "denied" ? "This account isn't on the staff list." : "Sign in with your staff account to open the console."}</p>
+            {loadErr && <p className="text-red-500 text-xs">{loadErr}</p>}
+            {gate !== "checking" && <Link href="/login?next=/admin"><Button className="w-full h-12 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl font-semibold">{gate === "denied" ? "Sign in with another account" : "Sign in"}</Button></Link>}
+          </div>
           <p className="text-center text-xs text-gray-400 mt-6">
             <Link href="/" className="text-violet-600 hover:underline">← Back to site</Link>
           </p>
