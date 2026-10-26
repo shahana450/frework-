@@ -9,8 +9,14 @@ export type PartyRow = { id: string; name: string; balance: number; status: "owe
 export type PartyReport = { rows: PartyRow[]; total: number; owed: number; advances: number; buckets: Record<PartyRow["bucket"], number> };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
-export const isReceivable = (a: PartyAccount) => !a.is_group && (a.sub_type === "trade_receivables" || (!a.sub_type && inferHead(a.name)?.key === "debtors"));
-export const isPayable = (a: PartyAccount) => !a.is_group && (a.sub_type === "trade_payables" || (!a.sub_type && inferHead(a.name)?.key === "creditors"));
+// A tax, loan or advance ledger is never a customer / supplier, whatever its name ("TDS Receivable", "GST Payable")
+const NOT_PARTY = /\b(tds|tcs|gst|igst|cgst|sgst|cess|tax|interest|loan|advance|salary|salaries|wages|rent|expenses?|provision)\b/i;
+/** THE rule for a customer ledger (Sundry Debtors) — every receivable figure uses it. */
+export const isReceivable = (a: PartyAccount) => !a.is_group && (a.sub_type === "trade_receivables" ||
+  ((!a.sub_type || a.sub_type === "current_asset") && !NOT_PARTY.test(a.name) && (inferHead(a.name)?.key === "debtors" || /\b(debtors?|receivables?)\b/i.test(a.name))));
+/** THE rule for a supplier ledger (Sundry Creditors). */
+export const isPayable = (a: PartyAccount) => !a.is_group && (a.sub_type === "trade_payables" ||
+  ((!a.sub_type || a.sub_type === "current_liability") && !NOT_PARTY.test(a.name) && (inferHead(a.name)?.key === "creditors" || /\b(creditors?|payables?)\b/i.test(a.name))));
 
 export function partyBalances(kind: "receivable" | "payable", accounts: PartyAccount[], lines: PartyLine[], today: string): PartyReport {
   const pick = kind === "receivable" ? isReceivable : isPayable;

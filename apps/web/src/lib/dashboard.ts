@@ -1,7 +1,7 @@
 // Dashboard figures and alerts, computed from posted entries with the same engine as the reports.
 import { buildTrialBalance, buildPL, groupOf, type Account } from "./books";
 import { gst3bByMonth, gst3bCash, gstRole } from "./gst3b";
-import { arAp } from "./partyBalances";
+import { arAp, isReceivable, isPayable } from "./partyBalances";
 import { monthPeriod, type QJournal, type Period } from "./bookQueries";
 import { formatMoney, DEFAULT_MONEY, type MoneyFormat } from "./money";
 import { dueDates, type DueItem } from "./compliance";
@@ -35,8 +35,8 @@ const inr = (n: number) => formatMoney(Math.abs(n), money, { decimals: false });
 const days = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
 
 const isCashBank = (a: Account) => a.sub_type === "bank" || a.sub_type === "cash" || a.type === "bank" || a.type === "cash" || (/\bbank\b|\bcash\b/i.test(a.name) && groupOf(a) === "current_asset" && !/charges|commission/i.test(a.name));
-const isDebtor = (a: Account) => a.sub_type === "trade_receivables" || (/debtor|receivable/i.test(a.name) && groupOf(a) === "current_asset");
-const isCreditor = (a: Account) => a.sub_type === "trade_payables" || (/creditor|payable/i.test(a.name) && groupOf(a) === "current_liability" && !/gst|tds|salary|tax/i.test(a.name));
+const isDebtor = (a: Account) => isReceivable(a);
+const isCreditor = (a: Account) => isPayable(a);
 
 export function computeDashboard(accounts: Account[], journals: QJournal[], today: string, fy: Period, extra: DashExtra, fmt: MoneyFormat = DEFAULT_MONEY): Dashboard {
   money = fmt;

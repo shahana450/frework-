@@ -1,5 +1,6 @@
 // Who owes you, how old it is, and what to say. Payments clear the oldest invoices first (FIFO).
-import { groupOf, type Account } from "./books";
+import { type Account } from "./books";
+import { isReceivable } from "./partyBalances";
 import type { QJournal } from "./bookQueries";
 
 export type OpenInvoice = { date: string; ref: string; amount: number; days: number };
@@ -8,11 +9,11 @@ export type Debtor = {
   lastPayment: string | null; bucket: "0-30" | "31-60" | "60+";
   phone?: string | null;
 };
-export type Collect = { total: number; buckets: { "0-30": number; "31-60": number; "60+": number }; collectedThisMonth: number; debtors: Debtor[] };
+export type Collect = { total: number; owed: number; advances: number; buckets: { "0-30": number; "31-60": number; "60+": number }; collectedThisMonth: number; debtors: Debtor[] };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const daysBetween = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
-export const isDebtorAccount = (a: Account) => a.sub_type === "trade_receivables" || (/debtor|receivable/i.test(a.name) && groupOf(a) === "current_asset") || (groupOf(a) === "current_asset" && a.type === "debtor");
+export const isDebtorAccount = (a: Account) => isReceivable(a) || a.type === "debtor";
 const GENERIC = /^(sundry\s+)?debtors?$|^trade receivables?$|^accounts? receivable$/i;
 
 export function bucketOf(days: number): Debtor["bucket"] { return days > 60 ? "60+" : days > 30 ? "31-60" : "0-30"; }
@@ -40,7 +41,10 @@ export function computeCollect(accounts: Account[], journals: QJournal[], today:
   }
 
   const debtors: Debtor[] = [];
+  let advances = 0;   // customers who paid more than they were billed (shown separately; the total is net, like every other screen)
   for (const [name, p] of parties) {
+    const billed = p.inv.reduce((s, i) => s + i.amount, 0);
+    if (p.credit - billed >= 1) advances = r2(advances + p.credit - billed);
     let credit = p.credit;
     const open: OpenInvoice[] = [];
     for (const inv of p.inv) {
@@ -58,7 +62,8 @@ export function computeCollect(accounts: Account[], journals: QJournal[], today:
 
   const buckets = { "0-30": 0, "31-60": 0, "60+": 0 };
   for (const d of debtors) for (const i of d.open) buckets[bucketOf(i.days)] = r2(buckets[bucketOf(i.days)] + i.amount);
-  return { total: r2(debtors.reduce((s, d) => s + d.balance, 0)), buckets, collectedThisMonth: r2(collectedThisMonth), debtors };
+  const owed = r2(debtors.reduce((s, d) => s + d.balance, 0));
+  return { total: r2(owed - advances), owed, advances, buckets, collectedThisMonth: r2(collectedThisMonth), debtors };
 }
 
 export type Tone = "polite" | "firm" | "malayalam";

@@ -52,6 +52,14 @@ export async function resolveLedgers(sb: SupabaseClient, businessId: string, wan
     if (error) throw new Error(`Could not create ledgers: ${error.message}`);
     for (const a of data ?? []) { accounts.push(a); created.push({ name: a.name, head: toCreate.get(a.name)?.label ?? "" }); }
     find = makeFinder(accounts);
+    // A new customer / supplier ledger is also a contact, so Customers & Suppliers and every party picker list it
+    const parties = (data ?? []).map(a => ({ a, h: toCreate.get(a.name) })).filter(x => x.h?.key === "debtors" || x.h?.key === "creditors");
+    if (parties.length) {
+      const rows = parties.map(({ a, h }) => ({ business_id: businessId, name: a.name, type: h!.key === "debtors" ? "customer" : "vendor", is_active: true, ledger_account_id: a.id }));
+      const ins = await sb.from("fw_fin_contacts").insert(rows);
+      // Older databases without the ledger link column (P3) still get the contact
+      if (ins.error && /ledger_account_id/.test(ins.error.message)) await sb.from("fw_fin_contacts").insert(rows.map(({ ledger_account_id: _l, ...r }) => { void _l; return r; }));
+    }
   }
 
   const ids = new Map<string, { id: string; name: string }>();

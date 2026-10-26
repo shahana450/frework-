@@ -76,6 +76,7 @@ export default function CollectPage() {
             <div style={{ fontSize: 14, fontWeight: 600, color: C.muted }}>Customers owe you</div>
             <h1 style={{ margin: "6px 0 0", fontFamily: SERIF, fontSize: "clamp(36px,5vw,56px)", fontWeight: 700 }}>{data ? fmt(data.total) : "…"}</h1>
             <div style={{ fontSize: 14, color: C.pos, fontWeight: 600, marginTop: 4 }}>{data ? `${fmt(data.collectedThisMonth)} collected this month` : ""}</div>
+            {data && (data as { advances?: number }).advances ? <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>{fmt((data as { owed?: number }).owed ?? data.total)} to collect, less {fmt((data as { advances?: number }).advances ?? 0)} advances received</div> : null}
           </div>
           {overdue.length > 0 && <span style={{ fontSize: 13, color: C.muted, maxWidth: 320 }}>{overdue.length} customer{overdue.length > 1 ? "s are" : " is"} more than 30 days overdue. Open each one and send its reminder from WhatsApp.</span>}
         </section>
@@ -83,7 +84,7 @@ export default function CollectPage() {
         {data && data.total > 0 && (
           <section aria-label="Ageing" style={{ ...card, padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden", background: C.soft }}>
-              {(Object.keys(BUCKET) as (keyof typeof BUCKET)[]).map(k => data.buckets[k] > 0 && <span key={k} style={{ width: `${(data.buckets[k] / data.total) * 100}%`, background: BUCKET[k].color }} />)}
+              {(Object.keys(BUCKET) as (keyof typeof BUCKET)[]).map(k => data.buckets[k] > 0 && <span key={k} style={{ width: `${(data.buckets[k] / ((data as { owed?: number }).owed || data.total)) * 100}%`, background: BUCKET[k].color }} />)}
             </div>
             <div style={{ display: "flex", gap: 28, flexWrap: "wrap", fontSize: 14 }}>
               {(Object.keys(BUCKET) as (keyof typeof BUCKET)[]).map(k => (

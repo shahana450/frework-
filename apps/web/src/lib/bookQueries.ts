@@ -2,6 +2,7 @@
 // The AI only chooses which question this is; every number here comes from the ledger.
 import { buildTrialBalance, buildPL, groupOf, statementAmount, type Account, type BookLine, type TBRow } from "./books";
 import { formatMoney, DEFAULT_MONEY, type MoneyFormat } from "./money";
+import { isReceivable, isPayable } from "./partyBalances";
 
 export type QJournal = {
   id: string; date: string; entry_no: string; narration: string; type: string; party_name: string | null;
@@ -35,8 +36,8 @@ function txRow(j: QJournal, names: Map<string, string>): TxRow {
   return { id: j.id, date: j.date, entry_no: j.entry_no, narration: j.narration, amount, accounts: `Dr ${dr.join(", ")} / Cr ${cr.join(", ")}` };
 }
 const inPeriod = (p: Period) => (j: QJournal) => j.date >= p.from && j.date <= p.to;
-const isDebtor = (a: Account) => a.sub_type === "trade_receivables" || /debtor|receivable/i.test(a.name) && groupOf(a) === "current_asset";
-const isCreditor = (a: Account) => a.sub_type === "trade_payables" || /creditor|payable/i.test(a.name) && groupOf(a) === "current_liability";
+const isDebtor = (a: Account) => isReceivable(a);
+const isCreditor = (a: Account) => isPayable(a);
 const isCashBank = (a: Account) => a.sub_type === "bank" || a.sub_type === "cash" || a.type === "bank" || a.type === "cash" || (/\bbank\b|\bcash\b/i.test(a.name) && groupOf(a) === "current_asset" && !/charges|commission/i.test(a.name));
 
 function plFor(accounts: Account[], journals: QJournal[], p: Period) {

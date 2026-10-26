@@ -3,6 +3,7 @@
 // side shows with a minus, except cash/bank credit balances, which move to Current Liabilities as overdrafts.
 // Every section total is the sum of its displayed lines, and the statement says so (footing check).
 import { statementAmount, type TBRow, type BS, type PL } from "./books";
+import { isReceivable, isPayable } from "./partyBalances";
 
 export type StmtLine = { id: string; name: string; amount: number; note?: string };
 export type StmtSection = { key: string; title: string; lines: StmtLine[]; total: number };
@@ -27,8 +28,8 @@ export function presentBalanceSheet(bs: BS, rows: (TBRow & { sub_type?: string |
   const sub = new Map(rows.map(r => [r.id, r.sub_type]));
   const withSub = (r: TBRow) => ({ ...r, sub_type: sub.get(r.id) ?? null });
   const nonZero = (r: TBRow) => Math.abs(r2(r.balance)) >= 0.005;
-  const isCustomer = (r: TBRow) => sub.get(r.id) === "trade_receivables" || /\b(debtors?|receivables?)\b/i.test(r.name);
-  const isSupplier = (r: TBRow) => sub.get(r.id) === "trade_payables" || /\b(creditors?|payables?)\b/i.test(r.name);
+  const isCustomer = (r: TBRow) => isReceivable({ id: r.id, name: r.name, sub_type: sub.get(r.id) ?? null });
+  const isSupplier = (r: TBRow) => isPayable({ id: r.id, name: r.name, sub_type: sub.get(r.id) ?? null });
   const isReserve = (r: TBRow) => /profit|loss|p\s*&\s*l|reserve|surplus|retained/i.test(r.name);
 
   // Abnormal balances move to the side where they belong, under a heading that says what they are:
