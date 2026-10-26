@@ -29,7 +29,7 @@ export type Intent = {
   splits?: { account: string; amount: number; date?: string | null }[] | null;  // several expense heads paid together (one line each)
   // A supplier bill read line by line: each item its own ledger (stock / expense / fixed asset) with its own GST rate.
   // taxable = the line's value before GST, after its share of any bill discount.
-  items?: { account: string; kind: "purchase" | "expense" | "asset"; taxable: number; rate: number; description?: string | null }[] | null;
+  items?: { account: string; kind: "purchase" | "expense" | "asset" | "sale"; taxable: number; rate: number; description?: string | null }[] | null;
   currency?: string | null;                        // transaction currency when not the base currency
   exchange_rate?: number | null;                   // base units per 1 unit of `currency` — never guessed
 };
@@ -213,6 +213,34 @@ function buildLocal(intent: Intent, tax: TaxModule, registered = true): RuleResu
       return { lines, rule, gst: gstOut, tds: tdsOut(net), missing, warnings };
     }
     case "sale": {
+      // A sales invoice read line by line: Sales per item, output GST per line at its own rate (0% lines carry none)
+      const sItems = (intent.items ?? []).filter(i => i.account?.trim() && Number(i.taxable) > 0);
+      if (sItems.length && !tdsAmt) {
+        const rated = intent.gst?.applicable && tax.taxName && g !== null;
+        const taxBy = new Map<string, { ledger: string; code: string; amt: number }>();
+        const totalTaxable = sItems.reduce((s, i) => s + Number(i.taxable), 0);
+        const credits: RuleLine[] = [];
+        for (const it of sItems) {
+          let val = Number(it.taxable);
+          if (rated) {
+            for (const t of tax.split(val, Number(it.rate) || 0, false, g?.supply ?? "intra").components) if (t.amount) {
+              const x = taxBy.get(t.outputLedger) ?? { ledger: t.outputLedger, code: t.code, amt: 0 };
+              x.amt = r2(x.amt + t.amount); taxBy.set(t.outputLedger, x);
+            }
+          } else if (stated > 0 && totalTaxable > 0) val = val / totalTaxable * stated;
+          credits.push(CR(it.account.trim() && !isControl(it.account) ? it.account.trim() : DEFAULT_LEDGERS.sales, r2(val), it.description ? `Item: ${it.description}` : "Sales", "income"));
+        }
+        for (const t of taxBy.values()) credits.push(CR(t.ledger, t.amt, `Output ${t.code}`, "liability"));
+        let total = r2(credits.reduce((s, l) => s + l.credit, 0));
+        const diff = stated > 0 ? r2(stated - total) : 0;
+        if (diff && Math.abs(diff) <= 1) { credits.push(diff > 0 ? CR("Round Off", diff, "Rounding on invoice", "income") : DR("Round Off", -diff, "Rounding on invoice", "expense")); total = stated; }
+        else if (diff) warnings.push(`The invoice lines add up to ${total}, not ${stated} — check the items before posting.`);
+        const customer = credit ? partyLedger("customer") : "";
+        lines.push(credit ? DR(customer, total, `Receivable from ${customer || "customer"}`, "debtors") : DR(settle ?? "", total, "Received into", "asset"), ...credits);
+        rule = `Sale booked item-wise: Dr ${credit ? `${customer || "customer"} (not yet received)` : settle} — Cr Sales${taxBy.size ? " + Output GST" : ""}`;
+        const sum = (code: string) => r2([...taxBy.values()].filter(t => t.code === code).reduce((s, t) => s + t.amt, 0));
+        return { lines, rule, gst: rated ? { ...gstOut, taxable_value: r2(totalTaxable), cgst: sum("CGST"), sgst: sum("SGST"), igst: sum("IGST") } : gstOut, tds: tdsOut(total), missing, warnings };
+      }
       const acc = counter && !isControl(counter) ? counter : DEFAULT_LEDGERS.sales;
       if (tdsAmt) lines.push(DR(tdsReceivable, tdsAmt, "TDS deducted by customer", "asset"));
       const customer = credit ? partyLedger("customer") : "";

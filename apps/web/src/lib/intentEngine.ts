@@ -38,8 +38,9 @@ FIELDS:
   · kind "purchase" — ONLY goods bought to resell, or raw material for goods it makes (its stock-in-trade). Ledger "Purchases" (or an existing purchase ledger). GST-rate ledgers like "Purchase @18%" are for stock only.
   · kind "asset" — durable items used in the business for more than a year (laptops, computers, printers, furniture, AC, machinery, vehicles, mobile phones). Ledger e.g. "Computers", "Furniture & Fixtures", "Office Equipment", "Plant & Machinery". Installation / setup charges of an asset go to that same asset ledger.
   · kind "expense" — things used up or services (stationery, consumables, small accessories like a mouse, cable or charger, repairs, software subscriptions, freight, professional fees). A specific ledger e.g. "Computer Accessories", "Printing & Stationery", "Repairs & Maintenance".
+  For a SALES invoice issued by this business, list every line too, with kind "sale" and the sales ledger (an existing sales ledger from the list, else "Sales"); a line with no GST keeps rate 0.
   If the business's nature (from its ledgers and past entries) shows it sells these goods, they are "purchase"; when unsure, prefer "expense"/"asset" and say why in "reason". Set action to "purchase" only if every line is stock; "asset_purchase" if the bill is mainly assets; else "expense_payment".
-DOCUMENTS: read date, party, GSTIN, invoice number, taxable value, GST and total from the document; supplier bills are purchases/expenses (see "items"); invoices issued by this business are sales. If the document does not show whether it was paid or is on credit and the user didn't say, put "payment_account" in missing.
+DOCUMENTS: read date, party, GSTIN, invoice number, taxable value, GST and total from the document; always fill "seller_name", "seller_gstin", "buyer_name", "buyer_gstin" exactly as printed (null when not shown) — the app checks that this business is one of them; supplier bills are purchases/expenses (see "items"); invoices issued by this business are sales. If the document does not show whether it was paid or is on credit and the user didn't say, put "payment_account" in missing.
 BANK STATEMENTS / PASSBOOKS with many rows: set "document_kind":"bank_statement" and nothing else needs filling.
 
 OUTPUT:
@@ -48,7 +49,7 @@ OUTPUT:
   "counter_account": null, "party_name": null, "invoice_number": null,
   "gst": {"applicable": false, "rate": 0, "inclusive": true, "supply": "intra"},
   "tds": {"applicable": false, "section": null, "rate": 0, "amount": 0, "amount_is_net": false},
-  "manual_lines": null, "splits": null, "items": null, "currency": null, "exchange_rate": null, "narrative": "one plain sentence describing the transaction",
+  "manual_lines": null, "splits": null, "items": null, "seller_name": null, "seller_gstin": null, "buyer_name": null, "buyer_gstin": null, "currency": null, "exchange_rate": null, "narrative": "one plain sentence describing the transaction",
   "reason": "...", "confidence": 0.9, "account_confidence": 0.9, "alternatives": [], "missing": [],
   "document_summary": null, "document_kind": null
 }
@@ -145,13 +146,14 @@ export type AiIntent = {
   kind?: "record" | "query"; tool?: string; params?: Record<string, unknown>; period?: unknown; period2?: unknown;
   action?: string; transaction_date?: string; amount?: number; payment_mode?: "cash" | "bank" | "credit" | null;
   payment_account?: string | null; counter_account?: string | null; party_name?: string | null; invoice_number?: string | null;
-  gst?: Intent["gst"]; tds?: Intent["tds"]; manual_lines?: Intent["manual_lines"]; splits?: Intent["splits"]; items?: Intent["items"]; narrative?: string; reason?: string;
+  gst?: Intent["gst"]; tds?: Intent["tds"]; manual_lines?: Intent["manual_lines"]; splits?: Intent["splits"]; items?: Intent["items"]; narrative?: string;
+  seller_name?: string | null; seller_gstin?: string | null; buyer_name?: string | null; buyer_gstin?: string | null; reason?: string;
   confidence?: number; account_confidence?: number; alternatives?: string[]; missing?: string[];
   document_summary?: string | null; document_kind?: string | null;
   currency?: string | null; exchange_rate?: number | null;
 };
 
-export type BusinessContext = { country: string; baseCurrency: string; tax: TaxModule; state?: string | null; gstin?: string | null; sells?: string[] };
+export type BusinessContext = { country: string; baseCurrency: string; tax: TaxModule; state?: string | null; gstin?: string | null; sells?: string[]; name?: string };
 
 /** The AI instructions with this business's country, currency and tax rules added. */
 export function intentSystemFor(ctx: BusinessContext): string {
@@ -187,6 +189,21 @@ export function accountListForAI(accounts: { name: string; type: string; sub_typ
   return accounts.map(a => a.sub_type === "trade_payables" ? `${a.name} (supplier — a party, not an expense or asset)`
     : a.sub_type === "trade_receivables" ? `${a.name} (customer — a party, not income)`
     : `${a.name} (${a.type}${a.sub_type ? "/" + a.sub_type : ""})`).join(" | ");
+}
+
+const normName = (s: string | null | undefined) => String(s ?? "").toLowerCase().replace(/\b(m\/s|pvt|private|ltd|limited|llp|the|and|&)\b/g, "").replace(/[^a-z0-9]/g, "");
+/** When a document names a seller and a buyer and this business is neither (by GSTIN, else by name), say so. Exported for tests. */
+export function documentNotOurs(ai: Pick<AiIntent, "seller_name" | "seller_gstin" | "buyer_name" | "buyer_gstin">, ctx?: Pick<BusinessContext, "gstin" | "name">): string | null {
+  if (!ctx) return null;
+  const g = (ctx.gstin ?? "").trim().toUpperCase(), n = normName(ctx.name);
+  const sg = (ai.seller_gstin ?? "").trim().toUpperCase(), bg = (ai.buyer_gstin ?? "").trim().toUpperCase();
+  const sn = normName(ai.seller_name), bn = normName(ai.buyer_name);
+  if (g && (sg === g || bg === g)) return null;
+  if (n && n.length >= 3 && [sn, bn].some(x => x && (x.includes(n) || n.includes(x)))) return null;
+  // Only when the document clearly shows both sides and neither is us
+  const gstinsShown = sg.length === 15 && bg.length === 15;
+  if (!(g && gstinsShown) && !(n && sn && bn)) return null;
+  return `This document is from ${ai.seller_name || ai.seller_gstin || "the seller"} to ${ai.buyer_name || ai.buyer_gstin || "the buyer"} — neither looks like your business. Check it belongs to you before booking.`;
 }
 
 export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { name: string; type: string; sub_type: string | null }[], businessId: string, today: string, ctx?: BusinessContext): Promise<ParsedTransaction> {
@@ -250,7 +267,7 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
     payment_account: paymentAccount, counter_account: counter, party_name: partyName,
     gst: ai.gst ?? null, tds: ai.tds ?? null, manual_lines: ai.manual_lines?.map(l => ({ ...l, account: canon(l.account) ?? l.account })) ?? null,
     splits: SPEND_ACTIONS.has(action) && Array.isArray(ai.splits) ? ai.splits.filter(s => s?.account && Number(s.amount) > 0).map(s => ({ account: canon(s.account) ?? s.account, amount: Number(s.amount) })) : null,
-    items: SPEND_ACTIONS.has(action) && Array.isArray(ai.items) ? ai.items.filter(i => i?.account && Number(i.taxable) > 0).map(i => ({ description: String(i.description ?? "").slice(0, 60) || null, account: canon(i.account) ?? i.account, kind: (["purchase", "expense", "asset"].includes(i.kind) ? i.kind : "expense") as "purchase" | "expense" | "asset", taxable: Number(i.taxable), rate: Number(i.rate) || 0 })) : null,
+    items: (SPEND_ACTIONS.has(action) || action === "sale") && Array.isArray(ai.items) ? ai.items.filter(i => i?.account && Number(i.taxable) > 0).map(i => ({ description: String(i.description ?? "").slice(0, 60) || null, account: canon(i.account) ?? i.account, kind: (["purchase", "expense", "asset", "sale"].includes(i.kind) ? i.kind : action === "sale" ? "sale" : "expense") as "purchase" | "expense" | "asset" | "sale", taxable: Number(i.taxable), rate: Number(i.rate) || 0 })) : null,
     currency: ai.currency ?? null, exchange_rate: ai.exchange_rate ?? null,
   };
   // An Indian business without a GSTIN is not GST-registered: GST goes into the cost, none is charged
@@ -287,6 +304,12 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
     ...(rr.fx ? { fc_debit: l.fc_debit ?? 0, fc_credit: l.fc_credit ?? 0 } : {}),
   }));
   const missing = rr.missing;
+  const notOurs = documentNotOurs(ai, ctx);
+  if (notOurs) return {
+    ...base, status: "needs_clarification", transaction_type: action, amount: Math.round(lines.reduce((s, l) => s + l.debit, 0) * 100) / 100 || intent.amount,
+    payment_mode: intent.payment_mode, bank_account_name: intent.payment_account, gst: rr.gst, tds: rr.tds, lines,
+    needs_clarification: [notOurs], warnings: rr.warnings, rule: rr.rule, counter_account: intent.counter_account, history_evidence, fx: rr.fx ?? null,
+  };
   return {
     ...base, status: missing.length ? "needs_clarification" : "complete", transaction_type: action,
     amount: Math.round(lines.reduce((s, l) => s + l.debit, 0) * 100) / 100 || intent.amount,
