@@ -187,18 +187,17 @@ export default function PricingPage() {
                   {now !== null && <div style={{ fontSize: 12, fontWeight: 700, color: "#8A5A00" }}>with your referral discount · then ₹{fmt(base)}</div>}
                   <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>{plan.audience}</div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, background: C.bg }}>
-                  <span aria-hidden="true" style={{ fontSize: 20 }}>🏢</span>
-                  <span style={{ fontWeight: 900, fontSize: 15 }}>{plan.businesses === null ? "Unlimited businesses" : plan.businesses === 1 ? "1 business" : `Up to ${plan.businesses} businesses`}</span>
-                  <span style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>one login</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, flex: 1, alignContent: "start" }}>
+                  {[
+                    { v: plan.businesses === null ? "∞" : String(plan.businesses), l: plan.businesses === 1 ? "business" : "businesses" },
+                    { v: fmt(plan.pages), l: "PDF pages / month" },
+                  ].map(x => (
+                    <div key={x.l} style={{ padding: "12px 12px 10px", borderRadius: 12, background: popular ? "#FFFFFF" : C.bg, border: popular ? `1px solid ${C.line}` : "none" }}>
+                      <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", color: C.navy }}>{x.v}</div>
+                      <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>{x.l}</div>
+                    </div>
+                  ))}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, background: C.bg, marginTop: -6 }}>
-                  <span aria-hidden="true" style={{ fontSize: 20 }}>📄</span>
-                  <span style={{ fontWeight: 800, fontSize: 14 }}>{fmt(plan.pages)} PDF statement pages / month</span>
-                </div>
-                <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
-                  {plan.features.map(f => <li key={f} style={{ display: "flex", gap: 8, fontSize: 13.5 }}><span style={{ color: C.pos, fontWeight: 900 }}>✓</span>{f}</li>)}
-                </ul>
                 <button onClick={() => handleBuy(plan)} disabled={paying !== null || isCurrent}
                   style={{ height: 46, borderRadius: 12, border: isCurrent ? `1px solid ${C.pos}` : "none", fontWeight: 800, fontSize: 15, cursor: isCurrent ? "default" : "pointer",
                     background: isCurrent ? C.posSoft : popular ? C.navy : "#141A3A", color: isCurrent ? C.pos : "#FFFFFF", opacity: paying && paying !== plan.id ? 0.5 : 1 }}>
@@ -208,6 +207,27 @@ export default function PricingPage() {
             );
           })}
         </div>
+
+        {/* What every plan includes — listed once */}
+        <section aria-labelledby="pr-incl" style={{ background: "#FFFFFF", border: `1px solid ${C.line}`, borderRadius: 20, padding: "22px 22px 18px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+            <h2 id="pr-incl" style={{ margin: 0, fontSize: 20, fontWeight: 900 }}>Every plan includes everything</h2>
+            <span style={{ fontSize: 13.5, color: C.muted }}>One login · all features · plans differ only in businesses and PDF pages</span>
+          </div>
+          <div style={{ display: "grid", gap: 18, gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))" }}>
+            {[
+              { h: "Record", items: ["Chat entries in English or Hinglish", "WhatsApp bot and voice notes", "Bill photos booked item-wise", "Bank statements — even password-protected"] },
+              { h: "GST", items: ["GST invoices, bills, credit and debit notes", "GSTR-1 & 3B prepared, GSTR-1 filed online", "GSTR-2B ITC match and supplier chase", "e-Invoice IRN and e-way bill"] },
+              { h: "Tax & compliance", items: ["TDS on entries and quarterly return (Form 140)", "MSME 45-day payment alerts (43B(h))", "Income-tax notices, 26AS and AIS fetched", "Due-date reminders"] },
+              { h: "Books & reports", items: ["Ledgers, receivables and payables", "P&L, Balance Sheet, TB — Schedule III", "Styled Excel exports", "Tally push and import"] },
+            ].map(g => (
+              <div key={g.h} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: C.navy }}>{g.h}</div>
+                {g.items.map(it => <div key={it} style={{ display: "flex", gap: 8, fontSize: 13.5, lineHeight: 1.45 }}><span style={{ color: C.pos, fontWeight: 900 }}>✓</span>{it}</div>)}
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Referral */}
         <section style={{ background: "#FFFFFF", border: `1px solid ${C.line}`, borderRadius: 20, padding: 20, display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", alignItems: "center" }}>
