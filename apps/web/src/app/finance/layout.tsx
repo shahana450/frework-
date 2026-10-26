@@ -12,7 +12,7 @@ import { FINANCE_NAV, isActive } from "@/lib/financeNav";
 import { FreBookMark } from "@/components/FreBookLogo";
 import UpdatePrompt from "@/components/UpdatePrompt";
 import { navIconPath } from "@/lib/navIcons";
-import { ActiveBusinessProvider, useActiveBusinessStore, setActiveBusiness, readActiveBusiness, getActiveBusiness, rememberedBusiness } from "@/lib/activeBusiness";
+import { ActiveBusinessProvider, useActiveBusinessStore, setActiveBusiness, readActiveBusiness, getActiveBusiness, rememberedBusiness, tabBusiness } from "@/lib/activeBusiness";
 
 
 // Navy Prestige type + phone layout for every finance page
@@ -95,6 +95,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const router = useRouter();
   const [bizName, setBizName] = useState("");
+  const [bizSwitched, setBizSwitched] = useState<{ from: string; to: string } | null>(null);
   const [india, setIndia] = useState(true);   // GST / TDS / Income-tax menus only for Indian businesses
   const [bizCount, setBizCount] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
@@ -187,6 +188,12 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         pick = member;
       }
       pick = pick ?? owned?.[0];
+      // Never switch silently: if this tab was working in another business, show which one is open now
+      const had = tabBusiness(user.id);
+      if (pick && had && had !== pick.id) {
+        const { data: prev } = await supabase.from("fw_fin_businesses").select("name").eq("id", had).maybeSingle();
+        setBizSwitched({ to: pick.name, from: (prev as { name?: string } | null)?.name ?? "the previous business" });
+      }
       if (pick) { setActiveBusiness(user.id, pick.id, pick.name); setBizName(pick.name); setTallyBusiness(pick.id); }
       // Money on every page follows this business's currency (set before any page mounts)
       if (pick) { const { data: m } = await supabase.from("fw_fin_businesses").select("currency,country").eq("id", pick.id).maybeSingle(); setActiveCurrency(m?.currency, m?.country); setIndia(!m?.country || m.country === "IN"); }
@@ -399,6 +406,13 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
               );
             })}
           </nav>
+        )}
+        {bizSwitched && (
+          <div role="alert" style={{ margin: "10px 16px 0", padding: "10px 14px", borderRadius: 12, background: "#FFF4DB", border: "1px solid #F2D29B", color: "#5A3A00", fontSize: 13.5, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <b>Now working in {bizSwitched.to}</b><span>(was {bizSwitched.from}). Check the business before you post.</span>
+            <Link href="/finance/select-business" style={{ color: "#232A63", fontWeight: 800 }}>Switch business</Link>
+            <button onClick={() => setBizSwitched(null)} style={{ marginLeft: "auto", border: "none", background: "none", fontWeight: 800, cursor: "pointer", color: "#5A3A00" }}>OK</button>
+          </div>
         )}
         <ActiveBusinessProvider>{children}</ActiveBusinessProvider>
       </main>

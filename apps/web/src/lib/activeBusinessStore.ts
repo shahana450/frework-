@@ -9,9 +9,19 @@ const listeners = new Set<(a: ActiveBusiness) => void>();
 export const activeBusinessKey = (userId: string) => `fw_fin_biz_${userId}`;
 const clean = (v: string | null | undefined) => (v ?? "").replace(/﻿/g, "").trim();
 const storage = (): Storage | null => { try { return typeof localStorage === "undefined" ? null : localStorage; } catch { return null; } };
+// Each browser tab keeps its own business (sessionStorage survives a reload of that tab but isn't shared with
+// other tabs), so choosing a business in one tab never moves another tab to it.
+const tabStorage = (): Storage | null => { try { return typeof sessionStorage === "undefined" ? null : sessionStorage; } catch { return null; } };
 
-/** Remembered choice on this device (used only to pick the business when the app opens). */
+/** The business this tab was working in (survives a reload of the tab). */
+export function tabBusiness(userId: string): string {
+  try { return clean(tabStorage()?.getItem(activeBusinessKey(userId))); } catch { return ""; }
+}
+
+/** The business to open with: this tab's own, else the last one chosen on this device (for a new tab). */
 export function rememberedBusiness(userId: string): string {
+  const tab = tabBusiness(userId);
+  if (tab) return tab;
   try { return clean(storage()?.getItem(activeBusinessKey(userId))); } catch { return ""; }
 }
 
@@ -27,6 +37,7 @@ export function readActiveBusiness(userId: string): string | null {
 /** Make `businessId` the active business (switcher, setup, CA desk). Updates the header and every page. */
 export function setActiveBusiness(userId: string, businessId: string, businessName?: string) {
   try { storage()?.setItem(activeBusinessKey(userId), businessId); } catch { /* */ }
+  try { tabStorage()?.setItem(activeBusinessKey(userId), businessId); } catch { /* */ }
   const same = current.userId === userId && current.businessId === businessId;
   current = { userId, businessId, businessName: businessName ?? (same ? current.businessName : ""), ready: true };
   listeners.forEach(l => l(current));
@@ -35,6 +46,7 @@ export function setActiveBusiness(userId: string, businessId: string, businessNa
 /** Forget the active business (e.g. after deleting it). */
 export function clearActiveBusiness(userId: string) {
   try { storage()?.removeItem(activeBusinessKey(userId)); } catch { /* */ }
+  try { tabStorage()?.removeItem(activeBusinessKey(userId)); } catch { /* */ }
   current = { userId, businessId: null, businessName: "", ready: true };
   listeners.forEach(l => l(current));
 }
