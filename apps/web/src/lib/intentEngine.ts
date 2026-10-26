@@ -265,7 +265,11 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
   const intent: Intent = {
     action, amount: Number(ai.amount) || 0, payment_mode: ai.payment_mode ?? (paymentAccount ? "bank" : null),
     payment_account: paymentAccount, counter_account: counter, party_name: partyName,
-    gst: ai.gst ?? null, tds: ai.tds ?? null, manual_lines: ai.manual_lines?.map(l => ({ ...l, account: canon(l.account) ?? l.account })) ?? null,
+    gst: ((): Intent["gst"] => {
+      const g = ai.gst ?? null, rates = (Array.isArray(ai.items) ? ai.items : []).map(i => Number(i?.rate) || 0);
+      if (!g?.applicable && rates.some(r => r > 0)) return { applicable: true, rate: Math.max(...rates), inclusive: false, supply: g?.supply ?? "intra" };
+      return g;
+    })(), tds: ai.tds ?? null, manual_lines: ai.manual_lines?.map(l => ({ ...l, account: canon(l.account) ?? l.account })) ?? null,
     splits: SPEND_ACTIONS.has(action) && Array.isArray(ai.splits) ? ai.splits.filter(s => s?.account && Number(s.amount) > 0).map(s => ({ account: canon(s.account) ?? s.account, amount: Number(s.amount) })) : null,
     items: (SPEND_ACTIONS.has(action) || action === "sale") && Array.isArray(ai.items) ? ai.items.filter(i => i?.account && Number(i.taxable) > 0).map(i => ({ description: String(i.description ?? "").slice(0, 60) || null, account: canon(i.account) ?? i.account, kind: (["purchase", "expense", "asset", "sale"].includes(i.kind) ? i.kind : action === "sale" ? "sale" : "expense") as "purchase" | "expense" | "asset" | "sale", taxable: Number(i.taxable), rate: Number(i.rate) || 0 })) : null,
     currency: ai.currency ?? null, exchange_rate: ai.exchange_rate ?? null,

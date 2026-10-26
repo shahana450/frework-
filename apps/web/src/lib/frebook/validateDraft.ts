@@ -43,6 +43,7 @@ const canonKey = (s: string) => norm(canonicalName(s));
 
 const isBankish = (l: { name?: string; account?: string; sub_type?: string | null; type?: string; suggested_type?: string | null }) => {
   const nm = norm(l.name ?? l.account ?? "");
+  if (l.sub_type !== "bank" && /\b(charges?|interest|commission|fees?|expenses?|loan|guarantee)\b/.test(nm)) return false;
   return l.sub_type === "bank" || l.type === "bank" || /\bbank\b|\bod\b|overdraft|\bsbi\b|\bhdfc\b|\bicici\b|\baxis\b|\bkotak\b|\bfederal\b|\bcanara\b|\bpnb\b/.test(nm);
 };
 const isGstLine = (account: string) => /\b(cgst|sgst|igst|utgst|gst|cess)\b/.test(norm(account));
