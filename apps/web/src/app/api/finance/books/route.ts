@@ -19,15 +19,18 @@ export async function GET(req: NextRequest) {
 
     // 1) journals, newest first
     const journals: Record<string, unknown>[] = [];
+    // party_name is optional on older databases: drop it from the read if the column is missing
+    let cols = "id,entry_no,date,narration,type,status,total_debit,total_credit,reference_no,ai_generated,created_at,reversed_by,reversal_of,party_name";
     for (let at = 0; at < 50000; at += PAGE) {
       let q = supabase.from("fw_fin_journals")
-        .select("id,entry_no,date,narration,type,status,total_debit,total_credit,reference_no,ai_generated,created_at,reversed_by,reversal_of")
+        .select(cols)
         .eq("business_id", businessId!);
       if (from && iso.test(from)) q = q.gte("date", from);
       if (to && iso.test(to)) q = q.lte("date", to);
       const { data, error } = await q.order("date", { ascending: false }).order("entry_no", { ascending: false }).range(at, at + PAGE - 1);
+      if (error && /party_name/.test(error.message) && cols.endsWith(",party_name")) { cols = cols.replace(",party_name", ""); at -= PAGE; continue; }
       if (error) throw error;
-      journals.push(...(data ?? []));
+      journals.push(...((data ?? []) as unknown as Record<string, unknown>[]));
       if (!data || data.length < PAGE) break;
     }
 

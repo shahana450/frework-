@@ -10,6 +10,7 @@ import TallyBar from "@/components/TallyBar";
 import { useTally } from "@/lib/tallyConnection";
 import { pushToTally, loadPushStatus, type PushState } from "@/lib/tallyPushRun";
 import { explainTallyError } from "@/lib/integrations/tally";
+import { writeStyledWorkbook } from "@/lib/styledWorkbook";
 
 type Journal = {
   id: string;
@@ -23,7 +24,18 @@ type Journal = {
   reference_no: string | null;
   ai_generated: boolean;
   created_at: string;
+  party_name?: string | null;
 };
+type Period = "all" | "month" | "last_month" | "fy" | "custom";
+const ymd = (d: Date) => d.toLocaleDateString("en-CA");
+function periodRange(p: Period, from: string, to: string): [string, string] | null {
+  const now = new Date();
+  if (p === "month") return [ymd(new Date(now.getFullYear(), now.getMonth(), 1)), ymd(now)];
+  if (p === "last_month") return [ymd(new Date(now.getFullYear(), now.getMonth() - 1, 1)), ymd(new Date(now.getFullYear(), now.getMonth(), 0))];
+  if (p === "fy") { const y = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1; return [`${y}-04-01`, `${y + 1}-03-31`]; }
+  if (p === "custom" && (from || to)) return [from || "0000-01-01", to || "9999-12-31"];
+  return null;
+}
 
 type SortKey = "posted" | "date_desc" | "date_asc" | "amount_desc" | "amount_asc" | "entry";
 type JournalLine = {
@@ -74,6 +86,10 @@ export default function JournalsPage() {
   const [filter, setFilter] = useState<"all" | "draft" | "posted" | "ai">("all");
   const [loadErr, setLoadErr] = useState("");
   const [query, setQuery] = useState("");
+  const [typeSel, setTypeSel] = useState<string>("");             // one entry type, or "" for all
+  const [period, setPeriod] = useState<Period>("all");
+  const [range, setRange] = useState({ from: "", to: "" });
+  const [tallyFilter, setTallyFilter] = useState<"" | "not_pushed" | "failed">("");
   const [sort, setSort] = useState<SortKey>("posted");
   const [shown, setShown] = useState(100);          // rows drawn; thousands at once froze the page
   const checkedIncome = useRef<Set<string>>(new Set());
@@ -153,12 +169,24 @@ export default function JournalsPage() {
   }
 
   const typeFilter = typeParam ? typeParam.split(",").map(t => t.trim()).filter(Boolean) : [];
-  const afterTypeFilter = typeFilter.length > 0 ? journals.filter(j => typeFilter.includes(j.type)) : journals;
+  const pr = periodRange(period, range.from, range.to);
+  const inPeriod = pr ? journals.filter(j => j.date.slice(0, 10) >= pr[0] && j.date.slice(0, 10) <= pr[1]) : journals;
+  const byTypeParam = typeFilter.length > 0 ? inPeriod.filter(j => typeFilter.includes(j.type)) : inPeriod;
+  const typeCounts = byTypeParam.reduce<Record<string, number>>((m, j) => { m[j.type] = (m[j.type] ?? 0) + 1; return m; }, {});
+  const afterTypeFilter = typeSel ? byTypeParam.filter(j => j.type === typeSel) : byTypeParam;
+  // The same entry number on two different entries breaks Tally pushes and audit trails
+  const noCount = journals.reduce<Map<string, number>>((m, j) => { if (j.entry_no) m.set(j.entry_no, (m.get(j.entry_no) ?? 0) + 1); return m; }, new Map());
+  const dupNos = [...noCount].filter(([, n]) => n > 1).length;
   const byStatus = filter === "all" ? afterTypeFilter
     : filter === "ai" ? afterTypeFilter.filter(j => j.ai_generated)
     : afterTypeFilter.filter(j => j.status === filter);
   const q = query.trim().toLowerCase();
-  const matched = q ? byStatus.filter(j => j.entry_no?.toLowerCase().includes(q) || j.narration?.toLowerCase().includes(q) || String(j.total_debit).includes(q)) : byStatus;
+  const byTally = !tallyFilter ? byStatus : byStatus.filter(j => {
+    const p = pushed[j.id];
+    if (tallyFilter === "failed") return !!p && "error" in p;
+    return j.status === "posted" && !j.entry_no?.startsWith("TLY-") && !(p && "at" in p);
+  });
+  const matched = q ? byTally.filter(j => j.entry_no?.toLowerCase().includes(q) || j.narration?.toLowerCase().includes(q) || (j.party_name ?? "").toLowerCase().includes(q) || String(j.total_debit).includes(q)) : byTally;
   // Sort: latest posted first by default (when it was entered, not the transaction date)
   const amt = (j: Journal) => Number(j.total_debit ?? 0);
   const cmp: Record<SortKey, (a: Journal, b: Journal) => number> = {
@@ -207,6 +235,13 @@ export default function JournalsPage() {
   const toggle = (id: string) => setSelected(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const notPushed = selectableHere.filter(j => !isPushed(j.id));
 
+  async function exportExcel() {
+    const rows = filtered.map(j => [j.entry_no, j.date.slice(0, 10), TYPE_LABEL[j.type] ?? j.type, j.narration ?? "", j.party_name ?? "", Number(j.total_debit) || 0, j.status, isPushed(j.id) ? "Pushed" : pushed[j.id] && "error" in pushed[j.id] ? "Failed" : ""]);
+    await writeStyledWorkbook([{ name: "Journal entries", widths: [18, 12, 12, 48, 26, 16, 10, 10], moneyFrom: 5,
+      rows: [["Journal entries"], [bizName], [pr ? `${pr[0]} to ${pr[1]}` : "All dates"], [], ["Entry no", "Date", "Type", "Narration", "Party", "Amount", "Status", "Tally"], ...rows] }],
+      `Journal_entries_${ymd(new Date())}.xlsx`, `Prepared with FreBook · ${new Date().toLocaleDateString("en-IN")}`);
+  }
+
   async function pushSelected(ids: string[]) {
     if (!bizId || tally.status !== "connected" || !ids.length || pushing) return;
     const already = ids.filter(isPushed).length;
@@ -235,6 +270,11 @@ export default function JournalsPage() {
         .jr-seg button.on { background: #232A63; color: #FFFFFF; box-shadow: 0 6px 14px -8px rgba(35,42,99,.7); }
         .jr-seg button span { font-size: 0.68rem; padding: 1px 7px; border-radius: 999px; background: rgba(20,26,58,0.07); }
         .jr-seg button.on span { background: rgba(255,255,255,0.18); }
+        .jr-chip { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(20,26,58,0.12); background: #FFFFFF; color: #141A3A; font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+        .jr-chip span { font-size: 0.68rem; padding: 1px 7px; border-radius: 999px; background: rgba(20,26,58,0.07); }
+        .jr-chip[data-on] { background: var(--c); border-color: var(--c); color: #FFFFFF; }
+        .jr-chip[data-on] span { background: rgba(255,255,255,0.22); }
+        .jr-select { height: 32px; border-radius: 9px; border: 1px solid rgba(20,26,58,0.14); padding: 0 10px; font-size: 0.8rem; font-family: inherit; background: #FFFFFF; color: #141A3A; }
         .jr-stat { background: #FFFFFF; border: 1px solid rgba(20,26,58,0.09); border-radius: 14px; padding: 12px 16px; min-width: 150px; flex: 1; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #FFFFFF; border-radius: 4px; }
@@ -306,6 +346,29 @@ export default function JournalsPage() {
               </select>
             </label>
           </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: "0.75rem" }}>
+            {[["", "All types", byTypeParam.length] as const, ...Object.entries(typeCounts).sort((a, b) => b[1] - a[1]).map(([t, n]) => [t, TYPE_LABEL[t] ?? t, n] as const)].map(([t, l, n]) => (
+              <button key={t || "all"} onClick={() => { setTypeSel(t); setShown(100); }} className="jr-chip" data-on={typeSel === t ? "1" : undefined}
+                style={{ ["--c" as string]: t ? TYPE_COLOR[t] ?? "#232A63" : "#232A63" }}>{l} <span>{n}</span></button>
+            ))}
+            <span style={{ flex: 1 }} />
+            <select value={period} onChange={e => { setPeriod(e.target.value as Period); setShown(100); }} aria-label="Period" className="jr-select">
+              <option value="all">All dates</option><option value="month">This month</option><option value="last_month">Last month</option><option value="fy">This financial year</option><option value="custom">Custom…</option>
+            </select>
+            {period === "custom" && <>
+              <input type="date" aria-label="From" value={range.from} onChange={e => setRange(x => ({ ...x, from: e.target.value }))} className="jr-select" />
+              <input type="date" aria-label="To" value={range.to} onChange={e => setRange(x => ({ ...x, to: e.target.value }))} className="jr-select" />
+            </>}
+            <select value={tallyFilter} onChange={e => { setTallyFilter(e.target.value as typeof tallyFilter); setShown(100); }} aria-label="Tally status" className="jr-select">
+              <option value="">Tally: any</option><option value="not_pushed">Not pushed</option><option value="failed">Push failed</option>
+            </select>
+            <button onClick={exportExcel} disabled={!filtered.length} className="jr-select" style={{ cursor: "pointer", fontWeight: 800 }}>⬇ Excel</button>
+          </div>
+          {dupNos > 0 && (
+            <div role="alert" style={{ marginBottom: "0.75rem", padding: "10px 14px", borderRadius: 12, background: "#FDECEA", color: "#8E2416", fontSize: "0.84rem", lineHeight: 1.5 }}>
+              <b>{dupNos} entry number{dupNos > 1 ? "s are" : " is"} used on more than one entry</b> (marked <i>Duplicate no.</i>). Tally rejects repeated voucher numbers, so these fail to push. Renumber them before pushing — ask us to run the renumbering repair for this business.
+            </div>
+          )}
           <div style={{ marginBottom: "1rem", display: "flex", flexDirection: "column", gap: 8 }}>
             <TallyBar preferName={bizName} returnTo="/finance/journals">
               {tally.status === "connected" && (
@@ -345,12 +408,12 @@ export default function JournalsPage() {
                         <input type="checkbox" aria-label="Select all entries that can be pushed" checked={allSelected} disabled={!selectableHere.length}
                           onChange={() => setSelected(allSelected ? new Set() : new Set(selectableHere.map(j => j.id)))} />
                       </th>
-                      {["Entry No", "Date", "Type", "Narration", "Debit (" + cur() + ")", "Credit (" + cur() + ")", "Status", "Tally", ""].map((h, i) => {
+                      {["Entry No", "Date", "Type", "Narration", "Amount (" + cur() + ")", "Status", "Tally", ""].map((h, i) => {
                         const key: SortKey | null = i === 0 ? "entry" : i === 1 ? (sort === "date_desc" ? "date_asc" : "date_desc") : i === 4 ? (sort === "amount_desc" ? "amount_asc" : "amount_desc") : null;
                         const on = (i === 0 && sort === "entry") || (i === 1 && sort.startsWith("date")) || (i === 4 && sort.startsWith("amount"));
                         const arrow = !on ? "" : sort.endsWith("asc") || sort === "entry" ? " ↑" : " ↓";
                         return (
-                          <th key={h} aria-sort={on ? (arrow === " ↑" ? "ascending" : "descending") : undefined} style={{ padding: "0.6rem 1rem", textAlign: i === 4 || i === 5 ? "right" : "left", fontSize: "0.68rem", color: on ? "#141A3A" : "rgba(20,26,58,0.60)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                          <th key={h} aria-sort={on ? (arrow === " ↑" ? "ascending" : "descending") : undefined} style={{ padding: "0.6rem 1rem", textAlign: i === 4 ? "right" : "left", fontSize: "0.68rem", color: on ? "#141A3A" : "rgba(20,26,58,0.60)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
                             {key ? <button onClick={() => { setSort(key); setShown(100); }} title="Sort by this column" style={{ all: "unset", cursor: "pointer" }}>{h}{arrow || <span style={{ opacity: 0.35 }}> ↕</span>}</button> : h}
                           </th>
                         );
@@ -373,7 +436,8 @@ export default function JournalsPage() {
                             {pushable(j) && <input type="checkbox" aria-label={`Select ${j.entry_no}`} checked={selected.has(j.id)} onChange={() => toggle(j.id)} />}
                           </td>
                           <td style={{ padding: "0.8rem 1rem", whiteSpace: "nowrap" }}>
-                            <span style={{ fontSize: "0.76rem", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, color: "#232A63", background: "#F1F3FB", border: "1px solid #E1E5F5", padding: "3px 8px", borderRadius: 7 }}>{j.entry_no}</span>
+                            <span style={{ fontSize: "0.76rem", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, color: "#232A63", background: "#F1F3FB", border: `1px solid ${(noCount.get(j.entry_no) ?? 0) > 1 ? "#E8A89E" : "#E1E5F5"}`, padding: "3px 8px", borderRadius: 7 }}>{j.entry_no}</span>
+                            {(noCount.get(j.entry_no) ?? 0) > 1 && <div style={{ fontSize: "0.64rem", fontWeight: 800, color: "#C2321F", marginTop: 3 }}>Duplicate no. ×{noCount.get(j.entry_no)}</div>}
                           </td>
                           <td style={{ padding: "0.8rem 1rem", whiteSpace: "nowrap" }}>
                             <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}</div>
@@ -382,12 +446,13 @@ export default function JournalsPage() {
                           <td style={{ padding: "0.8rem 1rem" }}>
                             <span className="jr-pill" style={{ color: TYPE_COLOR[j.type] ?? "#141A3A", background: `${TYPE_COLOR[j.type] ?? "#141A3A"}14` }}><i />{TYPE_LABEL[j.type] ?? j.type}</span>
                           </td>
-                          <td style={{ padding: "0.8rem 1rem", fontSize: "0.84rem", fontWeight: 500, maxWidth: selectedJournal ? 160 : 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={j.narration}>{j.narration}</td>
-                          <td style={{ padding: "0.8rem 1rem", fontSize: "0.84rem", fontWeight: 500, fontFamily: "'IBM Plex Mono',monospace", textAlign: "right", color: "#B4321F", fontVariantNumeric: "tabular-nums" }}>
-                            {j.total_debit ? j.total_debit.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
+                          <td style={{ padding: "0.8rem 1rem", fontSize: "0.84rem", fontWeight: 500, maxWidth: selectedJournal ? 160 : 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={j.narration}>
+                            <div style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{j.narration}</div>
+                            {j.party_name && <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.55)", overflow: "hidden", textOverflow: "ellipsis" }}>{j.party_name}</div>}
                           </td>
-                          <td style={{ padding: "0.8rem 1rem", fontSize: "0.84rem", fontWeight: 500, fontFamily: "'IBM Plex Mono',monospace", textAlign: "right", color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>
-                            {j.total_credit ? j.total_credit.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
+                          <td style={{ padding: "0.8rem 1rem", fontSize: "0.86rem", fontWeight: 700, fontFamily: "'IBM Plex Mono',monospace", textAlign: "right", color: "#141A3A", fontVariantNumeric: "tabular-nums" }}>
+                            {j.total_debit ? j.total_debit.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
+                            {Math.abs((Number(j.total_debit) || 0) - (Number(j.total_credit) || 0)) > 0.01 && <div style={{ fontSize: "0.64rem", color: "#C2321F", fontWeight: 800 }}>Dr ≠ Cr</div>}
                           </td>
                           <td style={{ padding: "0.8rem 1rem" }}>
                             <span className="jr-pill" style={{ color: STATUS_COLOR[j.status] ?? "#141A3A", background: `${STATUS_COLOR[j.status] ?? "#141A3A"}16` }}><i />{j.status.charAt(0).toUpperCase() + j.status.slice(1)}</span>
