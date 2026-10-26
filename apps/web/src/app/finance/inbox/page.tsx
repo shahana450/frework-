@@ -181,9 +181,10 @@ export default function SmartInbox() {
     const p = data.parsed as { status: string; transaction_date: string; narrative: string; amount: number; confidence?: number; account_confidence?: number; lines: Line[]; needs_clarification?: string[] } | undefined;
     if (!p) throw new Error("Nothing to book in this file.");
     const lines = (p.lines ?? []).map(l => ({ account: l.account, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0 }));
-    const sure = p.status === "complete" && lines.length >= 2 && (p.account_confidence ?? p.confidence ?? 1) >= 0.75;
+    const notOurs = (p as { warnings?: string[] }).warnings?.find(w => /neither looks like your business/i.test(w));
+    const sure = !notOurs && p.status === "complete" && lines.length >= 2 && (p.account_confidence ?? p.confidence ?? 1) >= 0.75;
     addItems([{ id: uid("b"), fileId: job.id, date: p.transaction_date ?? "", narration: p.narrative ?? file.name, amount: Number(p.amount) || lines.reduce((s, l) => s + l.debit, 0), lines, kind: "bill",
-      state: sure ? "ready" : "check", reason: sure ? undefined : p.needs_clarification?.[0] ?? "Check the ledgers" }]);
+      state: sure ? "ready" : "check", reason: sure ? undefined : notOurs?.replace(/^⚠\s*/, "") ?? p.needs_clarification?.[0] ?? "Check the ledgers" }]);
     return sure ? "1 entry ready" : "1 entry to check";
   }
 

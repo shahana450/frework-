@@ -305,11 +305,6 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
   }));
   const missing = rr.missing;
   const notOurs = documentNotOurs(ai, ctx);
-  if (notOurs) return {
-    ...base, status: "needs_clarification", transaction_type: action, amount: Math.round(lines.reduce((s, l) => s + l.debit, 0) * 100) / 100 || intent.amount,
-    payment_mode: intent.payment_mode, bank_account_name: intent.payment_account, gst: rr.gst, tds: rr.tds, lines,
-    needs_clarification: [notOurs], warnings: rr.warnings, rule: rr.rule, counter_account: intent.counter_account, history_evidence, fx: rr.fx ?? null,
-  };
   return {
     ...base, status: missing.length ? "needs_clarification" : "complete", transaction_type: action,
     amount: Math.round(lines.reduce((s, l) => s + l.debit, 0) * 100) / 100 || intent.amount,
@@ -319,7 +314,7 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
     needs_clarification: !missing.length ? [] : missing[0] === "payment_account" && intent.payment_mode === "bank" && banks.length > 1
       ? [`Which bank — ${banks.slice(0, 5).map(b => b.name).join(", ")}?`]
       : [questionFor(missing[0], intent)],
-    warnings: [...rr.warnings, ...lines.filter(l => l.is_new_account).map(l => `New ledger "${l.account}" will be created.`)],
+    warnings: [...(notOurs ? [`⚠ ${notOurs}`] : []), ...rr.warnings, ...lines.filter(l => l.is_new_account).map(l => `New ledger "${l.account}" will be created.`)],
     rule: rr.rule, counter_account: intent.counter_account, history_evidence, fx: rr.fx ?? null,
   };
 }
