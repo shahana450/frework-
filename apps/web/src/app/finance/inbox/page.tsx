@@ -1,4 +1,5 @@
 "use client";
+import { isCashBankAccount } from "@/lib/journalRules";
 import { readBankStatement } from "@/lib/readStatement";
 import { cur, activeMoney } from "@/lib/money";
 // Smart Inbox — drop every statement, bill, invoice and Excel at once. FreWork reads each file,
@@ -46,7 +47,7 @@ export default function SmartInbox() {
   const router = useRouter();
   const tally = useTally();
   const [bizId, setBizId] = useState("");
-  const [accounts, setAccounts] = useState<{ name: string; sub_type: string | null }[]>([]);
+  const [accounts, setAccounts] = useState<{ name: string; type?: string; sub_type: string | null }[]>([]);
   const [bankLedger, setBankLedger] = useState("");
   const [cardLedger, setCardLedger] = useState("");
   const docsRef = useRef<OpenDoc[]>([]);
@@ -69,14 +70,14 @@ export default function SmartInbox() {
       const saved = (readActiveBusiness(user.id) ?? "").replace(/﻿/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
-      const list: { name: string; sub_type: string | null }[] = [];
+      const list: { name: string; type?: string; sub_type: string | null }[] = [];
       for (let from = 0; ; from += 1000) {
-        const { data } = await supabase.from("fw_fin_chart_of_accounts").select("name,sub_type").eq("business_id", saved).eq("is_group", false).range(from, from + 999);
-        list.push(...((data ?? []) as { name: string; sub_type: string | null }[]));
+        const { data } = await supabase.from("fw_fin_chart_of_accounts").select("name,type,sub_type").eq("business_id", saved).eq("is_group", false).range(from, from + 999);
+        list.push(...((data ?? []) as { name: string; type?: string; sub_type: string | null }[]));
         if (!data || data.length < 1000) break;
       }
       setAccounts(list);
-      const bank = list.find(a => a.sub_type === "bank") ?? list.find(a => /bank/i.test(a.name));
+      const bank = list.find(a => a.sub_type === "bank") ?? list.find(a => isCashBankAccount(a as never) && a.sub_type !== "cash");
       if (bank) setBankLedger(bank.name);
       const card = list.find(a => /credit\s*card/i.test(a.name));
       if (card) setCardLedger(card.name);
@@ -337,7 +338,7 @@ export default function SmartInbox() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.muted, flexWrap: "wrap" }}>
             Bank ledger
             <input list="inbox-banks" value={bankLedger} onChange={e => setBankLedger(e.target.value)} placeholder="e.g. HDFC Bank" style={{ height: 38, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14, width: 180 }} />
-            <datalist id="inbox-banks">{accounts.filter(a => a.sub_type === "bank" || /bank/i.test(a.name)).map(a => <option key={a.name} value={a.name} />)}</datalist>
+            <datalist id="inbox-banks">{accounts.filter(a => isCashBankAccount(a as never)).map(a => <option key={a.name} value={a.name} />)}</datalist>
             <span style={{ marginLeft: 8 }}>Card ledger</span>
             <input list="inbox-cards" value={cardLedger} onChange={e => setCardLedger(e.target.value)} placeholder="e.g. HDFC Credit Card" style={{ height: 38, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14, width: 180 }} />
             <datalist id="inbox-cards">{accounts.filter(a => /card/i.test(a.name)).map(a => <option key={a.name} value={a.name} />)}</datalist>

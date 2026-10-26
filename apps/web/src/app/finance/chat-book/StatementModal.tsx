@@ -1,5 +1,6 @@
 "use client";
 import { readBankStatement } from "@/lib/readStatement";
+import { isCashBankAccount } from "@/lib/journalRules";
 import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
@@ -50,7 +51,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
       if (cancelled) return;
       const list = (accs ?? []) as Account[];
       setAccounts(list);
-      const banks = list.filter(a => a.sub_type === "bank" || /bank/i.test(a.name));
+      const banks = list.filter(a => isCashBankAccount(a as never) && a.sub_type !== "cash");
       if (banks.length) setBankLedger(banks[0].name);
 
       // Learn "payee → ledger" from statement rows posted before
@@ -60,7 +61,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
       const learned: { description: string; ledger: string; debit: number }[] = [];
       for (const j of (past ?? []) as unknown as { narration: string | null; fw_fin_journal_lines: { account_id: string; dr_amount: number; cr_amount: number }[] }[]) {
         const ls = j.fw_fin_journal_lines ?? [];
-        const bank = ls.find(l => { const a = nameOf.get(l.account_id); return a && (a.sub_type === "bank" || /bank/i.test(a.name)); });
+        const bank = ls.find(l => { const a = nameOf.get(l.account_id); return a && isCashBankAccount(a as never); });
         const other = ls.find(l => l !== bank);
         const acc = other ? nameOf.get(other.account_id) : null;
         if (bank && acc) learned.push({ description: j.narration ?? "", ledger: acc.name, debit: Number(bank.cr_amount) > 0 ? 1 : 0 });
@@ -243,7 +244,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem" }}>
             <span style={{ color: MUTED }}>Bank ledger</span>
             <input list="sm-banks" value={bankLedger} onChange={e => setBankLedger(e.target.value)} placeholder="Your bank ledger" style={{ ...inputStyle, width: 190, borderColor: bankLedger ? BORDER : AMBER }} />
-            <datalist id="sm-banks">{accounts.filter(a => a.sub_type === "bank" || /bank/i.test(a.name)).map(a => <option key={a.id} value={a.name} />)}</datalist>
+            <datalist id="sm-banks">{accounts.filter(a => isCashBankAccount(a as never)).map(a => <option key={a.id} value={a.name} />)}</datalist>
           </label>
           <button onClick={onClose} disabled={posting} style={{ background: "#FFFFFF", border: "none", color: MUTED, width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: "1.1rem" }}>×</button>
         </div>

@@ -43,7 +43,16 @@ async function readLockedPdf(file: File, opts: { bizId?: string; password?: stri
   return { transactions: out, missingPages: missing };
 }
 
-export async function readBankStatement(file: File, opts: { bizId?: string; shelf?: boolean; password?: string; onProgress?: (p: ReadProgress) => void } = {}): Promise<{ transactions: StatementTx[]; missingPages: string[]; stoppedReason?: string }> {
+import { fixDirections } from "./bankDirection";
+
+/** Reads a statement; withdrawals and deposits are then checked against the running balance (see bankDirection). */
+export async function readBankStatement(file: File, opts: { bizId?: string; shelf?: boolean; password?: string; onProgress?: (p: ReadProgress) => void } = {}): Promise<{ transactions: StatementTx[]; missingPages: string[]; stoppedReason?: string; directionFixed?: number }> {
+  const r = await readRaw(file, opts);
+  const f = fixDirections(r.transactions);
+  return { ...r, transactions: f.rows, directionFixed: f.fixed };
+}
+
+async function readRaw(file: File, opts: { bizId?: string; shelf?: boolean; password?: string; onProgress?: (p: ReadProgress) => void } = {}): Promise<{ transactions: StatementTx[]; missingPages: string[]; stoppedReason?: string }> {
   const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
   let pageCount = 0, src: import("pdf-lib").PDFDocument | null = null, encrypted = false;
   if (isPdf) {

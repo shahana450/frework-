@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
       // By name (statement window, Smart Inbox): an existing ledger, or a new one created under Bank Accounts / Current Liabilities (card)
       if (!bank_account_id && bank_account_name?.trim()) {
         const name = bank_account_name.trim();
+        if (/\b(charges?|interest|commission|fees?|expenses?)\b/i.test(name)) return NextResponse.json({ error: `"${name}" is an expense ledger, not a bank account. Choose your bank account for this statement.` }, { status: 400 });
         const r = await resolveLedgers(supabase, business_id, [{ name, suggestedType: card ? "liability" : "asset" }], { [name]: card ? "current_liability" : "bank" }, "statement import");
         if (r.ok) bank_account_id = r.ids.get(name)?.id;
       }
