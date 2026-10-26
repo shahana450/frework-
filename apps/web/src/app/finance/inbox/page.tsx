@@ -227,12 +227,12 @@ export default function SmartInbox() {
 
   // ── New ledgers used by entries waiting to post ──
   const newLedgers = useMemo(() => {
-    const m = new Map<string, "in" | "out" | null>();
+    const m = new Map<string, "in" | "out" | "party" | null>();
     for (const it of items) if (it.state === "ready" || it.state === "check") for (const l of it.lines) {
       if (!isNew(l.account) || m.has(l.account)) continue;
       if (/credit\s*card/i.test(l.account)) { m.set(l.account, null); continue; }
       const cb = it.lines.find(x => isCashBank(x.account));
-      m.set(l.account, cb ? (cb.debit > 0 ? "in" : "out") : null);
+      m.set(l.account, cb ? (cb.debit > 0 ? "in" : "out") : it.kind === "bill" && l.credit > 0 && !/gst|tds|tcs|cess/i.test(l.account) ? "party" : null);
     }
     return m;
   }, [items, isNew]);
@@ -301,6 +301,13 @@ export default function SmartInbox() {
   // ── Editing a "Needs a look" entry: the non cash/bank ledger ──
   function setLedger(id: string, idx: number, account: string) {
     setItems(prev => prev.map(x => x.id !== id ? x : { ...x, lines: x.lines.map((l, k) => k === idx ? { ...l, account } : l) }));
+  }
+  // "How was it paid?" in one tap: fills the empty credit line with cash, a bank, or the supplier (unpaid)
+  const banks = useMemo(() => accounts.filter(a => a.sub_type === "bank" || /\bbank\b/i.test(a.name)).map(a => a.name).slice(0, 4), [accounts]);
+  const cashName = useMemo(() => accounts.find(a => a.sub_type === "cash" || /^cash/i.test(a.name))?.name ?? "Cash in Hand", [accounts]);
+  function payWith(it: Item, account: string) {
+    const k = it.lines.findIndex(l => l.credit > 0 && !l.account.trim());
+    if (k >= 0) setLedger(it.id, k, account);
   }
   function markReady(id: string) { setItems(prev => prev.map(x => x.id === id && x.lines.length >= 2 && x.lines.every(l => l.account.trim()) && x.date ? { ...x, state: "ready", reason: undefined } : x)); }
   function remove(id: string) { setItems(prev => prev.filter(x => x.id !== id)); }
@@ -399,17 +406,31 @@ export default function SmartInbox() {
         {msg && <div role="status" style={{ background: msg.startsWith("✓") ? C.posSoft : C.amberSoft, color: msg.startsWith("✓") ? C.pos : C.amber, borderRadius: 12, padding: "10px 14px", fontWeight: 700, fontSize: 13.5 }}>{msg}{tally.status !== "connected" && msg.startsWith("✓") && <> <Link href="/finance/tally" style={{ color: C.pos }}>Connect Tally →</Link></>}</div>}
 
         {/* New ledgers */}
-        {newLedgers.size > 0 && (
-          <section style={{ background: C.amberSoft, borderRadius: 18, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-            <b style={{ fontSize: 14 }}>{newLedgers.size} new ledger{newLedgers.size === 1 ? "" : "s"} will be created — the likely group is ticked ✓. Change any that are wrong.</b>
-            {[...newLedgers.keys()].map(n => (
-              <div key={n} style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "#FFFFFF", borderRadius: 12, padding: "8px 12px" }}>
-                <b style={{ minWidth: 160, fontSize: 13.5 }}>{n}</b>
-                <GroupChips compact value={heads[n] ?? ""} onChange={k => setHeads(h => ({ ...h, [n]: k }))} />
+        {newLedgers.size > 0 && (() => {
+          const all = [...newLedgers.keys()];
+          const sure = all.filter(n => /\b(gst|cgst|sgst|igst|tds|tcs|cess)\b/i.test(n) && heads[n] === "duties");
+          const ask = all.filter(n => !sure.includes(n));
+          return (
+            <section aria-label="New ledgers" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 18, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                <b style={{ fontSize: 15 }}>New ledgers</b>
+                <span style={{ fontSize: 12.5, color: C.muted }}>{all.length} will be created when you approve{ask.length ? " — check the group for these" : " — all groups look right"}</span>
               </div>
-            ))}
-          </section>
-        )}
+              {sure.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "8px 12px", borderRadius: 12, background: C.posSoft, fontSize: 13 }}>
+                  <span style={{ color: C.pos, fontWeight: 900 }}>✓</span><b>Duties &amp; Taxes</b>
+                  <span style={{ color: C.muted }}>{sure.join(" · ")}</span>
+                </div>
+              )}
+              {ask.map(n => (
+                <div key={n} style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "8px 12px", borderRadius: 12, background: C.amberSoft }}>
+                  <b style={{ minWidth: 150, fontSize: 13.5 }}>{n}</b>
+                  <GroupChips compact value={heads[n] ?? ""} onChange={k => setHeads(h => ({ ...h, [n]: k }))} />
+                </div>
+              ))}
+            </section>
+          );
+        })()}
 
         {/* Entries */}
         {shown.length > 0 && (
@@ -430,19 +451,31 @@ export default function SmartInbox() {
                     <span style={{ fontSize: 11.5, color: C.muted, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={fileName.get(it.fileId)}>{fileName.get(it.fileId)}</span>
                   </div>
                   {it.lines.length > 0 && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", fontSize: 13 }}>
-                      {it.lines.map((l, k) => (
-                        <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ color: l.debit ? C.neg : C.pos, fontWeight: 700, fontSize: 12 }}>{l.debit ? "Dr" : "Cr"}</span>
-                          {editable && !isCashBank(l.account)
-                            ? <input list="inbox-ledgers" value={l.account} onChange={e => setLedger(it.id, k, e.target.value)} placeholder="Ledger name" aria-label="Ledger" style={{ height: 32, borderRadius: 8, border: `1px solid ${l.account ? C.line : "#EBCB8B"}`, padding: "0 10px", fontFamily: "inherit", fontSize: 13, width: 200 }} />
-                            : <span>{l.account || "—"}</span>}
-                          <span style={{ color: C.muted }}>{inr(l.debit || l.credit)}</span>
-                        </span>
+                    <div className="ib-lines" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
+                      {(["Dr", "Cr"] as const).map(side => (
+                        <div key={side} style={{ display: "flex", flexDirection: "column", gap: 4, padding: "8px 10px", borderRadius: 12, background: side === "Dr" ? "#FBF7EE" : "#F3F8F5" }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 900, letterSpacing: "0.1em", color: side === "Dr" ? C.neg : C.pos }}>{side === "Dr" ? "DEBIT" : "CREDIT"}</span>
+                          {it.lines.map((l, k) => ((side === "Dr") === (l.debit > 0)) && (
+                            <div key={k} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                              {editable && !isCashBank(l.account)
+                                ? <input list="inbox-ledgers" value={l.account} onChange={e => setLedger(it.id, k, e.target.value)} placeholder={side === "Cr" ? "Paid from / supplier" : "Ledger"} aria-label="Ledger" style={{ flex: 1, minWidth: 0, height: 30, borderRadius: 8, border: `1px solid ${l.account ? C.line : "#EBCB8B"}`, padding: "0 8px", fontFamily: "inherit", fontSize: 13, background: "#FFFFFF" }} />
+                                : <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.account || "—"}</span>}
+                              <span style={{ fontFamily: "'IBM Plex Mono',ui-monospace,monospace", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{inr(l.debit || l.credit)}</span>
+                            </div>
+                          ))}
+                        </div>
                       ))}
                     </div>
                   )}
-                  {(it.reason || it.tallyError) && <div style={{ fontSize: 12.5, color: st === "failed" || it.tally === "failed" ? C.neg : C.amber, fontWeight: 600 }}>{it.tallyError ?? it.reason}</div>}
+                  {editable && it.lines.some(l => l.credit > 0 && !l.account.trim()) && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: C.amber }}>How was it paid?</span>
+                      {[{ t: "Cash", a: cashName }, ...banks.map(b => ({ t: b, a: b })), ...(it.party ? [{ t: `Not paid yet — ${it.party}`, a: it.party }] : [])].map(o => (
+                        <button key={o.t} onClick={() => payWith(it, o.a)} style={{ height: 30, padding: "0 12px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#FFFFFF", fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>{o.t}</button>
+                      ))}
+                    </div>
+                  )}
+                  {(it.tallyError || (it.reason && !(/How was it paid/i.test(it.reason) && it.lines.some(l => l.credit > 0 && !l.account.trim())))) && <div style={{ fontSize: 12.5, color: st === "failed" || it.tally === "failed" ? C.neg : C.amber, fontWeight: 600 }}>{it.tallyError ?? it.reason}</div>}
                   {st === "check" && /Possible duplicate/.test(it.reason ?? "") && <button onClick={() => postAnyway(it)} disabled={!!busy} style={{ alignSelf: "flex-start", height: 30, padding: "0 12px", borderRadius: 8, border: `1px solid ${C.amber}`, background: "transparent", color: C.amber, fontWeight: 800, fontSize: 12.5, cursor: "pointer" }}>Not a duplicate — post anyway</button>}
                   {st === "check" && /Saved as a draft for review/.test(it.reason ?? "") && <a href="/finance/review" style={{ fontSize: 12.5, fontWeight: 800, color: C.amber }}>Open the review list →</a>}
                   {editable && (
@@ -467,7 +500,7 @@ export default function SmartInbox() {
       <style>{`
         .ib-spin { width: 14px; height: 14px; border: 2px solid #C99A4E; border-right-color: transparent; border-radius: 50%; animation: ibspin .7s linear infinite; display: inline-block; }
         @keyframes ibspin { to { transform: rotate(360deg); } }
-        @media (max-width: 760px) { .ib-steps { grid-template-columns: minmax(0,1fr) !important; } }
+        @media (max-width: 760px) { .ib-steps, .ib-lines { grid-template-columns: minmax(0,1fr) !important; } }
         @media (prefers-reduced-motion: reduce) { .ib-spin { animation: none; } }
       `}</style>
     </div>

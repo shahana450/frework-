@@ -13,7 +13,7 @@ const QUICK: { key: string; label: string }[] = [
 ];
 
 /** Best first guess for a new ledger from its name and which side of cash/bank it sits on. */
-export function guessGroup(name: string, side?: "in" | "out" | null): string {
+export function guessGroup(name: string, side?: "in" | "out" | "party" | null): string {
   const n = name.toLowerCase();
   if (/accumulated depreciation|acc\.? ?dep|provision for depreciation|depreciation (reserve|fund)/.test(n)) return "fixed_asset";
   if (/credit\s*card/.test(n)) return "current_liability";
@@ -25,7 +25,8 @@ export function guessGroup(name: string, side?: "in" | "out" | null): string {
   if (/\b(loan|od|overdraft)\b/.test(n)) return "loan";
   if (/\b(rent|salary|salaries|wages|electricity|power|telephone|internet|fuel|petrol|diesel|repairs?|stationery|printing|travel|conveyance|freight|transport|loading|unloading|food|tea|office|maintenance|insurance|fees?|charges?|expenses?|advertis\w*|commission paid|bonus)\b/.test(n)) return "indirect_expense";
   if (/\b(interest received|commission received|discount received|income|rebate)\b/.test(n)) return "indirect_income";
-  const business = /\b(traders?|trading|enterprises?|agenc(y|ies)|stores?|ltd|limited|pvt|private|llp|& ?co|company|industries|suppliers?|distributors?|marketing|associates|solutions|services)\b/.test(n);
+  const business = /\b(traders?|trading|enterprises?|agenc(y|ies)|stores?|ltd|limited|pvt|private|llp|& ?co|company|industries|suppliers?|distributors?|marketing|associates|solutions|services|corp|corporation|inc|co)\b\.?/.test(n);
+  if (side === "party") return "creditors";             // the party credited on a supplier bill
   if (side === "in") return "debtors";                 // someone paid us
   if (side === "out") return business ? "creditors" : "indirect_expense";
   return business ? "creditors" : "indirect_expense";
