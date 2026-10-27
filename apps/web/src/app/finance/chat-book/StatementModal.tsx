@@ -233,44 +233,46 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
       {label}{key && sort.key === key ? (sort.dir === 1 ? " ▲" : " ▼") : ""}
     </th>
   );
+  const T = { ink: "#10241F", green: "#12352D", gold: "#C9A24A", goldInk: "#9A6B22", cream: "#F4EFE4", paper: "#FFFDF8", line: "#E6DFD0", pos: "#0B7A55", neg: "#B4321F", look: "#FFF7E3", muted: "#6B7570" };
+  const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
+  const monthOf = (() => { const d = rows.find(x => x.date)?.date; return d ? new Date(d + "T00:00:00").toLocaleDateString("en-IN", { month: "long", year: "numeric" }).toUpperCase() : ""; })();
   const chip = (active: boolean, color = GOLD): React.CSSProperties => ({ background: active ? `${color}22` : "transparent", border: `1px solid ${active ? color + "66" : BORDER}`, color: active ? color : MUTED, padding: "4px 10px", borderRadius: 7, cursor: "pointer", fontSize: "0.75rem", fontWeight: 600, fontFamily: "inherit" });
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(20,26,58,0.33)", backdropFilter: "blur(3px)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
-      <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 14, width: "100%", maxWidth: 1180, height: "92vh", display: "flex", flexDirection: "column", color: TEXT, boxShadow: "0 30px 90px rgba(20,26,58,0.30)" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(10,24,20,0.55)", backdropFilter: "blur(3px)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+      <div style={{ background: T.cream, border: `1px solid ${T.line}`, borderRadius: 16, width: "100%", maxWidth: 1180, height: "92vh", display: "flex", flexDirection: "column", color: T.ink, boxShadow: "0 30px 90px rgba(0,0,0,0.35)", overflow: "hidden", fontFamily: SERIF }}>
 
-        {/* Header */}
-        <div style={{ padding: "0.9rem 1.2rem", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: "1rem" }}>🏦 Book bank statement</div>
-            <div style={{ fontSize: "0.74rem", color: MUTED }}>{file.name}{rows.length ? ` · ${rows.length} transactions · Withdrawals ${cur()}${fmt(totals.dr)} · Deposits ${cur()}${fmt(totals.cr)}` : ""}</div>
+        {/* Header — the bank book */}
+        <div style={{ padding: "1rem 1.4rem", background: T.green, color: "#F4EFE4", display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap", borderBottom: `2px solid ${T.gold}` }}>
+          <span aria-hidden="true" style={{ width: 48, height: 48, borderRadius: "50%", border: `1px solid ${T.gold}`, display: "grid", placeItems: "center", color: T.gold, fontStyle: "italic", fontSize: "1.2rem" }}>Fb</span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: "0.66rem", letterSpacing: "0.22em", color: T.gold }}>FREBOOK · BANK BOOK{monthOf ? ` · ${monthOf}` : ""}</div>
+            <div style={{ fontSize: "1.7rem", fontStyle: "italic", lineHeight: 1.15 }}>Book bank statement</div>
+            <div style={{ fontSize: "0.78rem", color: "#C9D3CE" }}>{file.name}{rows.length ? ` · ${rows.length} transactions` : ""}</div>
           </div>
           <div style={{ flex: 1 }} />
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem" }}>
-            <span style={{ color: MUTED }}>Bank ledger</span>
-            <input list="sm-banks" value={bankLedger} onChange={e => setBankLedger(e.target.value)} placeholder="Your bank ledger" style={{ ...inputStyle, width: 190, borderColor: bankLedger ? BORDER : AMBER }} />
+          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: "0.62rem", letterSpacing: "0.18em", color: T.gold }}>BANK LEDGER</span>
+            <input list="sm-banks" value={bankLedger} onChange={e => setBankLedger(e.target.value)} placeholder="Your bank ledger" style={{ height: 38, width: 230, borderRadius: 999, border: `1px solid ${bankLedger ? "rgba(255,255,255,0.25)" : T.gold}`, background: "rgba(255,255,255,0.06)", color: "#FFFFFF", padding: "0 16px", fontSize: "0.92rem", fontFamily: SERIF, outline: "none" }} />
             <datalist id="sm-banks">{accounts.filter(a => isCashBankAccount(a as never)).map(a => <option key={a.id} value={a.name} />)}</datalist>
           </label>
-          <button onClick={onClose} disabled={posting} style={{ background: "#FFFFFF", border: "none", color: MUTED, width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: "1.1rem" }}>×</button>
+          <button onClick={onClose} disabled={posting} aria-label="Close" style={{ width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.3)", background: "transparent", color: "#FFFFFF", cursor: "pointer", fontSize: "1rem" }}>✕</button>
         </div>
 
         {rows.length > 0 && phase !== "reading" && (() => {
           const openGroups = groups.length, ready = groups.filter(g => { const st = groupState(g.rowIds); const l = ledgerFor(g.key, suggestFor(g)); return st !== "none" && st !== "mixed" && st.toLowerCase() === l.trim().toLowerCase(); }).length;
           const postedN = rows.filter(r => r.state === "posted").length;
+          const nIn = rows.filter(r => r.credit > 0).length, nOut = rows.filter(r => r.debit > 0).length, net = totals.cr - totals.dr;
+          const money = (n: number) => { const [a, b] = fmt(Math.abs(n)).split("."); return <>{n < 0 ? "−" : ""}{cur()}{a}<span style={{ fontSize: "0.62em" }}>.{b ?? "00"}</span></>; };
+          const tile = (top: string, dark = false): React.CSSProperties => ({ background: dark ? T.green : T.paper, color: dark ? "#FFFFFF" : T.ink, border: `1px solid ${dark ? T.green : T.line}`, borderTop: `3px solid ${top}`, borderRadius: 10, padding: "10px 14px" });
+          const lab: React.CSSProperties = { fontSize: "0.62rem", letterSpacing: "0.16em", textTransform: "uppercase", color: T.muted };
           return (
-            <div style={{ padding: "0.7rem 1.2rem", borderBottom: `1px solid ${BORDER}`, display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", background: "#FAFBFE" }}>
-              {[
-                { l: "Money in", v: `${cur()}${fmt(totals.cr)}`, c: GREEN },
-                { l: "Money out", v: `${cur()}${fmt(totals.dr)}`, c: RED },
-                { l: "Groups applied", v: `${ready} of ${openGroups}`, c: TEXT, bar: openGroups ? ready / openGroups : 0 },
-                { l: "Posted", v: `${postedN} of ${rows.length}`, c: BLUE, bar: rows.length ? postedN / rows.length : 0 },
-              ].map(t => (
-                <div key={t.l} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "8px 12px" }}>
-                  <div style={{ fontSize: "0.64rem", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: MUTED }}>{t.l}</div>
-                  <div style={{ fontFamily: MONO, fontWeight: 800, fontSize: "1.05rem", color: t.c }}>{t.v}</div>
-                  {"bar" in t && <div style={{ height: 5, borderRadius: 999, background: "#EEF0F6", marginTop: 5, overflow: "hidden" }}><div style={{ width: `${Math.round((t.bar ?? 0) * 100)}%`, height: "100%", background: t.c === TEXT ? GREEN : t.c, transition: "width .4s" }} /></div>}
-                </div>
-              ))}
+            <div style={{ padding: "0.9rem 1.4rem", borderBottom: `1px solid ${T.line}`, display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
+              <div style={tile(T.pos)}><div style={lab}>Money in · Cr</div><div style={{ fontSize: "1.55rem", color: T.pos }}>{money(totals.cr)}</div><div style={{ fontSize: "0.72rem", fontStyle: "italic", color: T.muted }}>{nIn} receipt{nIn === 1 ? "" : "s"}</div></div>
+              <div style={tile(T.neg)}><div style={lab}>Money out · Dr</div><div style={{ fontSize: "1.55rem", color: T.neg }}>{money(totals.dr)}</div><div style={{ fontSize: "0.72rem", fontStyle: "italic", color: T.muted }}>{nOut} payment{nOut === 1 ? "" : "s"}</div></div>
+              <div style={tile(T.green, true)}><div style={{ ...lab, color: T.gold }}>Net movement</div><div style={{ fontSize: "1.55rem" }}>{money(net)}</div><div style={{ fontSize: "0.72rem", fontStyle: "italic", color: "#C9D3CE" }}>{net >= 0 ? "surplus" : "deficit"} for the period</div></div>
+              <div style={tile(T.gold)}><div style={lab}>Ledgers applied</div><div style={{ fontSize: "1.55rem" }}>{ready} <span style={{ fontSize: "0.8rem", fontStyle: "italic", color: T.muted }}>of {openGroups}</span></div><div style={{ height: 4, borderRadius: 999, background: T.line, marginTop: 6 }}><div style={{ width: `${openGroups ? Math.round(ready / openGroups * 100) : 0}%`, height: "100%", borderRadius: 999, background: T.gold, transition: "width .4s" }} /></div></div>
+              <div style={tile("#9AA39F")}><div style={lab}>Posted</div><div style={{ fontSize: "1.55rem" }}>{postedN} <span style={{ fontSize: "0.8rem", fontStyle: "italic", color: T.muted }}>of {rows.length}</span></div><div style={{ height: 4, borderRadius: 999, background: T.line, marginTop: 6 }}><div style={{ width: `${rows.length ? Math.round(postedN / rows.length * 100) : 0}%`, height: "100%", borderRadius: 999, background: T.pos }} /></div></div>
             </div>
           );
         })()}
@@ -282,81 +284,94 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
         ) : (
           <>
             {/* Toolbar */}
-            <div style={{ padding: "0.7rem 1.2rem", borderBottom: `1px solid ${BORDER}`, display: "flex", gap: "0.45rem", alignItems: "center", flexWrap: "wrap" }}>
-              <span style={{ display: "inline-flex", border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden", marginRight: 6 }}>
-                <button onClick={() => setView("groups")} style={{ ...chip(view === "groups", GOLD), border: "none", borderRadius: 0 }}>By group</button>
-                <button onClick={() => { setView("rows"); }} style={{ ...chip(view === "rows", GOLD), border: "none", borderRadius: 0 }}>All rows</button>
+            <div style={{ padding: "0.7rem 1.4rem", borderBottom: `1px solid ${T.line}`, display: "flex", gap: "1.1rem", alignItems: "center", flexWrap: "wrap", background: "#FAF7F0" }}>
+              <span style={{ display: "inline-flex", padding: 3, borderRadius: 999, background: "#EAE3D4" }}>
+                {(["groups", "rows"] as const).map(v => (
+                  <button key={v} onClick={() => setView(v)} style={{ height: 32, padding: "0 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: SERIF, fontSize: "0.86rem", background: view === v ? T.green : "transparent", color: view === v ? "#FFFFFF" : T.ink }}>{v === "groups" ? "By group" : "All rows"}</button>
+                ))}
               </span>
-              <button style={chip(filter === "all")} onClick={() => setFilter("all")}>All</button>
-              <button style={chip(filter === "debit", RED)} onClick={() => setFilter("debit")}>Withdrawals</button>
-              <button style={chip(filter === "credit", GREEN)} onClick={() => setFilter("credit")}>Deposits</button>
-              <button style={chip(filter === "unassigned", AMBER)} onClick={() => setFilter("unassigned")}>No ledger ({rows.filter(r => !r.ledger.trim() && r.state !== "posted").length})</button>
-              <button style={chip(filter === "posted", BLUE)} onClick={() => setFilter("posted")}>Posted ({rows.filter(r => r.state === "posted").length})</button>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search description, ledger, amount…" style={{ ...inputStyle, width: 230 }} />
-              {phase === "suggesting" && <span style={{ fontSize: "0.74rem", color: PURPLE }}>🤖 AI is suggesting ledgers…</span>}
+              {([["all", "All", rows.length], ["debit", "Withdrawals", rows.filter(x => x.debit > 0).length], ["credit", "Deposits", rows.filter(x => x.credit > 0).length], ["unassigned", "No ledger", rows.filter(x => !x.ledger.trim() && x.state !== "posted").length], ["posted", "Posted", rows.filter(x => x.state === "posted").length]] as const).map(([k, l, n]) => (
+                <button key={k} onClick={() => setFilter(k)} style={{ border: "none", background: "none", padding: "4px 2px", cursor: "pointer", fontFamily: SERIF, fontSize: "0.92rem", fontStyle: filter === k ? "italic" : "normal", color: T.ink, borderBottom: `2px solid ${filter === k ? T.gold : "transparent"}` }}>
+                  {l} <span style={{ fontSize: "0.72rem", color: T.goldInk }}>{n}</span>
+                </button>
+              ))}
+              {phase === "suggesting" && <span style={{ fontSize: "0.76rem", fontStyle: "italic", color: T.goldInk }}>Suggesting ledgers…</span>}
               <div style={{ flex: 1 }} />
               {selected.size > 0 && (
                 <>
-                  <span style={{ fontSize: "0.78rem", color: BLUE, fontWeight: 700 }}>{selected.size} selected</span>
-                  <input list="sm-ledgers" value={bulkLedger} onChange={e => setBulkLedger(e.target.value)} onKeyDown={e => { if (e.key === "Enter") applyBulk(); }} placeholder="Ledger for selected…" style={{ ...inputStyle, width: 180 }} />
-                  <button onClick={applyBulk} style={{ ...chip(true, BLUE) }}>Apply</button>
+                  <span style={{ fontSize: "0.82rem", fontStyle: "italic" }}>{selected.size} selected</span>
+                  <input list="sm-ledgers" value={bulkLedger} onChange={e => setBulkLedger(e.target.value)} onKeyDown={e => { if (e.key === "Enter") applyBulk(); }} placeholder="Ledger for selected…" style={{ height: 36, width: 180, borderRadius: 999, border: `1px solid ${T.line}`, padding: "0 14px", fontFamily: SERIF, background: T.paper }} />
+                  <button onClick={applyBulk} style={{ height: 36, padding: "0 16px", borderRadius: 999, border: "none", background: T.green, color: "#FFFFFF", fontFamily: SERIF, cursor: "pointer" }}>Apply</button>
                 </>
               )}
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search particulars, ledger, amount…" style={{ height: 38, width: 300, maxWidth: "100%", borderRadius: 999, border: `1px solid ${T.line}`, padding: "0 18px", fontFamily: SERIF, fontStyle: "italic", fontSize: "0.86rem", background: T.paper, outline: "none" }} />
             </div>
             <datalist id="sm-ledgers">{accounts.map(a => <option key={a.id} value={a.name} />)}</datalist>
 
             {/* Group view: similar transactions together, one ledger per group */}
-            {view === "groups" && (
-              <div style={{ flex: 1, overflow: "auto", padding: "0.8rem 1.2rem", display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: "0.8rem", color: MUTED }}>
-                  <span><b style={{ color: TEXT }}>{groups.length} groups</b> from {rows.filter(r => r.state !== "posted").length} open transactions. Check each ledger, then apply.</span>
-                  <div style={{ flex: 1 }} />
-                  <button onClick={applyAllSuggestions} disabled={!groups.some(g => !needsLook(g))} style={{ ...chip(true, GREEN), fontWeight: 800 }}>✓ Apply all ready &amp; select</button>
+            {view === "groups" && (() => {
+              const cols = "34px 40px minmax(180px,1.5fr) 110px 110px minmax(220px,1.3fr) 110px";
+              let n = 0;
+              return (
+              <div style={{ flex: 1, overflow: "auto", padding: "0.4rem 1.4rem 1rem", background: "#FAF7F0" }}>
+                <div style={{ display: "grid", gridTemplateColumns: cols, gap: 12, padding: "10px 12px", borderBottom: `1px solid ${T.ink}`, fontSize: "0.66rem", letterSpacing: "0.18em", color: T.muted, position: "sticky", top: 0, background: "#FAF7F0", zIndex: 1 }}>
+                  <span /><span>NO.</span><span>PARTICULARS</span><span style={{ textAlign: "right" }}>DR {cur()}</span><span style={{ textAlign: "right" }}>CR {cur()}</span><span>LEDGER</span><span />
                 </div>
-                {phase === "suggesting" && <div style={{ fontSize: "0.76rem", color: PURPLE }}>🤖 AI is still reading rows — groups will fill in suggestions as it goes.</div>}
+                {phase === "suggesting" && <div style={{ fontSize: "0.8rem", fontStyle: "italic", color: T.goldInk, padding: "8px 2px" }}>Still reading rows — suggestions fill in as it goes.</div>}
                 {(["look", "ready"] as const).map(section => {
                   const list = groups.filter(g => (section === "look") === needsLook(g));
                   if (!list.length) return null;
                   return (
-                    <div key={section} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      <div style={{ fontSize: "0.68rem", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: section === "look" ? AMBER : GREEN, marginTop: 6 }}>
-                        {section === "look" ? `Needs your choice · ${list.length}` : `Ready · ${list.length}`}
+                    <div key={section} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0 4px", fontStyle: "italic", fontSize: "0.88rem", color: section === "look" ? T.goldInk : T.pos }}>
+                        {section === "look" ? "Needs your choice" : "Ready to apply"}
+                        <span style={{ fontStyle: "normal", fontSize: "0.72rem", padding: "1px 9px", borderRadius: 999, background: section === "look" ? "#F6E3B4" : "#D8EFE4" }}>{list.length}</span>
+                        <span style={{ flex: 1, height: 1, background: section === "look" ? "#EBD9A8" : "#CFE3D8" }} />
                       </div>
                       {list.map(g => {
-                  const ledger = ledgerFor(g.key, suggestFor(g));
-                  const now = groupState(g.rowIds);
-                  const applied = now !== "none" && now !== "mixed" && now.toLowerCase() === ledger.trim().toLowerCase();
-                  const allSel = g.rowIds.every(id => selected.has(id));
-                  return (
-                    <div key={g.key} className="sm-group" style={{ display: "grid", gridTemplateColumns: "26px minmax(180px,1.4fr) 130px minmax(200px,1.2fr) auto", gap: 12, alignItems: "center", padding: "12px 14px", borderRadius: 12, border: `1px solid ${applied ? "rgba(11,122,85,0.35)" : BORDER}`, borderLeft: `4px solid ${g.dir === "out" ? RED : GREEN}`, background: applied ? "rgba(11,122,85,0.04)" : "#FFFFFF", boxShadow: "0 6px 18px -16px rgba(20,26,58,0.5)" }}>
-                      <input type="checkbox" aria-label={`Select ${g.label}`} checked={allSel} onChange={() => setSelected(s => { const n = new Set(s); g.rowIds.forEach(id => allSel ? n.delete(id) : n.add(id)); return n; })} />
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.label}</div>
-                        <div style={{ fontSize: "0.72rem", color: MUTED }}>
-                          <span style={{ color: g.dir === "out" ? RED : GREEN, fontWeight: 800 }}>{g.dir === "out" ? "↑ Paid out" : "↓ Received"}</span> · {g.count} transaction{g.count > 1 ? "s" : ""}
-                          {" · "}<button onClick={() => { setGroupFilter({ label: g.label, ids: new Set(g.rowIds) }); setView("rows"); setFilter("all"); }} style={{ background: "none", border: "none", color: BLUE, padding: 0, cursor: "pointer", fontSize: "inherit", fontFamily: "inherit" }}>see rows</button>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: "right", fontFamily: MONO, fontWeight: 800, fontSize: "1rem", color: g.dir === "out" ? RED : GREEN }}>{cur()}{fmt(g.total)}</div>
-                      <div style={{ minWidth: 0 }}>
-                        <input list="sm-ledgers" value={ledger} onChange={e => setGroupLedger(m => ({ ...m, [g.key]: e.target.value }))} placeholder="Choose or type ledger" style={{ ...inputStyle, width: "100%", borderColor: !ledger.trim() ? "rgba(184,120,0,0.4)" : isNew(ledger) ? "rgba(91,75,196,0.5)" : BORDER }} />
-                        <div style={{ fontSize: "0.68rem", color: MUTED, marginTop: 3 }}>
-                          {CONTROL.test(g.suggested.trim()) ? <span style={{ color: AMBER, fontWeight: 700 }}>Party gets its own ledger (not {g.suggested}) — check the name</span>
-                            : GATEWAY.test(g.label) ? <span style={{ color: AMBER, fontWeight: 700 }}>Gateway payout — usually money for sales already booked (customer / gateway ledger), not new Sales</span>
-                            : g.reason && <span style={{ color: g.source === "history" ? GREEN : g.source === "rule" ? BLUE : PURPLE }}>{g.source === "history" ? "★ " : ""}{g.reason}</span>}
-                          {isNew(ledger) && <span style={{ color: PURPLE }}> · new ledger</span>}
-                          {now === "mixed" && <span style={{ color: AMBER }}> · rows have different ledgers now</span>}
-                        </div>
-                      </div>
-                      <button onClick={() => applyGroup(g.rowIds, ledger)} disabled={!ledger.trim()} style={{ height: 34, padding: "0 14px", borderRadius: 999, border: "none", fontWeight: 800, fontSize: "0.76rem", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", opacity: ledger.trim() ? 1 : 0.5, background: applied ? "rgba(11,122,85,0.12)" : BLUE, color: applied ? GREEN : "#FFFFFF" }}>{applied ? "✓ Applied" : g.count > 1 ? `Apply to ${g.count}` : "Apply"}</button>
-                    </div>
-                  );
-                })}
+                        n++;
+                        const ledger = ledgerFor(g.key, suggestFor(g));
+                        const now = groupState(g.rowIds);
+                        const applied = now !== "none" && now !== "mixed" && now.toLowerCase() === ledger.trim().toLowerCase();
+                        const allSel = g.rowIds.every(id => selected.has(id));
+                        const note = CONTROL.test(g.suggested.trim()) ? `New party — create its own ledger under Sundry ${g.dir === "out" ? "Creditors" : "Debtors"}.`
+                          : GATEWAY.test(g.label) ? "Gateway payout usually settles sales already booked — consider the gateway ledger."
+                          : g.reason ? `${g.source === "history" ? "Matched · " : ""}${g.reason}` : "";
+                        return (
+                          <div key={g.key} style={{ display: "grid", gridTemplateColumns: cols, gap: 12, alignItems: "center", padding: "12px", borderRadius: 10, border: `1px solid ${section === "look" ? "#EFDFB4" : T.line}`, background: section === "look" ? T.look : T.paper }}>
+                            <input type="checkbox" aria-label={`Select ${g.label}`} checked={allSel} onChange={() => setSelected(s => { const x = new Set(s); g.rowIds.forEach(id => allSel ? x.delete(id) : x.add(id)); return x; })} />
+                            <span style={{ fontStyle: "italic", color: T.goldInk }}>{String(n).padStart(2, "0")}</span>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: "1.05rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.label}</div>
+                              <div style={{ fontSize: "0.76rem", color: T.muted }}>
+                                <span style={{ color: g.dir === "out" ? T.neg : T.pos }}>{g.dir === "out" ? "↑ Paid out" : "↓ Received"}</span> · {g.count} transaction{g.count > 1 ? "s" : ""} ·{" "}
+                                <button onClick={() => { setGroupFilter({ label: g.label, ids: new Set(g.rowIds) }); setView("rows"); setFilter("all"); }} style={{ background: "none", border: "none", color: T.ink, padding: 0, cursor: "pointer", fontSize: "inherit", fontFamily: "inherit", textDecoration: "underline" }}>see rows</button>
+                              </div>
+                            </div>
+                            <span style={{ textAlign: "right", color: T.neg, fontVariantNumeric: "tabular-nums" }}>{g.dir === "out" ? fmt(g.total) : ""}</span>
+                            <span style={{ textAlign: "right", color: T.pos, fontVariantNumeric: "tabular-nums" }}>{g.dir === "out" ? "" : fmt(g.total)}</span>
+                            <div style={{ minWidth: 0 }}>
+                              <input list="sm-ledgers" value={ledger} onChange={e => setGroupLedger(m => ({ ...m, [g.key]: e.target.value }))} placeholder="Choose or type ledger"
+                                style={{ width: "100%", height: 38, borderRadius: 999, border: `1px solid ${!ledger.trim() ? "#E3C27A" : T.line}`, background: "#FFFFFF", padding: "0 16px", fontFamily: SERIF, fontSize: "0.92rem", outline: "none" }} />
+                              {(note || isNew(ledger) || now === "mixed") && <div style={{ fontSize: "0.72rem", fontStyle: "italic", color: section === "look" ? T.goldInk : "#2F5D8A", marginTop: 4 }}>
+                                {note}{isNew(ledger) && !CONTROL.test(g.suggested.trim()) ? `${note ? " · " : ""}new ledger` : ""}{now === "mixed" ? " · rows have different ledgers now" : ""}
+                              </div>}
+                            </div>
+                            <button onClick={() => applyGroup(g.rowIds, ledger)} disabled={!ledger.trim()}
+                              style={{ height: 38, padding: "0 16px", borderRadius: 999, cursor: "pointer", fontFamily: SERIF, fontSize: "0.88rem", opacity: ledger.trim() ? 1 : 0.5, whiteSpace: "nowrap",
+                                background: applied ? "transparent" : section === "look" ? T.green : "transparent", color: applied ? T.pos : section === "look" ? "#FFFFFF" : T.ink,
+                                border: `1px solid ${applied ? T.pos : section === "look" ? T.green : T.ink}`, letterSpacing: applied ? "0.12em" : 0 }}>
+                              {applied ? "✓ APPLIED" : g.count > 1 ? `Apply to ${g.count}` : "Apply"}
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
               </div>
-            )}
+              );
+            })()}
 
             {/* Table */}
             {view === "rows" && (
@@ -409,7 +424,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
             )}
 
             {/* New ledgers + footer */}
-            <div style={{ borderTop: `1px solid ${BORDER}`, padding: "0.75rem 1.2rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+            <div style={{ borderTop: `1px solid ${T.line}`, padding: "0.8rem 1.4rem", display: "flex", flexDirection: "column", gap: "0.6rem", background: "#F1EADB" }}>
               {newLedgers.size > 0 && (
                 <div style={{ display: "flex", gap: "0.5rem 1rem", flexWrap: "wrap", alignItems: "center", fontSize: "0.78rem" }}>
                   <span style={{ color: unsureHeads.length ? AMBER : MUTED, fontWeight: 700 }}>{unsureHeads.length ? "🤔 Choose a group for new ledgers:" : "New ledgers will be created:"}</span>
@@ -425,16 +440,17 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
                 </div>
               )}
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                <span style={{ fontSize: "0.78rem", color: progress.startsWith("✓") ? GREEN : MUTED }}>
-                  {progress || (sel.length ? `${sel.length} to post · ${cur()}${fmt(sel.reduce((s, r) => s + r.debit + r.credit, 0))}` : "Tick the transactions to post. Click a column header to sort.")}
+                <span style={{ fontSize: "0.82rem", fontStyle: "italic", color: progress.startsWith("✓") ? T.pos : T.muted }}>
+                  {progress || (sel.length ? `${sel.length} to post · ${cur()}${fmt(sel.reduce((s, r) => s + r.debit + r.credit, 0))}` : "Tick the entries to post · click a column heading to sort")}
                   {selMissing > 0 && <span style={{ color: AMBER }}> · {selMissing} selected without a ledger</span>}
                   {!bankLedger.trim() && <span style={{ color: AMBER }}> · choose the bank ledger at the top</span>}
                 </span>
                 <div style={{ flex: 1 }} />
-                <button onClick={onClose} disabled={posting} style={{ ...chip(false), padding: "8px 16px" }}>Close</button>
+                {view === "groups" && <button onClick={applyAllSuggestions} disabled={!groups.some(g => !needsLook(g))} style={{ height: 42, padding: "0 20px", borderRadius: 999, border: `1px solid ${T.green}`, background: "transparent", color: T.ink, fontFamily: SERIF, fontSize: "0.95rem", cursor: "pointer" }}>Apply all ready · {groups.filter(g => !needsLook(g)).length}</button>}
+                <button onClick={onClose} disabled={posting} style={{ height: 42, padding: "0 20px", borderRadius: 999, border: `1px solid ${T.line}`, background: T.paper, color: T.ink, fontFamily: SERIF, fontSize: "0.95rem", cursor: "pointer" }}>Close</button>
                 <button onClick={postSelected} disabled={posting || !sel.length || selMissing > 0 || !bankLedger.trim() || unsureHeads.length > 0}
-                  style={{ background: GREEN, color: "#F5F6FA", border: "none", padding: "9px 22px", borderRadius: 8, fontWeight: 800, fontSize: "0.85rem", cursor: "pointer", fontFamily: "inherit", opacity: posting || !sel.length || selMissing > 0 || !bankLedger.trim() || unsureHeads.length > 0 ? 0.45 : 1 }}>
-                  {posting ? "Posting…" : `✓ Post ${sel.length || ""} selected`}
+                  style={{ background: T.gold, color: T.ink, border: `1px solid ${T.goldInk}`, height: 42, padding: "0 26px", borderRadius: 999, fontSize: "0.98rem", cursor: "pointer", fontFamily: SERIF, opacity: posting || !sel.length || selMissing > 0 || !bankLedger.trim() || unsureHeads.length > 0 ? 0.45 : 1 }}>
+                  {posting ? "Posting…" : sel.length ? `Post ${sel.length} selected` : "Post selected"}
                 </button>
               </div>
             </div>
