@@ -158,6 +158,7 @@ type AdminMetrics = {
   activity: { posted7: number; posted30: number; viaWhatsApp30: number; waLinked: number };
   expiring: { email: string; ends: string; paying: boolean; auto: boolean }[];
   recent: { email: string; created: string; via: string; hasBusiness: boolean }[];
+  logins?: { email: string; at: string; via: string }[];
 };
 
 // Business overview for FreWork staff: growth, customers, revenue, product use
@@ -260,6 +261,24 @@ function AdminOverview() {
                 <span style={{ color: "#5A6080", fontSize: 12, width: 52, textAlign: "right" }}>{day(u.created)}</span>
               </div>
             ))}
+          </div>
+        </div>
+        <div style={card}>
+          <span style={label}>Last signed in</span>
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column" }}>
+            {(m.logins ?? []).length === 0 && <p style={{ margin: 0, fontSize: 13, color: "#5A6080" }}>No sign-ins yet.</p>}
+            {(m.logins ?? []).map(u => {
+              const mins = Math.floor((Date.now() - Date.parse(u.at)) / 60000);
+              const ago = mins < 1 ? "just now" : mins < 60 ? `${mins} min ago` : mins < 1440 ? `${Math.floor(mins / 60)} h ago` : `${Math.floor(mins / 1440)} d ago`;
+              return (
+                <div key={u.email + u.at} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: "1px solid rgba(20,26,58,0.06)", fontSize: 13 }}>
+                  <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: mins < 60 ? "#0B7A55" : mins < 1440 ? "#C9A24A" : "#C9CEDA" }} />
+                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#141A3A" }}>{u.email || "(no email)"}</span>
+                  <span style={{ fontSize: 11, color: "#8A90AE" }}>{u.via}</span>
+                  <span title={new Date(u.at).toLocaleString("en-IN")} style={{ color: "#5A6080", fontSize: 12, width: 74, textAlign: "right" }}>{ago}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

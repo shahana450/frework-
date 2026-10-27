@@ -60,6 +60,9 @@ export async function GET(req: NextRequest) {
       expiring,
       recent: [...users].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 10)
         .map(u => ({ email: u.email ?? "", created: u.created_at, via: u.app_metadata?.provider ?? "email", hasBusiness: owners.has(u.id) })),
+      // Most recent sign-ins (Supabase records the time of each sign-in; open sessions are not tracked)
+      logins: users.filter(u => u.last_sign_in_at).sort((a, b) => (b.last_sign_in_at ?? "").localeCompare(a.last_sign_in_at ?? "")).slice(0, 25)
+        .map(u => ({ email: u.email ?? "", at: u.last_sign_in_at as string, via: u.app_metadata?.provider ?? "email" })),
     });
   } catch (e) {
     return serverError("admin/metrics", e, "Couldn't load the admin overview.");
