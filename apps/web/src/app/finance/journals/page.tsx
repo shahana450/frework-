@@ -11,6 +11,7 @@ import { useTally } from "@/lib/tallyConnection";
 import { pushToTally, loadPushStatus, type PushState } from "@/lib/tallyPushRun";
 import { explainTallyError } from "@/lib/integrations/tally";
 import { writeStyledWorkbook } from "@/lib/styledWorkbook";
+import { JournalTimeline, TimelineSide, type TLine } from "./JournalTimeline";
 
 type Journal = {
   id: string;
@@ -86,7 +87,9 @@ export default function JournalsPage() {
   const [filter, setFilter] = useState<"all" | "draft" | "posted" | "ai">("all");
   const [loadErr, setLoadErr] = useState("");
   const [query, setQuery] = useState("");
-  const [typeSel, setTypeSel] = useState<string>("");             // one entry type, or "" for all
+  const [typeSel, setTypeSel] = useState<string>("");
+  const [view, setView] = useState<"timeline" | "table">("timeline");
+  const [linesById, setLinesById] = useState<Record<string, TLine[]>>({});             // one entry type, or "" for all
   const [period, setPeriod] = useState<Period>("all");
   const [range, setRange] = useState({ from: "", to: "" });
   const [tallyFilter, setTallyFilter] = useState<"" | "not_pushed" | "failed">("");
@@ -203,7 +206,7 @@ export default function JournalsPage() {
   // Which rows on screen record income? Those get an "Invoice" button. Checked only for what's drawn.
   const visibleKey = visible.map(j => j.id).join(",");
   useEffect(() => {
-    const todo = visible.filter(j => j.status === "posted" && !checkedIncome.current.has(j.id)).map(j => j.id);
+    const todo = visible.filter(j => !checkedIncome.current.has(j.id)).map(j => j.id);
     if (!todo.length) return;
     todo.forEach(id => checkedIncome.current.add(id));
     (async () => {
@@ -216,7 +219,9 @@ export default function JournalsPage() {
           a.push({ dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0, account: l.fw_fin_chart_of_accounts?.name ?? "", accountType: l.fw_fin_chart_of_accounts?.type ?? null, subType: l.fw_fin_chart_of_accounts?.sub_type ?? null });
           byJ.set(l.journal_id, a);
         }
-        const found = [...byJ].filter(([, lines]) => isIncomeEntry(lines)).map(([id]) => id);
+        setLinesById(prev => ({ ...prev, ...Object.fromEntries([...byJ].map(([id, ls]) => [id, ls.map(l => ({ account: l.account, dr: l.dr, cr: l.cr })).sort((a, b) => b.dr - a.dr)])) }));
+        const posted = new Set(visible.filter(j => j.status === "posted").map(j => j.id));
+        const found = [...byJ].filter(([id, lines]) => posted.has(id) && isIncomeEntry(lines)).map(([id]) => id);
         if (found.length) setIncomeIds(prev => new Set([...prev, ...found]));
       }
     })();
@@ -254,7 +259,7 @@ export default function JournalsPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; }
@@ -267,7 +272,7 @@ export default function JournalsPage() {
         .jr-pill i { width: 6px; height: 6px; border-radius: 999px; background: currentColor; display: inline-block; }
         .jr-seg { display: inline-flex; padding: 4px; gap: 2px; border-radius: 12px; background: #FFFFFF; border: 1px solid rgba(20,26,58,0.1); }
         .jr-seg button { border: none; background: transparent; padding: 7px 14px; border-radius: 9px; font-weight: 700; font-size: 0.8rem; color: rgba(20,26,58,0.7); cursor: pointer; font-family: inherit; display: inline-flex; gap: 6px; align-items: center; }
-        .jr-seg button.on { background: #232A63; color: #FFFFFF; box-shadow: 0 6px 14px -8px rgba(35,42,99,.7); }
+        .jr-seg button.on { background: #12352D; color: #FFFFFF; box-shadow: 0 6px 14px -8px rgba(18,53,45,.7); }
         .jr-seg button span { font-size: 0.68rem; padding: 1px 7px; border-radius: 999px; background: rgba(20,26,58,0.07); }
         .jr-seg button.on span { background: rgba(255,255,255,0.18); }
         .jr-chip { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(20,26,58,0.12); background: #FFFFFF; color: #141A3A; font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
@@ -275,7 +280,8 @@ export default function JournalsPage() {
         .jr-chip[data-on] { background: var(--c); border-color: var(--c); color: #FFFFFF; }
         .jr-chip[data-on] span { background: rgba(255,255,255,0.22); }
         .jr-select { height: 32px; border-radius: 9px; border: 1px solid rgba(20,26,58,0.14); padding: 0 10px; font-size: 0.8rem; font-family: inherit; background: #FFFFFF; color: #141A3A; }
-        .jr-stat { background: #FFFFFF; border: 1px solid rgba(20,26,58,0.09); border-radius: 14px; padding: 12px 16px; min-width: 150px; flex: 1; }
+        .jr-stat { background: #FFFFFF; border: 1px solid #E6DFD0; border-radius: 14px; padding: 12px 16px; min-width: 150px; flex: 1; }
+        @media (max-width: 960px) { .jr-tl { grid-template-columns: minmax(0,1fr) !important; } }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #FFFFFF; border-radius: 4px; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -301,8 +307,14 @@ export default function JournalsPage() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
-              <h1 style={{ margin: "0 0 0.2rem", fontSize: "1.9rem", fontWeight: 700, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", letterSpacing: "-0.01em" }}>{pageTitle}</h1>
-              <div style={{ fontSize: "0.84rem", color: "rgba(20,26,58,0.6)" }}>Every entry in your books — click one to see its lines.</div>
+              <div style={{ fontSize: "0.7rem", letterSpacing: "0.24em", color: "#9A6B22", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>BOOKS OF ACCOUNT{bizName ? ` · ${bizName.toUpperCase()}` : ""}</div>
+              <h1 style={{ margin: "0 0 0.2rem", fontSize: "2.4rem", fontWeight: 400, fontStyle: "italic", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", letterSpacing: "-0.01em" }}>{pageTitle}</h1>
+              <div style={{ fontSize: "0.9rem", color: "#5E6B66", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>{view === "timeline" ? "Every entry on one timeline — each card shows its Dr / Cr lines." : "Every entry in your books — click one to see its lines."}</div>
+            </div>
+            <div className="jr-seg" role="tablist" aria-label="View">
+              <button role="tab" aria-selected={view === "timeline"} className={view === "timeline" ? "on" : ""} onClick={() => setView("timeline")}>Timeline</button>
+              <button role="tab" aria-selected={view === "table"} className={view === "table" ? "on" : ""} onClick={() => setView("table")}>Table</button>
+              <Link href="/finance/books" style={{ padding: "7px 14px", fontWeight: 700, fontSize: "0.8rem", color: "rgba(20,26,58,0.7)", textDecoration: "none" }}>Day book</Link>
             </div>
             <div className="jr-seg" role="tablist" aria-label="Filter entries">
               {(["all", "draft", "posted", "ai"] as const).map(f => (
@@ -317,14 +329,16 @@ export default function JournalsPage() {
           {/* At a glance */}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: "1rem" }}>
             {[
-              { l: "Entries shown", v: filtered.length.toLocaleString("en-IN"), c: "#141A3A" },
-              { l: "Total value", v: `${cur()}${totalDebit.toLocaleString(activeMoney().locale, { maximumFractionDigits: 0 })}`, c: "#232A63" },
-              { l: "Posted", v: filtered.filter(j => j.status === "posted").length.toLocaleString("en-IN"), c: "#0B7A55" },
-              { l: "Not in Tally", v: notPushed.length.toLocaleString("en-IN"), c: notPushed.length ? "#8A5A00" : "#0B7A55" },
+              { l: "Entries", v: filtered.length.toLocaleString("en-IN"), c: "#10241F", top: "#10241F", sub: `${filtered.filter(j => j.status === "draft").length} drafts` },
+              { l: "Total value", v: `${cur()}${totalDebit.toLocaleString(activeMoney().locale, { maximumFractionDigits: 0 })}`, c: "#FFFFFF", top: "#C9A24A", dark: true, sub: "all voucher types" },
+              { l: "Posted", v: filtered.filter(j => j.status === "posted").length.toLocaleString("en-IN"), c: "#0B7A55", top: "#0B7A55", sub: `of ${filtered.length}` },
+              { l: "In Tally", v: filtered.filter(j => isPushed(j.id) || j.entry_no?.startsWith("TLY-")).length.toLocaleString("en-IN"), c: "#10241F", top: "#C9A24A", sub: `of ${filtered.length}` },
+              { l: "Blocked", v: String(dupNos), c: dupNos ? "#B4321F" : "#0B7A55", top: dupNos ? "#B4321F" : "#E6DFD0", sub: "duplicate entry nos.", soft: !!dupNos },
             ].map(s => (
-              <div key={s.l} className="jr-stat">
-                <div style={{ fontSize: "0.66rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(20,26,58,0.5)" }}>{s.l}</div>
-                <div style={{ fontSize: "1.25rem", fontWeight: 800, color: s.c, fontVariantNumeric: "tabular-nums", marginTop: 2 }}>{s.v}</div>
+              <div key={s.l} className="jr-stat" style={{ borderTop: `3px solid ${s.top}`, background: s.dark ? "#12352D" : s.soft ? "#FBECE8" : "#FFFDF8", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+                <div style={{ fontSize: "0.64rem", letterSpacing: "0.16em", textTransform: "uppercase", color: s.dark ? "#C9A24A" : "#6B7570" }}>{s.l}</div>
+                <div style={{ fontSize: "1.6rem", color: s.c, fontVariantNumeric: "tabular-nums", marginTop: 2 }}>{s.v}</div>
+                <div style={{ fontSize: "0.72rem", fontStyle: "italic", color: s.dark ? "#C9D3CE" : "#6B7570" }}>{s.sub}</div>
               </div>
             ))}
           </div>
@@ -388,7 +402,35 @@ export default function JournalsPage() {
             {pushMsg && <div role="status" style={{ fontSize: "0.82rem", fontWeight: 600, color: pushMsg.startsWith("✓") ? "#0B7A55" : "#10241F", background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 10, padding: "8px 12px" }}>{pushMsg}</div>}
           </div>
 
-          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.09)", borderRadius: 18, overflow: "hidden", boxShadow: "0 16px 40px -32px rgba(20,26,58,0.5)" }}>
+          {view === "timeline" && !loading && !loadErr && (() => {
+            const tState = (id: string, j: { entry_no: string; status: string }) => j.entry_no?.startsWith("TLY-") ? "tally" as const : isPushed(id) ? "pushed" as const : pushed[id] && "error" in pushed[id] ? "failed" as const : j.status === "posted" ? "ready" as const : "none" as const;
+            const selSum = journals.filter(j => selected.has(j.id)).reduce((s, j) => s + (Number(j.total_debit) || 0), 0);
+            const gatewayN = visible.filter(j => j.type === "receipt" && /\b(razorpay|paytm|phonepe|payu|cashfree|stripe|gateway|settlement)\b/i.test(j.narration ?? "") && (linesById[j.id] ?? []).some(l => l.cr > 0 && /^sales/i.test(l.account))).length;
+            return (
+              <div className="jr-tl" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 300px", gap: 18, alignItems: "start" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+                  {selected.size > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 16px", borderRadius: 12, background: "#12352D", color: "#FFFFFF", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", position: "sticky", top: 170, zIndex: 5 }}>
+                      <b>{selected.size} selected</b><span style={{ color: "#C9D3CE" }}>· {cur()}{selSum.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span>
+                      <span style={{ flex: 1 }} />
+                      <button onClick={() => setSelected(new Set())} style={{ height: 34, padding: "0 14px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.3)", background: "transparent", color: "#FFFFFF", cursor: "pointer", fontFamily: "inherit" }}>Clear</button>
+                      <button onClick={() => pushSelected([...selected])} disabled={pushing || tally.status !== "connected"} title={tally.status === "connected" ? "" : "Connect Tally first"} style={{ height: 34, padding: "0 16px", borderRadius: 999, border: "none", background: "#C9A24A", color: "#10241F", cursor: "pointer", fontFamily: "inherit", opacity: tally.status === "connected" ? 1 : 0.6 }}>{pushing ? "Pushing…" : "Push to Tally"}</button>
+                    </div>
+                  )}
+                  {filtered.length === 0 ? <div style={{ padding: "3rem", textAlign: "center", color: "#6B7570" }}>No entries match.</div>
+                    : <JournalTimeline journals={visible} lines={linesById} labelOf={t => TYPE_LABEL[t] ?? t} dupCount={no => noCount.get(no) ?? 0} tallyState={tState}
+                        selected={selected} toggle={toggle} selectable={pushable} onOpen={openDrawer} incomeIds={incomeIds} />}
+                  {filtered.length > visible.length && (
+                    <button onClick={() => setShown(n => n + 100)} style={{ alignSelf: "center", height: 42, padding: "0 22px", borderRadius: 999, border: "1px solid #E6DFD0", background: "#FFFDF8", fontStyle: "italic", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", cursor: "pointer" }}>Load earlier entries · {filtered.length - visible.length} more</button>
+                  )}
+                </div>
+                <TimelineSide journals={filtered} all={byTypeParam} dupNos={dupNos} readyN={notPushed.length} inTallyN={filtered.filter(j => isPushed(j.id)).length}
+                  failedN={filtered.filter(j => pushed[j.id] && "error" in pushed[j.id]).length} tallyOnline={tally.status === "connected"} labelOf={t => TYPE_LABEL[t] ?? t} gatewayN={gatewayN} />
+              </div>
+            );
+          })()}
+
+          {(view === "table" || loading || loadErr) && <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.09)", borderRadius: 18, overflow: "hidden", boxShadow: "0 16px 40px -32px rgba(20,26,58,0.5)" }}>
             {loading ? (
               <div style={{ padding: "4rem", textAlign: "center", color: "rgba(20,26,58,0.55)" }}>Loading…</div>
             ) : loadErr ? (
@@ -487,7 +529,7 @@ export default function JournalsPage() {
                 )}
               </div>
             )}
-          </div>
+          </div>}
         </div>
 
         {/* Detail drawer panel */}
