@@ -6,6 +6,7 @@ import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
 import { useTallyAutoCatchUp, AUTO_PUSH_EVENT } from "@/lib/tallyAutoCatchUp";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import { PAYMENTS_LIVE } from "@/lib/plans";
 import { supabase } from "@/lib/supabase";
 import { currentUser } from "@/lib/currentUser";
 import { FINANCE_NAV, isActive } from "@/lib/financeNav";
@@ -156,7 +157,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       const visible = listed ? [...listed.businesses, ...listed.test] : [];
       const isTeamMember = visible.some(b => b.role && b.role !== "owner");
 
-      if (!UNGUARDED.some(p => pathname.startsWith(p)) && !isTeamMember) {
+      // Before payments go live there is no paywall: everyone uses FreBook on the free trial
+      if (PAYMENTS_LIVE && !UNGUARDED.some(p => pathname.startsWith(p)) && !isTeamMember) {
         const { data: sub } = await supabase
           .from("fw_fin_subscriptions")
           .select("status,subscription_ends_at")

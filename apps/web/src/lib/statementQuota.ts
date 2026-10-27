@@ -1,7 +1,7 @@
 // Monthly allowance of bank-statement pages read by the AI, charged to the business owner's plan.
 // If the usage table isn't set up yet, nothing is blocked (the allowance simply isn't enforced).
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { pageAllowance, planLabel, upgradeFor, planById } from "./plans";
+import { pageAllowance, planLabel, upgradeFor, planById, FREBOOK_PLAN, PAYMENTS_LIVE } from "./plans";
 import { isAdminEmail } from "./apiAuth";
 
 const monthKey = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7);
@@ -22,7 +22,8 @@ export async function checkStatementPages(sb: SupabaseClient, businessId: string
   if (usage.error) return { ok: true, ownerId: null };          // table not created yet → don't block
   const live = !!sub && (sub.status === "active" || sub.status === "trial") && (!sub.subscription_ends_at || sub.subscription_ends_at > new Date().toISOString());
   // No plan yet: the Starter allowance, so anyone can try one statement
-  const allowance = live ? pageAllowance(sub!.plan, sub!.status) : (planById("fb_starter")?.pages ?? 100);
+  // Before payments go live everyone gets the trial allowance
+  const allowance = !PAYMENTS_LIVE ? pageAllowance(FREBOOK_PLAN.id, "trial") : live ? pageAllowance(sub!.plan, sub!.status) : (planById("fb_starter")?.pages ?? 100);
   const used = Number(usage.data?.pages ?? 0);
   if (used + pages <= allowance) return { ok: true, ownerId };
   const cur = live ? sub!.plan : null;

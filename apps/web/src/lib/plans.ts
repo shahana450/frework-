@@ -95,3 +95,7 @@ export function planLabel(id: string | null | undefined): string {
 /** "₹699" — the starting price, as pages show it ("from ₹699/month"). */
 export const FREBOOK_PRICE_LABEL = `₹${LOWEST_PLAN.price.toLocaleString("en-IN")}`;
 export const priceLabel = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+
+/** Payments are not switched on yet: until NEXT_PUBLIC_PAYMENTS_LIVE=true, every login gets the full free trial
+ *  (no paywall, unlimited businesses, trial statement allowance). */
+export const PAYMENTS_LIVE = process.env.NEXT_PUBLIC_PAYMENTS_LIVE === "true";
