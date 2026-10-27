@@ -4,7 +4,7 @@
 import Link from "next/link";
 import type { MsmeReport } from "@/lib/msme43bh";
 
-const C = { ink: "#141A3A", muted: "#5A6080", line: "#E1E4EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB", pos: "#0B7A55", posSoft: "#E3F6EE" };
+const C = { ink: "#10241F", muted: "#6B7570", line: "#E1E4EE", neg: "#B4321F", negSoft: "#FDECEA", warn: "#9A6B22", warnSoft: "#FFF4DB", pos: "#0B7A55", posSoft: "#E3F6EE" };
 const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const dt = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 
@@ -15,15 +15,15 @@ export default function MsmePanel({ report, setupNeeded, marked }: { report: Msm
     </div>
   );
   if (!marked) return (
-    <div style={{ marginBottom: "1.5rem", padding: "0.8rem 1rem", borderRadius: 10, border: `1px dashed ${C.line}`, background: "#FFFFFF", color: C.muted, fontSize: "0.82rem", lineHeight: 1.55 }}>
+    <div style={{ marginBottom: "1.5rem", padding: "0.8rem 1rem", borderRadius: 10, border: `1px dashed ${C.line}`, background: "#FFFDF8", color: C.muted, fontSize: "0.82rem", lineHeight: 1.55 }}>
       <b style={{ color: C.ink }}>MSME suppliers (section 43B(h)):</b> payments to micro and small suppliers must be made within 15 days (or the agreed period, max 45) or the expense isn&apos;t allowed this year.{" "}
-      <Link href="/finance/contacts" style={{ color: "#232A63", fontWeight: 700 }}>Mark your MSME suppliers →</Link>
+      <Link href="/finance/contacts" style={{ color: "#12352D", fontWeight: 700 }}>Mark your MSME suppliers →</Link>
     </div>
   );
   if (!report) return null;
   const urgent = report.bills.filter(b => b.status !== "ok");
   return (
-    <section aria-label="MSME payments due" style={{ marginBottom: "1.5rem", background: "#FFFFFF", border: `1px solid ${C.line}`, borderRadius: 12, padding: "1rem 1.1rem", display: "flex", flexDirection: "column", gap: 10 }}>
+    <section aria-label="MSME payments due" style={{ marginBottom: "1.5rem", background: "#FFFDF8", border: `1px solid ${C.line}`, borderRadius: 12, padding: "1rem 1.1rem", display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
         <b style={{ fontSize: "0.95rem", color: C.ink }}>MSME payments · section 43B(h)</b>
         <span style={{ fontSize: "0.78rem", color: C.muted }}>Pay by the date shown, or the expense counts only in the year you pay.</span>
@@ -32,7 +32,7 @@ export default function MsmePanel({ report, setupNeeded, marked }: { report: Msm
         {[
           { l: "Past the limit", v: report.overdue, bg: C.negSoft, fg: C.neg },
           { l: "Due in 7 days", v: report.dueSoon, bg: C.warnSoft, fg: C.warn },
-          { l: `Disallowed if unpaid on ${dt(report.fyEnd)}`, v: report.atRiskAtFyEnd, bg: "#F7F8FC", fg: C.ink },
+          { l: `Disallowed if unpaid on ${dt(report.fyEnd)}`, v: report.atRiskAtFyEnd, bg: "#F8F3E8", fg: C.ink },
         ].map(k => (
           <div key={k.l} style={{ flex: "1 1 160px", padding: "0.6rem 0.8rem", borderRadius: 10, background: k.bg }}>
             <div style={{ fontSize: "0.72rem", fontWeight: 700, color: C.muted }}>{k.l}</div>

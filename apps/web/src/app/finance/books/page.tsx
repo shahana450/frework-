@@ -22,9 +22,9 @@ type Journal = {
 };
 type Source = "chat" | "tally" | "manual";
 
-const BG = "#F5F6FA", CARD = "#FFFFFF", BORDER = "rgba(20,26,58,0.12)";
-const GOLD = "#232A63", GREEN = "#0B7A55", RED = "#C2321F", BLUE = "#1F5EFF", PURPLE = "#5B4BC4", AMBER = "#8A5A00";
-const TEXT = "#141A3A", MUTED = "rgba(20,26,58,0.75)";
+const BG = "#F4EFE4", CARD = "#FFFFFF", BORDER = "rgba(16,36,31,0.12)";
+const GOLD = "#12352D", GREEN = "#0B7A55", RED = "#B4321F", BLUE = "#12352D", PURPLE = "#5B4BC4", AMBER = "#9A6B22";
+const TEXT = "#10241F", MUTED = "rgba(16,36,31,0.75)";
 const MONO = "'IBM Plex Mono', 'Fira Code', monospace";
 const fmt = (n: number) => cur() + (n ?? 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -268,13 +268,13 @@ export default function BooksPage() {
     background: active ? `${color}22` : "#FFFFFF", border: `1px solid ${active ? color + "66" : BORDER}`,
     color: active ? color : MUTED, padding: "5px 12px", borderRadius: 7, cursor: "pointer", fontWeight: 600, fontSize: "0.78rem", fontFamily: "inherit", whiteSpace: "nowrap",
   });
-  const btn = (bg: string, fg = "#F5F6FA", disabled = false): React.CSSProperties => ({
+  const btn = (bg: string, fg = "#F4EFE4", disabled = false): React.CSSProperties => ({
     background: bg, color: fg, border: "none", borderRadius: 8, padding: "8px 16px", fontWeight: 700, fontSize: "0.8rem",
     cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1, fontFamily: "inherit", whiteSpace: "nowrap",
   });
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Manrope',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
       <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.6rem", height: 54, position: "sticky", top: 0, background: "rgba(255,255,255,0.97)", zIndex: 20, flexWrap: "wrap" }}>
         <Link href="/finance" style={{ color: GOLD, fontWeight: 800, textDecoration: "none" }}>FreWork</Link>
         <span style={{ color: MUTED }}>›</span>
@@ -284,7 +284,7 @@ export default function BooksPage() {
         {[["/finance/chat-book", "🤖 Chat entry"], ["/finance/ledger", "Ledger"], ["/finance/reports?tab=trial_balance", "Trial Balance"], ["/finance/reports?tab=profit_loss", "P&L"], ["/finance/reports?tab=balance_sheet", "Balance Sheet"]].map(([href, label]) => (
           <Link key={href} href={href} style={{ fontSize: "0.75rem", color: href.includes("chat") ? GOLD : MUTED, textDecoration: "none", padding: "4px 10px", border: `1px solid ${BORDER}`, borderRadius: 7 }}>{label}</Link>
         ))}
-        <select value={allYears ? "all" : fy?.id ?? ""} onChange={e => { if (e.target.value === "all") setAllYears(true); else { setAllYears(false); setFy(fys.find(f => f.id === e.target.value) ?? null); } }} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "5px 10px", borderRadius: 8, fontSize: "0.78rem", fontFamily: "inherit" }}>
+        <select value={allYears ? "all" : fy?.id ?? ""} onChange={e => { if (e.target.value === "all") setAllYears(true); else { setAllYears(false); setFy(fys.find(f => f.id === e.target.value) ?? null); } }} style={{ background: "#FFFDF8", border: `1px solid ${BORDER}`, color: TEXT, padding: "5px 10px", borderRadius: 8, fontSize: "0.78rem", fontFamily: "inherit" }}>
           <option value="all">All years</option>
           {fys.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
         </select>
@@ -295,7 +295,7 @@ export default function BooksPage() {
         {/* Tally: shared connection; settings live on the Tally page */}
         <TallyBar preferName={bizName} returnTo="/finance/books">
           <a href="/finance/tally?redirect=/finance/books" title="Bring Tally's vouchers into FreWork for analysis. Entries FreWork pushed to Tally are skipped." style={{ fontSize: "0.8rem", color: "#0F2B25", fontWeight: 700, textDecoration: "none", border: "1px solid #D8CDB4", borderRadius: 9, height: 34, padding: "0 12px", display: "flex", alignItems: "center" }}>⬇ Import from Tally</a>
-          <button onClick={() => push(pendingIds)} disabled={conn !== "connected" || pushing || !pendingIds.length} style={btn(GREEN, "#F5F6FA", conn !== "connected" || pushing || !pendingIds.length)}>
+          <button onClick={() => push(pendingIds)} disabled={conn !== "connected" || pushing || !pendingIds.length} style={btn(GREEN, "#F4EFE4", conn !== "connected" || pushing || !pendingIds.length)}>
             ⇪ Push all not-yet-pushed ({pendingIds.length})
           </button>
         </TallyBar>
@@ -315,16 +315,16 @@ export default function BooksPage() {
           <button style={chip(filter === "pending", AMBER)} onClick={() => setFilter("pending")}>Not in Tally ({counts.pending})</button>
           <button style={chip(filter === "pushed", GREEN)} onClick={() => setFilter("pushed")}>Pushed to Tally ({counts.pushed})</button>
           <div style={{ flex: 1 }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search entry no, narration, account…" style={{ width: 280, background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "7px 12px", borderRadius: 8, fontSize: "0.82rem", fontFamily: "inherit" }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search entry no, narration, account…" style={{ width: 280, background: "#FFFDF8", border: `1px solid ${BORDER}`, color: TEXT, padding: "7px 12px", borderRadius: 8, fontSize: "0.82rem", fontFamily: "inherit" }} />
         </div>
 
         {selected.size > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "rgba(31,94,255,0.08)", border: "1px solid rgba(31,94,255,0.25)", borderRadius: 10, padding: "0.55rem 0.9rem", fontSize: "0.82rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "rgba(18,53,45,0.08)", border: "1px solid rgba(18,53,45,0.25)", borderRadius: 10, padding: "0.55rem 0.9rem", fontSize: "0.82rem", flexWrap: "wrap" }}>
             <strong style={{ color: BLUE }}>{selected.size} selected</strong>
             {selectedTallyOrigin > 0 && <span style={{ color: AMBER }}>⚠ {selectedTallyOrigin} came from Tally — pushing them back will duplicate them in Tally.</span>}
             <div style={{ flex: 1 }} />
             <button onClick={() => setSelected(new Set())} style={btn("#FFFFFF", MUTED)}>Clear</button>
-            <button onClick={() => push([...selected])} disabled={conn !== "connected" || pushing} title={conn !== "connected" ? "Connect to Tally first" : ""} style={btn(GREEN, "#F5F6FA", conn !== "connected" || pushing)}>
+            <button onClick={() => push([...selected])} disabled={conn !== "connected" || pushing} title={conn !== "connected" ? "Connect to Tally first" : ""} style={btn(GREEN, "#F4EFE4", conn !== "connected" || pushing)}>
               {pushing ? "Pushing…" : `⇪ Push ${selected.size} to Tally`}
             </button>
           </div>
@@ -344,7 +344,7 @@ export default function BooksPage() {
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem", minWidth: 900 }}>
               <thead>
-                <tr style={{ background: "#FFFFFF", borderBottom: `1px solid ${BORDER}` }}>
+                <tr style={{ background: "#FFFDF8", borderBottom: `1px solid ${BORDER}` }}>
                   <th style={{ padding: "0.55rem 0.75rem", width: 30 }}>
                     <input type="checkbox" checked={allChecked} onChange={() => setSelected(allChecked ? new Set() : new Set(selectable.map(j => j.id)))} />
                   </th>
@@ -364,7 +364,7 @@ export default function BooksPage() {
                   const open = expanded === j.id;
                   return (
                     <Fragment key={j.id}>
-                      <tr onClick={() => setExpanded(open ? null : j.id)} style={{ borderBottom: `1px solid rgba(20,26,58,0.10)`, cursor: "pointer", background: p && "error" in p ? "rgba(194,50,31,0.05)" : open ? "#FFFFFF" : "transparent" }}>
+                      <tr onClick={() => setExpanded(open ? null : j.id)} style={{ borderBottom: `1px solid rgba(16,36,31,0.10)`, cursor: "pointer", background: p && "error" in p ? "rgba(194,50,31,0.05)" : open ? "#FFFFFF" : "transparent" }}>
                         <td style={{ padding: "0.5rem 0.75rem" }} onClick={e => e.stopPropagation()}>
                           <input type="checkbox" disabled={j.status !== "posted"} checked={selected.has(j.id)} onChange={() => setSelected(s => { const n = new Set(s); if (n.has(j.id)) n.delete(j.id); else n.add(j.id); return n; })} />
                         </td>
@@ -378,7 +378,7 @@ export default function BooksPage() {
                         <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: MONO, fontWeight: 600, whiteSpace: "nowrap" }}>{fmt(amountOf(j))}</td>
                         <td style={{ padding: "0.5rem 0.75rem" }}>
                           {src === "chat" ? <span style={{ fontSize: "0.68rem", fontWeight: 700, color: PURPLE, background: "rgba(91,75,196,0.12)", padding: "2px 7px", borderRadius: 5 }}>🤖 Chat</span>
-                            : src === "tally" ? <span style={{ fontSize: "0.68rem", fontWeight: 700, color: BLUE, background: "rgba(31,94,255,0.12)", padding: "2px 7px", borderRadius: 5 }}>From Tally</span>
+                            : src === "tally" ? <span style={{ fontSize: "0.68rem", fontWeight: 700, color: BLUE, background: "rgba(18,53,45,0.12)", padding: "2px 7px", borderRadius: 5 }}>From Tally</span>
                             : <span style={{ fontSize: "0.68rem", color: MUTED }}>Manual</span>}
                         </td>
                         <td style={{ padding: "0.5rem 0.75rem", whiteSpace: "nowrap" }}>
@@ -391,7 +391,7 @@ export default function BooksPage() {
                         </td>
                       </tr>
                       {open && (
-                        <tr style={{ background: "#FFFFFF", borderBottom: `1px solid ${BORDER}` }}>
+                        <tr style={{ background: "#FFFDF8", borderBottom: `1px solid ${BORDER}` }}>
                           <td />
                           <td colSpan={8} style={{ padding: "0.6rem 0.75rem 0.9rem" }}>
                             {p && "error" in p && <div style={{ color: RED, fontSize: "0.78rem", marginBottom: 8 }}>Tally said: {p.error}</div>}

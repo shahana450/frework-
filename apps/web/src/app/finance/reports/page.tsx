@@ -65,15 +65,15 @@ function SectionTable({ title, rows, drLabel = "Debit", crLabel = "Credit", netL
   const total = rows.reduce((s, r) => s + (r.dr - r.cr), 0);
   return (
     <div style={{ marginBottom: "1.5rem" }}>
-      <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, padding: "0.5rem 1rem", background: "#FFFFFF" }}>{title}</div>
+      <div style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, padding: "0.5rem 1rem", background: "#FFFDF8" }}>{title}</div>
       {rows.map(r => (
-        <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 1rem", borderTop: "1px solid rgba(20,26,58,0.08)", fontSize: "0.85rem" }}>
-          <Drill id={r.id} style={{ color: "rgba(20,26,58,0.95)" }}>{r.name}</Drill>
+        <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 1rem", borderTop: "1px solid rgba(16,36,31,0.08)", fontSize: "0.85rem" }}>
+          <Drill id={r.id} style={{ color: "rgba(16,36,31,0.95)" }}>{r.name}</Drill>
           <Drill id={r.id} style={{ fontVariantNumeric: "tabular-nums" }}>{signedMoney(/Assets|Expenses|Cost/i.test(title) ? r.dr - r.cr : r.cr - r.dr)}</Drill>
         </div>
       ))}
       {netLabel && netValue !== undefined && (
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "0.6rem 1rem", borderTop: "2px solid rgba(20,26,58,0.17)", fontWeight: 700, color: netColor ?? "#232A63" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "0.6rem 1rem", borderTop: "2px solid rgba(16,36,31,0.17)", fontWeight: 700, color: netColor ?? "#12352D" }}>
           <span>{netLabel}</span>
           <span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(Math.abs(netValue))}</span>
         </div>
@@ -86,14 +86,14 @@ function SectionTable({ title, rows, drLabel = "Debit", crLabel = "Credit", netL
 function Section({ s }: { s: StmtSection }) {
   return (
     <div style={{ marginBottom: "1.5rem" }}>
-      <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, padding: "0.5rem 1rem", background: "#FFFFFF" }}>{s.title}</div>
+      <div style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, padding: "0.5rem 1rem", background: "#FFFDF8" }}>{s.title}</div>
       {s.lines.map(l => (
-        <div key={l.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0.5rem 1rem", borderTop: "1px solid rgba(20,26,58,0.08)", fontSize: "0.85rem" }}>
-          <Drill id={l.id} style={{ color: "rgba(20,26,58,0.95)" }}>{l.name}{l.note && <span style={{ marginLeft: 8, fontSize: "0.72rem", color: "#8A5A00" }}>({l.note})</span>}</Drill>
-          <Drill id={l.id} style={{ fontVariantNumeric: "tabular-nums", color: l.amount < 0 ? "#C2321F" : undefined }}>{signedMoney(l.amount)}</Drill>
+        <div key={l.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0.5rem 1rem", borderTop: "1px solid rgba(16,36,31,0.08)", fontSize: "0.85rem" }}>
+          <Drill id={l.id} style={{ color: "rgba(16,36,31,0.95)" }}>{l.name}{l.note && <span style={{ marginLeft: 8, fontSize: "0.72rem", color: "#9A6B22" }}>({l.note})</span>}</Drill>
+          <Drill id={l.id} style={{ fontVariantNumeric: "tabular-nums", color: l.amount < 0 ? "#B4321F" : undefined }}>{signedMoney(l.amount)}</Drill>
         </div>
       ))}
-      <div style={{ display: "flex", justifyContent: "space-between", padding: "0.45rem 1rem", borderTop: "1px solid rgba(20,26,58,0.15)", fontSize: "0.82rem", fontWeight: 700 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", padding: "0.45rem 1rem", borderTop: "1px solid rgba(16,36,31,0.15)", fontSize: "0.82rem", fontWeight: 700 }}>
         <span>Total {s.title}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{signedMoney(s.total)}</span>
       </div>
     </div>
@@ -101,7 +101,7 @@ function Section({ s }: { s: StmtSection }) {
 }
 function FootingBanner({ problems }: { problems: string[] }) {
   if (!problems.length) return null;
-  return <div role="alert" style={{ margin: "0.75rem 1rem", padding: "0.75rem 1rem", borderRadius: 10, background: "#FDECEA", color: "#C2321F", fontSize: "0.85rem", fontWeight: 600 }}>⚠ This statement doesn't add up — {problems.join("; ")}. Please report this; don't rely on these figures.</div>;
+  return <div role="alert" style={{ margin: "0.75rem 1rem", padding: "0.75rem 1rem", borderRadius: 10, background: "#FDECEA", color: "#B4321F", fontSize: "0.85rem", fontWeight: 600 }}>⚠ This statement doesn't add up — {problems.join("; ")}. Please report this; don't rely on these figures.</div>;
 }
 
 export default function ReportsPage() {
@@ -180,16 +180,16 @@ export default function ReportsPage() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <style>{`.rp-drill{cursor:pointer}.rp-drill:hover{color:#232A63 !important;text-decoration:underline !important}`}</style>
-      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
-        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Reports</span>
+    <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <style>{`.rp-drill{cursor:pointer}.rp-drill:hover{color:#12352D !important;text-decoration:underline !important}`}</style>
+      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
+        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>Reports</span>
         <div style={{ flex: 1 }} />
         {financialYears.length > 0 && (
           <select value={fyId ?? ""} onChange={e => setFyId(e.target.value)}
-            style={{ background: "rgba(35,42,99,0.1)", border: "1px solid rgba(35,42,99,0.3)", color: "#141A3A", padding: "4px 10px", borderRadius: 6, fontSize: "0.85rem", cursor: "pointer" }}>
+            style={{ background: "rgba(18,53,45,0.1)", border: "1px solid rgba(18,53,45,0.3)", color: "#10241F", padding: "4px 10px", borderRadius: 6, fontSize: "0.85rem", cursor: "pointer" }}>
             {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
           </select>
         )}
@@ -207,36 +207,36 @@ export default function ReportsPage() {
             {xlBusy ? "Preparing…" : "⬇ Excel — all statements"}
           </button>
         )}
-        <button onClick={() => window.print()} title="Print, or choose 'Save as PDF' — the printout is the presented statement shown on screen" style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "#141A3A", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
+        <button onClick={() => window.print()} title="Print, or choose 'Save as PDF' — the printout is the presented statement shown on screen" style={{ background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.14)", color: "#10241F", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
           🖨 Print / PDF
         </button>
       </nav>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "2rem" }}>
         {/* Tab row */}
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2rem", borderBottom: "1px solid rgba(20,26,58,0.11)", paddingBottom: "0" }}>
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2rem", borderBottom: "1px solid rgba(16,36,31,0.11)", paddingBottom: "0" }}>
           {TABS.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
-              background: "none", border: "none", color: tab === t.key ? "#232A63" : "rgba(20,26,58,0.70)",
+              background: "none", border: "none", color: tab === t.key ? "#12352D" : "rgba(16,36,31,0.70)",
               padding: "0.6rem 1rem", cursor: "pointer", fontWeight: tab === t.key ? 700 : 400, fontSize: "0.9rem",
-              borderBottom: tab === t.key ? "2px solid #232A63" : "2px solid transparent",
+              borderBottom: tab === t.key ? "2px solid #12352D" : "2px solid transparent",
               marginBottom: "-1px",
             }}>{t.label}</button>
           ))}
         </div>
 
-        {error && <div style={{ color: "#C2321F", background: "rgba(194,50,31,0.08)", padding: "1rem", borderRadius: 8, marginBottom: "1rem" }}>{error}</div>}
+        {error && <div style={{ color: "#B4321F", background: "rgba(194,50,31,0.08)", padding: "1rem", borderRadius: 8, marginBottom: "1rem" }}>{error}</div>}
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(20,26,58,0.55)" }}>Calculating…</div>
+          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(16,36,31,0.55)" }}>Calculating…</div>
         ) : (
-          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.11)", borderRadius: 12, overflow: "hidden" }}>
             {/* Profit & Loss */}
             {tab === "profit_loss" && plData?.schedule3 && (
               <>
-                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(20,26,58,0.11)" }}>
+                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(16,36,31,0.11)" }}>
                   <div style={{ fontWeight: 800, fontSize: "1rem" }}>Statement of Profit and Loss</div>
-                  <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>For the year — FY {financialYears.find(f => f.id === fyId)?.label}</div>
+                  <div style={{ fontSize: "0.75rem", color: "rgba(16,36,31,0.65)", marginTop: "0.2rem" }}>For the year — FY {financialYears.find(f => f.id === fyId)?.label}</div>
                 </div>
                 {plData.presented && <FootingBanner problems={plData.presented.problems} />}
                 <Schedule3PLView s={plData.schedule3} />
@@ -244,27 +244,27 @@ export default function ReportsPage() {
             )}
             {tab === "profit_loss" && plData && !plData.schedule3 && (
               <>
-                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(20,26,58,0.11)" }}>
+                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(16,36,31,0.11)" }}>
                   <div style={{ fontWeight: 800, fontSize: "1rem" }}>Profit & Loss Statement</div>
-                  <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>For the period — Financial Year {financialYears.find(f => f.id === fyId)?.label}</div>
+                  <div style={{ fontSize: "0.75rem", color: "rgba(16,36,31,0.65)", marginTop: "0.2rem" }}>For the period — Financial Year {financialYears.find(f => f.id === fyId)?.label}</div>
                 </div>
                 {plData.presented && <FootingBanner problems={plData.presented.problems} />}
                 {plData.presented ? <><Section s={plData.presented.sections[0]} /><Section s={plData.presented.sections[1]} /></> : <><SectionTable title="Revenue / Sales" rows={plData.direct_income} /><SectionTable title="Direct Expenses (Cost of Goods Sold)" rows={plData.direct_expense} /></>}
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: "rgba(35,42,99,0.06)", fontWeight: 800, fontSize: "0.95rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: "rgba(18,53,45,0.06)", fontWeight: 800, fontSize: "0.95rem" }}>
                   <span>Gross Profit</span>
-                  <span style={{ color: plData.gross_profit >= 0 ? "#0B7A55" : "#C2321F", fontVariantNumeric: "tabular-nums" }}>
+                  <span style={{ color: plData.gross_profit >= 0 ? "#0B7A55" : "#B4321F", fontVariantNumeric: "tabular-nums" }}>
                     {signedMoney(plData.gross_profit)}
                   </span>
                 </div>
                 {plData.presented ? <><Section s={plData.presented.sections[2]} /><Section s={plData.presented.sections[3]} /></> : <><SectionTable title="Other Income" rows={plData.indirect_income} /><SectionTable title="Operating Expenses" rows={plData.indirect_expense} /></>}
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "1rem 1.5rem", background: "rgba(35,42,99,0.1)", fontWeight: 800, fontSize: "1.1rem", borderTop: "2px solid rgba(35,42,99,0.3)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "1rem 1.5rem", background: "rgba(18,53,45,0.1)", fontWeight: 800, fontSize: "1.1rem", borderTop: "2px solid rgba(18,53,45,0.3)" }}>
                   <span>Net {plData.net_profit >= 0 ? "Profit" : "Loss"}</span>
-                  <span style={{ color: plData.net_profit >= 0 ? "#0B7A55" : "#C2321F", fontVariantNumeric: "tabular-nums" }}>
+                  <span style={{ color: plData.net_profit >= 0 ? "#0B7A55" : "#B4321F", fontVariantNumeric: "tabular-nums" }}>
                     {signedMoney(plData.net_profit)}
                   </span>
                 </div>
                 {plData.total_income === 0 && plData.total_expense === 0 && (
-                  <div style={{ padding: "3rem", textAlign: "center", color: "rgba(20,26,58,0.55)", fontSize: "0.88rem" }}>
+                  <div style={{ padding: "3rem", textAlign: "center", color: "rgba(16,36,31,0.55)", fontSize: "0.88rem" }}>
                     No posted entries yet. Upload documents and accept journal entries to see your P&L.
                   </div>
                 )}
@@ -274,31 +274,31 @@ export default function ReportsPage() {
             {/* Balance Sheet */}
             {tab === "balance_sheet" && bsData && (
               <>
-                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(20,26,58,0.11)" }}>
+                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(16,36,31,0.11)" }}>
                   <div style={{ fontWeight: 800, fontSize: "1rem" }}>Balance Sheet</div>
-                  <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>As at end of FY {financialYears.find(f => f.id === fyId)?.label}</div>
+                  <div style={{ fontSize: "0.75rem", color: "rgba(16,36,31,0.65)", marginTop: "0.2rem" }}>As at end of FY {financialYears.find(f => f.id === fyId)?.label}</div>
                 </div>
                 {bsData.presented && <FootingBanner problems={bsData.presented.problems} />}
                 {bsData.schedule3 ? <Schedule3View s={bsData.schedule3} netProfit={bsData.net_profit} /> : <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
-                  <div style={{ borderRight: "1px solid rgba(20,26,58,0.11)" }}>
-                    <div style={{ padding: "0.6rem 1rem", fontSize: "0.75rem", fontWeight: 700, color: "#1F5EFF", textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(31,94,255,0.05)" }}>Assets</div>
+                  <div style={{ borderRight: "1px solid rgba(16,36,31,0.11)" }}>
+                    <div style={{ padding: "0.6rem 1rem", fontSize: "0.75rem", fontWeight: 700, color: "#12352D", textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(18,53,45,0.05)" }}>Assets</div>
                     {bsData.presented ? bsData.presented.assets.map(s => <Section key={s.key} s={s} />) : <><SectionTable title="Current Assets" rows={bsData.current_assets} /><SectionTable title="Fixed Assets" rows={bsData.fixed_assets} /></>}
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: "rgba(31,94,255,0.08)", fontWeight: 800 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: "rgba(18,53,45,0.08)", fontWeight: 800 }}>
                       <span>Total Assets</span>
-                      <span style={{ color: "#1F5EFF", fontVariantNumeric: "tabular-nums" }}>{signedMoney(bsData.presented?.totalAssets ?? bsData.total_assets)}</span>
+                      <span style={{ color: "#12352D", fontVariantNumeric: "tabular-nums" }}>{signedMoney(bsData.presented?.totalAssets ?? bsData.total_assets)}</span>
                     </div>
                   </div>
                   <div>
-                    <div style={{ padding: "0.6rem 1rem", fontSize: "0.75rem", fontWeight: 700, color: "#C2321F", textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(194,50,31,0.05)" }}>Liabilities & Capital</div>
+                    <div style={{ padding: "0.6rem 1rem", fontSize: "0.75rem", fontWeight: 700, color: "#B4321F", textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(194,50,31,0.05)" }}>Liabilities & Capital</div>
                     {bsData.presented ? bsData.presented.liabilities.map(s => <Section key={s.key} s={s} />) : <><SectionTable title="Current Liabilities" rows={bsData.current_liabilities} /><SectionTable title="Long-term Liabilities" rows={bsData.long_term_liabilities} /><SectionTable title="Capital & Equity" rows={bsData.equity} /></>}
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 1rem", background: "rgba(194,50,31,0.08)", fontWeight: 800 }}>
                       <span>Total Liabilities & Capital</span>
-                      <span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>{signedMoney(bsData.presented?.totalLiabilities ?? bsData.total_liabilities_equity)}</span>
+                      <span style={{ color: "#B4321F", fontVariantNumeric: "tabular-nums" }}>{signedMoney(bsData.presented?.totalLiabilities ?? bsData.total_liabilities_equity)}</span>
                     </div>
                   </div>
                 </div>}
                 {bsData.total_assets === 0 && (
-                  <div style={{ padding: "3rem", textAlign: "center", color: "rgba(20,26,58,0.55)", fontSize: "0.88rem" }}>No posted entries yet.</div>
+                  <div style={{ padding: "3rem", textAlign: "center", color: "rgba(16,36,31,0.55)", fontSize: "0.88rem" }}>No posted entries yet.</div>
                 )}
               </>
             )}
@@ -306,15 +306,15 @@ export default function ReportsPage() {
             {/* Trial Balance */}
             {tab === "trial_balance" && tbData && (
               <>
-                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(20,26,58,0.11)" }}>
+                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(16,36,31,0.11)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: "1rem" }}>Trial Balance</div>
-                      <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>FY {financialYears.find(f => f.id === fyId)?.label} · click an account to open its ledger</div>
+                      <div style={{ fontSize: "0.75rem", color: "rgba(16,36,31,0.65)", marginTop: "0.2rem" }}>FY {financialYears.find(f => f.id === fyId)?.label} · click an account to open its ledger</div>
                     </div>
-                    <div role="radiogroup" aria-label="Trial balance view" style={{ display: "flex", border: "1px solid rgba(20,26,58,0.15)", borderRadius: 8, overflow: "hidden" }}>
+                    <div role="radiogroup" aria-label="Trial balance view" style={{ display: "flex", border: "1px solid rgba(16,36,31,0.15)", borderRadius: 8, overflow: "hidden" }}>
                       {([[false, "Closing balances"], [true, "Opening & transactions"]] as const).map(([v, l]) => (
-                        <button key={l} role="radio" aria-checked={tbDetail === v} onClick={() => setTbDetail(v)} style={{ border: "none", padding: "6px 12px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", background: tbDetail === v ? "#232A63" : "#FFFFFF", color: tbDetail === v ? "#FFFFFF" : "rgba(20,26,58,0.75)" }}>{l}</button>
+                        <button key={l} role="radio" aria-checked={tbDetail === v} onClick={() => setTbDetail(v)} style={{ border: "none", padding: "6px 12px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", background: tbDetail === v ? "#12352D" : "#FFFFFF", color: tbDetail === v ? "#FFFFFF" : "rgba(16,36,31,0.75)" }}>{l}</button>
                       ))}
                     </div>
                   </div>
@@ -322,41 +322,41 @@ export default function ReportsPage() {
                 {tbDetail ? <TBDetail data={tbData} /> : <>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ background: "#FFFFFF" }}>
+                    <tr style={{ background: "#FFFDF8" }}>
                       {["Code", "Account Name", "Debit (" + cur() + ")", "Credit (" + cur() + ")"].map(h => (
-                        <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h.includes(cur()) ? "right" : "left", fontSize: "0.7rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
+                        <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h.includes(cur()) ? "right" : "left", fontSize: "0.7rem", color: "rgba(16,36,31,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {tbData.accounts.map(a => (
-                      <tr key={a.id ?? a.name} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
-                        <td style={{ padding: "0.55rem 1rem", fontSize: "0.78rem", fontFamily: "monospace", color: "rgba(20,26,58,0.65)" }}>{a.code}</td>
+                      <tr key={a.id ?? a.name} style={{ borderTop: "1px solid rgba(16,36,31,0.08)" }}>
+                        <td style={{ padding: "0.55rem 1rem", fontSize: "0.78rem", fontFamily: "monospace", color: "rgba(16,36,31,0.65)" }}>{a.code}</td>
                         <td style={{ padding: "0.55rem 1rem", fontSize: "0.85rem" }}><Drill id={a.id}>{a.name}</Drill></td>
-                        <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", color: a.dr > 0 ? "#141A3A" : "rgba(20,26,58,0.35)" }}>
+                        <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", color: a.dr > 0 ? "#10241F" : "rgba(16,36,31,0.35)" }}>
                           {a.dr > 0 ? <Drill id={a.id}>{fmt(a.dr)}</Drill> : "—"}
                         </td>
-                        <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", color: a.cr > 0 ? "#141A3A" : "rgba(20,26,58,0.35)" }}>
+                        <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", color: a.cr > 0 ? "#10241F" : "rgba(16,36,31,0.35)" }}>
                           {a.cr > 0 ? <Drill id={a.id}>{fmt(a.cr)}</Drill> : "—"}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr style={{ borderTop: "2px solid rgba(35,42,99,0.3)", background: "rgba(35,42,99,0.06)" }}>
+                    <tr style={{ borderTop: "2px solid rgba(18,53,45,0.3)", background: "rgba(18,53,45,0.06)" }}>
                       <td colSpan={2} style={{ padding: "0.75rem 1rem", fontWeight: 800, fontSize: "0.9rem" }}>Grand Total</td>
-                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#232A63" }}>{cur()}{fmt(tbData.total_dr)}</td>
-                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#232A63" }}>{cur()}{fmt(tbData.total_cr)}</td>
+                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#12352D" }}>{cur()}{fmt(tbData.total_dr)}</td>
+                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#12352D" }}>{cur()}{fmt(tbData.total_cr)}</td>
                     </tr>
                     <tr>
-                      <td colSpan={4} style={{ padding: "0.5rem 1rem", textAlign: "right", fontSize: "0.78rem", color: Math.abs(tbData.total_dr - tbData.total_cr) < 0.01 ? "#0B7A55" : "#C2321F" }}>
+                      <td colSpan={4} style={{ padding: "0.5rem 1rem", textAlign: "right", fontSize: "0.78rem", color: Math.abs(tbData.total_dr - tbData.total_cr) < 0.01 ? "#0B7A55" : "#B4321F" }}>
                         {Math.abs(tbData.total_dr - tbData.total_cr) < 0.01 ? "✓ Trial Balance is balanced" : `⚠ Difference: ${cur()}${fmt(Math.abs(tbData.total_dr - tbData.total_cr))}`}
                       </td>
                     </tr>
                   </tfoot>
                 </table></>}
                 {tbData.accounts.length === 0 && (
-                  <div style={{ padding: "3rem", textAlign: "center", color: "rgba(20,26,58,0.55)", fontSize: "0.88rem" }}>No posted entries yet.</div>
+                  <div style={{ padding: "3rem", textAlign: "center", color: "rgba(16,36,31,0.55)", fontSize: "0.88rem" }}>No posted entries yet.</div>
                 )}
               </>
             )}
@@ -373,26 +373,26 @@ export default function ReportsPage() {
 }
 
 const S3CSS = `
-        .s3-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid rgba(20,26,58,0.08);font-size:12.5px;color:rgba(20,26,58,0.62)}
-        .s3-bar button{border:1px solid rgba(35,42,99,0.22);background:#FFFFFF;color:#232A63;font-weight:700;font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer}
+        .s3-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid rgba(16,36,31,0.08);font-size:12.5px;color:rgba(16,36,31,0.62)}
+        .s3-bar button{border:1px solid rgba(18,53,45,0.22);background:#FFFFFF;color:#12352D;font-weight:700;font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer}
         .s3 table{width:100%;border-collapse:collapse}
-        .s3 th{padding:10px 20px;text-align:left;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(20,26,58,0.6);font-weight:700;border-bottom:1px solid rgba(20,26,58,0.12);background:#FAFBFD}
+        .s3 th{padding:10px 20px;text-align:left;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(16,36,31,0.6);font-weight:700;border-bottom:1px solid rgba(16,36,31,0.12);background:#FAFBFD}
         .s3 th:nth-child(2){text-align:center;width:70px}.s3 th:nth-child(3){text-align:right;width:190px}
         .s3 td{padding:9px 20px;font-size:14px}
         .s3-num{text-align:right;white-space:nowrap}
-        .s3-part td{padding:18px 20px 8px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#232A63}
+        .s3-part td{padding:18px 20px 8px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#12352D}
         .s3-roman{display:inline-block;min-width:26px;color:#8A93C8}
-        .s3-block td{font-weight:700;color:#141A3A;padding-left:46px;background:#F7F8FC;border-top:1px solid rgba(20,26,58,0.06)}
-        .s3-sub{color:rgba(20,26,58,0.6)}
-        .s3-head{cursor:pointer;border-top:1px solid rgba(20,26,58,0.06)}
+        .s3-block td{font-weight:700;color:#10241F;padding-left:46px;background:#F8F3E8;border-top:1px solid rgba(16,36,31,0.06)}
+        .s3-sub{color:rgba(16,36,31,0.6)}
+        .s3-head{cursor:pointer;border-top:1px solid rgba(16,36,31,0.06)}
         .s3-head td:first-child{padding-left:66px}
         .s3-head:hover,.s3-head.on{background:#EEF0FA}
         .s3-caret{display:inline-block;width:16px;margin-left:-18px;color:#8A93C8;font-size:11px}
-        .s3-note{text-align:center;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;color:#232A63}
-        .s3-line td{font-size:13px;padding-top:6px;padding-bottom:6px;background:#FCFCFE;color:rgba(20,26,58,0.85)}
+        .s3-note{text-align:center;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;color:#12352D}
+        .s3-line td{font-size:13px;padding-top:6px;padding-bottom:6px;background:#FCFCFE;color:rgba(16,36,31,0.85)}
         .s3-line td:first-child{padding-left:90px}
-        .s3-flag{margin-left:8px;font-size:11px;color:#8A5A00;background:#FFF4DB;padding:1px 6px;border-radius:5px}
-        .s3-total td{font-weight:800;border-top:2px solid #232A63;border-bottom:3px double #232A63;background:#EEF0FA;padding-top:12px;padding-bottom:12px}
+        .s3-flag{margin-left:8px;font-size:11px;color:#9A6B22;background:#FFF4DB;padding:1px 6px;border-radius:5px}
+        .s3-total td{font-weight:800;border-top:2px solid #12352D;border-bottom:3px double #12352D;background:#EEF0FA;padding-top:12px;padding-bottom:12px}
         @media(max-width:640px){.s3 td{padding-left:12px;padding-right:12px}.s3-block td{padding-left:20px}.s3-head td:first-child{padding-left:34px}.s3-line td:first-child{padding-left:48px}.s3 th:nth-child(3){width:auto}}
         @media print{.s3-bar{display:none}}
 `;
@@ -422,7 +422,7 @@ function Schedule3PLView({ s }: { s: Schedule3PL }) {
   const heads = [s.revenue, s.otherIncome, ...s.expenses, s.tax].filter((x): x is S3Head => !!x);
   const [open, setOpen] = useState<Set<number>>(new Set());
   const toggle = (n: number) => setOpen(o => { const x = new Set(o); if (x.has(n)) x.delete(n); else x.add(n); return x; });
-  const amt = (n: number, strong = false) => <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: strong ? 800 : 600, color: n < 0 ? "#C2321F" : "#141A3A" }}>{signedMoney(n)}</span>;
+  const amt = (n: number, strong = false) => <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: strong ? 800 : 600, color: n < 0 ? "#B4321F" : "#10241F" }}>{signedMoney(n)}</span>;
   const head = (h: S3Head | null, prefix: string) => h ? <S3HeadRows key={h.key} h={h} prefix={prefix} open={open.has(h.note)} toggle={() => toggle(h.note)} amt={amt} /> : null;
   const sumRow = (roman: string, label: string, n: number, cls = "s3-block") => <tr className={cls}><td><span className="s3-roman">{roman}</span>{label}</td><td /><td className="s3-num">{amt(n, cls === "s3-total")}</td></tr>;
   return (
@@ -458,7 +458,7 @@ function Schedule3View({ s, netProfit }: { s: Schedule3BS; netProfit: number }) 
   const [open, setOpen] = useState<Set<number>>(new Set());
   const allNotes = [...s.equityLiabilities, ...s.assets].flatMap(b => b.heads.map(h => h.note));
   const toggle = (n: number) => setOpen(o => { const x = new Set(o); if (x.has(n)) x.delete(n); else x.add(n); return x; });
-  const amt = (n: number, strong = false) => <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: strong ? 800 : 600, color: n < 0 ? "#C2321F" : "#141A3A" }}>{signedMoney(n)}</span>;
+  const amt = (n: number, strong = false) => <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: strong ? 800 : 600, color: n < 0 ? "#B4321F" : "#10241F" }}>{signedMoney(n)}</span>;
   const part = (title: string, blocks: Schedule3BS["assets"], total: number, i: number) => (
     <Fragment key={title}>
       <tr className="s3-part"><td colSpan={3}><span className="s3-roman">{ROMAN[i]}</span>{title}</td></tr>
@@ -502,25 +502,25 @@ function Schedule3View({ s, netProfit }: { s: Schedule3BS; netProfit: number }) 
           </tbody>
         </table>
       </div>
-      <div style={{ padding: "10px 20px 0", fontSize: 12, color: "rgba(20,26,58,0.6)" }}>Reserves and surplus include the {netProfit >= 0 ? "profit" : "loss"} for the year of {signedMoney(netProfit)}.{Math.abs(s.totalEL - s.totalAssets) < 0.01 ? " ✓ Balanced." : ""}</div>
+      <div style={{ padding: "10px 20px 0", fontSize: 12, color: "rgba(16,36,31,0.6)" }}>Reserves and surplus include the {netProfit >= 0 ? "profit" : "loss"} for the year of {signedMoney(netProfit)}.{Math.abs(s.totalEL - s.totalAssets) < 0.01 ? " ✓ Balanced." : ""}</div>
     </div>
   );
 }
 
 // Trial balance with opening balance, this period's debits and credits, and closing balance (Dr / Cr)
 function TBDetail({ data }: { data: TBData }) {
-  const drcr = (n: number) => Math.abs(n) < 0.005 ? "—" : <>{fmt(n)} <span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.55)" }}>{n > 0 ? "Dr" : "Cr"}</span></>;
+  const drcr = (n: number) => Math.abs(n) < 0.005 ? "—" : <>{fmt(n)} <span style={{ fontSize: "0.68rem", color: "rgba(16,36,31,0.55)" }}>{n > 0 ? "Dr" : "Cr"}</span></>;
   const tot = data.accounts.reduce((t, a) => ({ op: t.op + (a.opening ?? 0), dr: t.dr + (a.period_dr ?? 0), cr: t.cr + (a.period_cr ?? 0), cl: t.cl + (a.dr - a.cr) }), { op: 0, dr: 0, cr: 0, cl: 0 });
   const td: React.CSSProperties = { padding: "0.55rem 0.8rem", textAlign: "right", fontSize: "0.83rem", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" };
   return (
     <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
         <thead>
-          <tr>{["Account", "Opening", "Debit", "Credit", "Closing"].map(h => <th key={h} style={{ padding: "0.6rem 0.8rem", textAlign: h === "Account" ? "left" : "right", fontSize: "0.7rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>)}</tr>
+          <tr>{["Account", "Opening", "Debit", "Credit", "Closing"].map(h => <th key={h} style={{ padding: "0.6rem 0.8rem", textAlign: h === "Account" ? "left" : "right", fontSize: "0.7rem", color: "rgba(16,36,31,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>)}</tr>
         </thead>
         <tbody>
           {data.accounts.map(a => (
-            <tr key={a.id ?? a.name} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
+            <tr key={a.id ?? a.name} style={{ borderTop: "1px solid rgba(16,36,31,0.08)" }}>
               <td style={{ padding: "0.55rem 0.8rem", fontSize: "0.85rem" }}><Drill id={a.id}>{a.name}</Drill></td>
               <td style={td}><Drill id={a.id}>{drcr(a.opening ?? 0)}</Drill></td>
               <td style={td}><Drill id={a.id}>{a.period_dr ? fmt(a.period_dr) : "—"}</Drill></td>
@@ -530,7 +530,7 @@ function TBDetail({ data }: { data: TBData }) {
           ))}
         </tbody>
         <tfoot>
-          <tr style={{ borderTop: "2px solid rgba(35,42,99,0.3)", background: "rgba(35,42,99,0.06)", fontWeight: 800 }}>
+          <tr style={{ borderTop: "2px solid rgba(18,53,45,0.3)", background: "rgba(18,53,45,0.06)", fontWeight: 800 }}>
             <td style={{ padding: "0.75rem 0.8rem" }}>Total</td>
             <td style={td}>{drcr(tot.op)}</td><td style={td}>{fmt(tot.dr)}</td><td style={td}>{fmt(tot.cr)}</td><td style={td}>{drcr(tot.cl)}</td>
           </tr>
@@ -555,14 +555,14 @@ function CashFlowStatement({ bizId, from, to }: { bizId: string | null; from: st
       .then(setCf).catch(e => setErr(e instanceof Error ? e.message : "We couldn't load your cash flow."));
   }, [bizId, from, to]);
 
-  if (err) return <div style={{ padding: "2rem", color: "#C2321F" }}>{err}</div>;
-  if (!cf) return <div style={{ padding: "3rem", textAlign: "center", color: "rgba(20,26,58,0.55)" }}>Calculating…</div>;
+  if (err) return <div style={{ padding: "2rem", color: "#B4321F" }}>{err}</div>;
+  if (!cf) return <div style={{ padding: "3rem", textAlign: "center", color: "rgba(16,36,31,0.55)" }}>Calculating…</div>;
 
   const money = (n: number) => `${n < 0 ? "−" : ""}${cur()}${fmt(Math.abs(n))}`;
   const row = (label: string, value: number, opts: { indent?: boolean; bold?: boolean; key?: string } = {}) => (
-    <tr key={opts.key ?? label} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
-      <td style={{ padding: `0.5rem ${opts.indent ? "2rem" : "1rem"}`, fontSize: "0.85rem", fontWeight: opts.bold ? 800 : 400, color: opts.bold ? "#141A3A" : "rgba(20,26,58,0.97)" }}>{label}</td>
-      <td style={{ padding: "0.5rem 1rem", textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: opts.bold ? 800 : 400, color: value < 0 ? "#C2321F" : value > 0 ? "#141A3A" : "rgba(20,26,58,0.55)" }}>{money(value)}</td>
+    <tr key={opts.key ?? label} style={{ borderTop: "1px solid rgba(16,36,31,0.08)" }}>
+      <td style={{ padding: `0.5rem ${opts.indent ? "2rem" : "1rem"}`, fontSize: "0.85rem", fontWeight: opts.bold ? 800 : 400, color: opts.bold ? "#10241F" : "rgba(16,36,31,0.97)" }}>{label}</td>
+      <td style={{ padding: "0.5rem 1rem", textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: opts.bold ? 800 : 400, color: value < 0 ? "#B4321F" : value > 0 ? "#10241F" : "rgba(16,36,31,0.55)" }}>{money(value)}</td>
     </tr>
   );
   const sections: { key: CF["items"][number]["section"]; title: string; total: number }[] = [
@@ -572,16 +572,16 @@ function CashFlowStatement({ bizId, from, to }: { bizId: string | null; from: st
   ];
   return (
     <>
-      <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(20,26,58,0.11)" }}>
+      <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(16,36,31,0.11)" }}>
         <div style={{ fontWeight: 800, fontSize: "1rem" }}>Cash Flow Statement</div>
-        <div style={{ fontSize: "0.75rem", color: "rgba(20,26,58,0.65)", marginTop: "0.2rem" }}>{from} to {to} · direct method, from your cash &amp; bank ledgers</div>
+        <div style={{ fontSize: "0.75rem", color: "rgba(16,36,31,0.65)", marginTop: "0.2rem" }}>{from} to {to} · direct method, from your cash &amp; bank ledgers</div>
       </div>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <tbody>
           {row("Opening cash & bank balance", cf.opening, { bold: true })}
           {sections.map(s => (
             <Fragment key={s.key}>
-              <tr><td colSpan={2} style={{ padding: "0.7rem 1rem 0.3rem", fontSize: "0.68rem", fontWeight: 700, color: "#232A63", textTransform: "uppercase", letterSpacing: "0.1em" }}>{s.title}</td></tr>
+              <tr><td colSpan={2} style={{ padding: "0.7rem 1rem 0.3rem", fontSize: "0.68rem", fontWeight: 700, color: "#12352D", textTransform: "uppercase", letterSpacing: "0.1em" }}>{s.title}</td></tr>
               {cf.items.filter(i => i.section === s.key).map(i => row(i.amount >= 0 ? `Received — ${i.name}` : `Paid — ${i.name}`, i.amount, { indent: true, key: `${s.key}-${i.name}` }))}
               {row(`Net cash from ${s.title.toLowerCase()}`, s.total, { bold: true, key: `${s.key}-total` })}
             </Fragment>
@@ -590,7 +590,7 @@ function CashFlowStatement({ bizId, from, to }: { bizId: string | null; from: st
           {row("Closing cash & bank balance", cf.closing, { bold: true })}
         </tbody>
       </table>
-      {cf.items.length === 0 && <div style={{ padding: "2rem", textAlign: "center", color: "rgba(20,26,58,0.55)", fontSize: "0.88rem" }}>No cash or bank movements in this period.</div>}
+      {cf.items.length === 0 && <div style={{ padding: "2rem", textAlign: "center", color: "rgba(16,36,31,0.55)", fontSize: "0.88rem" }}>No cash or bank movements in this period.</div>}
     </>
   );
 }

@@ -14,14 +14,14 @@ type Item = {
   status: string; notes: string | null; ai_summary: string | null; created_at: string;
 };
 
-const C = { bg: "#F5F6FA", surface: "#FFFFFF", line: "#E1E4EE", strong: "#C9CEDF", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", soft: "#E6E8F4", gold: "#C9A24A", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB" };
+const C = { bg: "#F4EFE4", surface: "#FFFFFF", line: "#E1E4EE", strong: "#C9CEDF", ink: "#10241F", muted: "#6B7570", primary: "#12352D", soft: "#E6DFD0", gold: "#C9A24A", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#B4321F", negSoft: "#FDECEA", warn: "#9A6B22", warnSoft: "#FFF4DB" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const ICON: Record<RackKey, string> = { gst: "🧾", income_tax: "🏛", tds: "🔖", notices: "📮", bank: "🏦", bills: "📄", payroll: "👥", registrations: "📜", others: "🗂" };
 // Each rack has its own colour: icon tile, active card and count badge
 const TINT: Record<RackKey | "all", { c: string; b: string }> = {
-  all: { c: "#232A63", b: "#E6E8F4" }, gst: { c: "#0B7A55", b: "#E3F6EE" }, income_tax: { c: "#1F5EFF", b: "#EAF2FF" }, tds: { c: "#C2410C", b: "#FFF1E8" },
-  notices: { c: "#C2321F", b: "#FDECEA" }, bank: { c: "#0E7490", b: "#E0F5F9" }, bills: { c: "#7C3AED", b: "#F1EBFE" }, payroll: { c: "#B45309", b: "#FEF3E2" },
-  registrations: { c: "#8A5A00", b: "#FFF4DB" }, others: { c: "#5A6080", b: "#EEF0F5" },
+  all: { c: "#12352D", b: "#E6DFD0" }, gst: { c: "#0B7A55", b: "#E3F6EE" }, income_tax: { c: "#12352D", b: "#EFE6D3" }, tds: { c: "#C2410C", b: "#FFF1E8" },
+  notices: { c: "#B4321F", b: "#FDECEA" }, bank: { c: "#0E7490", b: "#E0F5F9" }, bills: { c: "#7C3AED", b: "#F1EBFE" }, payroll: { c: "#B45309", b: "#FEF3E2" },
+  registrations: { c: "#9A6B22", b: "#FFF4DB" }, others: { c: "#6B7570", b: "#EEF0F5" },
 };
 const MONTHS = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
 const SOURCE: Record<string, string> = { upload: "Uploaded", frebook: "From FreBook", statement: "Bank statement", gstr1: "Auto-filed", system: "Auto-filed" };
@@ -133,11 +133,11 @@ export default function ShelfPage() {
   const thisMonth = (items ?? []).filter(i => i.created_at.slice(0, 7) === today().slice(0, 7)).length;
   const kind = (it: Item) => {
     const n = (it.file_name ?? it.mime ?? "").toLowerCase();
-    if (/pdf/.test(n)) return { t: "PDF", c: "#C2321F", b: "#FDECEA" };
-    if (/png|jpe?g|webp|heic|image/.test(n)) return { t: "IMG", c: "#1F5EFF", b: "#EAF2FF" };
+    if (/pdf/.test(n)) return { t: "PDF", c: "#B4321F", b: "#FDECEA" };
+    if (/png|jpe?g|webp|heic|image/.test(n)) return { t: "IMG", c: "#12352D", b: "#EFE6D3" };
     if (/xls|csv|sheet/.test(n)) return { t: "XLS", c: "#0B7A55", b: "#E3F6EE" };
     if (/doc|word/.test(n)) return { t: "DOC", c: "#3B4BC4", b: "#ECEEFB" };
-    if (/zip/.test(n)) return { t: "ZIP", c: "#8A5A00", b: "#FFF4DB" };
+    if (/zip/.test(n)) return { t: "ZIP", c: "#9A6B22", b: "#FFF4DB" };
     return { t: "FILE", c: C.muted, b: C.soft };
   };
 
@@ -157,7 +157,7 @@ export default function ShelfPage() {
         .sh-nav:hover{background:${C.bg}}
         .sh-nav[aria-pressed=true]{background:${C.soft}}
         .sh-row{transition:background .12s}
-        .sh-row:hover{background:#FAFBFE}
+        .sh-row:hover{background:#F8F3E8}
         .sh-row .sh-acts{opacity:.55;transition:opacity .12s}
         .sh-row:hover .sh-acts,.sh-row:focus-within .sh-acts{opacity:1}
         .sh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
@@ -177,7 +177,7 @@ export default function ShelfPage() {
 
       {/* Drop anywhere: a full-page target while dragging */}
       {drag && (
-        <div aria-hidden="true" style={{ position: "fixed", inset: 12, zIndex: 60, borderRadius: 24, border: `3px dashed ${C.gold}`, background: "rgba(35,42,99,0.78)", display: "grid", placeItems: "center", color: "#FFFFFF", pointerEvents: "none" }}>
+        <div aria-hidden="true" style={{ position: "fixed", inset: 12, zIndex: 60, borderRadius: 24, border: `3px dashed ${C.gold}`, background: "rgba(18,53,45,0.78)", display: "grid", placeItems: "center", color: "#FFFFFF", pointerEvents: "none" }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontFamily: SERIF, fontSize: 34 }}>Drop to file them</div>
             <div style={{ marginTop: 6, color: "#C9CEEA" }}>{uploadRack === "auto" ? "The AI reads each one and picks the rack and year" : `Into ${RACKS.find(r => r.key === uploadRack)?.label}`}</div>
@@ -199,7 +199,7 @@ export default function ShelfPage() {
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" style={{ position: "absolute", left: 13, top: 12 }}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
             <input id="sh-search" value={q} onChange={e => setQ(e.target.value)} placeholder={india ? "Search title, ARN, DIN, notice no…" : "Search title, reference, notice no…"} aria-label="Search the shelf" style={{ width: "100%", boxSizing: "border-box", height: 40, borderRadius: 12, border: `1px solid ${C.line}`, padding: "0 14px 0 38px", fontSize: 14, background: C.surface, color: C.ink }} />
           </div>
-          <div style={{ display: "flex", alignItems: "stretch", borderRadius: 12, overflow: "hidden", boxShadow: "0 8px 20px -12px rgba(35,42,99,.6)" }}>
+          <div style={{ display: "flex", alignItems: "stretch", borderRadius: 12, overflow: "hidden", boxShadow: "0 8px 20px -12px rgba(18,53,45,.6)" }}>
             <button onClick={() => fileRef.current?.click()} disabled={!bizId || !!setup} style={{ height: 40, padding: "0 16px", border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
               Upload

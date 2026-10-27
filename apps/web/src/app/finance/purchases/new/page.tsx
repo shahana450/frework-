@@ -144,26 +144,26 @@ export default function NewPurchaseBillPage() {
     router.push("/finance/journals");
   }
 
-  const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
-  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
+  const inputStyle = { background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.17)", color: "#10241F", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
+  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
-        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>New Purchase Bill</span>
+    <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
+        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>New Purchase Bill</span>
         <div style={{ flex: 1 }} />
-        <button onClick={() => handleSubmit("draft")} disabled={saving} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 16px", borderRadius: 8, cursor: "pointer", fontSize: "0.85rem" }}>Save Draft</button>
-        <button onClick={() => handleSubmit("post")} disabled={saving} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "7px 20px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>Post Bill</button>
+        <button onClick={() => handleSubmit("draft")} disabled={saving} style={{ background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.17)", color: "#10241F", padding: "7px 16px", borderRadius: 8, cursor: "pointer", fontSize: "0.85rem" }}>Save Draft</button>
+        <button onClick={() => handleSubmit("post")} disabled={saving} style={{ background: "#12352D", border: "none", color: "#F4EFE4", padding: "7px 20px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>Post Bill</button>
       </nav>
 
       <div style={{ maxWidth: 980, margin: "0 auto", padding: "2rem" }}>
         <h1 style={{ margin: "0 0 1.5rem", fontSize: "1.3rem", fontWeight: 800 }}>New Purchase Bill</h1>
 
-        {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#C2321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
+        {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#B4321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
 
-        <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem", marginBottom: "1rem" }}>
+        <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem", marginBottom: "1rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
             <div><label style={labelStyle}>Our Bill No</label><input value={billNo} onChange={e => setBillNo(e.target.value)} style={inputStyle} /></div>
             <div><label style={labelStyle}>Vendor Bill No (optional)</label><input value={vendorBillNo} onChange={e => setVendorBillNo(e.target.value)} placeholder="Vendor's invoice number" style={inputStyle} /></div>
@@ -208,22 +208,22 @@ export default function NewPurchaseBillPage() {
         </div>
 
         {/* Line Items */}
-        <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, overflow: "hidden", marginBottom: "1rem" }}>
-          <div style={{ padding: "0.85rem 1.25rem", borderBottom: "1px solid rgba(20,26,58,0.08)", fontWeight: 700, fontSize: "0.88rem" }}>
-            Items / Services {isIGST && <span style={{ marginLeft: "0.5rem", fontSize: "0.7rem", background: "rgba(35,42,99,0.1)", color: "#232A63", padding: "2px 8px", borderRadius: 10 }}>IGST (inter-state)</span>}
+        <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, overflow: "hidden", marginBottom: "1rem" }}>
+          <div style={{ padding: "0.85rem 1.25rem", borderBottom: "1px solid rgba(16,36,31,0.08)", fontWeight: 700, fontSize: "0.88rem" }}>
+            Items / Services {isIGST && <span style={{ marginLeft: "0.5rem", fontSize: "0.7rem", background: "rgba(18,53,45,0.1)", color: "#12352D", padding: "2px 8px", borderRadius: 10 }}>IGST (inter-state)</span>}
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#FFFFFF" }}>
+                <tr style={{ background: "#FFFDF8" }}>
                   {["Description", "HSN/SAC", "Qty", "Rate (" + cur() + ")", "GST %", "Base (" + cur() + ")", isIGST ? "IGST (" + cur() + ")" : "CGST+SGST (" + cur() + ")", ""].map(h => (
-                    <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: h.includes(cur()) || h.includes("%") ? "right" : "left", fontSize: "0.65rem", color: "rgba(20,26,58,0.60)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>{h}</th>
+                    <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: h.includes(cur()) || h.includes("%") ? "right" : "left", fontSize: "0.65rem", color: "rgba(16,36,31,0.60)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {lines.map((line, i) => (
-                  <tr key={i} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
+                  <tr key={i} style={{ borderTop: "1px solid rgba(16,36,31,0.08)" }}>
                     <td style={{ padding: "0.4rem 0.75rem" }}><input value={line.description} onChange={e => updateLine(i, "description", e.target.value)} placeholder="Item / service" style={{ ...inputStyle, minWidth: 160 }} /></td>
                     <td style={{ padding: "0.4rem 0.75rem" }}><input value={line.hsn_sac} onChange={e => updateLine(i, "hsn_sac", e.target.value)} placeholder="HSN" style={{ ...inputStyle, width: 80 }} /></td>
                     <td style={{ padding: "0.4rem 0.75rem" }}><input type="number" value={line.qty} onChange={e => updateLine(i, "qty", e.target.value)} style={{ ...inputStyle, width: 60, textAlign: "right" }} /></td>
@@ -245,33 +245,33 @@ export default function NewPurchaseBillPage() {
               </tbody>
             </table>
           </div>
-          <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid rgba(20,26,58,0.08)" }}>
+          <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid rgba(16,36,31,0.08)" }}>
             <button onClick={() => setLines(p => [...p, { description: "", hsn_sac: "", qty: "1", rate: "", gst_rate: "18", amount: 0, cgst: 0, sgst: 0, igst: 0 }])}
-              style={{ background: "rgba(35,42,99,0.08)", border: "1px solid rgba(35,42,99,0.2)", color: "#232A63", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
+              style={{ background: "rgba(18,53,45,0.08)", border: "1px solid rgba(18,53,45,0.2)", color: "#12352D", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
               + Add Line
             </button>
           </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem" }}>
-          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem" }}>
+          <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem" }}>
             <label style={labelStyle}>Narration</label>
             <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder={`Purchase Bill ${billNo}`} rows={3} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.55 }} />
           </div>
-          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem", minWidth: 240 }}>
+          <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem", minWidth: 240 }}>
             {[
               { label: "Subtotal", value: subtotal },
               ...(isIGST ? [{ label: "IGST (ITC)", value: totalIGST }] : [{ label: "CGST (ITC)", value: totalCGST }, { label: "SGST (ITC)", value: totalSGST }]),
             ].map(r => (
               <div key={r.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                <span style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.70)" }}>{r.label}</span>
+                <span style={{ fontSize: "0.8rem", color: "rgba(16,36,31,0.70)" }}>{r.label}</span>
                 <span style={{ fontSize: "0.8rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(r.value)}</span>
               </div>
             ))}
-            <div style={{ height: 1, background: "rgba(35,42,99,0.2)", margin: "0.75rem 0" }} />
+            <div style={{ height: 1, background: "rgba(18,53,45,0.2)", margin: "0.75rem 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ fontWeight: 800 }}>Total Payable</span>
-              <span style={{ fontWeight: 900, fontSize: "1.2rem", color: "#232A63", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(grandTotal)}</span>
+              <span style={{ fontWeight: 900, fontSize: "1.2rem", color: "#12352D", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(grandTotal)}</span>
             </div>
             {totalGST > 0 && <div style={{ fontSize: "0.7rem", color: "#0B7A55", marginTop: "0.35rem", textAlign: "right" }}>ITC: {cur()}{fmt(totalGST)}</div>}
           </div>
