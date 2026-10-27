@@ -1283,7 +1283,7 @@ export function BusinessOSHomepage() {
             <div style={{ background: "#12352D", borderBottom: "3px solid #C9A24A", padding: "26px 28px 22px", color: "#FFFFFF", position: "relative" }}>
               <button onClick={() => setShowAuthModal(false)} aria-label="Close"
                 style={{ position: "absolute", top: 14, right: 14, width: 32, height: 32, borderRadius: 999, border: "1px solid rgba(255,255,255,0.25)", background: "transparent", color: "#FFFFFF", cursor: "pointer", fontSize: 14 }}>✕</button>
-              <span style={{ width: 46, height: 46, borderRadius: 999, border: "1px solid #C9A24A", display: "grid", placeItems: "center", color: "#C9A24A", fontStyle: "italic", fontSize: 18 }}>Fb</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 12 }}><img src="/frebook-logo.png" alt="FreBook" width={52} height={52} style={{ width: 52, height: 52, borderRadius: 14, border: "2px solid #C9A24A", display: "block" }} /><span style={{ fontSize: 24, fontWeight: 700 }}>Fre<i style={{ color: "#C9A24A", fontWeight: 400 }}>Book</i></span></span>
               <div style={{ marginTop: 16, fontSize: 11, letterSpacing: "0.3em", color: "#C9A24A" }}>FREBOOK BY FREWORK</div>
               <h3 id="fb-auth-title" style={{ margin: "4px 0 0", fontSize: 28, fontWeight: 400, fontStyle: "italic", lineHeight: 1.15 }}>Sign in to your books</h3>
             </div>
