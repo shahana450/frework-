@@ -132,7 +132,12 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
 
   // Similar transactions grouped by payee / purpose, with one suggested ledger per group
   const groups = useMemo(() => groupStatement(rows.filter(r => r.state !== "posted").map(r => ({ id: r.id, date: r.date, description: r.description, debit: r.debit, credit: r.credit, aiLedger: r.aiLedger, confidence: r.confidence })), history), [rows, history]);
+  const CONTROL = /^(sundry\s+)?(debtors|creditors)(\s+control)?$|^(debtors|creditors)\s+control$|^accounts?\s+(receivable|payable)$/i;
+  const GATEWAY = /\b(gateway|razorpay|paytm|phonepe|payu|cashfree|stripe|ccavenue|instamojo|pine ?labs|settlement)\b/i;
+  // A named party is its own ledger (Sundry Debtors / Creditors are groups) — the group's label is the party
+  const suggestFor = (g: { label: string; suggested: string }) => CONTROL.test(g.suggested.trim()) ? g.label : g.suggested;
   const ledgerFor = (key: string, suggested: string) => groupLedger[key] ?? suggested;
+  const needsLook = (g: { label: string; suggested: string; key: string }) => !ledgerFor(g.key, suggestFor(g)).trim() || CONTROL.test(g.suggested.trim()) || GATEWAY.test(g.label);
   const groupState = (ids: string[]) => {
     const ls = new Set(rows.filter(r => ids.includes(r.id)).map(r => r.ledger.trim()).filter(Boolean));
     return ls.size === 0 ? "none" : ls.size === 1 ? [...ls][0] : "mixed";
@@ -144,7 +149,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
     if (select) setSelected(s => { const n = new Set(s); ids.forEach(id => n.add(id)); return n; });
   }
   function applyAllSuggestions() {
-    for (const g of groups) { const l = ledgerFor(g.key, g.suggested); if (l) applyGroup(g.rowIds, l); }
+    for (const g of groups) { if (needsLook(g)) continue; const l = ledgerFor(g.key, suggestFor(g)); if (l) applyGroup(g.rowIds, l); }
   }
 
   const openVisible = visible.filter(r => r.state !== "posted");
@@ -249,6 +254,27 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
           <button onClick={onClose} disabled={posting} style={{ background: "#FFFFFF", border: "none", color: MUTED, width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: "1.1rem" }}>×</button>
         </div>
 
+        {rows.length > 0 && phase !== "reading" && (() => {
+          const openGroups = groups.length, ready = groups.filter(g => { const st = groupState(g.rowIds); const l = ledgerFor(g.key, suggestFor(g)); return st !== "none" && st !== "mixed" && st.toLowerCase() === l.trim().toLowerCase(); }).length;
+          const postedN = rows.filter(r => r.state === "posted").length;
+          return (
+            <div style={{ padding: "0.7rem 1.2rem", borderBottom: `1px solid ${BORDER}`, display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", background: "#FAFBFE" }}>
+              {[
+                { l: "Money in", v: `${cur()}${fmt(totals.cr)}`, c: GREEN },
+                { l: "Money out", v: `${cur()}${fmt(totals.dr)}`, c: RED },
+                { l: "Groups applied", v: `${ready} of ${openGroups}`, c: TEXT, bar: openGroups ? ready / openGroups : 0 },
+                { l: "Posted", v: `${postedN} of ${rows.length}`, c: BLUE, bar: rows.length ? postedN / rows.length : 0 },
+              ].map(t => (
+                <div key={t.l} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "8px 12px" }}>
+                  <div style={{ fontSize: "0.64rem", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: MUTED }}>{t.l}</div>
+                  <div style={{ fontFamily: MONO, fontWeight: 800, fontSize: "1.05rem", color: t.c }}>{t.v}</div>
+                  {"bar" in t && <div style={{ height: 5, borderRadius: 999, background: "#EEF0F6", marginTop: 5, overflow: "hidden" }}><div style={{ width: `${Math.round((t.bar ?? 0) * 100)}%`, height: "100%", background: t.c === TEXT ? GREEN : t.c, transition: "width .4s" }} /></div>}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
         {phase === "reading" || phase === "error" ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, color: phase === "error" ? RED : MUTED, padding: "2rem", textAlign: "center" }}>
             {phase === "reading" ? <><span style={{ width: 22, height: 22, border: `2px solid ${GOLD}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />Reading every page of the statement… this can take up to a minute for long statements.</> : <>⚠ {error}<button onClick={onClose} style={{ ...chip(false), marginTop: 8 }}>Close</button></>}
@@ -285,34 +311,47 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: "0.8rem", color: MUTED }}>
                   <span><b style={{ color: TEXT }}>{groups.length} groups</b> from {rows.filter(r => r.state !== "posted").length} open transactions. Check each ledger, then apply.</span>
                   <div style={{ flex: 1 }} />
-                  <button onClick={applyAllSuggestions} disabled={!groups.some(g => ledgerFor(g.key, g.suggested))} style={{ ...chip(true, GREEN), fontWeight: 800 }}>✓ Apply all suggestions &amp; select</button>
+                  <button onClick={applyAllSuggestions} disabled={!groups.some(g => !needsLook(g))} style={{ ...chip(true, GREEN), fontWeight: 800 }}>✓ Apply all ready &amp; select</button>
                 </div>
                 {phase === "suggesting" && <div style={{ fontSize: "0.76rem", color: PURPLE }}>🤖 AI is still reading rows — groups will fill in suggestions as it goes.</div>}
-                {groups.map(g => {
-                  const ledger = ledgerFor(g.key, g.suggested);
+                {(["look", "ready"] as const).map(section => {
+                  const list = groups.filter(g => (section === "look") === needsLook(g));
+                  if (!list.length) return null;
+                  return (
+                    <div key={section} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ fontSize: "0.68rem", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: section === "look" ? AMBER : GREEN, marginTop: 6 }}>
+                        {section === "look" ? `Needs your choice · ${list.length}` : `Ready · ${list.length}`}
+                      </div>
+                      {list.map(g => {
+                  const ledger = ledgerFor(g.key, suggestFor(g));
                   const now = groupState(g.rowIds);
                   const applied = now !== "none" && now !== "mixed" && now.toLowerCase() === ledger.trim().toLowerCase();
                   const allSel = g.rowIds.every(id => selected.has(id));
                   return (
-                    <div key={g.key} style={{ display: "grid", gridTemplateColumns: "26px minmax(180px,1.4fr) 110px minmax(200px,1.2fr) auto", gap: 10, alignItems: "center", padding: "10px 12px", borderRadius: 10, border: `1px solid ${applied ? "rgba(11,122,85,0.35)" : BORDER}`, background: applied ? "rgba(11,122,85,0.05)" : "#FFFFFF" }}>
+                    <div key={g.key} className="sm-group" style={{ display: "grid", gridTemplateColumns: "26px minmax(180px,1.4fr) 130px minmax(200px,1.2fr) auto", gap: 12, alignItems: "center", padding: "12px 14px", borderRadius: 12, border: `1px solid ${applied ? "rgba(11,122,85,0.35)" : BORDER}`, borderLeft: `4px solid ${g.dir === "out" ? RED : GREEN}`, background: applied ? "rgba(11,122,85,0.04)" : "#FFFFFF", boxShadow: "0 6px 18px -16px rgba(20,26,58,0.5)" }}>
                       <input type="checkbox" aria-label={`Select ${g.label}`} checked={allSel} onChange={() => setSelected(s => { const n = new Set(s); g.rowIds.forEach(id => allSel ? n.delete(id) : n.add(id)); return n; })} />
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.label}</div>
                         <div style={{ fontSize: "0.72rem", color: MUTED }}>
-                          <span style={{ color: g.dir === "out" ? RED : GREEN, fontWeight: 700 }}>{g.dir === "out" ? "Paid out" : "Received"}</span> · {g.count} transaction{g.count > 1 ? "s" : ""}
+                          <span style={{ color: g.dir === "out" ? RED : GREEN, fontWeight: 800 }}>{g.dir === "out" ? "↑ Paid out" : "↓ Received"}</span> · {g.count} transaction{g.count > 1 ? "s" : ""}
                           {" · "}<button onClick={() => { setGroupFilter({ label: g.label, ids: new Set(g.rowIds) }); setView("rows"); setFilter("all"); }} style={{ background: "none", border: "none", color: BLUE, padding: 0, cursor: "pointer", fontSize: "inherit", fontFamily: "inherit" }}>see rows</button>
                         </div>
                       </div>
-                      <div style={{ textAlign: "right", fontFamily: MONO, fontWeight: 700, color: g.dir === "out" ? RED : GREEN }}>{cur()}{fmt(g.total)}</div>
+                      <div style={{ textAlign: "right", fontFamily: MONO, fontWeight: 800, fontSize: "1rem", color: g.dir === "out" ? RED : GREEN }}>{cur()}{fmt(g.total)}</div>
                       <div style={{ minWidth: 0 }}>
                         <input list="sm-ledgers" value={ledger} onChange={e => setGroupLedger(m => ({ ...m, [g.key]: e.target.value }))} placeholder="Choose or type ledger" style={{ ...inputStyle, width: "100%", borderColor: !ledger.trim() ? "rgba(184,120,0,0.4)" : isNew(ledger) ? "rgba(91,75,196,0.5)" : BORDER }} />
                         <div style={{ fontSize: "0.68rem", color: MUTED, marginTop: 3 }}>
-                          {g.reason && <span style={{ color: g.source === "history" ? GREEN : g.source === "rule" ? BLUE : PURPLE }}>{g.source === "history" ? "★ " : ""}{g.reason}</span>}
+                          {CONTROL.test(g.suggested.trim()) ? <span style={{ color: AMBER, fontWeight: 700 }}>Party gets its own ledger (not {g.suggested}) — check the name</span>
+                            : GATEWAY.test(g.label) ? <span style={{ color: AMBER, fontWeight: 700 }}>Gateway payout — usually money for sales already booked (customer / gateway ledger), not new Sales</span>
+                            : g.reason && <span style={{ color: g.source === "history" ? GREEN : g.source === "rule" ? BLUE : PURPLE }}>{g.source === "history" ? "★ " : ""}{g.reason}</span>}
                           {isNew(ledger) && <span style={{ color: PURPLE }}> · new ledger</span>}
                           {now === "mixed" && <span style={{ color: AMBER }}> · rows have different ledgers now</span>}
                         </div>
                       </div>
-                      <button onClick={() => applyGroup(g.rowIds, ledger)} disabled={!ledger.trim()} style={{ ...chip(!applied, applied ? GREEN : BLUE), whiteSpace: "nowrap", opacity: ledger.trim() ? 1 : 0.5 }}>{applied ? "✓ Applied" : `Apply to ${g.count}`}</button>
+                      <button onClick={() => applyGroup(g.rowIds, ledger)} disabled={!ledger.trim()} style={{ height: 34, padding: "0 14px", borderRadius: 999, border: "none", fontWeight: 800, fontSize: "0.76rem", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", opacity: ledger.trim() ? 1 : 0.5, background: applied ? "rgba(11,122,85,0.12)" : BLUE, color: applied ? GREEN : "#FFFFFF" }}>{applied ? "✓ Applied" : g.count > 1 ? `Apply to ${g.count}` : "Apply"}</button>
+                    </div>
+                  );
+                })}
                     </div>
                   );
                 })}
