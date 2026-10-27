@@ -41,142 +41,126 @@ export default function BankingDashboard() {
   const monthName = (k: string) => new Date(k + "-01T00:00:00").toLocaleDateString("en-IN", { month: "short" });
   const day = (s: string) => new Date(s + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 
+  const plain = (n: number) => Math.round(n).toLocaleString(m.locale);
+  const T = { ink: "#10241F", green: "#12352D", gold: "#C9A24A", goldInk: "#9A6B22", cream: "#F4EFE4", paper: "#FFFDF8", line: "#E6DFD0", pos: "#0B7A55", neg: "#B4321F", muted: "#6B7570", soft: "#F3ECDD" };
+  const all = [...banks, ...cash];
+  const [selId, setSelId] = useState("");
+  const sel = all.find(a => a.id === selId) ?? all[0];
+  const recent = (d?.recent ?? []).filter(r => !sel || r.account === sel.name);
+  const curMon = new Date().toLocaleDateString("en-IN", { month: "short" });
+  const net = inM - outM;
+
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.ink }}>
+    <div style={{ minHeight: "100vh", background: T.cream, color: T.ink, fontFamily: SERIF }}>
       <style>{`
-        .bd-grid { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0,1fr)); }
-        .bd-two { display: grid; gap: 14px; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); }
-        @media (max-width: 900px) { .bd-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } .bd-two { grid-template-columns: minmax(0,1fr); } }
-        .bd-acc { transition: transform .15s, box-shadow .15s; }
-        .bd-acc:hover { transform: translateY(-2px); box-shadow: 0 12px 26px -18px rgba(35,42,99,.5); }
+        .bk-two { display: grid; gap: 22px; grid-template-columns: 340px minmax(0,1fr); align-items: start; }
+        @media (max-width: 900px) { .bk-two { grid-template-columns: minmax(0,1fr); } }
+        .bk-acc { cursor: pointer; text-align: left; font-family: inherit; transition: border-color .15s; }
+        .bk-acc:hover { border-color: ${T.gold} !important; }
         @keyframes bdgrow { from { transform: scaleY(0) } }
         .bd-bar { transform-origin: bottom; animation: bdgrow .6s ease-out both; }
-        @media (prefers-reduced-motion: reduce) { .bd-bar { animation: none } .bd-acc { transition: none } }
+        @media (prefers-reduced-motion: reduce) { .bd-bar { animation: none } }
       `}</style>
-      <div style={{ maxWidth: 1120, margin: "0 auto", padding: "24px 18px 100px", display: "flex", flexDirection: "column", gap: 16 }}>
-
-        {/* Header with sync status */}
-        <header style={{ display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 240 }}>
-            <h1 style={{ margin: 0, fontFamily: SERIF, fontSize: 32 }}>Bank dashboard</h1>
-            <p style={{ margin: "4px 0 0", color: C.muted, fontSize: 14.5 }}>Balances and money movement across your bank and cash accounts.</p>
-          </div>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 700,
-            background: daysSince == null ? C.warnSoft : daysSince > 30 ? C.warnSoft : C.posSoft, color: daysSince == null || daysSince > 30 ? C.warn : C.pos }}>
-            <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: "currentColor" }} />
+      <div style={{ maxWidth: 1320, margin: "0 auto", padding: "32px 28px 100px", display: "flex", flexDirection: "column", gap: 22 }}>
+        <header style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <h1 style={{ margin: 0, fontSize: "2.5rem", fontWeight: 700 }}>Bank dashboard</h1>
+          <span style={{ flex: 1, display: "inline-flex", alignItems: "center", gap: 7, fontSize: "0.92rem", color: daysSince == null || daysSince > 30 ? T.goldInk : T.pos }}>
+            <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor" }} />
             {daysSince == null ? "No statement uploaded yet" : `Updated from statement ${daysSince === 0 ? "today" : `${daysSince} day${daysSince > 1 ? "s" : ""} ago`}`}
           </span>
-          <Link href="/finance/banking/import" style={{ height: 42, padding: "0 18px", borderRadius: 11, background: C.navy, color: "#FFFFFF", fontWeight: 800, fontSize: 14, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
-            Upload statement
-          </Link>
+          <Link href="/finance/banking/import" style={{ height: 44, padding: "0 22px", borderRadius: 999, background: T.green, color: "#FFFFFF", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>↑ Upload statement</Link>
         </header>
 
-        {err && <div style={{ background: C.warnSoft, color: C.warn, borderRadius: 12, padding: "12px 16px", fontWeight: 600 }}>{err}</div>}
+        {err && <div style={{ background: "#FFF4DB", color: T.goldInk, borderRadius: 12, padding: "12px 16px" }}>{err}</div>}
 
-        {/* Headline numbers */}
-        <div className="bd-grid">
-          {[
-            { l: "Total bank & cash", v: total, tone: total < 0 ? C.neg : C.ink, dark: true },
-            { l: "Money in · this month", v: inM, tone: C.pos },
-            { l: "Money out · this month", v: outM, tone: C.neg },
-            { l: "Net this month", v: inM - outM, tone: inM - outM < 0 ? C.neg : C.pos },
-          ].map(s => (
-            <div key={s.l} style={{ borderRadius: 18, padding: "16px 18px", background: s.dark ? "linear-gradient(150deg,#2E3680,#232A63 55%,#1B2152)" : C.tile, border: s.dark ? "none" : `1px solid ${C.line}`, color: s.dark ? "#FFFFFF" : C.ink }}>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: s.dark ? C.gold : C.muted }}>{s.l}</div>
-              <div style={{ fontFamily: MONO, fontSize: 24, fontWeight: 600, marginTop: 6, color: s.dark ? (s.v < 0 ? "#FFB4A8" : "#FFFFFF") : s.tone, fontVariantNumeric: "tabular-nums", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d ? money(s.v) : "—"}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Accounts */}
-        <section style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))" }}>
-          {!d ? [0, 1, 2].map(k => <div key={k} style={{ height: 130, borderRadius: 18, background: C.tile, border: `1px solid ${C.line}`, opacity: 0.6 }} />)
-            : d.accounts.length === 0 ? (
-              <div style={{ gridColumn: "1 / -1", background: C.tile, border: `1px dashed ${C.line}`, borderRadius: 18, padding: 28, textAlign: "center", color: C.muted }}>
-                <b style={{ color: C.ink, fontSize: 16 }}>No bank account yet</b><br />Upload a bank statement — FreBook creates the bank ledger and fills this dashboard.
+        <div className="bk-two">
+          {/* Left: total + accounts */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ background: T.green, color: "#FFFFFF", borderRadius: 16, padding: "22px 22px" }}>
+              <div style={{ fontSize: "0.74rem", letterSpacing: "0.24em", color: T.gold }}>TOTAL BANK &amp; CASH</div>
+              <div style={{ fontSize: "2.2rem", marginTop: 6, color: total < 0 ? "#F0A792" : "#FFFFFF", fontVariantNumeric: "tabular-nums" }}>{d ? money(total) : "—"}</div>
+              <div style={{ display: "flex", gap: 16, fontSize: "0.9rem", marginTop: 10, flexWrap: "wrap" }}>
+                <span>In {d ? plain(inM) : "—"}</span>
+                <span>Out {d ? plain(outM) : "—"}</span>
+                <span style={{ color: net < 0 ? "#F0A792" : "#9FE0C2" }}>Net {d ? plain(net) : "—"}</span>
               </div>
-            ) : [...banks, ...cash].map(a => (
-              <Link key={a.id} href={`/finance/ledger?account=${a.id}`} className="bd-acc" style={{ background: C.tile, border: `1px solid ${C.line}`, borderRadius: 18, padding: 16, textDecoration: "none", color: C.ink, display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 11, display: "grid", placeItems: "center", background: a.kind === "bank" ? "#EAF2FF" : "#FFF4DB", color: a.kind === "bank" ? "#1F5EFF" : C.warn }}>
-                    {a.kind === "bank"
-                      ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18" /></svg>
-                      : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="6" width="18" height="12" rx="2" /><circle cx="12" cy="12" r="2.5" /></svg>}
-                  </span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span>
-                    <span style={{ display: "block", fontSize: 12, color: C.muted }}>{a.last ? `Last entry ${day(a.last)}` : "No entries yet"}{a.fromStatements ? ` · ${a.fromStatements} from statements` : ""}</span>
-                  </span>
-                </div>
-                <div style={{ fontFamily: MONO, fontSize: 22, fontWeight: 600, color: a.balance < 0 ? C.neg : C.ink }}>{money(a.balance)}</div>
-                {a.balance < 0 && <div style={{ fontSize: 12, fontWeight: 700, color: C.neg, background: C.negSoft, borderRadius: 8, padding: "4px 8px" }}>{a.kind === "cash" ? "Cash can't go below zero — a receipt may be missing." : "Overdrawn or an entry is missing — check against the statement."}</div>}
-                <div style={{ display: "flex", gap: 14, fontSize: 12.5 }}>
-                  <span style={{ color: C.pos, fontWeight: 700 }}>↓ In {money(a.inMonth)}</span>
-                  <span style={{ color: C.neg, fontWeight: 700 }}>↑ Out {money(a.outMonth)}</span>
-                  <span style={{ color: C.muted, marginLeft: "auto" }}>this month</span>
-                </div>
-              </Link>
-            ))}
-        </section>
-
-        <div className="bd-two">
-          {/* 6-month flow */}
-          <section style={{ background: C.tile, border: `1px solid ${C.line}`, borderRadius: 18, padding: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-              <h2 style={{ margin: 0, fontSize: 16 }}>Money in and out · last 6 months</h2>
-              <span style={{ marginLeft: "auto", display: "flex", gap: 12, fontSize: 12, color: C.muted }}>
-                <span><i style={{ display: "inline-block", width: 9, height: 9, borderRadius: 2, background: C.pos, marginRight: 5 }} />In</span>
-                <span><i style={{ display: "inline-block", width: 9, height: 9, borderRadius: 2, background: "#E8A59B", marginRight: 5 }} />Out</span>
-              </span>
             </div>
-            <div role="img" aria-label="Money in and out by month" style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0,1fr))", gap: 10, alignItems: "end", height: 170 }}>
-              {(d?.months ?? []).map((x, i) => (
-                <div key={x.month} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, height: "100%" }}>
-                  <div style={{ flex: 1, width: "100%", display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 4, borderBottom: `1px solid ${C.line}` }}>
-                    <span className="bd-bar" title={`In ${money(x.in)}`} style={{ width: "38%", height: `${(x.in / max) * 100}%`, minHeight: x.in ? 3 : 0, background: C.pos, borderRadius: "5px 5px 0 0", animationDelay: `${i * 60}ms` }} />
-                    <span className="bd-bar" title={`Out ${money(x.out)}`} style={{ width: "38%", height: `${(x.out / max) * 100}%`, minHeight: x.out ? 3 : 0, background: "#E8A59B", borderRadius: "5px 5px 0 0", animationDelay: `${i * 60 + 30}ms` }} />
+            {!d ? [0, 1].map(k => <div key={k} style={{ height: 150, borderRadius: 16, background: T.paper, border: `1px solid ${T.line}`, opacity: 0.6 }} />)
+              : all.length === 0 ? (
+                <div style={{ background: T.paper, border: `1px dashed ${T.gold}`, borderRadius: 16, padding: 24, textAlign: "center", color: T.muted }}>
+                  <b style={{ color: T.ink }}>No bank account yet</b><br />Upload a bank statement — FreBook creates the bank ledger and fills this dashboard.
+                </div>
+              ) : all.map(a => {
+                const on = sel?.id === a.id, flow = a.inMonth + a.outMonth;
+                return (
+                  <button key={a.id} className="bk-acc" onClick={() => setSelId(a.id)} style={{ background: T.paper, border: `${on ? 2 : 1}px solid ${on ? T.green : T.line}`, borderRadius: 16, padding: "18px 20px", color: T.ink, display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", color: T.muted }}><span>{a.kind === "bank" ? "Bank account" : "Cash"}</span><span>{a.last ? day(a.last) : ""}</span></div>
+                    <div style={{ fontSize: "1.35rem" }}>{a.kind === "cash" && /^cash$/i.test(a.name) ? "Cash in hand" : a.name}</div>
+                    <div style={{ fontSize: "1.75rem", color: a.balance < 0 ? T.neg : T.ink, fontVariantNumeric: "tabular-nums" }}>{money(a.balance)}</div>
+                    {a.balance < 0 && <div style={{ fontSize: "0.8rem", color: T.neg, background: "#FBECE8", borderRadius: 8, padding: "6px 10px" }}>{a.kind === "cash" ? "Cash can't go below zero — a receipt may be missing." : "Overdrawn or an entry is missing — check against the statement."}</div>}
+                    {flow > 0 && a.balance >= 0 && <div style={{ height: 6, borderRadius: 999, background: "#EFE6D3", overflow: "hidden" }}><div style={{ width: `${Math.round((a.inMonth / flow) * 100)}%`, height: "100%", background: T.gold }} /></div>}
+                    <div style={{ fontSize: "0.8rem", color: T.muted }}>In {plain(a.inMonth)} · Out {plain(a.outMonth)} this month</div>
+                  </button>
+                );
+              })}
+            <Link href="/finance/chart-of-accounts" style={{ padding: "16px", borderRadius: 16, border: `1px dashed ${T.gold}`, textAlign: "center", color: T.ink, textDecoration: "none" }}>+ Add bank or card account</Link>
+          </div>
+
+          {/* Right: selected account */}
+          <section style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 18, padding: "24px 26px", display: "flex", flexDirection: "column", gap: 18 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "0.74rem", letterSpacing: "0.24em", color: T.goldInk }}>SELECTED ACCOUNT</div>
+                <div style={{ fontSize: "2rem", fontStyle: "italic" }}>{sel ? sel.name : "—"}</div>
+              </div>
+              {sel && <Link href={`/finance/ledger?account=${sel.id}`} style={{ color: T.goldInk }}>Open ledger →</Link>}
+            </div>
+            <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
+              {[["Balance", sel?.balance ?? 0, T.muted], [`In · ${curMon}`, sel?.inMonth ?? 0, T.pos], [`Out · ${curMon}`, sel?.outMonth ?? 0, T.neg]].map(([l, v, c]) => (
+                <div key={l as string} style={{ background: T.soft, borderRadius: 12, padding: "12px 16px" }}>
+                  <div style={{ fontSize: "0.8rem", color: c as string }}>{l as string}</div>
+                  <div style={{ fontSize: "1.4rem", fontVariantNumeric: "tabular-nums" }}>{sel ? plain(v as number) : "—"}</div>
+                </div>
+              ))}
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
+                <b>Recent activity</b>
+                <Link href="/finance/banking/history" style={{ marginLeft: "auto", fontSize: "0.85rem", color: T.goldInk }}>All →</Link>
+              </div>
+              {!d ? <span style={{ color: T.muted }}>Loading…</span>
+                : recent.length === 0 ? <span style={{ color: T.muted, fontStyle: "italic" }}>Nothing yet — upload a statement to see transactions here.</span>
+                : recent.map((r, i) => (
+                  <Link key={r.id + i} href={`/finance/journals?id=${r.id}`} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: `1px solid ${T.line}`, textDecoration: "none", color: T.ink }}>
+                    <span style={{ width: 64, color: T.muted, flexShrink: 0 }}>{day(r.date)}</span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration || r.entry_no}</span>
+                      <span style={{ display: "block", fontSize: "0.78rem", color: T.muted }}>{r.source === "statement" ? "from statement" : r.entry_no}</span>
+                    </span>
+                    <span style={{ fontSize: "1.05rem", color: r.in ? T.pos : T.neg, whiteSpace: "nowrap" }}>{r.in ? "+" : "−"}{money(r.in || r.out)}</span>
+                  </Link>
+                ))}
+            </div>
+            <div>
+              <b>Last 6 months</b>
+              <div role="img" aria-label="Money in and out by month" style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0,1fr))", gap: 10, alignItems: "end", height: 150, marginTop: 10 }}>
+                {(d?.months ?? []).map((x, i) => (
+                  <div key={x.month} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, height: "100%" }}>
+                    <div style={{ flex: 1, width: "100%", display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 4, borderBottom: `1px solid ${T.line}` }}>
+                      <span className="bd-bar" title={`In ${money(x.in)}`} style={{ width: 18, height: `${(x.in / max) * 100}%`, minHeight: x.in ? 3 : 0, background: T.green, animationDelay: `${i * 60}ms` }} />
+                      <span className="bd-bar" title={`Out ${money(x.out)}`} style={{ width: 18, height: `${(x.out / max) * 100}%`, minHeight: x.out ? 3 : 0, background: T.gold, animationDelay: `${i * 60 + 30}ms` }} />
+                    </div>
+                    <span style={{ fontSize: "0.82rem", color: T.muted }}>{monthName(x.month)}</span>
                   </div>
-                  <span style={{ fontSize: 11.5, color: C.muted, fontWeight: 600 }}>{monthName(x.month)}</span>
-                </div>
-              ))}
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 14, fontSize: "0.8rem", color: T.muted, marginTop: 8 }}>
+                <span><i style={{ display: "inline-block", width: 9, height: 9, background: T.green, marginRight: 5 }} />In</span>
+                <span><i style={{ display: "inline-block", width: 9, height: 9, background: T.gold, marginRight: 5 }} />Out</span>
+              </div>
             </div>
-          </section>
-
-          {/* Recent */}
-          <section style={{ background: C.tile, border: `1px solid ${C.line}`, borderRadius: 18, padding: 18, display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <h2 style={{ margin: 0, fontSize: 16 }}>Recent bank activity</h2>
-              <Link href="/finance/banking/history" style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: C.navy, textDecoration: "none" }}>All →</Link>
-            </div>
-            {!d ? <span style={{ color: C.muted, fontSize: 13 }}>Loading…</span>
-              : d.recent.length === 0 ? <span style={{ color: C.muted, fontSize: 13 }}>Nothing yet — upload a statement to see transactions here.</span>
-              : d.recent.map((r, i) => (
-                <Link key={r.id + i} href={`/finance/journals?id=${r.id}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderTop: i ? `1px solid ${C.line}` : "none", textDecoration: "none", color: C.ink }}>
-                  <span style={{ width: 44, fontSize: 11.5, color: C.muted, fontWeight: 600, flexShrink: 0 }}>{day(r.date)}</span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration || r.entry_no}</span>
-                    <span style={{ display: "block", fontSize: 11, color: C.muted }}>{r.account}{r.source === "statement" ? " · statement" : ""}</span>
-                  </span>
-                  <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: r.in ? C.pos : C.neg, whiteSpace: "nowrap" }}>{r.in ? "+" : "−"}{money(r.in || r.out)}</span>
-                </Link>
-              ))}
           </section>
         </div>
-
-        {/* How it updates */}
-        <section style={{ background: "linear-gradient(120deg,#FFFFFF,#F6F7FC)", border: `1px solid ${C.line}`, borderRadius: 18, padding: 18, display: "grid", gap: 14, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-          {[
-            { t: "Now: upload statements", d: "PDF, Excel or CSV. The AI reads every row, you confirm the ledgers, and this dashboard updates.", on: true },
-            { t: "Next: automatic bank feed", d: "Connect your bank once (RBI Account Aggregator) and transactions arrive by themselves — no uploads.", on: false },
-            { t: "Always: matched to your books", d: "Every bank line becomes a proper entry — ledger, trial balance and Tally stay in step.", on: true },
-          ].map(s => (
-            <div key={s.t} style={{ display: "flex", gap: 10 }}>
-              <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 999, flexShrink: 0, display: "grid", placeItems: "center", fontSize: 12, fontWeight: 900, background: s.on ? C.posSoft : C.warnSoft, color: s.on ? C.pos : C.warn }}>{s.on ? "✓" : "…"}</span>
-              <span><b style={{ fontSize: 14 }}>{s.t}</b><br /><span style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>{s.d}</span></span>
-            </div>
-          ))}
-        </section>
       </div>
     </div>
   );
