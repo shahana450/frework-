@@ -179,65 +179,50 @@ export default function ReportsPage() {
     { key: "cash_flow", label: "Cash Flow" },
   ];
 
+  const TITLE: Record<ReportTab, string> = { profit_loss: "Statement of Profit and Loss", balance_sheet: "Balance Sheet", trial_balance: "Trial Balance", cash_flow: "Cash Flow Statement" };
+  const btn = (dark: boolean): React.CSSProperties => ({ height: 40, padding: "0 18px", borderRadius: 999, border: `1px solid ${dark ? "#12352D" : "#E6DFD0"}`, background: dark ? "#12352D" : "#FFFDF8", color: dark ? "#FFFFFF" : "#10241F", fontFamily: "inherit", fontSize: "0.9rem", cursor: "pointer" });
   return (
     <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
-      <style>{`.rp-drill{cursor:pointer}.rp-drill:hover{color:#12352D !important;text-decoration:underline !important}`}</style>
-      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
-        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>Reports</span>
-        <div style={{ flex: 1 }} />
-        {financialYears.length > 0 && (
-          <select value={fyId ?? ""} onChange={e => setFyId(e.target.value)}
-            style={{ background: "rgba(18,53,45,0.1)", border: "1px solid rgba(18,53,45,0.3)", color: "#10241F", padding: "4px 10px", borderRadius: 6, fontSize: "0.85rem", cursor: "pointer" }}>
-            {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
-          </select>
-        )}
-        {tbData && plData && bsData && (
-          <button disabled={xlBusy} title="One workbook: Balance Sheet, P&L, Notes, Trial Balance and Cash Flow"
-            onClick={async () => {
-              setXlBusy(true);
-              try {
-                const meta = { business: bizName || "Business", period: period ? `FY ${period.label} (${period.start_date} to ${period.end_date})` : "" };
-                const cf = period && bizId ? await fetch(`/api/finance/reports?business_id=${bizId}&from=${period.start_date}&to=${period.end_date}&report=cash_flow`).then(r => r.ok ? r.json() : null).catch(() => null) : null;
-                await downloadAllStatements({ tb: tbData, pl: plData, bs: bsData, cf, meta });
-              } finally { setXlBusy(false); }
-            }}
-            style={{ background: "#0B7A55", border: "none", color: "#FFFFFF", padding: "6px 14px", borderRadius: 6, cursor: xlBusy ? "wait" : "pointer", fontSize: "0.8rem", fontWeight: 700 }}>
-            {xlBusy ? "Preparing…" : "⬇ Excel — all statements"}
-          </button>
-        )}
-        <button onClick={() => window.print()} title="Print, or choose 'Save as PDF' — the printout is the presented statement shown on screen" style={{ background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.14)", color: "#10241F", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
-          🖨 Print / PDF
-        </button>
-      </nav>
-
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "2rem" }}>
-        {/* Tab row */}
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2rem", borderBottom: "1px solid rgba(16,36,31,0.11)", paddingBottom: "0" }}>
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{
-              background: "none", border: "none", color: tab === t.key ? "#12352D" : "rgba(16,36,31,0.70)",
-              padding: "0.6rem 1rem", cursor: "pointer", fontWeight: tab === t.key ? 700 : 400, fontSize: "0.9rem",
-              borderBottom: tab === t.key ? "2px solid #12352D" : "2px solid transparent",
-              marginBottom: "-1px",
-            }}>{t.label}</button>
-          ))}
+      <style>{`.rp-drill{cursor:pointer}.rp-drill:hover{color:#9A6B22 !important;text-decoration:underline !important}@media print{.rp-top{display:none}}`}</style>
+      <div style={{ maxWidth: 1320, margin: "0 auto", padding: "32px 28px" }}>
+        <div className="rp-top" style={{ display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <div style={{ fontSize: "0.74rem", letterSpacing: "0.3em", color: "#9A6B22" }}>REPORTS{period ? ` · FY ${period.label}` : ""}{tab === "profit_loss" || tab === "balance_sheet" ? " · SCHEDULE III" : ""}</div>
+            <h1 style={{ margin: "4px 0 0", fontSize: "2.6rem", fontWeight: 400, fontStyle: "italic" }}>{TITLE[tab]}</h1>
+          </div>
+          <div role="tablist" style={{ display: "inline-flex", gap: 2, padding: 4, borderRadius: 999, background: "#EFE6D3" }}>
+            {TABS.map(t => (
+              <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)} style={{ border: "none", borderRadius: 999, padding: "8px 14px", fontFamily: "inherit", fontSize: "0.9rem", cursor: "pointer", background: tab === t.key ? "#12352D" : "transparent", color: tab === t.key ? "#FFFFFF" : "#10241F" }}>{t.key === "profit_loss" ? "P&L" : t.label}</button>
+            ))}
+          </div>
+          {financialYears.length > 0 && (
+            <select value={fyId ?? ""} onChange={e => setFyId(e.target.value)} style={{ ...btn(false), paddingRight: 10 }}>
+              {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
+            </select>
+          )}
+          {tbData && plData && bsData && (
+            <button disabled={xlBusy} title="One workbook: Balance Sheet, P&L, Notes, Trial Balance and Cash Flow" style={{ ...btn(true), cursor: xlBusy ? "wait" : "pointer" }}
+              onClick={async () => {
+                setXlBusy(true);
+                try {
+                  const meta = { business: bizName || "Business", period: period ? `FY ${period.label} (${period.start_date} to ${period.end_date})` : "" };
+                  const cf = period && bizId ? await fetch(`/api/finance/reports?business_id=${bizId}&from=${period.start_date}&to=${period.end_date}&report=cash_flow`).then(r => r.ok ? r.json() : null).catch(() => null) : null;
+                  await downloadAllStatements({ tb: tbData, pl: plData, bs: bsData, cf, meta });
+                } finally { setXlBusy(false); }
+              }}>{xlBusy ? "Preparing…" : "↓ Excel — all statements"}</button>
+          )}
+          <button onClick={() => window.print()} title="Print, or choose 'Save as PDF'" style={btn(false)}>Print / PDF</button>
         </div>
 
-        {error && <div style={{ color: "#B4321F", background: "rgba(194,50,31,0.08)", padding: "1rem", borderRadius: 8, marginBottom: "1rem" }}>{error}</div>}
+        {error && <div style={{ color: "#B4321F", background: "#FBECE8", padding: "1rem", borderRadius: 10, marginBottom: "1rem" }}>{error}</div>}
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(16,36,31,0.55)" }}>Calculating…</div>
+          <div style={{ textAlign: "center", padding: "5rem", color: "#6B7570", fontStyle: "italic" }}>Calculating…</div>
         ) : (
-          <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.11)", borderRadius: 12, overflow: "hidden" }}>
+          <div style={tab === "balance_sheet" || tab === "cash_flow" || (tab === "profit_loss" && !plData?.schedule3) ? { background: "#FFFDF8", borderTop: "6px solid #12352D", boxShadow: "0 24px 50px -30px rgba(16,36,31,0.45)", maxWidth: tab === "balance_sheet" ? undefined : 900, margin: "0 auto" } : undefined}>
             {/* Profit & Loss */}
             {tab === "profit_loss" && plData?.schedule3 && (
               <>
-                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(16,36,31,0.11)" }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem" }}>Statement of Profit and Loss</div>
-                  <div style={{ fontSize: "0.75rem", color: "rgba(16,36,31,0.65)", marginTop: "0.2rem" }}>For the year — FY {financialYears.find(f => f.id === fyId)?.label}</div>
-                </div>
                 {plData.presented && <FootingBanner problems={plData.presented.problems} />}
                 <Schedule3PLView s={plData.schedule3} />
               </>
@@ -274,9 +259,9 @@ export default function ReportsPage() {
             {/* Balance Sheet */}
             {tab === "balance_sheet" && bsData && (
               <>
-                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(16,36,31,0.11)" }}>
-                  <div style={{ fontWeight: 800, fontSize: "1rem" }}>Balance Sheet</div>
-                  <div style={{ fontSize: "0.75rem", color: "rgba(16,36,31,0.65)", marginTop: "0.2rem" }}>As at end of FY {financialYears.find(f => f.id === fyId)?.label}</div>
+                <div style={{ padding: "36px 24px 22px", textAlign: "center" }}>
+                  <div style={{ fontSize: "0.74rem", letterSpacing: "0.3em", color: "#9A6B22" }}>BALANCE SHEET</div>
+                  <div style={{ fontSize: "2rem", fontStyle: "italic", marginTop: 4 }}>As at end of FY {financialYears.find(f => f.id === fyId)?.label}</div>
                 </div>
                 {bsData.presented && <FootingBanner problems={bsData.presented.problems} />}
                 {bsData.schedule3 ? <Schedule3View s={bsData.schedule3} netProfit={bsData.net_profit} /> : <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
@@ -306,55 +291,12 @@ export default function ReportsPage() {
             {/* Trial Balance */}
             {tab === "trial_balance" && tbData && (
               <>
-                <div style={{ padding: "1.25rem 1rem", borderBottom: "1px solid rgba(16,36,31,0.11)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: "1rem" }}>Trial Balance</div>
-                      <div style={{ fontSize: "0.75rem", color: "rgba(16,36,31,0.65)", marginTop: "0.2rem" }}>FY {financialYears.find(f => f.id === fyId)?.label} · click an account to open its ledger</div>
-                    </div>
-                    <div role="radiogroup" aria-label="Trial balance view" style={{ display: "flex", border: "1px solid rgba(16,36,31,0.15)", borderRadius: 8, overflow: "hidden" }}>
-                      {([[false, "Closing balances"], [true, "Opening & transactions"]] as const).map(([v, l]) => (
-                        <button key={l} role="radio" aria-checked={tbDetail === v} onClick={() => setTbDetail(v)} style={{ border: "none", padding: "6px 12px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", background: tbDetail === v ? "#12352D" : "#FFFFFF", color: tbDetail === v ? "#FFFFFF" : "rgba(16,36,31,0.75)" }}>{l}</button>
-                      ))}
-                    </div>
-                  </div>
+                <div role="radiogroup" aria-label="Trial balance view" style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 14, fontSize: "0.92rem" }}>
+                  {([[false, "Closing balances"], [true, "Opening & transactions"]] as const).map(([v, l]) => (
+                    <label key={l} style={{ display: "flex", gap: 7, alignItems: "center", cursor: "pointer" }}><input type="radio" checked={tbDetail === v} onChange={() => setTbDetail(v)} style={{ accentColor: "#12352D" }} />{l}</label>
+                  ))}
                 </div>
-                {tbDetail ? <TBDetail data={tbData} /> : <>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ background: "#FFFDF8" }}>
-                      {["Code", "Account Name", "Debit (" + cur() + ")", "Credit (" + cur() + ")"].map(h => (
-                        <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h.includes(cur()) ? "right" : "left", fontSize: "0.7rem", color: "rgba(16,36,31,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tbData.accounts.map(a => (
-                      <tr key={a.id ?? a.name} style={{ borderTop: "1px solid rgba(16,36,31,0.08)" }}>
-                        <td style={{ padding: "0.55rem 1rem", fontSize: "0.78rem", fontFamily: "monospace", color: "rgba(16,36,31,0.65)" }}>{a.code}</td>
-                        <td style={{ padding: "0.55rem 1rem", fontSize: "0.85rem" }}><Drill id={a.id}>{a.name}</Drill></td>
-                        <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", color: a.dr > 0 ? "#10241F" : "rgba(16,36,31,0.35)" }}>
-                          {a.dr > 0 ? <Drill id={a.id}>{fmt(a.dr)}</Drill> : "—"}
-                        </td>
-                        <td style={{ padding: "0.55rem 1rem", textAlign: "right", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", color: a.cr > 0 ? "#10241F" : "rgba(16,36,31,0.35)" }}>
-                          {a.cr > 0 ? <Drill id={a.id}>{fmt(a.cr)}</Drill> : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr style={{ borderTop: "2px solid rgba(18,53,45,0.3)", background: "rgba(18,53,45,0.06)" }}>
-                      <td colSpan={2} style={{ padding: "0.75rem 1rem", fontWeight: 800, fontSize: "0.9rem" }}>Grand Total</td>
-                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#12352D" }}>{cur()}{fmt(tbData.total_dr)}</td>
-                      <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#12352D" }}>{cur()}{fmt(tbData.total_cr)}</td>
-                    </tr>
-                    <tr>
-                      <td colSpan={4} style={{ padding: "0.5rem 1rem", textAlign: "right", fontSize: "0.78rem", color: Math.abs(tbData.total_dr - tbData.total_cr) < 0.01 ? "#0B7A55" : "#B4321F" }}>
-                        {Math.abs(tbData.total_dr - tbData.total_cr) < 0.01 ? "✓ Trial Balance is balanced" : `⚠ Difference: ${cur()}${fmt(Math.abs(tbData.total_dr - tbData.total_cr))}`}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table></>}
+                {tbDetail ? <TBDetail data={tbData} /> : <TBGrouped data={tbData} />}
                 {tbData.accounts.length === 0 && (
                   <div style={{ padding: "3rem", textAlign: "center", color: "rgba(16,36,31,0.55)", fontSize: "0.88rem" }}>No posted entries yet.</div>
                 )}
@@ -373,27 +315,48 @@ export default function ReportsPage() {
 }
 
 const S3CSS = `
-        .s3-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid rgba(16,36,31,0.08);font-size:12.5px;color:rgba(16,36,31,0.62)}
-        .s3-bar button{border:1px solid rgba(18,53,45,0.22);background:#FFFFFF;color:#12352D;font-weight:700;font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer}
+        .s3-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px;font-size:13px;font-style:italic;color:#6B7570}
+        .s3-bar button{border:1px solid #E6DFD0;background:#FFFDF8;color:#10241F;font-family:inherit;font-size:13px;padding:7px 16px;border-radius:999px;cursor:pointer}
         .s3 table{width:100%;border-collapse:collapse}
-        .s3 th{padding:10px 20px;text-align:left;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(16,36,31,0.6);font-weight:700;border-bottom:1px solid rgba(16,36,31,0.12);background:#FAFBFD}
-        .s3 th:nth-child(2){text-align:center;width:70px}.s3 th:nth-child(3){text-align:right;width:190px}
-        .s3 td{padding:9px 20px;font-size:14px}
+        .s3 th{padding:12px 20px;text-align:left;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#6B7570;font-weight:400;border-bottom:1px solid #9AA3A0;background:#FFFDF8}
+        .s3 th:nth-child(2){text-align:center;width:80px}.s3 th:nth-child(3){text-align:right;width:190px}
+        .s3 td{padding:11px 20px;font-size:14.5px;border-top:1px solid #EFE8DA}
         .s3-num{text-align:right;white-space:nowrap}
-        .s3-part td{padding:18px 20px 8px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#12352D}
-        .s3-roman{display:inline-block;min-width:26px;color:#8A93C8}
-        .s3-block td{font-weight:700;color:#10241F;padding-left:46px;background:#F8F3E8;border-top:1px solid rgba(16,36,31,0.06)}
-        .s3-sub{color:rgba(16,36,31,0.6)}
-        .s3-head{cursor:pointer;border-top:1px solid rgba(16,36,31,0.06)}
-        .s3-head td:first-child{padding-left:66px}
-        .s3-head:hover,.s3-head.on{background:#EEF0FA}
-        .s3-caret{display:inline-block;width:16px;margin-left:-18px;color:#8A93C8;font-size:11px}
-        .s3-note{text-align:center;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;color:#12352D}
-        .s3-line td{font-size:13px;padding-top:6px;padding-bottom:6px;background:#FCFCFE;color:rgba(16,36,31,0.85)}
-        .s3-line td:first-child{padding-left:90px}
+        .s3-part td{padding:12px 20px;font-weight:700;color:#10241F;background:#F3ECDD}
+        .s3-roman{display:inline-block;min-width:50px;color:#9A6B22;font-style:italic;font-weight:400}
+        .s3-block td{font-weight:700;color:#10241F;background:#F3ECDD}
+        .s3-sub{color:#10241F}
+        .s3-head{cursor:pointer;background:#FFFDF8}
+        .s3-head td:first-child{padding-left:70px}
+        .s3-head:hover,.s3-head.on{background:#F6EFDF}
+        .s3-caret{display:none}
+        .s3-note{text-align:center}
+        .s3-note span{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;border:1px solid #C9A24A;color:#9A6B22;font-size:12px}
+        .s3-line td{font-size:13.5px;padding-top:7px;padding-bottom:7px;background:#FCF8EF;color:#3C4A45}
+        .s3-line td:first-child{padding-left:94px}
         .s3-flag{margin-left:8px;font-size:11px;color:#9A6B22;background:#FFF4DB;padding:1px 6px;border-radius:5px}
-        .s3-total td{font-weight:800;border-top:2px solid #12352D;border-bottom:3px double #12352D;background:#EEF0FA;padding-top:12px;padding-bottom:12px}
-        @media(max-width:640px){.s3 td{padding-left:12px;padding-right:12px}.s3-block td{padding-left:20px}.s3-head td:first-child{padding-left:34px}.s3-line td:first-child{padding-left:48px}.s3 th:nth-child(3){width:auto}}
+        .s3-total td{font-weight:400;font-size:16px;background:#12352D;color:#FFFFFF;padding-top:14px;padding-bottom:14px}
+        .s3-total .s3-roman{color:#C9A24A}
+        .s3-total span{color:inherit !important}
+        .s3-pl{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+        .s3-card{background:#FFFDF8;border:1px solid #E6DFD0;border-radius:14px;overflow:hidden}
+        .s3-nh{display:flex;justify-content:space-between;gap:10px;padding:12px 18px;background:#F3ECDD}
+        .s3-chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 18px;font-size:13px;color:#6B7570}
+        .s3-chip{padding:5px 12px;border-radius:999px;border:1px solid #E6DFD0;background:#FFFFFF;color:#10241F;text-decoration:none;font-size:13px}
+        .s3-chip:hover{border-color:#C9A24A}
+        .bs-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #6B7570}
+        .bs-col+.bs-col{border-left:1px solid #6B7570}
+        .bs-h{display:flex;justify-content:space-between;padding:12px 20px;background:#12352D;color:#FFFFFF}
+        .bs-h span:last-child{color:#C9A24A}
+        .bs-r{display:flex;justify-content:space-between;gap:12px;padding:11px 20px;border-top:1px solid #EFE8DA;font-size:14.5px}
+        .bs-r.blk{background:#F3ECDD;font-weight:700}
+        .bs-r.hd{padding-left:36px;cursor:pointer}.bs-r.hd:hover{background:#F6EFDF}
+        .bs-r.ln{padding-left:54px;font-size:13.5px;background:#FCF8EF}
+        .bs-n{color:#9A6B22;font-size:12px;margin-left:6px}
+        .bs-t{display:flex;justify-content:space-between;padding:14px 20px;border-top:1px solid #6B7570;font-weight:700;font-size:16px}
+        .bs-t span:last-child{border-bottom:3px double #6B7570}
+        @media(max-width:860px){.s3-pl,.bs-grid{grid-template-columns:1fr}.bs-col+.bs-col{border-left:none;border-top:1px solid #6B7570}}
+        @media(max-width:640px){.s3 td{padding-left:12px;padding-right:12px}.s3-head td:first-child{padding-left:34px}.s3-line td:first-child{padding-left:48px}.s3 th:nth-child(3){width:auto}}
         @media print{.s3-bar{display:none}}
 `;
 
@@ -402,8 +365,8 @@ function S3HeadRows({ h, prefix, open, toggle, amt }: { h: S3Head; prefix: strin
   return (
     <>
       <tr className={"s3-head" + (open ? " on" : "")} onClick={toggle} title="Show the ledgers in this note">
-        <td><span className="s3-caret">{open ? "▾" : "▸"}</span>{prefix}{h.label}</td>
-        <td className="s3-note">{h.note}</td>
+        <td>{prefix}{h.label}</td>
+        <td className="s3-note"><span>{h.note}</span></td>
         <td className="s3-num">{amt(h.total)}</td>
       </tr>
       {open && h.lines.map(l => (
@@ -417,92 +380,137 @@ function S3HeadRows({ h, prefix, open, toggle, amt }: { h: S3Head; prefix: strin
   );
 }
 
-// Statement of Profit and Loss in Schedule III format
+// Statement of Profit and Loss in Schedule III format, with the notes and their ledgers alongside
 function Schedule3PLView({ s }: { s: Schedule3PL }) {
   const heads = [s.revenue, s.otherIncome, ...s.expenses, s.tax].filter((x): x is S3Head => !!x);
   const [open, setOpen] = useState<Set<number>>(new Set());
+  const [notes, setNotes] = useState(true);
   const toggle = (n: number) => setOpen(o => { const x = new Set(o); if (x.has(n)) x.delete(n); else x.add(n); return x; });
-  const amt = (n: number, strong = false) => <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: strong ? 800 : 600, color: n < 0 ? "#B4321F" : "#10241F" }}>{signedMoney(n)}</span>;
+  const amt = (n: number, strong = false) => <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: strong ? 700 : 400, color: n < 0 ? "#B4321F" : "#10241F" }}>{signedMoney(n)}</span>;
   const head = (h: S3Head | null, prefix: string) => h ? <S3HeadRows key={h.key} h={h} prefix={prefix} open={open.has(h.note)} toggle={() => toggle(h.note)} amt={amt} /> : null;
-  const sumRow = (roman: string, label: string, n: number, cls = "s3-block") => <tr className={cls}><td><span className="s3-roman">{roman}</span>{label}</td><td /><td className="s3-num">{amt(n, cls === "s3-total")}</td></tr>;
+  const sumRow = (roman: string, label: string, n: number, cls = "s3-block") => <tr className={cls}><td><span className="s3-roman">{roman}</span>{label}</td><td /><td className="s3-num">{amt(n, cls !== "s3-total")}</td></tr>;
   return (
     <div className="s3">
       <style>{S3CSS}</style>
       <div className="s3-bar">
-        <span>Schedule III format · click a line to see its ledgers, click a ledger to open it</span>
-        <button onClick={() => setOpen(open.size ? new Set() : new Set(heads.map(h => h.note)))}>{open.size ? "Collapse notes" : "Expand all notes"}</button>
+        <span>Schedule III · click a line to see its ledgers</span>
+        <button onClick={() => setNotes(v => !v)}>{notes ? "Collapse notes" : "Show notes"}</button>
       </div>
-      <div style={{ overflowX: "auto" }}>
-        <table>
-          <thead><tr><th>Particulars</th><th>Note</th><th>Amount ({cur()})</th></tr></thead>
-          <tbody>
-            {head(s.revenue, "I. ")}
-            {head(s.otherIncome, "II. ")}
-            {sumRow("III", "Total income (I + II)", s.totalIncome)}
-            <tr className="s3-part"><td colSpan={3}><span className="s3-roman">IV</span>Expenses</td></tr>
-            {s.expenses.map((h, i) => head(h, `(${String.fromCharCode(97 + i)}) `))}
-            {sumRow("", "Total expenses (IV)", s.totalExpenses)}
-            {sumRow("V", `${s.pbt >= 0 ? "Profit" : "Loss"} before tax (III − IV)`, s.pbt)}
-            {s.tax && <><tr className="s3-part"><td colSpan={3}><span className="s3-roman">VI</span>Tax expense</td></tr>{head(s.tax, "")}</>}
-            {sumRow(s.tax ? "VII" : "VI", `${s.profit >= 0 ? "Profit" : "Loss"} for the year`, s.profit, "s3-total")}
-          </tbody>
-        </table>
+      <div className={notes ? "s3-pl" : undefined}>
+        <div className="s3-card" style={{ overflowX: "auto" }}>
+          <table>
+            <thead><tr><th style={{ paddingLeft: 70 }}>Particulars</th><th>Note</th><th>{cur()}</th></tr></thead>
+            <tbody>
+              {s.revenue && <S3HeadRows h={s.revenue} prefix="" open={open.has(s.revenue.note)} toggle={() => toggle(s.revenue!.note)} amt={amt} />}
+              {s.otherIncome && <S3HeadRows h={s.otherIncome} prefix="" open={open.has(s.otherIncome.note)} toggle={() => toggle(s.otherIncome!.note)} amt={amt} />}
+              {sumRow("III", "Total income (I + II)", s.totalIncome)}
+              <tr className="s3-part"><td colSpan={3}><span className="s3-roman">IV</span>Expenses</td></tr>
+              {s.expenses.map((h, i) => head(h, `(${String.fromCharCode(97 + i)}) `))}
+              {sumRow("", "Total expenses (IV)", s.totalExpenses)}
+              {sumRow("V", `${s.pbt >= 0 ? "Profit" : "Loss"} before tax (III − IV)`, s.pbt)}
+              {s.tax && <><tr className="s3-part"><td colSpan={3}><span className="s3-roman">VI</span>Tax expense</td></tr>{head(s.tax, "")}</>}
+              {sumRow(s.tax ? "VII" : "VI", `${s.profit >= 0 ? "Profit" : "Loss"} for the year`, s.profit, "s3-total")}
+            </tbody>
+          </table>
+        </div>
+        {notes && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {heads.map(h => (
+              <div key={h.key} className="s3-card">
+                <div className="s3-nh"><span><span style={{ color: "#9A6B22" }}>Note {h.note}</span> · {h.label}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{signedMoney(h.total)}</span></div>
+                <div className="s3-chips">Ledgers:{h.lines.map(l => { const href = ledgerHref(l.id); return href ? <Link key={l.id} href={href} className="s3-chip">{l.name} →</Link> : <span key={l.id} className="s3-chip">{l.name}</span>; })}</div>
+              </div>
+            ))}
+            <div style={{ fontSize: 13, fontStyle: "italic", color: "#6B7570" }}>Click a ledger to open it.</div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// Balance Sheet in Schedule III vertical format: blocks → note-numbered heads → (expand) ledgers
-const ROMAN = ["I", "II"];
+// Balance Sheet in Schedule III, side by side: equity & liabilities | assets
 function Schedule3View({ s, netProfit }: { s: Schedule3BS; netProfit: number }) {
   const [open, setOpen] = useState<Set<number>>(new Set());
-  const allNotes = [...s.equityLiabilities, ...s.assets].flatMap(b => b.heads.map(h => h.note));
   const toggle = (n: number) => setOpen(o => { const x = new Set(o); if (x.has(n)) x.delete(n); else x.add(n); return x; });
-  const amt = (n: number, strong = false) => <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: strong ? 800 : 600, color: n < 0 ? "#B4321F" : "#10241F" }}>{signedMoney(n)}</span>;
-  const part = (title: string, blocks: Schedule3BS["assets"], total: number, i: number) => (
-    <Fragment key={title}>
-      <tr className="s3-part"><td colSpan={3}><span className="s3-roman">{ROMAN[i]}</span>{title}</td></tr>
-      {blocks.map((b, bi) => (
+  const amt = (n: number) => <span style={{ fontVariantNumeric: "tabular-nums", color: n < 0 ? "#B4321F" : undefined }}>{signedMoney(n)}</span>;
+  const col = (title: string, blocks: Schedule3BS["assets"], total: number) => (
+    <div className="bs-col">
+      <div className="bs-h"><span>{title}</span><span>{cur()}</span></div>
+      {blocks.map(b => (
         <Fragment key={b.key}>
-          <tr className="s3-block"><td>({bi + 1}) {b.label}</td><td /><td className="s3-num s3-sub">{amt(b.total)}</td></tr>
-          {b.heads.map((h, hi) => (
+          <div className="bs-r blk"><span>{b.label}</span>{amt(b.total)}</div>
+          {b.heads.map(h => (
             <Fragment key={h.key}>
-              <tr className={"s3-head" + (open.has(h.note) ? " on" : "")} onClick={() => toggle(h.note)} title="Show the ledgers in this note">
-                <td><span className="s3-caret">{open.has(h.note) ? "▾" : "▸"}</span>({String.fromCharCode(97 + hi)}) {h.label}</td>
-                <td className="s3-note">{h.note}</td>
-                <td className="s3-num">{amt(h.total)}</td>
-              </tr>
-              {open.has(h.note) && h.lines.map(l => (
-                <tr key={l.id} className="s3-line">
-                  <td><Drill id={l.id}>{l.name}</Drill>{l.note && <span className="s3-flag">{l.note}</span>}</td>
-                  <td />
-                  <td className="s3-num"><Drill id={l.id}>{amt(l.amount)}</Drill></td>
-                </tr>
-              ))}
+              <div className="bs-r hd" onClick={() => toggle(h.note)} title="Show the ledgers in this note"><span>{h.label}<span className="bs-n">Note {h.note}</span></span>{amt(h.total)}</div>
+              {open.has(h.note) && h.lines.map(l => <div key={l.id} className="bs-r ln"><Drill id={l.id}>{l.name}</Drill><Drill id={l.id}>{amt(l.amount)}</Drill></div>)}
             </Fragment>
           ))}
         </Fragment>
       ))}
-      <tr className="s3-total"><td>Total</td><td /><td className="s3-num">{amt(total, true)}</td></tr>
-    </Fragment>
+      <div style={{ flex: 1 }} />
+      <div className="bs-t"><span>Total</span>{amt(total)}</div>
+    </div>
   );
   return (
-    <div className="s3">
+    <div className="s3" style={{ padding: "0 24px 24px" }}>
       <style>{S3CSS}</style>
-      <div className="s3-bar">
-        <span>Schedule III format · click a line to see its ledgers, click a ledger to open it</span>
-        <button onClick={() => setOpen(open.size ? new Set() : new Set(allNotes))}>{open.size ? "Collapse notes" : "Expand all notes"}</button>
+      <div className="bs-grid">
+        <div style={{ display: "flex", flexDirection: "column" }}>{col("Equity & liabilities", s.equityLiabilities, s.totalEL)}</div>
+        <div className="bs-col" style={{ display: "flex", flexDirection: "column" }}>{col("Assets", s.assets, s.totalAssets)}</div>
+      </div>
+      <div style={{ paddingTop: 18, textAlign: "center", fontSize: 13, fontStyle: "italic", color: "#6B7570" }}>Schedule III · click a line to see its ledgers · reserves include the {netProfit >= 0 ? "profit" : "loss"} for the year of {signedMoney(netProfit)}{Math.abs(s.totalEL - s.totalAssets) < 0.01 ? " · ✓ balanced" : ""}</div>
+    </div>
+  );
+}
+
+// Trial balance by group (Assets, Liabilities, Income, Expenses, Equity), each group collapsible
+function TBGrouped({ data }: { data: TBData }) {
+  const GROUPS: [string, string][] = [["asset", "Assets"], ["liability", "Liabilities"], ["income", "Income"], ["expense", "Expenses"], ["equity", "Equity"]];
+  const [shut, setShut] = useState<Set<string>>(new Set());
+  const flip = (k: string) => setShut(s => { const x = new Set(s); if (x.has(k)) x.delete(k); else x.add(k); return x; });
+  const known = new Set(GROUPS.map(g => g[0]));
+  const groups = [...GROUPS, ["__other", "Other"] as [string, string]].map(([k, l]) => ({ k, l, rows: data.accounts.filter(a => k === "__other" ? !known.has(a.type) : a.type === k) })).filter(g => g.rows.length);
+  const cell: React.CSSProperties = { padding: "11px 24px", textAlign: "right", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" };
+  const v = (n: number) => n > 0.005 ? fmt(n) : "—";
+  const diff = Math.abs(data.total_dr - data.total_cr);
+  return (
+    <div style={{ background: "#FFFDF8", border: "1px solid #E6DFD0", borderRadius: 14, overflow: "hidden" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "10px 16px 0" }}>
+        <button onClick={() => setShut(shut.size ? new Set() : new Set(groups.map(g => g.k)))} style={{ border: "1px solid #E6DFD0", background: "#FFFDF8", borderRadius: 999, padding: "7px 16px", fontFamily: "inherit", cursor: "pointer" }}>{shut.size ? "Expand all groups" : "Collapse all groups"}</button>
       </div>
       <div style={{ overflowX: "auto" }}>
-        <table>
-          <thead><tr><th>Particulars</th><th>Note</th><th>Amount ({cur()})</th></tr></thead>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.95rem" }}>
+          <thead><tr style={{ borderBottom: "1px solid #9AA3A0" }}>{["Group / account", `Debit ${cur()}`, `Credit ${cur()}`].map((h, i) => <th key={h} style={{ padding: "14px 24px", textAlign: i ? "right" : "left", fontWeight: 400, fontSize: "0.72rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "#4A5651" }}>{h}</th>)}</tr></thead>
           <tbody>
-            {part("Equity and liabilities", s.equityLiabilities, s.totalEL, 0)}
-            {part("Assets", s.assets, s.totalAssets, 1)}
+            {groups.map(g => {
+              const dr = g.rows.reduce((s, a) => s + a.dr, 0), cr = g.rows.reduce((s, a) => s + a.cr, 0), open = !shut.has(g.k);
+              return (
+                <Fragment key={g.k}>
+                  <tr onClick={() => flip(g.k)} style={{ background: "#F3ECDD", cursor: "pointer", borderTop: "1px solid #E6DFD0" }}>
+                    <td style={{ padding: "11px 24px", fontWeight: 700 }}><span style={{ display: "inline-block", width: 16, fontSize: "0.7rem" }}>{open ? "▼" : "▶"}</span>{g.l}</td>
+                    <td style={{ ...cell, fontWeight: 700 }}>{v(dr)}</td><td style={{ ...cell, fontWeight: 700 }}>{v(cr)}</td>
+                  </tr>
+                  {open && g.rows.map(a => (
+                    <tr key={a.id ?? a.name} style={{ borderTop: "1px solid #EFE8DA" }}>
+                      <td style={{ padding: "11px 24px 11px 48px" }}><Drill id={a.id}>{a.name}</Drill>{a.code && <span style={{ marginLeft: 6, fontSize: "0.72rem", color: "#6B7570" }}>{a.code}</span>}</td>
+                      <td style={cell}>{a.dr > 0 ? <Drill id={a.id}>{fmt(a.dr)}</Drill> : "—"}</td>
+                      <td style={cell}>{a.cr > 0 ? <Drill id={a.id}>{fmt(a.cr)}</Drill> : "—"}</td>
+                    </tr>
+                  ))}
+                </Fragment>
+              );
+            })}
           </tbody>
+          <tfoot>
+            <tr style={{ background: "#12352D", color: "#FFFFFF" }}>
+              <td style={{ padding: "16px 24px", fontSize: "0.78rem", letterSpacing: "0.22em", color: "#C9A24A" }}>TOTAL</td>
+              <td style={{ ...cell, fontSize: "1.05rem" }}>{fmt(data.total_dr)}</td><td style={{ ...cell, fontSize: "1.05rem" }}>{fmt(data.total_cr)}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
-      <div style={{ padding: "10px 20px 0", fontSize: 12, color: "rgba(16,36,31,0.6)" }}>Reserves and surplus include the {netProfit >= 0 ? "profit" : "loss"} for the year of {signedMoney(netProfit)}.{Math.abs(s.totalEL - s.totalAssets) < 0.01 ? " ✓ Balanced." : ""}</div>
+      {diff >= 0.01 && <div style={{ padding: "10px 24px", color: "#B4321F", background: "#FBECE8" }}>⚠ Difference: {cur()}{fmt(diff)}</div>}
     </div>
   );
 }
