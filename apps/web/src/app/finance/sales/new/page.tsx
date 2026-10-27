@@ -17,7 +17,20 @@ type PastItem = { desc: string; hsn: string; rate: number; gst: number };
 type Paid = "credit" | "cash" | "bank";
 
 const GST_RATES = ["0", "5", "12", "18", "28"];
-const C = { ink: "#141A3A", muted: "rgba(20,26,58,0.62)", line: "rgba(20,26,58,0.12)", navy: "#232A63", navySoft: "rgba(35,42,99,0.07)", ground: "#F5F6FA", card: "#FFFFFF", good: "#0B7A55", goodSoft: "#E3F6EE", bad: "#C2321F", badSoft: "#FDECEA" };
+const C = { ink: "#10241F", muted: "#6B7570", line: "#E6DFD0", navy: "#12352D", navySoft: "#EFE6D3", ground: "#F4EFE4", card: "#FFFDF8", good: "#0B7A55", goodSoft: "#E3F6EE", bad: "#B4321F", badSoft: "#FBECE8", gold: "#C9A24A", goldInk: "#9A6B22" };
+const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
+// Amount in words, Indian system (for the invoice preview)
+function inWords(n: number): string {
+  const a = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  const two = (x: number) => x < 20 ? a[x] : b[Math.floor(x / 10)] + (x % 10 ? "-" + a[x % 10] : "");
+  const three = (x: number) => (x >= 100 ? a[Math.floor(x / 100)] + " Hundred" + (x % 100 ? " " : "") : "") + (x % 100 ? two(x % 100) : "");
+  let v = Math.round(n); if (!v) return "Zero";
+  const parts: string[] = [];
+  for (const [d, w] of [[10000000, "Crore"], [100000, "Lakh"], [1000, "Thousand"]] as const) { if (v >= d) { parts.push(three(Math.floor(v / d)) + " " + w); v %= d; } }
+  if (v) parts.push(three(v));
+  return parts.join(" ");
+}
 const blankLine = (gst = "18"): BillLine => ({ description: "", hsn: "", qty: "1", rate: "", gst, priceIncludesGst: false });
 const money = (n: number) => cur() + n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -25,6 +38,7 @@ export default function NewSalesInvoicePage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
   const [bizState, setBizState] = useState("");
+  const [biz, setBiz] = useState<{ name?: string; gstin?: string; address?: string }>({});
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [pastItems, setPastItems] = useState<PastItem[]>([]);
@@ -57,7 +71,7 @@ export default function NewSalesInvoicePage() {
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       const [bizRes, contactsRes, accountsRes, pastRes, countRes, itemsRes] = await Promise.all([
-        supabase.from("fw_fin_businesses").select("state").eq("id", saved).single(),
+        supabase.from("fw_fin_businesses").select("*").eq("id", saved).single(),
         supabase.from("fw_fin_contacts").select("id,name,gstin,phone,state").eq("business_id", saved).eq("type", "customer").order("name"),
         supabase.from("fw_fin_chart_of_accounts").select("id,code,name,type,sub_type").eq("business_id", saved).eq("is_group", false).order("code"),
         supabase.from("fw_fin_journals").select("metadata").eq("business_id", saved).eq("type", "sales").order("date", { ascending: false }).limit(200),
@@ -65,6 +79,7 @@ export default function NewSalesInvoicePage() {
         supabase.from("fw_fin_items").select("name,hsn,rate,gst_rate").eq("business_id", saved).eq("is_active", true).order("name"),
       ]);
       setBizState(bizRes.data?.state ?? "");
+      { const b = (bizRes.data ?? {}) as Record<string, unknown>; setBiz({ name: b.name as string, gstin: (b.gstin ?? b.gst_number) as string, address: [b.address, b.city, b.state].filter(Boolean).join(", ") }); }
       setContacts((contactsRes.data ?? []) as Contact[]);
       const accs = (accountsRes.data ?? []) as Account[];
       setAccounts(accs);
@@ -181,13 +196,13 @@ export default function NewSalesInvoicePage() {
   const chip = (on: boolean): React.CSSProperties => ({ flex: 1, height: 42, borderRadius: 10, border: on ? `2px solid ${C.navy}` : `1px solid ${C.line}`, background: on ? C.navySoft : C.card, color: on ? C.navy : C.ink, fontWeight: on ? 800 : 600, fontSize: 14, cursor: "pointer" });
 
   if (done) return (
-    <div style={{ minHeight: "100vh", background: C.ground, color: C.ink, fontFamily: "'Manrope',system-ui,sans-serif", display: "grid", placeItems: "center", padding: 16 }}>
+    <div style={{ minHeight: "100vh", background: C.ground, color: C.ink, fontFamily: SERIF, display: "grid", placeItems: "center", padding: 16 }}>
       <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 20, padding: "32px 28px", maxWidth: 440, width: "100%", textAlign: "center" }}>
         <div style={{ width: 56, height: 56, borderRadius: 28, background: C.goodSoft, color: C.good, display: "grid", placeItems: "center", fontSize: 28, margin: "0 auto 14px" }}>✓</div>
         <h1 style={{ margin: "0 0 6px", fontSize: 22 }}>Invoice saved</h1>
         <p style={{ margin: "0 0 20px", color: C.muted }}>{done.entry} · {done.customer} · <b style={{ color: C.ink }}>{money(done.total)}</b></p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-          <button onClick={startNew} style={{ height: 44, padding: "0 20px", borderRadius: 11, border: "none", background: C.navy, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>+ New invoice</button>
+          <button onClick={startNew} style={{ height: 44, padding: "0 20px", borderRadius: 11, border: "none", background: C.navy, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: SERIF }}>+ New invoice</button>
           <Link href="/finance/invoices" style={{ height: 44, padding: "0 20px", borderRadius: 11, border: `1px solid ${C.line}`, color: C.ink, fontWeight: 700, fontSize: 15, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>All invoices</Link>
         </div>
       </div>
@@ -195,10 +210,14 @@ export default function NewSalesInvoicePage() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: C.ground, color: C.ink, fontFamily: "'Manrope',system-ui,sans-serif", paddingBottom: 110 }}>
+    <div style={{ minHeight: "100vh", background: C.ground, color: C.ink, fontFamily: SERIF, paddingBottom: 40 }}>
       <style>{`
-        .bill-top{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:14px}
-        .bill-row{display:grid;grid-template-columns:minmax(0,2.4fr) 70px 110px 86px 110px 32px;gap:8px;align-items:center}
+        .bill-top{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}.bill-top>:first-child{grid-column:1/-1}
+        .inv-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:24px;align-items:start}
+        @media (max-width:1000px){.inv-two{grid-template-columns:minmax(0,1fr)}}
+        .inv-pv th{font-weight:400;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#4A5651;padding:6px 0;border-bottom:1px solid #6B7570}
+        .inv-pv td{padding:8px 0;border-bottom:1px solid #EFE8DA;font-size:13px}
+        .bill-row{display:grid;grid-template-columns:minmax(0,2.4fr) 64px 110px 86px 28px;gap:8px;align-items:center}
         .bill-head{font-size:12px;font-weight:700;color:${C.muted};text-transform:uppercase;letter-spacing:.05em}
         .bill-amt{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
         .bill-input:focus{border-color:${C.navy}!important;box-shadow:0 0 0 3px ${C.navySoft}}
@@ -210,14 +229,18 @@ export default function NewSalesInvoicePage() {
         }
       `}</style>
 
-      <div style={{ maxWidth: 980, margin: "0 auto", padding: "22px 16px" }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>New invoice</h1>
-          <span style={{ color: C.muted, fontSize: 14 }}>{invoiceNo} · {new Date(invoiceDate + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 28px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+          <h1 style={{ margin: 0, fontSize: 34, fontWeight: 700 }}>New invoice</h1>
+          <span style={{ flex: 1, color: C.muted, fontSize: 14.5, fontStyle: "italic" }}>{invoiceNo} · {new Date(invoiceDate + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+          <button onClick={() => save("draft")} disabled={saving} style={{ height: 44, padding: "0 20px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontFamily: SERIF, fontSize: 15, cursor: "pointer" }}>Save draft</button>
+          <a href={`https://wa.me/?text=${encodeURIComponent(`Invoice ${invoiceNo} from ${biz.name ?? "us"} — ${money(total)}${customer || customerQuery ? ` for ${customer?.name ?? customerQuery}` : ""}`)}`} target="_blank" rel="noopener noreferrer" style={{ height: 44, padding: "0 20px", borderRadius: 999, border: `1px solid ${C.navy}`, color: C.ink, fontSize: 15, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Share on WhatsApp</a>
+          <button onClick={() => save("post")} disabled={saving} style={{ height: 44, padding: "0 24px", borderRadius: 999, border: "none", background: C.navy, color: "#fff", fontFamily: SERIF, fontWeight: 700, fontSize: 15, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.7 : 1 }}>{saving ? "Saving…" : "Save invoice"}</button>
         </div>
 
         {error && <div role="alert" style={{ background: C.badSoft, color: C.bad, padding: "10px 14px", borderRadius: 10, marginBottom: 14, fontWeight: 600 }}>{error}</div>}
 
+        <div className="inv-two"><div>
         {/* Who and when */}
         <section style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 18, marginBottom: 14 }}>
           <div className="bill-top">
@@ -271,7 +294,7 @@ export default function NewSalesInvoicePage() {
         <section style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 18, marginBottom: 14 }}>
           <datalist id="past-items">{pastItems.map(p => <option key={p.desc} value={p.desc} />)}</datalist>
           <div className="bill-row bill-head" style={{ marginBottom: 8 }}>
-            <span>Item</span><span>Qty</span><span>Price ₹</span><span>GST</span><span style={{ textAlign: "right" }}>Amount</span><span />
+            <span>Item</span><span>Qty</span><span>Price {cur()}</span><span>GST</span><span />
           </div>
           {lines.map((l, i) => (
             <div key={i} className="bill-row" style={{ marginBottom: 8 }}>
@@ -283,7 +306,6 @@ export default function NewSalesInvoicePage() {
               <select className="bill-input" style={field} aria-label="GST rate" value={l.gst} onChange={e => setLine(i, { gst: e.target.value })}>
                 {GST_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
               </select>
-              <span className="bill-amt amt">{money(t.calc[i]?.total ?? 0)}</span>
               <button aria-label="Remove item" onClick={() => setLines(prev => prev.length > 1 ? prev.filter((_, k) => k !== i) : [blankLine()])}
                 style={{ height: 32, width: 32, border: "none", borderRadius: 8, background: "none", color: C.muted, cursor: "pointer", fontSize: 18 }}>×</button>
             </div>
@@ -334,22 +356,34 @@ export default function NewSalesInvoicePage() {
           )}
         </section>
 
-        <section style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: "14px 18px", display: "grid", gap: 6, maxWidth: 380, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>
-          <Row k="Taxable value" v={money(t.subtotal)} />
-          {interState ? <Row k="IGST" v={money(t.igst)} /> : <><Row k="CGST" v={money(t.cgst)} /><Row k="SGST" v={money(t.sgst)} /></>}
-          {roundOff && t.roundOff !== 0 && <Row k="Round off" v={(t.roundOff > 0 ? "+" : "−") + money(Math.abs(t.roundOff))} />}
-        </section>
-      </div>
+        </div>
 
-      {/* Always-visible total and actions */}
-      <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, background: C.card, borderTop: `1px solid ${C.line}`, boxShadow: "0 -6px 20px rgba(20,26,58,.06)", zIndex: 30 }}>
-        <div style={{ maxWidth: 980, margin: "0 auto", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 150 }}>
-            <div style={{ fontSize: 12.5, color: C.muted, fontWeight: 700 }}>TOTAL{paid === "credit" ? " · due from customer" : ""}</div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: C.navy, fontVariantNumeric: "tabular-nums" }}>{money(total)}</div>
+        {/* Live preview */}
+        <div style={{ background: C.navy, borderRadius: 20, padding: "18px 20px 20px", position: "sticky", top: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", color: "#DCE4E0", fontSize: 14, marginBottom: 12 }}><span>Live preview · A4</span><span>Updates as you type</span></div>
+          <div className="inv-pv" style={{ background: "#FFFFFF", padding: "30px 34px", color: C.ink, fontVariantNumeric: "tabular-nums" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, paddingBottom: 18, borderBottom: `2px solid ${C.navy}` }}>
+              <div><div style={{ fontSize: 20, fontWeight: 700 }}>{biz.name || "[Your business name]"}</div><div style={{ fontSize: 12, color: C.muted }}>{biz.address || "[Address]"} · GSTIN {biz.gstin || "[your GSTIN]"}</div></div>
+              <div style={{ textAlign: "right" }}><div style={{ fontSize: 11, letterSpacing: ".3em", color: C.goldInk }}>TAX INVOICE</div><div style={{ fontSize: 17, fontWeight: 700 }}>{invoiceNo}</div><div style={{ fontSize: 12, color: C.muted }}>{new Date(invoiceDate + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div></div>
+            </div>
+            <div style={{ padding: "18px 0 14px" }}><div style={{ fontSize: 11, letterSpacing: ".2em", color: C.muted }}>BILL TO</div><div style={{ fontWeight: 700 }}>{customer?.name || customerQuery || "—"}</div>{customer?.gstin && <div style={{ fontSize: 12, color: C.muted }}>GSTIN {customer.gstin}</div>}</div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead><tr><th style={{ textAlign: "left" }}>Item</th><th style={{ textAlign: "right" }}>Qty</th><th style={{ textAlign: "right" }}>Rate</th><th style={{ textAlign: "right" }}>GST</th><th style={{ textAlign: "right" }}>Amount</th></tr></thead>
+              <tbody>
+                {lines.map((l, i) => (l.description || t.calc[i]?.taxable) ? (
+                  <tr key={i}><td>{l.description || "—"}</td><td style={{ textAlign: "right" }}>{l.qty}</td><td style={{ textAlign: "right" }}>{(parseFloat(l.rate) || 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</td><td style={{ textAlign: "right" }}>{l.gst}%</td><td style={{ textAlign: "right" }}>{(t.calc[i]?.taxable ?? 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</td></tr>
+                ) : null)}
+              </tbody>
+            </table>
+            <div style={{ display: "grid", gap: 4, maxWidth: 270, marginLeft: "auto", marginTop: 18, fontSize: 13 }}>
+              <Row k="Taxable value" v={money(t.subtotal).replace(cur(), "")} />
+              {interState ? <Row k="IGST" v={money(t.igst).replace(cur(), "")} /> : <><Row k="CGST" v={money(t.cgst).replace(cur(), "")} /><Row k="SGST" v={money(t.sgst).replace(cur(), "")} /></>}
+              {roundOff && t.roundOff !== 0 && <Row k="Round off" v={(t.roundOff > 0 ? "+" : "−") + money(Math.abs(t.roundOff)).replace(cur(), "")} />}
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${C.muted}`, paddingTop: 6, marginTop: 2 }}><b>Total</b><b style={{ fontSize: 16, borderBottom: `3px solid ${C.gold}` }}>{money(total)}</b></div>
+            </div>
+            <div style={{ marginTop: 18, fontSize: 12, fontStyle: "italic", color: C.muted }}>Rupees {inWords(total)} Only</div>
           </div>
-          <button onClick={() => save("draft")} disabled={saving} style={{ height: 46, padding: "0 18px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save draft</button>
-          <button onClick={() => save("post")} disabled={saving} style={{ height: 46, padding: "0 26px", borderRadius: 12, border: "none", background: C.navy, color: "#fff", fontWeight: 800, fontSize: 16, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.7 : 1 }}>{saving ? "Saving…" : "Save invoice"}</button>
+        </div>
         </div>
       </div>
       {importing && bizId && <BulkImport kind={importing} bizId={bizId} onClose={() => setImporting(null)} onDone={() => setReloadKey(k => k + 1)} />}
@@ -358,5 +392,5 @@ export default function NewSalesInvoicePage() {
 }
 
 function Row({ k, v }: { k: string; v: string }) {
-  return <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14.5 }}><span style={{ color: "rgba(20,26,58,0.62)" }}>{k}</span><span style={{ fontWeight: 700 }}>{v}</span></div>;
+  return <div style={{ display: "flex", justifyContent: "space-between", fontSize: "inherit" }}><span>{k}</span><span>{v}</span></div>;
 }

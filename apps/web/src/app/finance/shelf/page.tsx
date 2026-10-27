@@ -150,12 +150,14 @@ export default function ShelfPage() {
       onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={e => { if (e.currentTarget === e.target) setDrag(false); }}
       onDrop={e => { e.preventDefault(); setDrag(false); if (e.dataTransfer.files?.length) upload(e.dataTransfer.files); }}>
       <style>{`
-        .sh-wrap{max-width:1240px;margin:0 auto;padding:22px 20px 90px;display:flex;flex-direction:column;gap:16px}
-        .sh-body{display:grid;grid-template-columns:232px minmax(0,1fr);gap:20px;align-items:start}
-        .sh-side{position:sticky;top:16px;display:flex;flex-direction:column;gap:2px;background:${C.surface};border:1px solid ${C.line};border-radius:18px;padding:8px}
-        .sh-nav{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:12px;border:none;background:transparent;cursor:pointer;font:inherit;color:${C.ink};text-align:left;transition:background .12s}
-        .sh-nav:hover{background:${C.bg}}
-        .sh-nav[aria-pressed=true]{background:${C.soft}}
+        .sh-wrap{max-width:1400px;margin:0 auto;padding:32px 28px 90px;display:flex;flex-direction:column;gap:16px}
+        .sh-wrap{font-family:'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif}
+        .sh-body{display:flex;flex-direction:column;gap:20px}
+        .sh-side{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+        .sh-nav{display:flex;flex-direction:column;align-items:stretch;gap:18px;padding:16px 18px;border-radius:14px;border:1px solid #E6DFD0;background:#FFFDF8;cursor:pointer;font:inherit;color:#10241F;text-align:left;transition:border-color .12s,background .12s}
+        .sh-nav:hover{border-color:#C9A24A}
+        .sh-nav[aria-pressed=true]{background:#12352D;border-color:#12352D;color:#FFFFFF}
+        .sh-nav.empty{color:#7D8783}
         .sh-row{transition:background .12s}
         .sh-row:hover{background:#F8F3E8}
         .sh-row .sh-acts{opacity:.55;transition:opacity .12s}
@@ -164,10 +166,7 @@ export default function ShelfPage() {
         .sh-grid .sh-row{flex-direction:column;align-items:stretch;border:1px solid ${C.line}!important;border-radius:14px}
         .sh-grid .sh-acts{opacity:1;justify-content:flex-end}
         @media (max-width:900px){
-          .sh-body{grid-template-columns:minmax(0,1fr)}
-          .sh-side{position:static;flex-direction:row;overflow-x:auto;padding:6px}
-          .sh-nav{width:auto;white-space:nowrap;flex-shrink:0}
-          .sh-nav .sh-hint{display:none}
+          .sh-side{grid-template-columns:repeat(2,minmax(0,1fr))}
         }
         @keyframes sh-pulse{0%,100%{opacity:.55}50%{opacity:1}}
         .sh-skel{animation:sh-pulse 1.2s ease-in-out infinite}
@@ -190,21 +189,22 @@ export default function ShelfPage() {
         {/* Header: title, search, upload */}
         <header style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <div style={{ marginRight: "auto" }}>
-            <h1 style={{ margin: 0, fontFamily: SERIF, fontSize: 32, lineHeight: 1.1 }}>Shelf</h1>
+            <div style={{ fontSize: 12, letterSpacing: "0.3em", color: "#9A6B22" }}>DOCUMENT SHELF</div>
+            <h1 style={{ margin: "2px 0 0", fontFamily: SERIF, fontSize: 44, fontWeight: 400, fontStyle: "italic", lineHeight: 1.1 }}>Shelf</h1>
             <div style={{ fontSize: 13.5, color: C.muted, marginTop: 4 }}>
               {items === null ? "Loading…" : <>{(items ?? []).length} files · {kb(totalBytes) || "0 KB"} · {thisMonth} added this month{lastAdded ? ` · last ${day(lastAdded)}` : ""}</>}
             </div>
           </div>
-          <div style={{ position: "relative", flex: "0 1 320px", minWidth: 220 }}>
+          <div style={{ position: "relative", flex: "0 1 360px", minWidth: 220 }}>
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" style={{ position: "absolute", left: 13, top: 12 }}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-            <input id="sh-search" value={q} onChange={e => setQ(e.target.value)} placeholder={india ? "Search title, ARN, DIN, notice no…" : "Search title, reference, notice no…"} aria-label="Search the shelf" style={{ width: "100%", boxSizing: "border-box", height: 40, borderRadius: 12, border: `1px solid ${C.line}`, padding: "0 14px 0 38px", fontSize: 14, background: C.surface, color: C.ink }} />
+            <input id="sh-search" value={q} onChange={e => setQ(e.target.value)} placeholder={india ? "Search title, ARN, DIN, notice no…" : "Search title, reference, notice no…"} aria-label="Search the shelf" style={{ width: "100%", boxSizing: "border-box", height: 42, borderRadius: 999, fontFamily: SERIF, border: `1px solid ${C.line}`, padding: "0 14px 0 38px", fontSize: 14, background: C.surface, color: C.ink }} />
           </div>
-          <div style={{ display: "flex", alignItems: "stretch", borderRadius: 12, overflow: "hidden", boxShadow: "0 8px 20px -12px rgba(18,53,45,.6)" }}>
+          <div style={{ display: "flex", alignItems: "stretch", borderRadius: 999, overflow: "hidden" }}>
             <button onClick={() => fileRef.current?.click()} disabled={!bizId || !!setup} style={{ height: 40, padding: "0 16px", border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
               Upload
             </button>
-            <select id="sh-into" value={uploadRack} onChange={e => setUploadRack(e.target.value as RackKey | "auto")} aria-label="Where to file uploads" title="Where uploads go" style={{ height: 40, border: "none", borderLeft: "1px solid rgba(255,255,255,0.2)", background: "#2E3680", color: "#FFFFFF", fontSize: 13, fontWeight: 700, padding: "0 8px", cursor: "pointer" }}>
+            <select id="sh-into" value={uploadRack} onChange={e => setUploadRack(e.target.value as RackKey | "auto")} aria-label="Where to file uploads" title="Where uploads go" style={{ height: 40, border: "none", borderLeft: "1px solid rgba(255,255,255,0.2)", background: "#0D2822", color: "#FFFFFF", fontSize: 13, fontWeight: 700, padding: "0 8px", cursor: "pointer" }}>
               <option value="auto">✨ AI files it</option>
               {racks.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
             </select>
@@ -242,12 +242,12 @@ export default function ShelfPage() {
               const n = r.key === "all" ? inYear.length : counts[r.key] ?? 0;
               const t = TINT[r.key];
               return (
-                <button key={r.key} className="sh-nav" onClick={() => setRack(r.key)} aria-pressed={on} title={r.hint}>
-                  <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: 9, display: "grid", placeItems: "center", fontSize: 15, background: on ? t.c : t.b, flexShrink: 0, filter: on ? "none" : "saturate(.9)" }}>{r.key === "all" ? "🗄" : ICON[r.key]}</span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 14, fontWeight: on ? 800 : 600 }}>{r.label}</span>
+                <button key={r.key} className={"sh-nav" + (n ? "" : " empty")} onClick={() => setRack(r.key)} aria-pressed={on} title={r.hint}>
+                  <svg aria-hidden="true" width="30" height="24" viewBox="0 0 30 24" fill="none" stroke="#C9A24A" strokeWidth="1.6" strokeLinejoin="round"><path d="M2 4a2 2 0 012-2h7l3 3h12a2 2 0 012 2v13a2 2 0 01-2 2H4a2 2 0 01-2-2V4z" /><path d="M2 9h26" /></svg>
+                  <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 15.5 }}>{r.label}</span>
+                    <span style={{ fontSize: 19, fontVariantNumeric: "tabular-nums" }}>{n}</span>
                   </span>
-                  <span style={{ fontSize: 12, fontWeight: 800, fontVariantNumeric: "tabular-nums", color: n ? (on ? t.c : C.muted) : C.strong }}>{n}</span>
                 </button>
               );
             })}
@@ -256,9 +256,8 @@ export default function ShelfPage() {
           {/* Rack content */}
           <main style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span aria-hidden="true" style={{ width: 6, height: 34, borderRadius: 3, background: curTint.c }} />
               <div style={{ minWidth: 0 }}>
-                <h2 style={{ margin: 0, fontSize: 21, fontWeight: 800 }}>{current.label}</h2>
+                <h2 style={{ margin: 0, fontSize: 24, fontWeight: 400 }}>{current.label}{items ? <span style={{ fontSize: 14, color: C.muted }}> · {shown.length} file{shown.length === 1 ? "" : "s"}</span> : null}</h2>
                 <div style={{ fontSize: 13, color: C.muted }}>{current.hint}</div>
               </div>
             </div>
@@ -356,7 +355,7 @@ export default function ShelfPage() {
                         <select value={it.rack} onChange={e => patch(it.id, { rack: e.target.value as RackKey })} aria-label="Move to rack" title="Move to another rack" style={sel}>
                           {RACKS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
                         </select>
-                        <button onClick={() => open(it)} style={{ ...btn, height: 30, background: C.primary, color: "#FFFFFF", border: "none" }}>Open</button>
+                        <button onClick={() => open(it)} style={{ ...btn, height: 32, padding: "0 16px", borderRadius: 999, background: "#12352D", color: "#FFFFFF", border: "none", fontFamily: SERIF }}>Open</button>
                         <button onClick={() => open(it, true)} style={{ ...btn, height: 30 }} aria-label="Download" title="Download">⬇</button>
                         <button onClick={() => setEditing(it.id)} aria-label="Rename" title="Rename" style={{ ...btn, height: 30 }}>✎</button>
                         <button onClick={() => remove(it)} aria-label="Remove" title="Remove" style={{ ...btn, height: 30, color: C.neg }}>×</button>

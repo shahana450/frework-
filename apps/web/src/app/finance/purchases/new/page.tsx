@@ -144,136 +144,121 @@ export default function NewPurchaseBillPage() {
     router.push("/finance/journals");
   }
 
-  const inputStyle = { background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.17)", color: "#10241F", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
-  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
+  const T = { ink: "#10241F", green: "#12352D", gold: "#C9A24A", goldInk: "#9A6B22", cream: "#F4EFE4", paper: "#FFFDF8", line: "#E6DFD0", pos: "#0B7A55", neg: "#B4321F", muted: "#6B7570" };
+  const inputStyle = { background: "#FFFFFF", border: `1px solid ${T.line}`, color: T.ink, padding: "10px 12px", borderRadius: 10, fontSize: "0.92rem", fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" as const };
+  const labelStyle = { display: "block", fontSize: "0.82rem", color: "#4A5651", marginBottom: "0.4rem" };
+  const card = { background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, padding: "20px 20px" };
+  const colHead = { fontSize: "0.7rem", letterSpacing: "0.16em", textTransform: "uppercase" as const, color: T.muted };
+  const pill = (dark: boolean) => ({ height: 42, padding: "0 20px", borderRadius: 999, border: `1px solid ${dark ? T.green : T.line}`, background: dark ? T.green : T.paper, color: dark ? "#FFFFFF" : T.ink, fontFamily: "inherit", fontWeight: dark ? 700 : 400, fontSize: "0.95rem", cursor: saving ? "wait" : "pointer" });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
-        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>New Purchase Bill</span>
-        <div style={{ flex: 1 }} />
-        <button onClick={() => handleSubmit("draft")} disabled={saving} style={{ background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.17)", color: "#10241F", padding: "7px 16px", borderRadius: 8, cursor: "pointer", fontSize: "0.85rem" }}>Save Draft</button>
-        <button onClick={() => handleSubmit("post")} disabled={saving} style={{ background: "#12352D", border: "none", color: "#F4EFE4", padding: "7px 20px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>Post Bill</button>
-      </nav>
-
-      <div style={{ maxWidth: 980, margin: "0 auto", padding: "2rem" }}>
-        <h1 style={{ margin: "0 0 1.5rem", fontSize: "1.3rem", fontWeight: 800 }}>New Purchase Bill</h1>
-
-        {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#B4321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
-
-        <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem", marginBottom: "1rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-            <div><label style={labelStyle}>Our Bill No</label><input value={billNo} onChange={e => setBillNo(e.target.value)} style={inputStyle} /></div>
-            <div><label style={labelStyle}>Vendor Bill No (optional)</label><input value={vendorBillNo} onChange={e => setVendorBillNo(e.target.value)} placeholder="Vendor's invoice number" style={inputStyle} /></div>
-            <div><label style={labelStyle}>Bill Date</label><input type="date" value={billDate} onChange={e => setBillDate(e.target.value)} style={inputStyle} /></div>
+    <div style={{ minHeight: "100vh", background: T.cream, color: T.ink, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <style>{`.pb-two{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1fr);gap:22px;align-items:start}@media(max-width:900px){.pb-two{grid-template-columns:1fr}}
+        .pb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}@media(max-width:560px){.pb-grid{grid-template-columns:1fr}}
+        .pb-line{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr) 60px minmax(0,1fr) 72px 24px;gap:8px;align-items:center}`}</style>
+      <div style={{ maxWidth: 1360, margin: "0 auto", padding: "32px 28px 80px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: "0.74rem", letterSpacing: "0.3em", color: T.goldInk }}>PAYABLES · {billNo || "NEW BILL"}</div>
+            <h1 style={{ margin: "4px 0 0", fontSize: "2.4rem", fontWeight: 700 }}>New Purchase Bill</h1>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-            <div>
-              <label style={labelStyle}>Vendor</label>
-              <select value={vendorId} onChange={e => setVendorId(e.target.value)} style={inputStyle}>
-                <option value="">-- Select Vendor --</option>
-                {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+          <button onClick={() => handleSubmit("draft")} disabled={saving} style={pill(false)}>Save draft</button>
+          <button onClick={() => handleSubmit("post")} disabled={saving} style={pill(true)}>{saving ? "Posting…" : "Post bill"}</button>
+        </div>
+
+        {error && <div style={{ background: "#FBECE8", border: "1px solid #EBC4BA", color: T.neg, padding: "10px 14px", borderRadius: 10 }}>{error}</div>}
+
+        <div className="pb-two">
+          {/* Scan panel: Smart Inbox reads the vendor's bill and books it item-wise */}
+          <div style={{ background: T.green, color: "#FFFFFF", borderRadius: 20, padding: "22px 22px", display: "flex", flexDirection: "column", gap: 14, minHeight: 560 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", color: "#DCE4E0" }}><span>Vendor’s bill</span><span>Read by FreBook AI</span></div>
+            <div style={{ flex: 1, border: `2px dashed ${T.gold}`, borderRadius: 14, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 24, textAlign: "center" }}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.gold} strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M7 12h10" /></svg>
+              <div style={{ fontSize: "1.6rem", fontWeight: 700 }}>Drop the vendor’s bill</div>
+              <div style={{ color: "#C9D3CE", lineHeight: 1.6 }}>PDF, photo or scan — even handwritten.<br />Vendor, GSTIN, items and tax are read for you.</div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 6 }}>
+                <Link href="/finance/inbox" style={{ padding: "11px 22px", borderRadius: 999, background: T.gold, color: T.ink, fontWeight: 700, textDecoration: "none" }}>Choose file</Link>
+                <Link href="/finance/inbox?camera=1" style={{ padding: "11px 22px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.35)", color: "#FFFFFF", textDecoration: "none" }}>Use camera</Link>
+              </div>
+              <div style={{ fontSize: "0.8rem", color: "#9FB1AA", fontStyle: "italic" }}>Opens Smart Inbox, which books the bill item-wise for you to confirm.</div>
             </div>
-            <div><label style={labelStyle}>Vendor State (for GST)</label><input value={vendorState} onChange={e => { setVendorState(e.target.value); setLines(prev => prev.map(l => calcLine(l))); }} placeholder="e.g. Maharashtra" style={inputStyle} /></div>
-            <div>
-              <label style={labelStyle}>Purchase Account</label>
-              <select value={purchaseAccountId} onChange={e => setPurchaseAccountId(e.target.value)} style={inputStyle}>
-                <option value="">-- Select Account --</option>
-                {accounts.filter(a => a.type === "expense" || (a.type === "asset" && a.sub_type === "inventory")).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-            </div>
+            <Link href="/finance/shelf" style={{ color: T.gold, fontSize: "0.9rem" }}>or pick from Shelf · Bills &amp; Invoices</Link>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-            <div>
-              <label style={labelStyle}>Payment</label>
-              <select value={paymentMode} onChange={e => setPaymentMode(e.target.value as "credit" | "bank" | "cash")} style={inputStyle}>
-                <option value="credit">Credit (Creditor — pay later)</option>
-                <option value="bank">Bank Transfer (Paid now)</option>
-                <option value="cash">Cash (Paid now)</option>
-              </select>
-            </div>
-            {paymentMode !== "credit" && (
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ ...card }} className="pb-grid">
               <div>
-                <label style={labelStyle}>Payment Account</label>
-                <select value={paymentAccountId} onChange={e => setPaymentAccountId(e.target.value)} style={inputStyle}>
-                  <option value="">-- Select Account --</option>
-                  {accounts.filter(a => a.type === "asset" && (a.name.toLowerCase().includes("bank") || a.name.toLowerCase().includes("cash"))).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                <label style={labelStyle}>Vendor</label>
+                <select value={vendorId} onChange={e => setVendorId(e.target.value)} style={inputStyle}>
+                  <option value="">Select vendor…</option>
+                  {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Line Items */}
-        <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, overflow: "hidden", marginBottom: "1rem" }}>
-          <div style={{ padding: "0.85rem 1.25rem", borderBottom: "1px solid rgba(16,36,31,0.08)", fontWeight: 700, fontSize: "0.88rem" }}>
-            Items / Services {isIGST && <span style={{ marginLeft: "0.5rem", fontSize: "0.7rem", background: "rgba(18,53,45,0.1)", color: "#12352D", padding: "2px 8px", borderRadius: 10 }}>IGST (inter-state)</span>}
-          </div>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#FFFDF8" }}>
-                  {["Description", "HSN/SAC", "Qty", "Rate (" + cur() + ")", "GST %", "Base (" + cur() + ")", isIGST ? "IGST (" + cur() + ")" : "CGST+SGST (" + cur() + ")", ""].map(h => (
-                    <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: h.includes(cur()) || h.includes("%") ? "right" : "left", fontSize: "0.65rem", color: "rgba(16,36,31,0.60)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line, i) => (
-                  <tr key={i} style={{ borderTop: "1px solid rgba(16,36,31,0.08)" }}>
-                    <td style={{ padding: "0.4rem 0.75rem" }}><input value={line.description} onChange={e => updateLine(i, "description", e.target.value)} placeholder="Item / service" style={{ ...inputStyle, minWidth: 160 }} /></td>
-                    <td style={{ padding: "0.4rem 0.75rem" }}><input value={line.hsn_sac} onChange={e => updateLine(i, "hsn_sac", e.target.value)} placeholder="HSN" style={{ ...inputStyle, width: 80 }} /></td>
-                    <td style={{ padding: "0.4rem 0.75rem" }}><input type="number" value={line.qty} onChange={e => updateLine(i, "qty", e.target.value)} style={{ ...inputStyle, width: 60, textAlign: "right" }} /></td>
-                    <td style={{ padding: "0.4rem 0.75rem" }}><input type="number" value={line.rate} onChange={e => updateLine(i, "rate", e.target.value)} placeholder="0.00" style={{ ...inputStyle, width: 90, textAlign: "right" }} /></td>
-                    <td style={{ padding: "0.4rem 0.75rem" }}>
-                      <select value={line.gst_rate} onChange={e => updateLine(i, "gst_rate", e.target.value)} style={{ ...inputStyle, width: 70 }}>
-                        {GST_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
-                      </select>
-                    </td>
-                    <td style={{ padding: "0.4rem 0.75rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>{fmt(line.amount)}</td>
-                    <td style={{ padding: "0.4rem 0.75rem", textAlign: "right", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: "#0B7A55" }}>
-                      {isIGST ? fmt(line.igst) : fmt(line.cgst + line.sgst)}
-                    </td>
-                    <td style={{ padding: "0.4rem 0.75rem" }}>
-                      {lines.length > 1 && <button onClick={() => setLines(p => p.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: "rgba(194,50,31,0.5)", cursor: "pointer" }}>✕</button>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid rgba(16,36,31,0.08)" }}>
-            <button onClick={() => setLines(p => [...p, { description: "", hsn_sac: "", qty: "1", rate: "", gst_rate: "18", amount: 0, cgst: 0, sgst: 0, igst: 0 }])}
-              style={{ background: "rgba(18,53,45,0.08)", border: "1px solid rgba(18,53,45,0.2)", color: "#12352D", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
-              + Add Line
-            </button>
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem" }}>
-          <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem" }}>
-            <label style={labelStyle}>Narration</label>
-            <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder={`Purchase Bill ${billNo}`} rows={3} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.55 }} />
-          </div>
-          <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem", minWidth: 240 }}>
-            {[
-              { label: "Subtotal", value: subtotal },
-              ...(isIGST ? [{ label: "IGST (ITC)", value: totalIGST }] : [{ label: "CGST (ITC)", value: totalCGST }, { label: "SGST (ITC)", value: totalSGST }]),
-            ].map(r => (
-              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                <span style={{ fontSize: "0.8rem", color: "rgba(16,36,31,0.70)" }}>{r.label}</span>
-                <span style={{ fontSize: "0.8rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(r.value)}</span>
+              <div><label style={labelStyle}>Vendor state (GST)</label><input value={vendorState} onChange={e => { setVendorState(e.target.value); setLines(prev => prev.map(l => calcLine(l))); }} placeholder="e.g. Maharashtra" style={inputStyle} /></div>
+              <div><label style={labelStyle}>Vendor bill no.</label><input value={vendorBillNo} onChange={e => setVendorBillNo(e.target.value)} placeholder="Vendor’s invoice number" style={inputStyle} /></div>
+              <div><label style={labelStyle}>Bill date</label><input type="date" value={billDate} onChange={e => setBillDate(e.target.value)} style={inputStyle} /></div>
+              <div>
+                <label style={labelStyle}>Purchase account</label>
+                <select value={purchaseAccountId} onChange={e => setPurchaseAccountId(e.target.value)} style={inputStyle}>
+                  <option value="">Select account…</option>
+                  {accounts.filter(a => a.type === "expense" || (a.type === "asset" && a.sub_type === "inventory")).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
               </div>
-            ))}
-            <div style={{ height: 1, background: "rgba(18,53,45,0.2)", margin: "0.75rem 0" }} />
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontWeight: 800 }}>Total Payable</span>
-              <span style={{ fontWeight: 900, fontSize: "1.2rem", color: "#12352D", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(grandTotal)}</span>
+              <div>
+                <label style={labelStyle}>Payment</label>
+                <select value={paymentMode} onChange={e => setPaymentMode(e.target.value as "credit" | "bank" | "cash")} style={inputStyle}>
+                  <option value="credit">Credit (Creditor — pay later)</option>
+                  <option value="bank">Bank transfer (paid now)</option>
+                  <option value="cash">Cash (paid now)</option>
+                </select>
+              </div>
+              {paymentMode !== "credit" && (
+                <div>
+                  <label style={labelStyle}>Paid from</label>
+                  <select value={paymentAccountId} onChange={e => setPaymentAccountId(e.target.value)} style={inputStyle}>
+                    <option value="">Select account…</option>
+                    {accounts.filter(a => a.type === "asset" && (a.name.toLowerCase().includes("bank") || a.name.toLowerCase().includes("cash"))).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div><label style={labelStyle}>Our bill no.</label><input value={billNo} onChange={e => setBillNo(e.target.value)} style={inputStyle} /></div>
             </div>
-            {totalGST > 0 && <div style={{ fontSize: "0.7rem", color: "#0B7A55", marginTop: "0.35rem", textAlign: "right" }}>ITC: {cur()}{fmt(totalGST)}</div>}
+
+            <div style={{ ...card, display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>Items / services {isIGST && <span style={{ marginLeft: 8, fontSize: "0.75rem", fontWeight: 400, color: T.goldInk, border: `1px solid ${T.gold}`, padding: "1px 8px", borderRadius: 999 }}>IGST · inter-state</span>}</div>
+              <div className="pb-line">{["Description", "HSN", "Qty", `Rate ${cur()}`, "GST", ""].map(h => <span key={h} style={colHead}>{h}</span>)}</div>
+              {lines.map((line, i) => (
+                <div key={i} className="pb-line">
+                  <input value={line.description} onChange={e => updateLine(i, "description", e.target.value)} placeholder="Item / service" style={inputStyle} />
+                  <input value={line.hsn_sac} onChange={e => updateLine(i, "hsn_sac", e.target.value)} placeholder="HSN" style={inputStyle} />
+                  <input type="number" value={line.qty} onChange={e => updateLine(i, "qty", e.target.value)} style={{ ...inputStyle, textAlign: "right", padding: "10px 8px" }} />
+                  <input type="number" value={line.rate} onChange={e => updateLine(i, "rate", e.target.value)} placeholder="0.00" style={{ ...inputStyle, textAlign: "right" }} />
+                  <select value={line.gst_rate} onChange={e => updateLine(i, "gst_rate", e.target.value)} style={{ ...inputStyle, padding: "10px 6px" }}>
+                    {GST_RATES.map(r => <option key={r} value={r}>{r}%</option>)}
+                  </select>
+                  {lines.length > 1 ? <button onClick={() => setLines(p => p.filter((_, idx) => idx !== i))} aria-label="Remove line" style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}>×</button> : <span />}
+                </div>
+              ))}
+              <button onClick={() => setLines(p => [...p, { description: "", hsn_sac: "", qty: "1", rate: "", gst_rate: "18", amount: 0, cgst: 0, sgst: 0, igst: 0 }])}
+                style={{ alignSelf: "flex-start", border: `1px dashed ${T.gold}`, background: "transparent", borderRadius: 999, padding: "8px 16px", fontFamily: "inherit", cursor: "pointer", color: T.ink }}>+ Add line</button>
+              <div>
+                <label style={{ ...labelStyle, marginTop: 6 }}>Narration</label>
+                <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder={`Purchase Bill ${billNo}`} rows={2} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }} />
+              </div>
+            </div>
+
+            <div style={{ ...card, display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 200, display: "flex", flexDirection: "column", gap: 6 }}>
+                {[{ label: "Subtotal", value: subtotal }, ...(isIGST ? [{ label: "IGST (ITC)", value: totalIGST }] : [{ label: "CGST (ITC)", value: totalCGST }, { label: "SGST (ITC)", value: totalSGST }])].map(r => (
+                  <div key={r.label} style={{ display: "flex", justifyContent: "space-between" }}><span>{r.label}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(r.value)}</span></div>
+                ))}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "0.74rem", letterSpacing: "0.24em", color: T.goldInk }}>BILL TOTAL</div>
+                <div style={{ fontSize: "2.1rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(grandTotal)}</div>
+                {totalGST > 0 && <div style={{ fontSize: "0.8rem", color: T.pos }}>ITC {cur()}{fmt(totalGST)}</div>}
+              </div>
+            </div>
           </div>
         </div>
       </div>
