@@ -5,7 +5,8 @@ import Link from "next/link";
 import { HELP, type Illustration, type QA } from "@/lib/helpContent";
 import { FREBOOK_PLANS_LIST } from "@/lib/plans";
 
-const NAVY = "#232A63", INK = "#141A3A", MUTED = "#5A6080", LINE = "#E1E4EE", ORANGE = "#F0662B", GREEN = "#0B7A55", SOFT = "#EEF0FA";
+const NAVY = "#12352D", INK = "#10241F", MUTED = "#6B7570", LINE = "#E6DFD0", ORANGE = "#C9A24A", GREEN = "#0B7A55", SOFT = "#EFE6D3";
+const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", PAPER = "#FFFDF8", GOLD = "#C9A24A", GOLDINK = "#9A6B22";
 
 function Steps({ steps }: { steps: string[] }) {
   return (
@@ -94,7 +95,7 @@ function Item({ qa, open, onToggle }: { qa: QA; open: boolean; onToggle: () => v
   return (
     <div className={`hc-item${open ? " open" : ""}`}>
       <button className="hc-q" aria-expanded={open} onClick={onToggle}>
-        <span>{qa.q}</span><span className="hc-plus" aria-hidden="true">{open ? "−" : "+"}</span>
+        <span>{qa.q}</span><span className="hc-plus" aria-hidden="true">{open ? "▼" : "▶"}</span>
       </button>
       {open && (
         <div className="hc-a">
@@ -109,8 +110,8 @@ function Item({ qa, open, onToggle }: { qa: QA; open: boolean; onToggle: () => v
 
 export default function HelpCenter({ inApp = false }: { inApp?: boolean }) {
   const [query, setQuery] = useState("");
-  const [topic, setTopic] = useState<string>("all");
-  const [open, setOpen] = useState<string | null>("start-0");
+  const [topic, setTopic] = useState<string>(HELP[0]?.id ?? "all");
+  const [open, setOpen] = useState<string | null>(`${HELP[0]?.id}-0`);
   const q = query.trim().toLowerCase();
   const topics = useMemo(() => HELP
     .filter(t => topic === "all" || t.id === topic || q)
@@ -118,35 +119,36 @@ export default function HelpCenter({ inApp = false }: { inApp?: boolean }) {
     .filter(t => t.items.length), [topic, q]);
   const count = topics.reduce((s, t) => s + t.items.length, 0);
 
+  const code = (title: string) => title.split(/[\s&]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase().slice(0, 3);
   return (
-    <div className="hc" style={{ background: "#F4F5FA", color: INK, fontFamily: "var(--font-plus-jakarta),var(--font-inter),system-ui,sans-serif", minHeight: inApp ? undefined : "100vh" }}>
+    <div className="hc" style={{ background: "#F4EFE4", color: INK, fontFamily: SERIF, minHeight: inApp ? undefined : "100vh" }}>
       <style>{`
         .hc *{box-sizing:border-box}
-        .hc-hero{padding:120px 16px 36px;text-align:center;background:radial-gradient(ellipse 60% 60% at 50% 0%,rgba(35,42,99,.09),transparent 70%)}
-        .hc-hero h1{margin:0 0 10px;font-size:clamp(30px,5vw,48px);font-weight:800;letter-spacing:-.03em;text-wrap:balance}
-        .hc-hero p{margin:0 auto 22px;max-width:560px;color:${MUTED};font-size:16px;line-height:1.6}
-        .hc-search{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid ${LINE};border-radius:16px;padding:0 16px;height:54px;box-shadow:0 14px 40px -24px rgba(20,26,58,.35)}
-        .hc-search input{flex:1;border:none;outline:none;font-size:16px;color:${INK};background:transparent;min-width:0}
-        .hc-search:focus-within{border-color:${NAVY}}
-        .hc-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:980px;margin:22px auto 0;padding:0 16px}
-        .hc-chipbtn{border:1px solid ${LINE};background:#fff;color:${INK};border-radius:999px;padding:8px 14px;font-size:13.5px;font-weight:700;cursor:pointer}
-        .hc-chipbtn[aria-pressed=true]{background:${NAVY};border-color:${NAVY};color:#fff}
-        .hc-chipbtn:focus-visible,.hc-q:focus-visible{outline:2px solid ${ORANGE};outline-offset:2px}
-        .hc-main{max-width:860px;margin:0 auto;padding:28px 16px 80px;display:flex;flex-direction:column;gap:28px}
-        .hc-topic h2{display:flex;align-items:center;gap:10px;margin:0 0 4px;font-size:20px;font-weight:800}
-        .hc-topic .blurb{margin:0 0 12px;color:${MUTED};font-size:13.5px}
-        .hc-list{display:flex;flex-direction:column;gap:8px}
-        .hc-item{background:#fff;border:1px solid ${LINE};border-radius:16px;overflow:hidden;transition:box-shadow .2s,border-color .2s}
-        .hc-item.open{border-color:#C9CEDF;box-shadow:0 16px 40px -28px rgba(20,26,58,.4)}
-        .hc-q{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;background:none;border:none;text-align:left;padding:16px 18px;font-size:15px;font-weight:700;color:${INK};cursor:pointer}
-        .hc-plus{width:26px;height:26px;border-radius:8px;background:${SOFT};color:${NAVY};display:grid;place-items:center;font-size:18px;flex-shrink:0}
-        .hc-a{padding:0 18px 18px;color:#3C4366;font-size:14.5px;line-height:1.65}
-        .hc-a p{margin:0 0 10px;max-width:68ch}
-        .hc-pic{margin:6px 0 12px;padding:16px;border-radius:14px;background:#F7F8FC;border:1px solid ${LINE};overflow-x:auto}
-        .hc-link{color:${NAVY};font-weight:800;text-decoration:none;font-size:14px}
-        .hc-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;counter-reset:s}
-        .hc-steps li{position:relative;display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid ${LINE};border-radius:12px;padding:12px;font-size:13.5px;font-weight:600;color:${INK}}
-        .hc-num{width:24px;height:24px;border-radius:12px;background:${NAVY};color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center;flex-shrink:0}
+        .hc-wrap{max-width:1200px;margin:0 auto;padding:0 28px}
+        .hc-search{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:10px;background:${PAPER};border-radius:999px;padding:5px 5px 5px 22px;height:62px}
+        .hc-search input{flex:1;border:none;outline:none;font-size:17px;color:${INK};background:transparent;min-width:0;font-family:${SERIF}}
+        .hc-topics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+        @media(max-width:1000px){.hc-topics{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.hc-topics{grid-template-columns:minmax(0,1fr)}}
+        .hc-tcard{display:flex;gap:14px;align-items:flex-start;text-align:left;padding:18px 20px;border-radius:14px;border:1px solid ${LINE};background:${PAPER};color:${INK};cursor:pointer;font-family:${SERIF}}
+        .hc-tcard:hover{border-color:${GOLD}}
+        .hc-tcard[aria-pressed=true]{background:${NAVY};border-color:${NAVY};color:#fff}
+        .hc-tcard[aria-pressed=true] .hc-tb{color:#D3DCD8}
+        .hc-tcode{width:42px;height:42px;flex-shrink:0;border-radius:10px;background:${NAVY};color:${GOLD};display:grid;place-items:center;font-size:12.5px;letter-spacing:.04em}
+        .hc-tcard[aria-pressed=true] .hc-tcode{background:rgba(255,255,255,.12)}
+        .hc-tb{display:block;font-size:14px;color:${MUTED};margin-top:2px;line-height:1.35}
+        .hc-sec{display:grid;grid-template-columns:300px minmax(0,1fr);gap:40px;align-items:start}
+        @media(max-width:860px){.hc-sec{grid-template-columns:minmax(0,1fr);gap:14px}}
+        .hc-list{display:flex;flex-direction:column;gap:12px}
+        .hc-item{background:${PAPER};border:1px solid ${LINE};border-radius:16px;overflow:hidden}
+        .hc-q{width:100%;display:flex;align-items:center;gap:12px;background:none;border:none;text-align:left;padding:20px 24px;font-size:19px;color:${INK};cursor:pointer;font-family:${SERIF}}
+        .hc-plus{order:-1;font-size:13px;color:${INK};flex-shrink:0;width:14px}
+        .hc-a{margin:0 24px;padding:18px 0 22px;border-top:1px solid ${LINE};color:#33433E;font-size:16px;line-height:1.75}
+        .hc-a p{margin:0 0 12px;max-width:72ch}
+        .hc-pic{margin:6px 0 12px;padding:16px;border-radius:14px;background:#F8F3E8;border:1px solid ${LINE};overflow-x:auto}
+        .hc-link{color:${GOLDINK};text-decoration:underline;font-size:15px}
+        .hc-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+        .hc-steps li{display:flex;gap:10px;align-items:flex-start;background:${PAPER};border:1px solid ${LINE};border-radius:12px;padding:12px;font-size:14px;color:${INK}}
+        .hc-num{width:24px;height:24px;border-radius:12px;background:${NAVY};color:#fff;font-size:12px;display:grid;place-items:center;flex-shrink:0}
         .hc-steps li:last-child .hc-num{background:${GREEN}}
         .hc-chat{max-width:380px;border-radius:16px;overflow:hidden;border:1px solid ${LINE};background:#ECE5DD}
         .hc-chat-head{display:flex;gap:10px;align-items:center;padding:10px 12px;background:#075E54;color:#fff}
@@ -158,56 +160,76 @@ export default function HelpCenter({ inApp = false }: { inApp?: boolean }) {
         .hc-bubble.bot{align-self:flex-start;background:#fff;border-top-left-radius:2px}
         .hc-path{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
         .hc-path-row{display:inline-flex;align-items:center;gap:6px}
-        .hc-chip{padding:6px 12px;border-radius:999px;background:#fff;border:1px solid ${LINE};font-size:13px;font-weight:700;color:${INK}}
+        .hc-chip{padding:6px 12px;border-radius:999px;background:${PAPER};border:1px solid ${LINE};font-size:13px;color:${INK}}
         .hc-chip.end{background:${NAVY};border-color:${NAVY};color:#fff}
-        .hc-sep{color:${MUTED};font-weight:800}
+        .hc-sep{color:${MUTED}}
         .hc-plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
-        .hc-plan{background:#fff;border:1px solid ${LINE};border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:13px;color:${MUTED}}
+        .hc-plan{background:${PAPER};border:1px solid ${LINE};border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:13px;color:${MUTED}}
         .hc-plan-top{display:flex;justify-content:space-between;color:${INK}}
-        .hc-plan-top span{font-weight:800}.hc-plan-top small{font-weight:500;color:${MUTED}}
+        .hc-plan-top span{font-weight:700}.hc-plan-top small{color:${MUTED}}
         .hc-bar{height:8px;border-radius:4px;background:${SOFT};overflow:hidden}
         .hc-bar span{display:block;height:100%;background:${NAVY};border-radius:4px}
-        .hc-cta{background:${INK};color:#fff;border-radius:22px;padding:26px;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-        .hc-cta a{background:${ORANGE};color:#fff;text-decoration:none;font-weight:800;padding:12px 18px;border-radius:12px}
-        @media (prefers-reduced-motion:reduce){.hc-item{transition:none}}
+        .hc-q:focus-visible,.hc-tcard:focus-visible{outline:2px solid ${GOLD};outline-offset:2px}
       `}</style>
 
-      <div style={{ maxWidth: 980, margin: "0 auto", padding: inApp ? "18px 16px 0" : "96px 16px 0" }}>
-        <Link href={inApp ? "/finance" : "/"} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 999, background: "#FFFFFF", border: `1px solid ${LINE}`, color: NAVY, fontWeight: 700, fontSize: 13.5, textDecoration: "none" }}>
-          ← Back to {inApp ? "FreBook home" : "home"}
-        </Link>
-      </div>
-      <section className="hc-hero" style={{ paddingTop: inApp ? 20 : 28 }}>
-        <h1>How can we help?</h1>
-        <p>Answers to common questions about FreBook — bookkeeping, WhatsApp, invoices, GST, bank, reports and plans.</p>
-        <label className="hc-search">
-          <span aria-hidden="true">🔍</span>
-          <input type="search" placeholder="Search, e.g. IGST, WhatsApp, Tally, refund…" value={query} onChange={e => setQuery(e.target.value)} aria-label="Search help" />
-          {query && <button onClick={() => setQuery("")} style={{ border: "none", background: "none", color: MUTED, cursor: "pointer", fontSize: 18 }} aria-label="Clear search">×</button>}
-        </label>
-        <div className="hc-chips" role="group" aria-label="Topics">
-          <button className="hc-chipbtn" aria-pressed={topic === "all"} onClick={() => setTopic("all")}>All topics</button>
-          {HELP.map(t => <button key={t.id} className="hc-chipbtn" aria-pressed={topic === t.id} onClick={() => { setTopic(t.id); setQuery(""); }}>{t.icon} {t.title}</button>)}
+      <header style={{ background: NAVY, color: "#FFFFFF" }}>
+        <div className="hc-wrap" style={{ paddingTop: inApp ? 22 : 96 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, paddingBottom: 20, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+            <span style={{ fontSize: 22, fontWeight: 700 }}>Fre<span style={{ color: GOLD }}>Book</span></span>
+            <Link href={inApp ? "/finance" : "/"} style={{ height: 44, padding: "0 18px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.28)", color: "#FFFFFF", textDecoration: "none", display: "inline-flex", alignItems: "center", fontSize: 15 }}>← Back to {inApp ? "FreBook" : "home"}</Link>
+          </div>
+          <div style={{ textAlign: "center", padding: "52px 0 48px" }}>
+            <div style={{ fontSize: 13, letterSpacing: "0.3em", color: GOLD }}>HELP CENTRE</div>
+            <h1 style={{ margin: "10px 0 14px", fontSize: "clamp(40px,6vw,64px)", fontWeight: 400, fontStyle: "italic", lineHeight: 1.1 }}>How can we help?</h1>
+            <p style={{ margin: "0 auto 28px", maxWidth: 760, fontSize: 18, lineHeight: 1.6, color: "#DCE4E0" }}>Answers to common questions about FreBook: bookkeeping, WhatsApp, invoices, GST, bank, reports and plans.</p>
+            <form className="hc-search" role="search" onSubmit={e => e.preventDefault()}>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+              <input type="search" placeholder="Search, e.g. IGST, WhatsApp, Tally, refund" value={query} onChange={e => setQuery(e.target.value)} aria-label="Search help" />
+              {query && <button type="button" onClick={() => setQuery("")} style={{ border: "none", background: "none", color: MUTED, cursor: "pointer", fontSize: 20 }} aria-label="Clear search">×</button>}
+              <button type="submit" style={{ height: 52, padding: "0 26px", borderRadius: 999, border: "none", background: GOLD, color: INK, fontFamily: SERIF, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Search</button>
+            </form>
+          </div>
         </div>
-      </section>
+      </header>
 
-      <main className="hc-main">
-        {q && <p style={{ margin: 0, color: MUTED, fontSize: 14 }}>{count ? `${count} answer${count === 1 ? "" : "s"} for “${query.trim()}”` : `Nothing found for “${query.trim()}”. Try another word, or ask us on WhatsApp.`}</p>}
+      <main className="hc-wrap" style={{ paddingTop: 40, paddingBottom: 80, display: "flex", flexDirection: "column", gap: 44 }}>
+        {!q && (
+          <section aria-label="Topics">
+            <h2 style={{ margin: "0 0 18px", fontSize: 28, fontWeight: 400, fontStyle: "italic" }}>Browse by topic</h2>
+            <div className="hc-topics">
+              {HELP.map(t => (
+                <button key={t.id} className="hc-tcard" aria-pressed={topic === t.id} onClick={() => { setTopic(t.id); setOpen(`${t.id}-0`); }}>
+                  <span className="hc-tcode">{code(t.title)}</span>
+                  <span><span style={{ display: "block", fontSize: 18 }}>{t.title}</span><span className="hc-tb">{t.blurb}</span></span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {q && <p style={{ margin: 0, color: MUTED, fontSize: 16, fontStyle: "italic" }}>{count ? `${count} answer${count === 1 ? "" : "s"} for “${query.trim()}”` : `Nothing found for “${query.trim()}”. Try another word, or ask us on WhatsApp.`}</p>}
         {topics.map(t => (
-          <section key={t.id} className="hc-topic" aria-labelledby={`t-${t.id}`}>
-            <h2 id={`t-${t.id}`}><span aria-hidden="true">{t.icon}</span>{t.title}</h2>
-            <p className="blurb">{t.blurb}</p>
+          <section key={t.id} className="hc-sec" aria-labelledby={`t-${t.id}`}>
+            <div>
+              <div style={{ fontSize: 13, letterSpacing: "0.24em", color: GOLDINK }}>TOPIC</div>
+              <h2 id={`t-${t.id}`} style={{ margin: "6px 0 10px", fontSize: 36, fontWeight: 400, fontStyle: "italic", lineHeight: 1.15 }}>{t.title}</h2>
+              <p style={{ margin: 0, color: MUTED, fontSize: 16, lineHeight: 1.55 }}>{t.blurb}</p>
+            </div>
             <div className="hc-list">
               {t.items.map(({ it, key }) => <Item key={key} qa={it} open={open === key || (!!q && count <= 3)} onToggle={() => setOpen(open === key ? null : key)} />)}
             </div>
           </section>
         ))}
-        <div className="hc-cta">
+
+        <div style={{ background: NAVY, color: "#FFFFFF", borderRadius: 22, padding: "34px 40px", display: "flex", gap: 18, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800 }}>Still stuck?</div>
-            <div style={{ opacity: .75, fontSize: 14, marginTop: 4 }}>Message us on WhatsApp — a real person replies.</div>
+            <div style={{ fontSize: 30, fontStyle: "italic" }}>Still stuck?</div>
+            <div style={{ fontSize: 16, color: "#DCE4E0", marginTop: 6 }}>Message the FreBook team and a real person will get back to you.</div>
           </div>
-          <a href="https://wa.me/919539028318?text=Hi%20FreWork%2C%20I%20have%20a%20question%20about%20FreBook" target="_blank" rel="noopener noreferrer">Chat on WhatsApp</a>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <a href="https://wa.me/919539028318?text=Hi%20FreWork%2C%20I%20have%20a%20question%20about%20FreBook" target="_blank" rel="noopener noreferrer" style={{ height: 50, padding: "0 26px", borderRadius: 999, background: GOLD, color: INK, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", fontSize: 16 }}>Chat on WhatsApp →</a>
+            <a href="mailto:support@frework.online?subject=FreBook%20help" style={{ height: 50, padding: "0 26px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.3)", color: "#FFFFFF", textDecoration: "none", display: "inline-flex", alignItems: "center", fontSize: 16 }}>Email support</a>
+          </div>
         </div>
       </main>
     </div>
