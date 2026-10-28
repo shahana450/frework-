@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import PageHero, { HeroAction, HT, SERIF } from "@/components/finance/PageHero";
 
 type MonthData = { month: string; revenue: number; expenses: number; profit: number };
 type TopAccount = { name: string; amount: number; type: string };
@@ -13,6 +14,7 @@ export default function InsightsPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
   const [bizName, setBizName] = useState("");
+  const [gstin, setGstin] = useState("");
   const [loading, setLoading] = useState(true);
   const [monthlyData, setMonthlyData] = useState<MonthData[]>([]);
   const [topExpenses, setTopExpenses] = useState<TopAccount[]>([]);
@@ -30,8 +32,8 @@ export default function InsightsPage() {
       const saved = (readActiveBusiness(user.id) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
-      const { data: biz } = await supabase.from("fw_fin_businesses").select("name").eq("id", saved).single();
-      setBizName(biz?.name ?? "");
+      const { data: biz } = await supabase.from("fw_fin_businesses").select("name,gstin").eq("id", saved).single();
+      setBizName(biz?.name ?? ""); setGstin((biz as { gstin?: string | null } | null)?.gstin ?? "");
       await loadInsights(saved);
     });
   }, []);
@@ -78,7 +80,7 @@ export default function InsightsPage() {
     const months: MonthData[] = Array.from(monthMap.entries())
       .map(([month, d]) => ({ month, revenue: d.revenue, expenses: d.expenses, profit: d.revenue - d.expenses }))
       .sort((x, y) => x.month.localeCompare(y.month))
-      .slice(-6);
+      ;
     setMonthlyData(months);
 
     const rev = [...monthMap.values()].reduce((s, m) => s + m.revenue, 0);
@@ -103,192 +105,123 @@ export default function InsightsPage() {
     setLoading(false);
   }
 
-  const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
-  const fmtShort = (n: number) => n >= 100000 ? `${cur()}${(n / 100000).toFixed(1)}L` : n >= 1000 ? `${cur()}${(n / 1000).toFixed(1)}K` : `${cur()}${Math.round(n)}`;
+  const inr = (n: number) => `${n < 0 ? "−" : ""}${cur()}${Math.abs(Math.round(n)).toLocaleString(activeMoney().locale)}`;
+  const [ask, setAsk] = useState("");
 
-  const maxMonthValue = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expenses)), 1);
-  const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : "0.0";
-  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  // Every month of the financial year up to now, so gaps show
+  const now = new Date();
+  const fyY = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  const fyLabel = `${fyY}-${String(fyY + 1).slice(2)}`;
+  const byMonth = new Map(monthlyData.map(m => [m.month, m]));
+  const months: MonthData[] = [];
+  for (let d = new Date(fyY, 3, 1); d <= now; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    months.push(byMonth.get(k) ?? { month: k, revenue: 0, expenses: 0, profit: 0 });
+  }
+  const mName = (k: string, long = false) => new Date(k + "-01T00:00:00").toLocaleDateString("en-IN", { month: long ? "long" : "short" });
+  const max = Math.max(1, ...months.flatMap(m => [m.revenue, m.expenses]));
+  const cur0 = months[months.length - 1];
+  const active = months.filter(m => m.revenue || m.expenses);
+  const empty = months.filter(m => !m.revenue && !m.expenses && m !== cur0);
+  const margin = totalRevenue ? (netProfit / totalRevenue) * 100 : 0;
+  const monthlySpend = active.length ? totalExpenses / active.length : 0;
+
+  const headline = loading ? "Reading your books…"
+    : !totalRevenue && !totalExpenses ? "No entries yet this year"
+    : `${netProfit >= 0 ? "A healthy year" : "A loss-making year"}, ${cur0 && cur0.profit < 0 ? `a soft ${mName(cur0.month, true)}` : cur0 && cur0.profit > 0 ? `a good ${mName(cur0.month, true)}` : "so far"}`;
+
+  type Note = { tag: "Watch" | "Check" | "Good"; text: React.ReactNode };
+  const notes: Note[] = [];
+  if (cur0 && cur0.profit < 0 && (cur0.revenue || cur0.expenses)) notes.push({ tag: "Watch", text: <>{mName(cur0.month, true)} ran at a loss of {inr(-cur0.profit)} — expenses of {inr(cur0.expenses)} outpaced sales of {inr(cur0.revenue)}.</> });
+  if (topExpenses[0] && totalExpenses && topExpenses[0].amount / totalExpenses > 0.4) notes.push({ tag: "Watch", text: <>{topExpenses[0].name} is {Math.round((topExpenses[0].amount / totalExpenses) * 100)}% of all expenses this year ({inr(topExpenses[0].amount)}).</> });
+  if (empty.length) notes.push({ tag: "Check", text: <>No entries for {empty.length === 1 ? mName(empty[0].month, true) : `${mName(empty[0].month, true)} to ${mName(empty[empty.length - 1].month, true)}`}. <Link href="/finance/banking/import" style={{ color: HT.ink }}>Upload statements</Link> to complete the year.</> });
+  if (!gstin) notes.push({ tag: "Check", text: <>GST payable can’t be worked out without a GSTIN. <Link href="/finance/settings/business" style={{ color: HT.ink }}>Add it</Link>.</> });
+  if (cashBalance < 0) notes.push({ tag: "Watch", text: <>Cash & bank is negative ({inr(cashBalance)}) — a receipt may be missing.</> });
+  if (totalRevenue && margin > 0) notes.push({ tag: "Good", text: <>Year-to-date margin of {margin.toFixed(1)}%{monthlySpend > 0 && cashBalance > 0 ? `; cash covers about ${(cashBalance / monthlySpend).toFixed(1)} months of average spending` : ""}.</> });
+  const TAG = { Watch: { bg: "#FBE3DE", c: "#B4321F" }, Check: { bg: "#FBF1DA", c: "#9A6B22" }, Good: { bg: "#E3F3EC", c: "#0B7A55" } };
+
+  const goAsk = (q: string) => { if (q.trim()) router.push(`/finance/chat-book?q=${encodeURIComponent(q.trim())}`); };
+  const card: React.CSSProperties = { background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 18 };
+  const best = active.length ? active.reduce((a, b) => (b.profit > a.profit ? b : a)) : null;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
-        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>AI Insights</span>
-        <div style={{ flex: 1 }} />
-        <Link href="/finance/chat-book" style={{ background: "rgba(18,53,45,0.1)", border: "1px solid rgba(18,53,45,0.3)", color: "#12352D", padding: "6px 14px", borderRadius: 8, textDecoration: "none", fontSize: "0.82rem" }}>
-          🛩️ Ask your books
-        </Link>
-      </nav>
+    <div style={{ minHeight: "100vh", background: HT.cream, color: HT.ink, fontFamily: SERIF }}>
+      <style>{`.in-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}@media(max-width:900px){.in-two{grid-template-columns:minmax(0,1fr)}}`}</style>
+      <PageHero eyebrow={`AI insights · FY ${fyLabel} to date`} title={headline}
+        actions={<HeroAction onClick={() => document.getElementById("in-ask")?.focus()}>✦ Ask your books</HeroAction>}
+        tiles={[
+          { label: "Revenue", value: inr(totalRevenue) },
+          { label: "Expenses", value: inr(totalExpenses) },
+          { label: netProfit < 0 ? "Net loss" : "Net profit", value: inr(netProfit), sub: totalRevenue ? `margin ${margin.toFixed(1)}%` : undefined, tone: netProfit < 0 ? "bad" : "good" },
+          { label: "Cash & bank", value: inr(cashBalance), tone: cashBalance < 0 ? "bad" : "plain" },
+          { label: "GST payable", value: inr(gstPayable), sub: gstin ? undefined : "GSTIN not set", tone: "warn" },
+        ]} />
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
-        <div style={{ marginBottom: "1.5rem" }}>
-          <h1 style={{ margin: "0 0 0.2rem", fontSize: "1.3rem", fontWeight: 800 }}>AI Financial Insights</h1>
-          <p style={{ margin: 0, color: "rgba(16,36,31,0.65)", fontSize: "0.82rem" }}>{bizName} — Current Financial Year</p>
-        </div>
-
-        {loading ? (
-          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(16,36,31,0.55)" }}>Analysing your financials…</div>
-        ) : (
-          <>
-            {/* KPI Strip */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
-              {[
-                { label: "Revenue", value: totalRevenue, color: "#0B7A55", icon: "📈" },
-                { label: "Expenses", value: totalExpenses, color: "#B4321F", icon: "📉" },
-                { label: "Net Profit", value: netProfit, color: netProfit >= 0 ? "#12352D" : "#B4321F", icon: "💰" },
-                { label: "GST Payable", value: gstPayable, color: "#12352D", icon: "🏛️" },
-                { label: "Cash & Bank", value: cashBalance, color: "rgba(16,36,31,1.00)", icon: "🏦" },
-              ].map(k => (
-                <div key={k.label} style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 10, padding: "0.9rem 1rem" }}>
-                  <div style={{ fontSize: "1.1rem", marginBottom: "0.35rem" }}>{k.icon}</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>{fmtShort(k.value)}</div>
-                  <div style={{ fontSize: "0.68rem", color: "rgba(16,36,31,0.60)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.2rem" }}>{k.label}</div>
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 60px", display: "flex", flexDirection: "column", gap: 22 }}>
+        <div className="in-two">
+          <section style={{ ...card, padding: "22px 24px" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 14 }}>
+              <span style={{ flex: 1, fontSize: 22, fontStyle: "italic" }}>Revenue against expenses</span>
+              <span style={{ fontSize: 13.5, color: HT.muted }}><i style={{ display: "inline-block", width: 10, height: 10, background: HT.green, marginRight: 5 }} />Revenue <i style={{ display: "inline-block", width: 10, height: 10, background: "#D7B266", margin: "0 5px 0 10px" }} />Expenses</span>
+            </div>
+            <div role="img" aria-label="Revenue and expenses by month" style={{ display: "grid", gridTemplateColumns: `repeat(${Math.max(months.length, 1)},minmax(0,1fr))`, gap: 8, alignItems: "end", height: 190, borderBottom: `1px solid ${HT.line}` }}>
+              {months.map(m => (
+                <div key={m.month} title={`${mName(m.month, true)}: revenue ${inr(m.revenue)}, expenses ${inr(m.expenses)}`} style={{ height: "100%", display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 4 }}>
+                  {m.revenue || m.expenses
+                    ? <><span style={{ width: "34%", maxWidth: 22, height: `${(Math.max(0, m.revenue) / max) * 100}%`, background: HT.green }} /><span style={{ width: "34%", maxWidth: 22, height: `${(Math.max(0, m.expenses) / max) * 100}%`, background: "#D7B266" }} /></>
+                    : <span style={{ width: 3, height: 3, borderRadius: 999, background: HT.muted, marginBottom: "50%" }} />}
                 </div>
               ))}
             </div>
-
-            {/* Profit Margin card */}
-            <div style={{ background: parseFloat(profitMargin) >= 0 ? "rgba(11,122,85,0.06)" : "rgba(194,50,31,0.06)", border: `1px solid ${parseFloat(profitMargin) >= 0 ? "rgba(11,122,85,0.2)" : "rgba(194,50,31,0.2)"}`, borderRadius: 12, padding: "1rem 1.5rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "2rem" }}>
-              <div>
-                <div style={{ fontSize: "0.7rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>Net Profit Margin</div>
-                <div style={{ fontSize: "2.5rem", fontWeight: 900, color: parseFloat(profitMargin) >= 0 ? "#0B7A55" : "#B4321F", fontVariantNumeric: "tabular-nums" }}>{profitMargin}%</div>
-              </div>
-              <div style={{ flex: 1, fontSize: "0.85rem", color: "rgba(16,36,31,0.75)", lineHeight: 1.6 }}>
-                {parseFloat(profitMargin) >= 20
-                  ? "Excellent margin. Your business is highly profitable. Consider investing surplus in growth."
-                  : parseFloat(profitMargin) >= 10
-                  ? "Healthy margin. Room to improve by controlling expenses or increasing pricing."
-                  : parseFloat(profitMargin) >= 0
-                  ? "Thin margin. Review your largest expense categories and consider pricing strategy."
-                  : "Operating at a loss. Immediate action needed — cut costs or increase revenue."}
-              </div>
-              <Link href="/finance/chat-book" style={{ flexShrink: 0, background: "rgba(18,53,45,0.1)", border: "1px solid rgba(18,53,45,0.25)", color: "#12352D", padding: "8px 16px", borderRadius: 8, textDecoration: "none", fontSize: "0.8rem", fontWeight: 600 }}>
-                Ask your books →
-              </Link>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.max(months.length, 1)},minmax(0,1fr))`, gap: 8, fontSize: 13.5, color: HT.muted, textAlign: "center", marginTop: 8 }}>
+              {months.map(m => <span key={m.month}>{mName(m.month)}</span>)}
             </div>
+            {(best || cur0) && <div style={{ display: "flex", justifyContent: "space-between", gap: 12, borderTop: `1px solid ${HT.line}`, marginTop: 14, paddingTop: 12, fontSize: 15 }}>
+              {best && best !== cur0 ? <span>{mName(best.month, true)} profit <span style={{ color: "#0B7A55" }}>{best.profit >= 0 ? "+" : ""}{inr(best.profit)}</span></span> : <span />}
+              {cur0 && <span>{mName(cur0.month, true)} <span style={{ color: cur0.profit < 0 ? "#B4321F" : "#0B7A55" }}>{cur0.profit >= 0 ? "+" : ""}{inr(cur0.profit)}</span></span>}
+            </div>}
+          </section>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem", marginBottom: "1.5rem" }}>
-              {/* Bar Chart — Monthly P&L */}
-              <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem" }}>
-                <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "1.25rem" }}>Monthly Revenue vs Expenses</div>
-                {monthlyData.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "2rem", color: "rgba(16,36,31,0.35)", fontSize: "0.82rem" }}>No posted journals yet</div>
-                ) : (
-                  <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", height: 160 }}>
-                    {monthlyData.map(m => {
-                      const revH = Math.round((m.revenue / maxMonthValue) * 140);
-                      const expH = Math.round((m.expenses / maxMonthValue) * 140);
-                      const label = monthLabels[parseInt(m.month.slice(5, 7)) - 1];
-                      return (
-                        <div key={m.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                          <div style={{ fontSize: "0.62rem", color: "rgba(16,36,31,0.55)", marginBottom: 4, fontVariantNumeric: "tabular-nums" }}>{fmtShort(m.profit)}</div>
-                          <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 140 }}>
-                            <div title={`Revenue: ${cur()}${fmt(m.revenue)}`} style={{ width: 14, height: revH, background: "linear-gradient(180deg,#0B7A55,#0B7A55)", borderRadius: "3px 3px 0 0", transition: "height 0.4s" }} />
-                            <div title={`Expenses: ${cur()}${fmt(m.expenses)}`} style={{ width: 14, height: expH, background: "linear-gradient(180deg,#B4321F,#B4321F)", borderRadius: "3px 3px 0 0", transition: "height 0.4s" }} />
-                          </div>
-                          <div style={{ fontSize: "0.62rem", color: "rgba(16,36,31,0.65)", marginTop: 4 }}>{label}</div>
-                        </div>
-                      );
-                    })}
+          <section>
+            <div style={{ fontSize: 22, fontStyle: "italic", marginBottom: 12 }}>What FreBook noticed</div>
+            <div style={{ ...card, overflow: "hidden" }}>
+              {loading ? <div style={{ padding: 22, color: HT.muted, fontStyle: "italic" }}>Reading…</div>
+                : notes.length === 0 ? <div style={{ padding: 22, color: HT.muted, fontStyle: "italic" }}>Nothing stands out yet — add a few months of entries.</div>
+                : notes.map((n, i) => (
+                  <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "15px 22px", borderTop: i ? `1px solid ${HT.line}` : undefined, fontSize: 15.5, lineHeight: 1.55 }}>
+                    <span style={{ flexShrink: 0, marginTop: 2, fontSize: 12.5, padding: "2px 10px", borderRadius: 999, background: TAG[n.tag].bg, color: TAG[n.tag].c }}>{n.tag}</span>
+                    <span>{n.text}</span>
                   </div>
-                )}
-                <div style={{ display: "flex", gap: "1rem", marginTop: "0.75rem" }}>
-                  {[{ color: "#0B7A55", label: "Revenue" }, { color: "#B4321F", label: "Expenses" }].map(l => (
-                    <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color }} />
-                      <span style={{ fontSize: "0.7rem", color: "rgba(16,36,31,0.65)" }}>{l.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Revenue / Expense trend (profit line concept) */}
-              <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem" }}>
-                <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "1rem" }}>Profit Trend</div>
-                {monthlyData.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "2rem", color: "rgba(16,36,31,0.35)", fontSize: "0.82rem" }}>No data yet</div>
-                ) : (
-                  <div>
-                    {monthlyData.map(m => {
-                      const maxAbs = Math.max(...monthlyData.map(x => Math.abs(x.profit)), 1);
-                      const pct = (Math.abs(m.profit) / maxAbs) * 100;
-                      const label = monthLabels[parseInt(m.month.slice(5, 7)) - 1];
-                      const isProfit = m.profit >= 0;
-                      return (
-                        <div key={m.month} style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.6rem" }}>
-                          <div style={{ width: 26, fontSize: "0.68rem", color: "rgba(16,36,31,0.60)", flexShrink: 0 }}>{label}</div>
-                          <div style={{ flex: 1, height: 20, background: "rgba(16,36,31,0.08)", borderRadius: 4, overflow: "hidden" }}>
-                            <div style={{ height: "100%", width: `${pct}%`, background: isProfit ? "linear-gradient(90deg,#0B7A55,#0B7A55)" : "linear-gradient(90deg,#B4321F,#B4321F)", borderRadius: 4, transition: "width 0.5s" }} />
-                          </div>
-                          <div style={{ width: 70, textAlign: "right", fontSize: "0.72rem", color: isProfit ? "#0B7A55" : "#B4321F", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
-                            {isProfit ? "+" : ""}{fmtShort(m.profit)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                ))}
             </div>
-
-            {/* Top Expenses + Top Revenue */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem", marginBottom: "1.5rem" }}>
-              {[
-                { title: "Top Expense Categories", data: topExpenses, color: "#B4321F", emptyMsg: "No expense data yet" },
-                { title: "Top Revenue Accounts", data: topRevenue, color: "#0B7A55", emptyMsg: "No revenue data yet" },
-              ].map(section => {
-                const max = Math.max(...section.data.map(d => d.amount), 1);
-                const total = section.data.reduce((s, d) => s + d.amount, 0);
-                return (
-                  <div key={section.title} style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem" }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "1rem" }}>{section.title}</div>
-                    {section.data.length === 0 ? (
-                      <div style={{ textAlign: "center", padding: "1.5rem", color: "rgba(16,36,31,0.35)", fontSize: "0.82rem" }}>{section.emptyMsg}</div>
-                    ) : (
-                      section.data.map((d, i) => (
-                        <div key={i} style={{ marginBottom: "0.75rem" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
-                            <span style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "65%" }}>{d.name}</span>
-                            <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
-                              <span style={{ fontSize: "0.75rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(d.amount)}</span>
-                              <span style={{ fontSize: "0.68rem", color: "rgba(16,36,31,0.55)" }}>{total > 0 ? `${((d.amount / total) * 100).toFixed(0)}%` : ""}</span>
-                            </div>
-                          </div>
-                          <div style={{ height: 6, background: "rgba(16,36,31,0.08)", borderRadius: 3, overflow: "hidden" }}>
-                            <div style={{ height: "100%", width: `${(d.amount / max) * 100}%`, background: section.color, borderRadius: 3, opacity: 0.8 }} />
-                          </div>
-                        </div>
-                      ))
-                    )}
+            {(topExpenses.length > 0 || topRevenue.length > 0) && (
+              <div style={{ ...card, marginTop: 14, padding: "14px 22px", display: "grid", gap: 6, fontSize: 14.5 }}>
+                <div style={{ fontSize: 12, letterSpacing: "0.2em", color: HT.goldInk }}>LARGEST EXPENSES</div>
+                {topExpenses.slice(0, 4).map(e => (
+                  <div key={e.name} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.name}</span>
+                    <span style={{ width: 90, height: 5, borderRadius: 999, background: "#EFE6D3", overflow: "hidden" }}><span style={{ display: "block", height: "100%", width: `${(e.amount / (topExpenses[0]?.amount || 1)) * 100}%`, background: "#D7B266" }} /></span>
+                    <span style={{ width: 96, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{inr(e.amount)}</span>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* Smart Alerts */}
-            <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem" }}>
-              <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "1rem" }}>Smart Alerts & Recommendations</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-                {[
-                  gstPayable > 0 && { icon: "🏛️", text: `GST payable estimated at ${cur()}${fmt(gstPayable)}. File GSTR-3B before the 20th.`, color: "#12352D", href: "/finance/gst" },
-                  netProfit < 0 && { icon: "⚠️", text: "Business is operating at a loss this year. Review your top expenses and pricing.", color: "#B4321F", href: "/finance/chat-book" },
-                  totalRevenue === 0 && { icon: "📈", text: "No sales recorded yet. Create your first sales invoice to start tracking revenue.", color: "#12352D", href: "/finance/sales/new" },
-                  totalExpenses > totalRevenue * 0.8 && totalRevenue > 0 && { icon: "📊", text: `Expenses are ${((totalExpenses / totalRevenue) * 100).toFixed(0)}% of revenue. Industry benchmark is typically 60–70%.`, color: "#B4561E", href: "/finance/reports" },
-                  gstPayable > 0 && { icon: "✅", text: "Ensure GST ITC is claimed on all purchase bills with valid GSTIN.", color: "#0B7A55", href: "/finance/chat-book" },
-                  { icon: "📋", text: "Keep all invoices uploaded and AI-reviewed for accurate books and easy ITR filing.", color: "rgba(16,36,31,0.75)", href: "/finance/upload" },
-                ].filter(Boolean).map((alert, i) => alert && (
-                  <Link key={i} href={alert.href} style={{ display: "flex", alignItems: "center", gap: "0.85rem", padding: "0.65rem 0.85rem", background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.08)", borderRadius: 8, textDecoration: "none" }}>
-                    <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{alert.icon}</span>
-                    <span style={{ fontSize: "0.82rem", color: alert.color, flex: 1, lineHeight: 1.45 }}>{alert.text}</span>
-                    <span style={{ fontSize: "0.75rem", color: "#12352D", flexShrink: 0 }}>→</span>
-                  </Link>
                 ))}
               </div>
-            </div>
-          </>
-        )}
+            )}
+          </section>
+        </div>
+
+        <section style={{ ...card, padding: "22px 24px" }}>
+          <div style={{ fontSize: 22, fontStyle: "italic", marginBottom: 12 }}>Ask your books</div>
+          <form onSubmit={e => { e.preventDefault(); goAsk(ask); }} style={{ display: "flex", gap: 10 }}>
+            <input id="in-ask" value={ask} onChange={e => setAsk(e.target.value)} placeholder={cur0 && cur0.profit < 0 ? `Why was ${mName(cur0.month, true)} a loss?` : "Where did most of my money go?"}
+              style={{ flex: 1, minWidth: 0, height: 48, borderRadius: 999, border: `1px solid ${HT.line}`, background: "#FFFFFF", padding: "0 20px", fontFamily: SERIF, fontSize: 16, color: HT.ink, outline: "none" }} />
+            <button type="submit" style={{ height: 48, padding: "0 24px", borderRadius: 999, border: "none", background: HT.green, color: "#FFFFFF", fontFamily: SERIF, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Ask</button>
+          </form>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+            {["Biggest expenses this year", "Who owes me?", best && cur0 && best !== cur0 ? `Compare ${mName(best.month, true)} and ${mName(cur0.month, true)}` : "Profit this month"].map(q => (
+              <button key={q} onClick={() => goAsk(q)} style={{ height: 38, padding: "0 16px", borderRadius: 999, border: `1px solid ${HT.line}`, background: HT.paper, color: HT.ink, fontFamily: SERIF, fontSize: 14.5, cursor: "pointer" }}>{q}</button>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );
