@@ -1,5 +1,5 @@
 "use client";
-// The one Tally connection for the whole app. Every page reads it; only the Tally page changes the port or company.
+// The one Tally connection for the whole app. Every page reads it; only the Tally page changes the port or company. 
 // Once connected it stays connected — across pages, tabs and reloads — until you press Disconnect or Tally really
 // closes (two failed checks in a row, so one slow reply never drops it).
 // B5: the link is PER BUSINESS. Company, session and the Disconnect flag are stored under the active business, so a
