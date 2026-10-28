@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import PageHero, { HeroAction, HT, SERIF } from "@/components/finance/PageHero";
 import BulkImport from "@/components/finance/BulkImport";
 
 type Contact = {
@@ -102,77 +103,62 @@ export default function ContactsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
-        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>Contacts</span>
-        <div style={{ flex: 1 }} />
-        <button onClick={() => setImporting(true)} style={{ background: "#FFFDF8", border: "1px solid rgba(18,53,45,0.3)", color: "#12352D", padding: "6px 14px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>⇪ Import from Excel</button>
-        <button onClick={() => { setForm(blank()); setMsme(noMsme); setEditId(null); setShowForm(true); }} style={{ background: "#12352D", border: "none", color: "#F4EFE4", padding: "6px 16px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>
-          + New Contact
-        </button>
-      </nav>
+      {(() => {
+        const cust = contacts.filter(x => x.type === "customer" || x.type === "both").length;
+        const vend = contacts.filter(x => x.type === "vendor" || x.type === "both").length;
+        const noGst = contacts.filter(x => !x.gstin).length;
+        return (
+          <PageHero eyebrow="Customers & vendors" title="Everyone you trade with"
+            actions={<><HeroAction onClick={() => setImporting(true)}>↑ Import from Excel</HeroAction><HeroAction primary onClick={() => { setForm(blank()); setMsme(noMsme); setEditId(null); setShowForm(true); }}>+ New contact</HeroAction></>}
+            tiles={[
+              { label: "Contacts", value: loading ? "—" : contacts.length },
+              { label: "Customers", value: loading ? "—" : cust },
+              { label: "Vendors", value: loading ? "—" : vend, sub: vend ? undefined : "Import your supplier list", tone: vend ? "plain" : "warn" },
+              { label: "Missing GSTIN", value: loading ? "—" : noGst, sub: noGst ? "Treated as B2C in GSTR-1" : "All have GSTIN", tone: noGst ? "warn" : "good" },
+            ]} />
+        );
+      })()}
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem", alignItems: "center" }}>
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 60px", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {(["all", "customer", "vendor"] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={{
-              background: filter === f ? "rgba(18,53,45,0.12)" : "#FFFFFF",
-              border: `1px solid ${filter === f ? "rgba(18,53,45,0.35)" : "rgba(16,36,31,0.14)"}`,
-              color: filter === f ? "#12352D" : "rgba(16,36,31,0.75)",
-              padding: "5px 16px", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.82rem", textTransform: "capitalize",
-            }}>{f === "all" ? `All (${contacts.length})` : f === "customer" ? `Customers (${contacts.filter(c => c.type === "customer" || c.type === "both").length})` : `Vendors (${contacts.filter(c => c.type === "vendor" || c.type === "both").length})`}</button>
+            <button key={f} onClick={() => setFilter(f)} style={{ height: 40, padding: "0 16px", borderRadius: 999, border: `1px solid ${filter === f ? HT.green : HT.line}`, background: filter === f ? HT.green : HT.paper, color: filter === f ? "#FFFFFF" : HT.ink, fontFamily: SERIF, fontSize: 15, cursor: "pointer" }}>
+              {f === "all" ? `All ${contacts.length}` : f === "customer" ? `Customers ${contacts.filter(x => x.type === "customer" || x.type === "both").length}` : `Vendors ${contacts.filter(x => x.type === "vendor" || x.type === "both").length}`}
+            </button>
           ))}
+          <span style={{ flex: 1 }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or GSTIN…"
-            style={{ marginLeft: "auto", ...inp, width: 220 }} />
+            style={{ width: 340, maxWidth: "100%", height: 42, borderRadius: 999, border: `1px solid ${HT.line}`, background: HT.paper, padding: "0 18px", fontFamily: SERIF, fontSize: 15, color: HT.ink, outline: "none" }} />
         </div>
 
-        <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.11)", borderRadius: 12, overflow: "hidden" }}>
-          {loading ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "rgba(16,36,31,0.55)" }}>Loading…</div>
-          ) : filtered.length === 0 ? (
-            <div style={{ padding: "4rem", textAlign: "center" }}>
-              <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>👥</div>
-              <div style={{ color: "rgba(16,36,31,0.65)", marginBottom: "1rem" }}>No contacts yet.</div>
-              <button onClick={() => setShowForm(true)} style={{ background: "#12352D", border: "none", color: "#F4EFE4", padding: "8px 20px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>+ Add First Contact</button>
-            </div>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#FFFDF8" }}>
-                  {["Name", "Type", "GSTIN", "City", "Phone", "Credit Days", "Opening Balance", ""].map(h => (
-                    <th key={h} style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(16,36,31,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(c => (
-                  <tr key={c.id} style={{ borderTop: "1px solid rgba(16,36,31,0.08)" }}>
-                    <td style={{ padding: "0.7rem 1rem", fontWeight: 600, fontSize: "0.88rem" }}>{c.name}</td>
-                    <td style={{ padding: "0.7rem 1rem" }}>
-                      <span style={{
-                        fontSize: "0.72rem", padding: "2px 8px", borderRadius: 4, fontWeight: 600,
-                        background: c.type === "customer" ? "rgba(11,122,85,0.1)" : c.type === "vendor" ? "rgba(18,53,45,0.1)" : "rgba(91,75,196,0.1)",
-                        color: c.type === "customer" ? "#0B7A55" : c.type === "vendor" ? "#12352D" : "#5B4BC4",
-                      }}>
-                        {c.type.charAt(0).toUpperCase() + c.type.slice(1)}
-                      </span>
-                    </td>
-                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.8rem", fontFamily: "monospace", color: "rgba(16,36,31,0.75)" }}>{c.gstin ?? "—"}</td>
-                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", color: "rgba(16,36,31,0.85)" }}>{c.city ? `${c.city}, ${c.state}` : "—"}</td>
-                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", color: "rgba(16,36,31,0.85)" }}>{c.phone ?? "—"}</td>
-                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem" }}>{c.credit_days} days</td>
-                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.82rem", fontVariantNumeric: "tabular-nums" }}>
-                      {c.opening_balance > 0 ? `${cur()}${c.opening_balance.toLocaleString(activeMoney().locale)} ${c.opening_balance_type.toUpperCase()}` : "—"}
-                    </td>
-                    <td style={{ padding: "0.7rem 1rem" }}>
-                      <button onClick={() => startEdit(c)} style={{ background: "none", border: "none", color: "#12352D", cursor: "pointer", fontSize: "0.78rem" }}>Edit</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        <div style={{ background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 18, overflow: "hidden" }}>
+          {loading ? <div style={{ padding: "3rem", textAlign: "center", color: HT.muted, fontStyle: "italic" }}>Loading…</div>
+            : filtered.length === 0 ? (
+              <div style={{ padding: "3rem", textAlign: "center" }}>
+                <div style={{ fontSize: 24, fontStyle: "italic" }}>{contacts.length ? "No contact matches" : "No contacts yet"}</div>
+                {!contacts.length && <button onClick={() => setShowForm(true)} style={{ marginTop: 14, height: 44, padding: "0 22px", borderRadius: 999, border: "none", background: HT.green, color: "#FFFFFF", fontFamily: SERIF, fontSize: 15, cursor: "pointer" }}>+ Add your first contact</button>}
+              </div>
+            ) : filtered.map((ct, i) => {
+              const ledgerLike = /\b(advance|control|suspense|account|a\/c|deposit|payable|receivable)\b/i.test(ct.name);
+              const initials = ct.name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+              const tag = ct.type === "customer" ? { t: "Customer", bg: "#E3F6EE", c: "#0B7A55" } : ct.type === "vendor" ? { t: "Vendor", bg: "#EFE6D3", c: "#9A6B22" } : { t: "Both", bg: "#EEE9F8", c: "#5B4BC4" };
+              return (
+                <div key={ct.id} style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 24px", borderTop: i ? `1px solid ${HT.line}` : undefined }}>
+                  <span style={{ width: 42, height: 42, flexShrink: 0, borderRadius: 999, background: HT.green, color: HT.gold, display: "grid", placeItems: "center", fontSize: 15 }}>{initials}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 17 }}>{ct.name}</span>
+                      <span style={{ fontSize: 12, padding: "2px 10px", borderRadius: 999, background: tag.bg, color: tag.c }}>{tag.t}</span>
+                    </div>
+                    <div style={{ fontSize: 13.5, color: HT.muted, marginTop: 2 }}>
+                      GSTIN {ct.gstin ?? "—"} · {ct.city ? `${ct.city}, ${ct.state}` : "City —"} · {ct.phone ? <a href={`https://wa.me/${ct.phone.replace(/\D/g, "").length === 10 ? "91" : ""}${ct.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" style={{ color: "#0B7A55" }}>{ct.phone}</a> : "Phone —"} · {ct.credit_days} days credit · Opening {ct.opening_balance > 0 ? `${cur()}${ct.opening_balance.toLocaleString(activeMoney().locale)} ${ct.opening_balance_type.toUpperCase()}` : "—"}
+                    </div>
+                    {ledgerLike && <div style={{ fontSize: 13, fontStyle: "italic", color: HT.goldInk, marginTop: 2 }}>Looks like a ledger account, not a {ct.type === "vendor" ? "vendor" : "customer"}</div>}
+                  </div>
+                  <button onClick={() => startEdit(ct)} style={{ height: 38, padding: "0 18px", borderRadius: 999, border: `1px solid ${HT.gold}`, background: "transparent", color: HT.goldInk, fontFamily: SERIF, fontSize: 14.5, cursor: "pointer" }}>Edit</button>
+                </div>
+              );
+            })}
         </div>
       </div>
 
