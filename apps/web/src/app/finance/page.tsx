@@ -374,8 +374,8 @@ export default function FinanceDashboard() {
     setLoading(false);
   }
 
-  function switchBiz(biz: Business) {
-    if (user && !confirmBusinessSwitch(user.id, biz.id, biz.name)) return;
+  async function switchBiz(biz: Business) {
+    if (user && !(await confirmBusinessSwitch(user.id, biz.id, biz.name))) return;
     setActiveBiz(biz);
     if (user) { setActiveBusiness(user.id, biz.id); loadStats(biz.id, user.id, null); }
   }

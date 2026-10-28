@@ -56,9 +56,9 @@ export default function SelectBusinessPage() {
     });
   }, [router]);
 
-  function enter(biz: Business) {
+  async function enter(biz: Business) {
     if (!userId) return;
-    if (!confirmBusinessSwitch(userId, biz.id, biz.name)) return;
+    if (!(await confirmBusinessSwitch(userId, biz.id, biz.name))) return;
     setSelecting(biz.id);
     setActiveBusiness(userId, biz.id, biz.name);
     router.replace("/finance");

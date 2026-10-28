@@ -87,9 +87,9 @@ export default function CADashboardPage() {
     });
   }, []);
 
-  const switchClient = (clientId: string) => {
+  const switchClient = async (clientId: string) => {
     if (!userId) return;
-    if (!confirmBusinessSwitch(userId, clientId, clients.find(c => c.id === clientId)?.name ?? "this client")) return;
+    if (!(await confirmBusinessSwitch(userId, clientId, clients.find(c => c.id === clientId)?.name ?? "this client"))) return;
     setSwitchingTo(clientId);
     setActiveBusiness(userId, clientId);
     setActiveClient(clientId);
