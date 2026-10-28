@@ -13,7 +13,7 @@ type Row = { ledger: string; head: string; debit: number; credit: number; existi
 type Fy = { id: string; label: string; start_date: string; end_date: string; is_current: boolean; is_locked: boolean };
 type Posted = { id: string; entry_no: string; date: string; total: number; fy_id: string };
 
-const C = { ground: "#F2F3F6", tile: "#FFFFFF", grey: "#ECEEF3", line: "#E3E6EE", ink: "#141A3A", muted: "#5A6080", navy: "#232A63", orange: "#C2410C", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB" };
+const C = { ground: "#F3ECDD", tile: "#FFFFFF", grey: "#F3ECDD", line: "#E6DFD0", ink: "#10241F", muted: "#6B7570", navy: "#12352D", orange: "#C2410C", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#B4321F", negSoft: "#FDECEA", warn: "#9A6B22", warnSoft: "#FFF4DB" };
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 const inr = (n: number) => cur() + Number(n || 0).toLocaleString(activeMoney().locale, { maximumFractionDigits: 2 });
 const cell: React.CSSProperties = { height: 34, border: `1px solid ${C.line}`, borderRadius: 8, padding: "0 8px", fontSize: 13, color: C.ink, background: C.tile, width: "100%", boxSizing: "border-box" };
@@ -95,7 +95,7 @@ export default function OpeningBalancesPage() {
             {busy === "read" ? "Reading trial balance…" : "Upload trial balance"}
             <input type="file" accept=".pdf,.xlsx,.xls,.csv,image/*" disabled={!!busy || !!already} onChange={e => { const f = e.target.files?.[0]; if (f) read(f); e.target.value = ""; }} style={{ display: "none" }} />
           </label>
-          <button onClick={() => setRows(r => [...r, { ledger: "", head: "", debit: 0, credit: 0 }])} disabled={!!already} style={{ height: 42, padding: "0 16px", borderRadius: 11, border: "1px solid #C9CEDF", background: C.tile, color: C.ink, fontWeight: 700, cursor: "pointer" }}>＋ Type rows instead</button>
+          <button onClick={() => setRows(r => [...r, { ledger: "", head: "", debit: 0, credit: 0 }])} disabled={!!already} style={{ height: 42, padding: "0 16px", borderRadius: 11, border: "1px solid #D9CDB4", background: C.tile, color: C.ink, fontWeight: 700, cursor: "pointer" }}>＋ Type rows instead</button>
           {file && <span style={{ fontSize: 13, color: C.muted }}>{file}</span>}
           {already && <div style={{ width: "100%", background: C.posSoft, color: C.pos, borderRadius: 10, padding: "10px 14px", fontWeight: 600, fontSize: 14 }}>✓ Opening balances for FY {fy?.label} are posted as <Link href={`/finance/journals?id=${already.id}`} style={{ color: C.pos }}>{already.entry_no}</Link> ({inr(already.total)}). To redo them, reverse that entry in the Journal first.</div>}
         </section>

@@ -37,9 +37,9 @@ function fmtDate(d: string) {
 }
 
 const ACC_TYPE_COLOR: Record<string, string> = {
-  bank: "#1F5EFF", cash: "#0B7A55", income: "#0B7A55", expense: "#8A5A00",
-  asset: "#1F5EFF", liability: "#5B4BC4", equity: "#B4561E", receivable: "#0B7A55",
-  payable: "#C2321F",
+  bank: "#12352D", cash: "#0B7A55", income: "#0B7A55", expense: "#9A6B22",
+  asset: "#12352D", liability: "#5B4BC4", equity: "#B4561E", receivable: "#0B7A55",
+  payable: "#B4321F",
 };
 
 /* ─── Main Component ─────────────────────────────────────── */
@@ -434,31 +434,31 @@ export default function BankingPage() {
 
   /* ─────────────────── JSX ─────────────────────────────── */
   const inp: React.CSSProperties = {
-    background: "#FFFFFF", border: "1px solid #FFFFFF", color: "#141A3A",
+    background: "#FFFDF8", border: "1px solid #FFFFFF", color: "#10241F",
     padding: "7px 10px", borderRadius: 7, fontSize: "0.82rem", outline: "none",
-    fontFamily: "'DM Sans',system-ui,sans-serif",
+    fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif",
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; }
         .bs-drop { transition: border-color 0.2s, background 0.2s; }
-        .bs-drop:hover { border-color: #1F5EFF !important; background: rgba(31,94,255,0.04) !important; }
+        .bs-drop:hover { border-color: #12352D !important; background: rgba(18,53,45,0.04) !important; }
         .bs-row:hover td { background: #FFFFFF; }
         .bs-row.pushed td { opacity: 0.45; }
-        .bs-sel { accent-color: #1F5EFF; width: 14px; height: 14px; cursor: pointer; }
+        .bs-sel { accent-color: #12352D; width: 14px; height: 14px; cursor: pointer; }
         .bs-chip { font-size: 0.6rem; font-weight: 700; padding: 2px 7px; border-radius: 12px; white-space: nowrap; }
-        .bs-badge-dr { background: rgba(194,50,31,0.12); color: #C2321F; }
+        .bs-badge-dr { background: rgba(194,50,31,0.12); color: #B4321F; }
         .bs-badge-cr { background: rgba(11,122,85,0.12); color: #0B7A55; }
         .bs-btn { border: none; border-radius: 8px; font-family: inherit; font-weight: 700; cursor: pointer; transition: opacity 0.15s, transform 0.1s; display: inline-flex; align-items: center; gap: 0.4rem; }
         .bs-btn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
         .bs-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
         .bs-filter-btn { background: #FFFFFF; border: 1px solid #FFFFFF; color: #6E88A8; border-radius: 7px; padding: 5px 12px; font-size: 0.76rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
-        .bs-filter-btn.active { background: rgba(31,94,255,0.12); border-color: rgba(31,94,255,0.4); color: #1F5EFF; }
-        .ledger-sel { background: #FFFFFF; border: 1px solid #FFFFFF; color: #141A3A; padding: 4px 6px; border-radius: 6px; font-size: 0.72rem; outline: none; width: 100%; cursor: pointer; max-width: 200px; }
-        .ledger-sel:focus { border-color: #1F5EFF; }
+        .bs-filter-btn.active { background: rgba(18,53,45,0.12); border-color: rgba(18,53,45,0.4); color: #12352D; }
+        .ledger-sel { background: #FFFFFF; border: 1px solid #FFFFFF; color: #10241F; padding: 4px 6px; border-radius: 6px; font-size: 0.72rem; outline: none; width: 100%; cursor: pointer; max-width: 200px; }
+        .ledger-sel:focus { border-color: #12352D; }
         select option { background: #FFFFFF; }
         input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
         ::-webkit-scrollbar { width: 5px; height: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #FFFFFF; border-radius: 3px; }
@@ -468,14 +468,14 @@ export default function BankingPage() {
 
       {/* ── Top bar ── */}
       <div style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid #FFFFFF", padding: "0 1.5rem", height: 52, display: "flex", alignItems: "center", gap: "0.75rem", position: "sticky", top: 0, zIndex: 20 }}>
-        <Link href="/finance" style={{ color: "#5A6080", textDecoration: "none", fontSize: "0.82rem" }}>Finance</Link>
-        <span style={{ color: "#E1E4EE" }}>›</span>
-        <Link href="/finance/banking" style={{ color: "#5A6080", textDecoration: "none", fontSize: "0.82rem" }}>Banking</Link>
-        <span style={{ color: "#E1E4EE" }}>›</span>
+        <Link href="/finance" style={{ color: "#6B7570", textDecoration: "none", fontSize: "0.82rem" }}>Finance</Link>
+        <span style={{ color: "#E6DFD0" }}>›</span>
+        <Link href="/finance/banking" style={{ color: "#6B7570", textDecoration: "none", fontSize: "0.82rem" }}>Banking</Link>
+        <span style={{ color: "#E6DFD0" }}>›</span>
         <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Import Statement</span>
         {rows.length > 0 && (
           <>
-            <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#5A6080" }}>
+            <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#6B7570" }}>
               {rows.length} transactions · {assignedCount} assigned · {rows.filter(r => r.pushed).length} pushed
             </span>
             <button onClick={() => { setRows([]); setSelected(new Set()); setPushResult(null); setParseError(""); }}
@@ -492,31 +492,31 @@ export default function BankingPage() {
         {rows.length === 0 && restorable && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "0 0 1rem", padding: "12px 16px", borderRadius: 12, background: "#FFF4DB", border: "1px solid #F2D29B", color: "#5A3A00" }}>
             <span style={{ fontSize: "0.86rem", flex: 1, minWidth: 220 }}>💾 You have a saved statement — <b>{restorable.rows.length} transactions</b>, {restorable.rows.filter(r => r.ledger_id).length} with ledgers, saved {new Date(restorable.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.</span>
-            <button onClick={() => { setRows(restorable.rows); if (restorable.bank) setBankAccountId(restorable.bank); setRestorable(null); }} style={{ height: 34, padding: "0 14px", borderRadius: 9, border: "none", background: "#232A63", color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Continue where I left off</button>
-            <button onClick={clearDraft} style={{ height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid #F2D29B", background: "#FFFFFF", color: "#8A5A00", fontWeight: 700, cursor: "pointer" }}>Discard</button>
+            <button onClick={() => { setRows(restorable.rows); if (restorable.bank) setBankAccountId(restorable.bank); setRestorable(null); }} style={{ height: 34, padding: "0 14px", borderRadius: 9, border: "none", background: "#12352D", color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Continue where I left off</button>
+            <button onClick={clearDraft} style={{ height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid #F2D29B", background: "#FFFDF8", color: "#9A6B22", fontWeight: 700, cursor: "pointer" }}>Discard</button>
           </div>
         )}
         {rows.length === 0 && (
           <div>
             <div style={{ marginBottom: "1.5rem" }}>
               <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800, letterSpacing: "-0.02em" }}>Bank Statement Import</h1>
-              <p style={{ margin: 0, color: "#5A6080", fontSize: "0.88rem" }}>Upload your bank statement (PDF or Excel). Assign ledger accounts and push directly to Journal Entries → Ledger → Trial Balance → Financial Statements.</p>
+              <p style={{ margin: 0, color: "#6B7570", fontSize: "0.88rem" }}>Upload your bank statement (PDF or Excel). Assign ledger accounts and push directly to Journal Entries → Ledger → Trial Balance → Financial Statements.</p>
             </div>
 
             <div
               className="bs-drop"
               onDrop={onDrop} onDragOver={e => e.preventDefault()}
               onClick={() => fileRef.current?.click()}
-              style={{ border: "2px dashed #FFFFFF", borderRadius: 16, padding: "3rem 2rem", textAlign: "center", cursor: "pointer", background: "#FFFFFF" }}
+              style={{ border: "2px dashed #FFFFFF", borderRadius: 16, padding: "3rem 2rem", textAlign: "center", cursor: "pointer", background: "#FFFDF8" }}
             >
               {parsing ? (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", padding: "1rem 0" }}>
                   {/* Progress bar */}
-                  <div style={{ width: "100%", maxWidth: 420, background: "#FFFFFF", borderRadius: 99, height: 8, overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 99, background: "linear-gradient(90deg,#232A63,#1F5EFF)", width: `${parseProgress}%`, transition: "width 0.6s ease" }} />
+                  <div style={{ width: "100%", maxWidth: 420, background: "#FFFDF8", borderRadius: 99, height: 8, overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 99, background: "linear-gradient(90deg,#12352D,#12352D)", width: `${parseProgress}%`, transition: "width 0.6s ease" }} />
                   </div>
                   {/* Step label */}
-                  <div style={{ color: "#1F5EFF", fontWeight: 600, fontSize: "0.9rem" }}>{parseStep || "Processing…"}</div>
+                  <div style={{ color: "#12352D", fontWeight: 600, fontSize: "0.9rem" }}>{parseStep || "Processing…"}</div>
                   {/* Sub-steps */}
                   <div style={{ display: "flex", gap: "2rem", marginTop: "0.25rem" }}>
                     {[["📂","Read file"], ["🤖","AI parse"], ["📊","Extract rows"]].map(([icon, label], i) => {
@@ -525,19 +525,19 @@ export default function BankingPage() {
                       return (
                         <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem", opacity: done || active ? 1 : 0.3 }}>
                           <div style={{ fontSize: "1.4rem" }}>{done ? "✅" : active ? icon : icon}</div>
-                          <div style={{ fontSize: "0.68rem", color: done ? "#0B7A55" : active ? "#1F5EFF" : "#E1E4EE", fontWeight: 600 }}>{label}</div>
+                          <div style={{ fontSize: "0.68rem", color: done ? "#0B7A55" : active ? "#12352D" : "#E6DFD0", fontWeight: 600 }}>{label}</div>
                         </div>
                       );
                     })}
                   </div>
-                  <div style={{ fontSize: "0.74rem", color: "#E1E4EE" }}>PDF parsing takes ~20–30 sec via AI · Excel is instant</div>
+                  <div style={{ fontSize: "0.74rem", color: "#E6DFD0" }}>PDF parsing takes ~20–30 sec via AI · Excel is instant</div>
                 </div>
               ) : (
                 <>
                   <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📄</div>
                   <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: "0.3rem" }}>Drop bank statement here</div>
-                  <div style={{ color: "#5A6080", fontSize: "0.84rem", marginBottom: "1rem" }}>PDF (parsed by AI) · Excel .xlsx / .xls · CSV</div>
-                  <div style={{ display: "inline-block", background: "#232A63", color: "#fff", padding: "10px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.88rem" }}>
+                  <div style={{ color: "#6B7570", fontSize: "0.84rem", marginBottom: "1rem" }}>PDF (parsed by AI) · Excel .xlsx / .xls · CSV</div>
+                  <div style={{ display: "inline-block", background: "#12352D", color: "#fff", padding: "10px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.88rem" }}>
                     Browse File
                   </div>
                 </>
@@ -547,28 +547,28 @@ export default function BankingPage() {
 
             {locked && (
               <form onSubmit={e => { e.preventDefault(); if (pdfPassword) void handleFile(locked.file); }}
-                style={{ marginTop: "1rem", background: "#FFFFFF", border: "1px solid rgba(35,42,99,0.2)", borderRadius: 12, padding: "1.1rem 1.2rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                <div style={{ fontWeight: 800, color: "#141A3A" }}>🔒 {locked.file.name} is password-protected</div>
-                <div style={{ fontSize: "0.8rem", color: "#5A6080", lineHeight: 1.55 }}>
-                  {locked.wrong ? <b style={{ color: "#C2321F" }}>That password didn&apos;t work. </b> : null}
+                style={{ marginTop: "1rem", background: "#FFFDF8", border: "1px solid rgba(18,53,45,0.2)", borderRadius: 12, padding: "1.1rem 1.2rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                <div style={{ fontWeight: 800, color: "#10241F" }}>🔒 {locked.file.name} is password-protected</div>
+                <div style={{ fontSize: "0.8rem", color: "#6B7570", lineHeight: 1.55 }}>
+                  {locked.wrong ? <b style={{ color: "#B4321F" }}>That password didn&apos;t work. </b> : null}
                   Enter the statement password. Banks usually use your customer ID, or the first letters of your name with your date of birth — check the bank&apos;s email. It&apos;s used only in this browser to open the file and is never sent or saved.
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   <input type="password" aria-label="Statement password" autoFocus value={pdfPassword} onChange={e => setPdfPassword(e.target.value)} placeholder="Statement password" autoComplete="off"
-                    style={{ flex: "1 1 220px", height: 42, borderRadius: 10, border: "1px solid rgba(20,26,58,0.2)", padding: "0 12px", fontSize: "0.9rem" }} />
-                  <button type="submit" disabled={!pdfPassword} style={{ height: 42, padding: "0 18px", borderRadius: 10, border: "none", background: "#232A63", color: "#fff", fontWeight: 800, cursor: pdfPassword ? "pointer" : "default", opacity: pdfPassword ? 1 : 0.5 }}>Unlock &amp; read</button>
+                    style={{ flex: "1 1 220px", height: 42, borderRadius: 10, border: "1px solid rgba(16,36,31,0.2)", padding: "0 12px", fontSize: "0.9rem" }} />
+                  <button type="submit" disabled={!pdfPassword} style={{ height: 42, padding: "0 18px", borderRadius: 10, border: "none", background: "#12352D", color: "#fff", fontWeight: 800, cursor: pdfPassword ? "pointer" : "default", opacity: pdfPassword ? 1 : 0.5 }}>Unlock &amp; read</button>
                 </div>
               </form>
             )}
 
             {parseError && (
               <div style={{ marginTop: "1rem", background: "rgba(194,50,31,0.07)", border: "1px solid rgba(194,50,31,0.25)", borderRadius: 10, padding: "1rem 1.1rem" }}>
-                <div style={{ color: "#C2321F", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.5rem" }}>⚠ {parseError}</div>
+                <div style={{ color: "#B4321F", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.5rem" }}>⚠ {parseError}</div>
                 <div style={{ color: "#7A93B4", fontSize: "0.78rem", lineHeight: 1.6 }}>
-                  <strong style={{ color: "#141A3A" }}>Tip:</strong> Most Indian banks (SBI, HDFC, ICICI, Axis, Kotak) let you download statements as <strong style={{ color: "#1F5EFF" }}>Excel (.xlsx)</strong> from NetBanking → Account Statement → Download. Excel always works reliably.
+                  <strong style={{ color: "#10241F" }}>Tip:</strong> Most Indian banks (SBI, HDFC, ICICI, Axis, Kotak) let you download statements as <strong style={{ color: "#12352D" }}>Excel (.xlsx)</strong> from NetBanking → Account Statement → Download. Excel always works reliably.
                 </div>
                 <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.6rem" }}>
-                  <button onClick={() => fileRef.current?.click()} style={{ background: "#232A63", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>
+                  <button onClick={() => fileRef.current?.click()} style={{ background: "#12352D", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontWeight: 700, fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>
                     Try Another File
                   </button>
                   <button onClick={() => setParseError("")} style={{ background: "none", border: "1px solid #FFFFFF", color: "#6E88A8", borderRadius: 7, padding: "7px 14px", fontWeight: 600, fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>
@@ -588,13 +588,13 @@ export default function BankingPage() {
             <div style={{ flex: 1, minWidth: 0 }}>
 
               {/* Filters row */}
-              <div style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 12, padding: "0.8rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, padding: "0.8rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
                 {/* Search */}
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search description…" style={{ ...inp, flex: "1 1 180px", minWidth: 140 }} />
 
                 {/* Date range */}
                 <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} style={{ ...inp, width: 130 }} title="From date" />
-                <span style={{ color: "#E1E4EE", fontSize: "0.75rem" }}>–</span>
+                <span style={{ color: "#E6DFD0", fontSize: "0.75rem" }}>–</span>
                 <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} style={{ ...inp, width: 130 }} title="To date" />
 
                 {/* Type filter */}
@@ -611,52 +611,52 @@ export default function BankingPage() {
                   </button>
                 ))}
 
-                <span style={{ marginLeft: "auto", fontSize: "0.74rem", color: "#5A6080" }}>{filtered.length} shown</span>
+                <span style={{ marginLeft: "auto", fontSize: "0.74rem", color: "#6B7570" }}>{filtered.length} shown</span>
               </div>
 
               {/* Suggest + saved */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "0 0 0.75rem", padding: "10px 12px", borderRadius: 12, background: "linear-gradient(90deg,#FFFFFF,#FBF7EE)", border: "1px solid rgba(201,162,74,0.35)" }}>
                 <button onClick={suggestLedgers} disabled={suggesting || !rows.some(r => !r.pushed && !r.ledger_id)}
-                  style={{ height: 36, padding: "0 16px", borderRadius: 10, border: "none", background: rows.some(r => !r.pushed && !r.ledger_id) ? "#232A63" : "#B9BDD6", color: "#FFFFFF", fontWeight: 800, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>
+                  style={{ height: 36, padding: "0 16px", borderRadius: 10, border: "none", background: rows.some(r => !r.pushed && !r.ledger_id) ? "#12352D" : "#B9BDD6", color: "#FFFFFF", fontWeight: 800, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>
                   {suggesting ? "Suggesting…" : `✨ Suggest ledgers${rows.some(r => !r.pushed && !r.ledger_id) ? ` for ${rows.filter(r => !r.pushed && !r.ledger_id).length}` : ""}`}
                 </button>
-                <span style={{ fontSize: "0.76rem", color: "#5A6080", flex: 1, minWidth: 200 }}>{suggestMsg || "Reads each description (rent, salary, electricity, bank charges, party names…) and creates any missing ledger under the right group."}</span>
+                <span style={{ fontSize: "0.76rem", color: "#6B7570", flex: 1, minWidth: 200 }}>{suggestMsg || "Reads each description (rent, salary, electricity, bank charges, party names…) and creates any missing ledger under the right group."}</span>
                 {savedAt && <span title="Saved on this device — come back any time" style={{ fontSize: "0.74rem", fontWeight: 700, color: "#0B7A55" }}>💾 Saved {new Date(savedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>}
               </div>
 
               {/* Bulk assign bar — visible when rows are selected */}
               {selected.size > 0 && (
-                <div style={{ background: "rgba(37,99,235,0.08)", border: "1px solid rgba(31,94,255,0.25)", borderRadius: 10, padding: "0.65rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#1F5EFF" }}>{selected.size} selected</span>
+                <div style={{ background: "rgba(37,99,235,0.08)", border: "1px solid rgba(18,53,45,0.25)", borderRadius: 10, padding: "0.65rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#12352D" }}>{selected.size} selected</span>
                   <input value={bulkSearch} onChange={e => setBulkSearch(e.target.value)} placeholder="Search ledger…" style={{ ...inp, width: 160, padding: "5px 8px", fontSize: "0.78rem" }} />
                   <select value={bulkLedgerId} onChange={e => setBulkLedgerId(e.target.value)} style={{ ...inp, minWidth: 200, padding: "5px 8px", fontSize: "0.78rem", cursor: "pointer" }}>
                     <option value="">— select ledger to assign —</option>
                     {bulkCoa.map(a => <option key={a.id} value={a.id}>{a.name} ({a.type})</option>)}
                   </select>
-                  <button onClick={applyBulkAssign} disabled={!bulkLedgerId} className="bs-btn" style={{ background: "#232A63", color: "#fff", padding: "6px 16px", fontSize: "0.8rem" }}>
+                  <button onClick={applyBulkAssign} disabled={!bulkLedgerId} className="bs-btn" style={{ background: "#12352D", color: "#fff", padding: "6px 16px", fontSize: "0.8rem" }}>
                     Assign to All
                   </button>
-                  <button onClick={() => setSelected(new Set())} style={{ background: "none", border: "none", color: "#5A6080", cursor: "pointer", fontSize: "0.78rem", fontFamily: "inherit" }}>
+                  <button onClick={() => setSelected(new Set())} style={{ background: "none", border: "none", color: "#6B7570", cursor: "pointer", fontSize: "0.78rem", fontFamily: "inherit" }}>
                     Deselect
                   </button>
                 </div>
               )}
 
               {/* Table */}
-              <div style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 12, overflow: "hidden" }}>
+              <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, overflow: "hidden" }}>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
                     <thead>
-                      <tr style={{ background: "#FFFFFF", borderBottom: "1px solid #FFFFFF" }}>
+                      <tr style={{ background: "#FFFDF8", borderBottom: "1px solid #FFFFFF" }}>
                         <th style={{ padding: "0.6rem 0.75rem", width: 36, textAlign: "center" }}>
                           <input type="checkbox" className="bs-sel" checked={allFilteredSelected} onChange={toggleAll} />
                         </th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Date</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Description</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Debit (Dr)</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Credit (Cr)</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Balance</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ledger Account</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Date</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Description</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Debit (Dr)</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Credit (Cr)</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Balance</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ledger Account</th>
                         <th style={{ padding: "0.6rem 0.75rem", width: 32 }}></th>
                       </tr>
                     </thead>
@@ -673,39 +673,39 @@ export default function BankingPage() {
                             <td style={{ padding: "0.5rem 0.75rem", whiteSpace: "nowrap", color: "#6E88A8", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem" }}>
                               {fmtDate(row.date)}
                             </td>
-                            <td style={{ padding: "0.5rem 0.75rem", color: "#141A3A", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.description}>
-                              {row.description || <span style={{ color: "#E1E4EE" }}>—</span>}
+                            <td style={{ padding: "0.5rem 0.75rem", color: "#10241F", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.description}>
+                              {row.description || <span style={{ color: "#E6DFD0" }}>—</span>}
                             </td>
-                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.debit ? "#C2321F" : "#E1E4EE", fontWeight: row.debit ? 600 : 400 }}>
+                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.debit ? "#B4321F" : "#E6DFD0", fontWeight: row.debit ? 600 : 400 }}>
                               {row.debit ? `${cur()}${fmt(row.debit)}` : ""}
                             </td>
-                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.credit ? "#0B7A55" : "#E1E4EE", fontWeight: row.credit ? 600 : 400 }}>
+                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.credit ? "#0B7A55" : "#E6DFD0", fontWeight: row.credit ? 600 : 400 }}>
                               {row.credit ? `${cur()}${fmt(row.credit)}` : ""}
                             </td>
-                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: "#5A6080", fontSize: "0.7rem" }}>
+                            <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: "#6B7570", fontSize: "0.7rem" }}>
                               {row.balance ? `${cur()}${fmt(row.balance)}` : ""}
                             </td>
                             <td style={{ padding: "0.5rem 0.75rem" }}>
-                              {row.suggested && !row.pushed && addLedgerRow !== row.id && <span title="Suggested from the description — change it if wrong" style={{ display: "inline-block", fontSize: 10.5, fontWeight: 800, color: "#8A5A00", background: "#FFF4DB", borderRadius: 999, padding: "1px 7px", marginBottom: 4 }}>✨ Suggested</span>}
+                              {row.suggested && !row.pushed && addLedgerRow !== row.id && <span title="Suggested from the description — change it if wrong" style={{ display: "inline-block", fontSize: 10.5, fontWeight: 800, color: "#9A6B22", background: "#FFF4DB", borderRadius: 999, padding: "1px 7px", marginBottom: 4 }}>✨ Suggested</span>}
                               {row.pushed ? (
                                 <span className="bs-chip" style={{ background: "rgba(11,122,85,0.12)", color: "#0B7A55" }}>✓ Pushed</span>
                               ) : addLedgerRow === row.id ? (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 12, borderRadius: 14, background: "#FFFFFF", border: "1px solid rgba(35,42,99,0.16)", boxShadow: "0 12px 28px -18px rgba(20,26,58,0.45)", minWidth: 300, maxWidth: 380 }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 12, borderRadius: 14, background: "#FFFDF8", border: "1px solid rgba(18,53,45,0.16)", boxShadow: "0 12px 28px -18px rgba(16,36,31,0.45)", minWidth: 300, maxWidth: 380 }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                     <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#8A90AE" }}>New ledger</span>
-                                    <span style={{ fontSize: 11, color: "#5A6080" }}>· money {row.debit ? "paid out" : "received"}</span>
-                                    <button onClick={() => setAddLedgerRow(null)} aria-label="Cancel" style={{ marginLeft: "auto", background: "none", border: "none", color: "#5A6080", cursor: "pointer", fontSize: 15, lineHeight: 1 }}>×</button>
+                                    <span style={{ fontSize: 11, color: "#6B7570" }}>· money {row.debit ? "paid out" : "received"}</span>
+                                    <button onClick={() => setAddLedgerRow(null)} aria-label="Cancel" style={{ marginLeft: "auto", background: "none", border: "none", color: "#6B7570", cursor: "pointer", fontSize: 15, lineHeight: 1 }}>×</button>
                                   </div>
                                   <input autoFocus value={newLedgerName} placeholder={row.debit ? "e.g. Office Rent, Purchases, Supplier name" : "e.g. Sales, Customer name, Interest Received"}
                                     onChange={e => { const v = e.target.value; setNewLedgerName(v); if (!groupTouched) setNewLedgerType(guessGroup(v, row.debit ? "out" : "in")); }}
                                     onKeyDown={e => { if (e.key === "Enter" && newLedgerName.trim()) addLedger(row.id); if (e.key === "Escape") setAddLedgerRow(null); }}
-                                    style={{ height: 36, borderRadius: 10, border: "1px solid rgba(20,26,58,0.16)", padding: "0 12px", fontSize: 13.5, fontWeight: 600, color: "#141A3A", fontFamily: "inherit" }} />
+                                    style={{ height: 36, borderRadius: 10, border: "1px solid rgba(16,36,31,0.16)", padding: "0 12px", fontSize: 13.5, fontWeight: 600, color: "#10241F", fontFamily: "inherit" }} />
                                   <div>
-                                    <div style={{ fontSize: 12, fontWeight: 700, color: "#4A5070", marginBottom: 6 }}>Group</div>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: "#6B7570", marginBottom: 6 }}>Group</div>
                                     <GroupChips compact value={newLedgerType} onChange={k => { setGroupTouched(true); setNewLedgerType(k); }} />
                                   </div>
                                   <button onClick={() => addLedger(row.id)} disabled={addingLedger || !newLedgerName.trim()}
-                                    style={{ height: 36, borderRadius: 10, border: "none", background: newLedgerName.trim() ? "#232A63" : "#B9BDD6", color: "#FFFFFF", fontWeight: 800, fontSize: 13, cursor: newLedgerName.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
+                                    style={{ height: 36, borderRadius: 10, border: "none", background: newLedgerName.trim() ? "#12352D" : "#B9BDD6", color: "#FFFFFF", fontWeight: 800, fontSize: 13, cursor: newLedgerName.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
                                     {addingLedger ? "Adding…" : `Add under ${headByKey(newLedgerType)?.label ?? "Indirect Expenses"}`}
                                   </button>
                                 </div>
@@ -717,7 +717,7 @@ export default function BankingPage() {
                                     assignLedger(row.id, e.target.value);
                                   }}
                                   className="ledger-sel"
-                                  style={{ borderColor: row.ledger_id ? "rgba(11,122,85,0.3)" : "#FFFFFF", color: row.ledger_id ? "#0B7A55" : "#5A6080" }}
+                                  style={{ borderColor: row.ledger_id ? "rgba(11,122,85,0.3)" : "#FFFFFF", color: row.ledger_id ? "#0B7A55" : "#6B7570" }}
                                 >
                                   <option value="">— select ledger —</option>
                                   <option value="__add__">＋ Add new ledger…</option>
@@ -740,11 +740,11 @@ export default function BankingPage() {
                     </tbody>
                     {/* Footer totals */}
                     <tfoot>
-                      <tr style={{ borderTop: "1px solid #FFFFFF", background: "#FFFFFF" }}>
-                        <td colSpan={3} style={{ padding: "0.55rem 0.75rem", fontSize: "0.72rem", fontWeight: 700, color: "#5A6080" }}>
+                      <tr style={{ borderTop: "1px solid #FFFFFF", background: "#FFFDF8" }}>
+                        <td colSpan={3} style={{ padding: "0.55rem 0.75rem", fontSize: "0.72rem", fontWeight: 700, color: "#6B7570" }}>
                           Total ({rows.length} transactions)
                         </td>
-                        <td style={{ padding: "0.55rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, color: "#C2321F", fontSize: "0.78rem" }}>
+                        <td style={{ padding: "0.55rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, color: "#B4321F", fontSize: "0.78rem" }}>
                           {cur()}{fmt(totalDebit)}
                         </td>
                         <td style={{ padding: "0.55rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontWeight: 700, color: "#0B7A55", fontSize: "0.78rem" }}>
@@ -758,7 +758,7 @@ export default function BankingPage() {
               </div>
 
               {filtered.length === 0 && (
-                <div style={{ padding: "2rem", textAlign: "center", color: "#E1E4EE", fontSize: "0.84rem" }}>
+                <div style={{ padding: "2rem", textAlign: "center", color: "#E6DFD0", fontSize: "0.84rem" }}>
                   No transactions match the current filters.
                 </div>
               )}
@@ -768,42 +768,42 @@ export default function BankingPage() {
             <div style={{ width: 260, flexShrink: 0, position: "sticky", top: 68 }}>
 
               {/* Bank account selector */}
-              <div style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
-                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#5A6080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Bank / Cash Account</div>
+              <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
+                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#6B7570", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Bank / Cash Account</div>
                 <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} style={{ ...inp, width: "100%", cursor: "pointer", fontSize: "0.8rem" }}>
                   <option value="">— select account —</option>
                   {bankAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
-                <div style={{ fontSize: "0.68rem", color: "#5A6080", marginTop: "0.4rem" }}>All transactions in this statement belong to this account</div>
+                <div style={{ fontSize: "0.68rem", color: "#6B7570", marginTop: "0.4rem" }}>All transactions in this statement belong to this account</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                   <input value={newBank} onChange={e => setNewBank(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addBank(); }} placeholder={bankAccounts.length ? "＋ Another bank…" : "＋ Add your bank, e.g. IDFC First Bank"} aria-label="Add a bank account"
                     style={{ ...inp, flex: 1, minWidth: 0, fontSize: "0.76rem", padding: "6px 8px" }} />
-                  {newBank.trim() && <button onClick={addBank} style={{ border: "none", borderRadius: 8, background: "#232A63", color: "#FFFFFF", fontWeight: 800, fontSize: "0.74rem", padding: "0 10px", cursor: "pointer" }}>Add</button>}
+                  {newBank.trim() && <button onClick={addBank} style={{ border: "none", borderRadius: 8, background: "#12352D", color: "#FFFFFF", fontWeight: 800, fontSize: "0.74rem", padding: "0 10px", cursor: "pointer" }}>Add</button>}
                 </div>
               </div>
 
               {/* Summary */}
-              <div style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
-                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#5A6080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>Summary</div>
+              <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
+                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#6B7570", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>Summary</div>
                 {[
-                  ["Total Transactions", rows.length, "#141A3A"],
+                  ["Total Transactions", rows.length, "#10241F"],
                   ["Assigned", assignedCount, "#0B7A55"],
-                  ["Unassigned", rows.length - assignedCount - rows.filter(r => r.pushed).length, "#8A5A00"],
-                  ["Already Pushed", rows.filter(r => r.pushed).length, "#1F5EFF"],
+                  ["Unassigned", rows.length - assignedCount - rows.filter(r => r.pushed).length, "#9A6B22"],
+                  ["Already Pushed", rows.filter(r => r.pushed).length, "#12352D"],
                   ["Ready to Push", unpushedAssigned, "#5B4BC4"],
                 ].map(([label, val, color]) => (
                   <div key={String(label)} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
-                    <span style={{ fontSize: "0.76rem", color: "#5A6080" }}>{label}</span>
+                    <span style={{ fontSize: "0.76rem", color: "#6B7570" }}>{label}</span>
                     <span style={{ fontSize: "0.78rem", fontWeight: 700, color: String(color) }}>{val}</span>
                   </div>
                 ))}
-                <div style={{ height: 1, background: "#FFFFFF", margin: "0.6rem 0" }} />
+                <div style={{ height: 1, background: "#FFFDF8", margin: "0.6rem 0" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.3rem" }}>
-                  <span style={{ fontSize: "0.76rem", color: "#5A6080" }}>Total Payments</span>
-                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#C2321F", fontFamily: "'IBM Plex Mono',monospace" }}>{cur()}{fmt(totalDebit)}</span>
+                  <span style={{ fontSize: "0.76rem", color: "#6B7570" }}>Total Payments</span>
+                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#B4321F", fontFamily: "'IBM Plex Mono',monospace" }}>{cur()}{fmt(totalDebit)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.76rem", color: "#5A6080" }}>Total Receipts</span>
+                  <span style={{ fontSize: "0.76rem", color: "#6B7570" }}>Total Receipts</span>
                   <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#0B7A55", fontFamily: "'IBM Plex Mono',monospace" }}>{cur()}{fmt(totalCredit)}</span>
                 </div>
               </div>
@@ -813,32 +813,32 @@ export default function BankingPage() {
                 onClick={pushToJournals}
                 disabled={pushing || unpushedAssigned === 0 || !bankAccountId}
                 className="bs-btn"
-                style={{ width: "100%", padding: "14px 0", fontSize: "0.92rem", fontWeight: 800, background: unpushedAssigned > 0 && bankAccountId ? "#232A63" : "#FFFFFF", color: unpushedAssigned > 0 && bankAccountId ? "#fff" : "#E1E4EE", borderRadius: 10, justifyContent: "center", marginBottom: "0.5rem" }}
+                style={{ width: "100%", padding: "14px 0", fontSize: "0.92rem", fontWeight: 800, background: unpushedAssigned > 0 && bankAccountId ? "#12352D" : "#FFFFFF", color: unpushedAssigned > 0 && bankAccountId ? "#fff" : "#E6DFD0", borderRadius: 10, justifyContent: "center", marginBottom: "0.5rem" }}
               >
                 {pushing ? (
-                  <><span className="spin" style={{ width: 16, height: 16, border: "2px solid rgba(20,26,58,0.20)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block" }} /> Pushing…</>
+                  <><span className="spin" style={{ width: 16, height: 16, border: "2px solid rgba(16,36,31,0.20)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block" }} /> Pushing…</>
                 ) : (
                   `🚀 Push ${unpushedAssigned} to Journals`
                 )}
               </button>
 
               {!bankAccountId && (
-                <div style={{ fontSize: "0.72rem", color: "#8A5A00", textAlign: "center", marginBottom: "0.5rem" }}>Select a bank account above first</div>
+                <div style={{ fontSize: "0.72rem", color: "#9A6B22", textAlign: "center", marginBottom: "0.5rem" }}>Select a bank account above first</div>
               )}
 
               {pushResult && (
                 <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", borderRadius: 10, padding: "0.85rem 1rem", textAlign: "center" }}>
                   <div style={{ fontSize: "1.4rem", marginBottom: "0.25rem" }}>✅</div>
                   <div style={{ fontWeight: 700, color: "#0B7A55", fontSize: "0.88rem", marginBottom: "0.2rem" }}>{pushResult.created} entries created</div>
-                  <div style={{ fontSize: "0.72rem", color: "#5A6080", marginBottom: "0.75rem" }}>Journals → Ledger → TB → FS updated</div>
+                  <div style={{ fontSize: "0.72rem", color: "#6B7570", marginBottom: "0.75rem" }}>Journals → Ledger → TB → FS updated</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                    <Link href="/finance/journals" style={{ display: "block", background: "rgba(31,94,255,0.1)", border: "1px solid rgba(31,94,255,0.25)", color: "#1F5EFF", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
+                    <Link href="/finance/journals" style={{ display: "block", background: "rgba(18,53,45,0.1)", border: "1px solid rgba(18,53,45,0.25)", color: "#12352D", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
                       📋 View Journals →
                     </Link>
-                    <Link href="/finance/ledger" style={{ display: "block", background: "#FFFFFF", border: "1px solid #FFFFFF", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
+                    <Link href="/finance/ledger" style={{ display: "block", background: "#FFFDF8", border: "1px solid #FFFFFF", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
                       📒 Ledger →
                     </Link>
-                    <Link href="/finance/reports" style={{ display: "block", background: "#FFFFFF", border: "1px solid #FFFFFF", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
+                    <Link href="/finance/reports" style={{ display: "block", background: "#FFFDF8", border: "1px solid #FFFFFF", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
                       📈 Financial Statements →
                     </Link>
                   </div>
@@ -847,7 +847,7 @@ export default function BankingPage() {
 
               {/* Upload another */}
               <div style={{ marginTop: "0.75rem", textAlign: "center" }}>
-                <button onClick={() => fileRef.current?.click()} style={{ background: "none", border: "1px dashed #FFFFFF", color: "#5A6080", padding: "7px 16px", borderRadius: 8, cursor: "pointer", fontSize: "0.76rem", fontFamily: "inherit", fontWeight: 600, width: "100%" }}>
+                <button onClick={() => fileRef.current?.click()} style={{ background: "none", border: "1px dashed #FFFFFF", color: "#6B7570", padding: "7px 16px", borderRadius: 8, cursor: "pointer", fontSize: "0.76rem", fontFamily: "inherit", fontWeight: 600, width: "100%" }}>
                   ⬆ Upload Another Statement
                 </button>
                 <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={onFileInput} style={{ display: "none" }} />

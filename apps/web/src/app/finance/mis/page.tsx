@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import type { Dashboard } from "@/lib/dashboard";
 
-const C = { ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", forest: "#0F2B25", gold: "#C99A4E", pos: "#0B7A55", neg: "#C2321F" };
+const C = { ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", forest: "#0F2B25", gold: "#C99A4E", pos: "#0B7A55", neg: "#B4321F" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 const inr = (n: number) => (n < 0 ? "−" : "") + cur() + Math.abs(Math.round(n || 0)).toLocaleString(activeMoney().locale);
@@ -42,7 +42,7 @@ export default function MisPack() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#FFFFFF", color: C.ink, fontFamily: "'Manrope',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#FFFDF8", color: C.ink, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
       <style>{`@media print { .no-print { display: none !important } aside, nav.fw-topicons, .fw-tabs { display: none !important } main.fw-main { margin-left: 0 !important } @page { size: A4; margin: 14mm } } .mis-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px } @media (max-width: 700px) { .mis-grid { grid-template-columns: minmax(0,1fr) } }`}</style>
       <div style={{ maxWidth: 860, margin: "0 auto", padding: "28px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
         <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>

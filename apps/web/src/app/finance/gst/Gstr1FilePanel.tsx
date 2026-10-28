@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { Gstr1 } from "@/lib/gstr1";
 import type { Gstr1Summary } from "@/lib/gstTaxpayer";
 
-const C = { line: "#E1E4EE", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB" };
+const C = { line: "#E6DFD0", ink: "#10241F", muted: "#6B7570", primary: "#12352D", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#B4321F", negSoft: "#FDECEA", warn: "#9A6B22", warnSoft: "#FFF4DB" };
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 const fmt = (n: number | undefined) => (n ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 type Step = "start" | "preparing" | "review" | "otp" | "filing" | "filed";
@@ -54,7 +54,7 @@ export default function Gstr1FilePanel({ bizId, month, monthLabel, ours, blocked
   const primary: React.CSSProperties = { height: 40, padding: "0 18px", borderRadius: 10, border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, fontSize: 14, cursor: "pointer" };
 
   return (
-    <section aria-label="File GSTR-1 on the GST portal" style={{ background: "#FFFFFF", border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+    <section aria-label="File GSTR-1 on the GST portal" style={{ background: "#FFFDF8", border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
         <b style={{ fontSize: 15 }}>File on the GST portal</b>
         <span style={{ fontSize: 12.5, color: C.muted }}>Straight from FreBook — no JSON upload. Needs the portal connected (OTP) and the signatory&apos;s EVC OTP.</span>
@@ -76,7 +76,7 @@ export default function Gstr1FilePanel({ bizId, month, monthLabel, ours, blocked
           <div style={{ fontSize: 13.5, fontWeight: 700 }}>2. Check the portal&apos;s summary — this is what will be filed</div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, fontVariantNumeric: "tabular-nums" }}>
-              <thead><tr style={{ background: "#F7F8FC", color: C.muted, fontSize: 11.5, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <thead><tr style={{ background: "#F8F3E8", color: C.muted, fontSize: 11.5, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 {["Section", "Docs", "Portal value", "Portal tax", "FreBook value", ""].map((h, i) => <th key={i} style={{ padding: "8px 12px", textAlign: i < 2 ? "left" : "right" }}>{h}</th>)}
               </tr></thead>
               <tbody>
@@ -102,7 +102,7 @@ export default function Gstr1FilePanel({ bizId, month, monthLabel, ours, blocked
           <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: 4 }}>3. File with EVC</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <input id="gst-pan" aria-label="Authorised signatory PAN" placeholder="Signatory PAN" value={pan} onChange={e => setPan(e.target.value.toUpperCase().slice(0, 10))} style={{ ...input, width: 160, letterSpacing: 1, fontWeight: 700 }} autoComplete="off" />
-            <button onClick={sendOtp} disabled={!/^[A-Z]{5}\d{4}[A-Z]$/.test(pan)} style={{ ...primary, background: "#FFFFFF", color: C.primary, border: `1px solid ${C.primary}`, opacity: /^[A-Z]{5}\d{4}[A-Z]$/.test(pan) ? 1 : 0.5 }}>{step === "otp" ? "Send again" : "Send EVC OTP"}</button>
+            <button onClick={sendOtp} disabled={!/^[A-Z]{5}\d{4}[A-Z]$/.test(pan)} style={{ ...primary, background: "#FFFDF8", color: C.primary, border: `1px solid ${C.primary}`, opacity: /^[A-Z]{5}\d{4}[A-Z]$/.test(pan) ? 1 : 0.5 }}>{step === "otp" ? "Send again" : "Send EVC OTP"}</button>
             {step !== "review" && <input id="gst-evc" aria-label="EVC OTP" inputMode="numeric" placeholder="6-digit OTP" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} style={{ ...input, width: 140, letterSpacing: 4, fontWeight: 800 }} autoComplete="one-time-code" />}
           </div>
           {step !== "review" && (

@@ -107,40 +107,40 @@ export default function PaymentPage() {
     setRecent(rec ?? []);
   }
 
-  const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
-  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
+  const inputStyle = { background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.17)", color: "#10241F", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
+  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
   const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
-        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Payment Entry</span>
+    <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
+        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>Payment Entry</span>
       </nav>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "1.5rem", maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
         <div>
           <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Payment Entry</h1>
-          <p style={{ margin: "0 0 1.5rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Record customer receipts or vendor payments</p>
+          <p style={{ margin: "0 0 1.5rem", color: "rgba(16,36,31,0.65)", fontSize: "0.82rem" }}>Record customer receipts or vendor payments</p>
 
           {/* Type Toggle */}
           <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.5rem" }}>
             {(["receipt", "payment"] as const).map(t => (
               <button key={t} onClick={() => setPaymentType(t)} style={{
                 padding: "9px 24px", borderRadius: 8, fontWeight: 700, fontSize: "0.88rem", cursor: "pointer", border: "none",
-                background: paymentType === t ? (t === "receipt" ? "#0B7A55" : "#C2321F") : "rgba(20,26,58,0.08)",
-                color: paymentType === t ? "#F5F6FA" : "rgba(20,26,58,0.75)",
+                background: paymentType === t ? (t === "receipt" ? "#0B7A55" : "#B4321F") : "rgba(16,36,31,0.08)",
+                color: paymentType === t ? "#F4EFE4" : "rgba(16,36,31,0.75)",
               }}>
                 {t === "receipt" ? "💰 Customer Receipt" : "💳 Vendor Payment"}
               </button>
             ))}
           </div>
 
-          {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#C2321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
+          {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#B4321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
           {success && <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", color: "#0B7A55", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
-          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem" }}>
+          <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div><label style={labelStyle}>Date</label><input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} style={inputStyle} /></div>
               <div>
@@ -206,16 +206,16 @@ export default function PaymentPage() {
 
             {/* Journal preview */}
             {parseFloat(amount) > 0 && (
-              <div style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8rem" }}>
-                <div style={{ fontWeight: 700, marginBottom: "0.5rem", color: "rgba(20,26,58,0.75)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Journal Preview</div>
+              <div style={{ background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.08)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8rem" }}>
+                <div style={{ fontWeight: 700, marginBottom: "0.5rem", color: "rgba(16,36,31,0.75)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Journal Preview</div>
                 {paymentType === "receipt" ? (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Bank / Cash</span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>{cur()}{parseFloat(amount).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Bank / Cash</span><span style={{ color: "#B4321F", fontVariantNumeric: "tabular-nums" }}>{cur()}{parseFloat(amount).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span></div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Debtors (AR)</span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>{cur()}{parseFloat(amount).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span></div>
                   </>
                 ) : (
                   <>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Creditors (AP)</span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>{cur()}{parseFloat(amount).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Dr Creditors (AP)</span><span style={{ color: "#B4321F", fontVariantNumeric: "tabular-nums" }}>{cur()}{parseFloat(amount).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span></div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ paddingLeft: "1rem" }}>Cr Bank / Cash</span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>{cur()}{parseFloat(amount).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span></div>
                   </>
                 )}
@@ -223,8 +223,8 @@ export default function PaymentPage() {
             )}
 
             <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button onClick={() => handleSave("draft")} disabled={saving} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
-              <button onClick={() => handleSave("post")} disabled={saving} style={{ background: paymentType === "receipt" ? "#0B7A55" : "#C2321F", border: "none", color: "#F5F6FA", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
+              <button onClick={() => handleSave("draft")} disabled={saving} style={{ background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.17)", color: "#10241F", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
+              <button onClick={() => handleSave("post")} disabled={saving} style={{ background: paymentType === "receipt" ? "#0B7A55" : "#B4321F", border: "none", color: "#F4EFE4", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
                 {saving ? "Saving…" : `Post ${paymentType === "receipt" ? "Receipt" : "Payment"}`}
               </button>
             </div>
@@ -233,22 +233,22 @@ export default function PaymentPage() {
 
         {/* Sidebar — Recent */}
         <div>
-          <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Payments</div>
+          <div style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Payments</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {recent.map(r => (
-              <div key={r.id} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
+              <div key={r.id} style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.08)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.2rem" }}>
-                  <span style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "rgba(20,26,58,0.5)" }}>{r.entry_no}</span>
-                  <span style={{ padding: "1px 6px", borderRadius: 8, background: r.type === "receipt" ? "rgba(11,122,85,0.12)" : "rgba(194,50,31,0.12)", color: r.type === "receipt" ? "#0B7A55" : "#C2321F", fontSize: "0.65rem" }}>{r.type}</span>
+                  <span style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "rgba(16,36,31,0.5)" }}>{r.entry_no}</span>
+                  <span style={{ padding: "1px 6px", borderRadius: 8, background: r.type === "receipt" ? "rgba(11,122,85,0.12)" : "rgba(194,50,31,0.12)", color: r.type === "receipt" ? "#0B7A55" : "#B4321F", fontSize: "0.65rem" }}>{r.type}</span>
                 </div>
                 <div style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.25rem" }}>
-                  <span style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.55)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                  <span style={{ fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: r.type === "receipt" ? "#0B7A55" : "#C2321F" }}>{cur()}{fmt(r.type === "receipt" ? r.total_credit : r.total_debit)}</span>
+                  <span style={{ fontSize: "0.7rem", color: "rgba(16,36,31,0.55)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                  <span style={{ fontSize: "0.82rem", fontVariantNumeric: "tabular-nums", color: r.type === "receipt" ? "#0B7A55" : "#B4321F" }}>{cur()}{fmt(r.type === "receipt" ? r.total_credit : r.total_debit)}</span>
                 </div>
               </div>
             ))}
-            {recent.length === 0 && <div style={{ color: "rgba(20,26,58,0.35)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No payments recorded yet</div>}
+            {recent.length === 0 && <div style={{ color: "rgba(16,36,31,0.35)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No payments recorded yet</div>}
           </div>
         </div>
       </div>

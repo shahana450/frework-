@@ -28,8 +28,8 @@ type Suggestion = {
   fw_fin_documents: { file_name: string; file_url: string | null; doc_type: string | null; ai_summary: Summary | null } | null;
 };
 
-const BG = "#F5F6FA", CARD = "#FFFFFF", BORDER = "rgba(20,26,58,0.11)";
-const TEXT = "#141A3A", MUTED = "rgba(20,26,58,0.75)", GOLD = "#232A63", GREEN = "#0B7A55", RED = "#C2321F", AMBER = "#8A5A00", BLUE = "#1F5EFF", PURPLE = "#5B4BC4";
+const BG = "#F4EFE4", CARD = "#FFFFFF", BORDER = "rgba(16,36,31,0.11)";
+const TEXT = "#10241F", MUTED = "rgba(16,36,31,0.75)", GOLD = "#12352D", GREEN = "#0B7A55", RED = "#B4321F", AMBER = "#9A6B22", BLUE = "#12352D", PURPLE = "#5B4BC4";
 const MONO = "'IBM Plex Mono', 'Fira Code', monospace";
 const money = (n: number) => cur() + (n ?? 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const TYPE_LABEL: Record<string, string> = { sales: "Sale", purchase: "Purchase", payment: "Payment / Expense", receipt: "Receipt", journal: "Journal", contra: "Transfer", credit_note: "Credit Note", debit_note: "Debit Note" };
@@ -142,7 +142,7 @@ export default function AIReviewPage() {
   const btn = (bg: string, fg: string, border = "none"): React.CSSProperties => ({ background: bg, color: fg, border, padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.78rem", fontFamily: "inherit", whiteSpace: "nowrap" });
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Manrope',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
       <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.8rem", height: 56, flexWrap: "wrap" }}>
         <Link href="/finance" style={{ color: GOLD, fontWeight: 700, textDecoration: "none" }}>FreWork</Link>
         <span style={{ color: MUTED }}>›</span>
@@ -159,7 +159,7 @@ export default function AIReviewPage() {
 
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
           {(["pending", "accepted", "rejected"] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={btn(filter === f ? GOLD : "rgba(20,26,58,0.08)", filter === f ? BG : MUTED)}>
+            <button key={f} onClick={() => setFilter(f)} style={btn(filter === f ? GOLD : "rgba(16,36,31,0.08)", filter === f ? BG : MUTED)}>
               {f === "pending" ? `To review (${pendingCount})` : f === "accepted" ? "Posted" : "Rejected"}
             </button>
           ))}
@@ -185,7 +185,7 @@ export default function AIReviewPage() {
               const conf = Math.min(s.confidence ?? 0, d.account_confidence ?? 1);
               const party = d.party ?? sum.vendor ?? sum.customer;
               return (
-                <div key={s.id} style={{ background: CARD, border: `1px solid ${dups.length && s.status === "pending" ? "rgba(194,50,31,0.35)" : open ? "rgba(35,42,99,0.3)" : BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+                <div key={s.id} style={{ background: CARD, border: `1px solid ${dups.length && s.status === "pending" ? "rgba(194,50,31,0.35)" : open ? "rgba(18,53,45,0.3)" : BORDER}`, borderRadius: 12, overflow: "hidden" }}>
                   {/* Summary row */}
                   <div onClick={() => { setExpanded(open ? null : s.id); }} style={{ padding: "0.9rem 1.1rem", display: "flex", gap: "1rem", alignItems: "center", cursor: "pointer", flexWrap: "wrap" }}>
                     <div style={{ fontFamily: MONO, fontWeight: 800, fontSize: "1.05rem", minWidth: 120 }}>{money(total)}</div>
@@ -202,7 +202,7 @@ export default function AIReviewPage() {
                       {conf < 0.7 ? "⚠ Needs review · " : ""}{Math.round(conf * 100)}%
                     </span>
                     {dups.length > 0 && <span style={{ fontSize: "0.7rem", fontWeight: 700, color: RED, background: "rgba(194,50,31,0.1)", padding: "2px 9px", borderRadius: 10 }}>⚠ Possible duplicate</span>}
-                    {d.question && <span style={{ fontSize: "0.7rem", fontWeight: 700, color: BLUE, background: "rgba(31,94,255,0.1)", padding: "2px 9px", borderRadius: 10 }}>? Question</span>}
+                    {d.question && <span style={{ fontSize: "0.7rem", fontWeight: 700, color: BLUE, background: "rgba(18,53,45,0.1)", padding: "2px 9px", borderRadius: 10 }}>? Question</span>}
                     {s.status === "pending" ? (
                       <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
                         <button onClick={() => reject(s)} style={btn("rgba(194,50,31,0.08)", RED, "1px solid rgba(194,50,31,0.25)")}>Reject</button>
@@ -263,7 +263,7 @@ export default function AIReviewPage() {
                       <section>
                         <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.66rem", color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>Suggested entry {s.status === "pending" && "(editable)"}</h4>
                         <input value={narr[s.id] ?? s.suggested_narration} disabled={s.status !== "pending"} onChange={e => setNarr(p => ({ ...p, [s.id]: e.target.value }))}
-                          style={{ width: "100%", boxSizing: "border-box", background: "rgba(20,26,58,0.08)", border: `1px solid ${BORDER}`, color: TEXT, padding: "7px 10px", borderRadius: 6, fontSize: "0.84rem", marginBottom: 8, fontFamily: "inherit" }} />
+                          style={{ width: "100%", boxSizing: "border-box", background: "rgba(16,36,31,0.08)", border: `1px solid ${BORDER}`, color: TEXT, padding: "7px 10px", borderRadius: 6, fontSize: "0.84rem", marginBottom: 8, fontFamily: "inherit" }} />
                         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.83rem" }}>
                           <thead><tr>{["Account", "Debit", "Credit", ""].map(h => <th key={h} style={{ textAlign: h === "Account" ? "left" : "right", padding: "4px 6px", color: MUTED, fontSize: "0.66rem", textTransform: "uppercase" }}>{h}</th>)}</tr></thead>
                           <tbody>
@@ -292,7 +292,7 @@ export default function AIReviewPage() {
                           {heads[s.id].map(h => (
                             <label key={h.account} style={{ display: "flex", gap: 10, alignItems: "center" }}>
                               <span style={{ minWidth: 160 }}>{h.account}</span>
-                              <select value={chosenHeads[h.account] ?? h.suggested} onChange={e => setChosenHeads(c => ({ ...c, [h.account]: e.target.value }))} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "5px 8px", borderRadius: 6, fontFamily: "inherit" }}>
+                              <select value={chosenHeads[h.account] ?? h.suggested} onChange={e => setChosenHeads(c => ({ ...c, [h.account]: e.target.value }))} style={{ background: "#FFFDF8", border: `1px solid ${BORDER}`, color: TEXT, padding: "5px 8px", borderRadius: 6, fontFamily: "inherit" }}>
                                 {LEDGER_HEADS.map(x => <option key={x.key} value={x.key}>{x.label}</option>)}
                               </select>
                             </label>

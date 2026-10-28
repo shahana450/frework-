@@ -122,40 +122,40 @@ export default function ExpensesPage() {
     setRecentExpenses(rec ?? []);
   }
 
-  const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
-  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
+  const inputStyle = { background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.17)", color: "#10241F", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
+  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
   const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
-        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Record Expense</span>
+    <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
+        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
+        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
+        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>Record Expense</span>
       </nav>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "1.5rem", maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
         {/* Main Form */}
         <div>
           <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Record Expense</h1>
-          <p style={{ margin: "0 0 1.5rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Quick expense entry — journal is auto-created</p>
+          <p style={{ margin: "0 0 1.5rem", color: "rgba(16,36,31,0.65)", fontSize: "0.82rem" }}>Quick expense entry — journal is auto-created</p>
 
           {/* Presets */}
           <div style={{ marginBottom: "1.25rem" }}>
-            <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem" }}>Quick Presets</div>
+            <div style={{ fontSize: "0.7rem", color: "rgba(16,36,31,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem" }}>Quick Presets</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
               {EXPENSE_PRESETS.map(p => (
-                <button key={p.label} onClick={() => applyPreset(p)} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "rgba(20,26,58,0.85)", padding: "4px 12px", borderRadius: 14, cursor: "pointer", fontSize: "0.78rem" }}>
+                <button key={p.label} onClick={() => applyPreset(p)} style={{ background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.14)", color: "rgba(16,36,31,0.85)", padding: "4px 12px", borderRadius: 14, cursor: "pointer", fontSize: "0.78rem" }}>
                   {p.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#C2321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
+          {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#B4321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
           {success && <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", color: "#0B7A55", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
-          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem" }}>
+          <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.10)", borderRadius: 12, padding: "1.25rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div>
                 <label style={labelStyle}>Date</label>
@@ -224,19 +224,19 @@ export default function ExpensesPage() {
 
             {/* Summary */}
             {baseAmount > 0 && (
-              <div style={{ background: "rgba(35,42,99,0.05)", border: "1px solid rgba(35,42,99,0.15)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
+              <div style={{ background: "rgba(18,53,45,0.05)", border: "1px solid rgba(18,53,45,0.15)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem" }}>
                 <div style={{ display: "flex", gap: "2rem", fontSize: "0.82rem" }}>
-                  <div><span style={{ color: "rgba(20,26,58,0.65)" }}>Base: </span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(baseAmount)}</span></div>
-                  {gstAmt > 0 && <div><span style={{ color: "rgba(20,26,58,0.65)" }}>GST ITC: </span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(gstAmt)}</span></div>}
-                  {tdsAmt > 0 && <div><span style={{ color: "rgba(20,26,58,0.65)" }}>TDS: </span><span style={{ color: "#C2321F", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(tdsAmt)}</span></div>}
-                  <div style={{ marginLeft: "auto", fontWeight: 800 }}><span style={{ color: "rgba(20,26,58,0.65)" }}>Net Payable: </span><span style={{ color: "#232A63", fontSize: "1rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(netPayable)}</span></div>
+                  <div><span style={{ color: "rgba(16,36,31,0.65)" }}>Base: </span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(baseAmount)}</span></div>
+                  {gstAmt > 0 && <div><span style={{ color: "rgba(16,36,31,0.65)" }}>GST ITC: </span><span style={{ color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(gstAmt)}</span></div>}
+                  {tdsAmt > 0 && <div><span style={{ color: "rgba(16,36,31,0.65)" }}>TDS: </span><span style={{ color: "#B4321F", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(tdsAmt)}</span></div>}
+                  <div style={{ marginLeft: "auto", fontWeight: 800 }}><span style={{ color: "rgba(16,36,31,0.65)" }}>Net Payable: </span><span style={{ color: "#12352D", fontSize: "1rem", fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(netPayable)}</span></div>
                 </div>
               </div>
             )}
 
             <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button onClick={() => handleSave("draft")} disabled={saving} style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
-              <button onClick={() => handleSave("post")} disabled={saving} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
+              <button onClick={() => handleSave("draft")} disabled={saving} style={{ background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.17)", color: "#10241F", padding: "9px 18px", borderRadius: 8, cursor: "pointer", fontSize: "0.88rem" }}>Save Draft</button>
+              <button onClick={() => handleSave("post")} disabled={saving} style={{ background: "#12352D", border: "none", color: "#F4EFE4", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
                 {saving ? "Saving…" : "Post Expense"}
               </button>
             </div>
@@ -245,22 +245,22 @@ export default function ExpensesPage() {
 
         {/* Sidebar — Recent Expenses */}
         <div>
-          <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Expenses</div>
+          <div style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Expenses</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {recentExpenses.map(e => (
-              <div key={e.id} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
+              <div key={e.id} style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.08)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.2rem" }}>
-                  <span style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "rgba(20,26,58,0.5)" }}>{e.entry_no}</span>
-                  <span style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.55)" }}>{new Date(e.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                  <span style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "rgba(16,36,31,0.5)" }}>{e.entry_no}</span>
+                  <span style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.55)" }}>{new Date(e.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                 </div>
                 <div style={{ fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.narration}</div>
-                <div style={{ fontSize: "0.82rem", color: "#C2321F", fontVariantNumeric: "tabular-nums", marginTop: "0.2rem" }}>{cur()}{fmt(e.total_debit)}</div>
+                <div style={{ fontSize: "0.82rem", color: "#B4321F", fontVariantNumeric: "tabular-nums", marginTop: "0.2rem" }}>{cur()}{fmt(e.total_debit)}</div>
               </div>
             ))}
             {recentExpenses.length === 0 && (
-              <div style={{ color: "rgba(20,26,58,0.35)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No expenses recorded yet</div>
+              <div style={{ color: "rgba(16,36,31,0.35)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No expenses recorded yet</div>
             )}
-            <Link href="/finance/journals?type=expense" style={{ color: "#232A63", fontSize: "0.78rem", textAlign: "center", padding: "0.5rem", textDecoration: "none" }}>View all expenses →</Link>
+            <Link href="/finance/journals?type=expense" style={{ color: "#12352D", fontSize: "0.78rem", textAlign: "center", padding: "0.5rem", textDecoration: "none" }}>View all expenses →</Link>
           </div>
         </div>
       </div>
