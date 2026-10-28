@@ -425,7 +425,7 @@ export default function JournalsPage() {
                   )}
                 </div>
                 <TimelineSide journals={filtered} all={byTypeParam} dupNos={dupNos} readyN={notPushed.length} inTallyN={filtered.filter(j => isPushed(j.id)).length}
-                  failedN={filtered.filter(j => pushed[j.id] && "error" in pushed[j.id]).length} tallyOnline={tally.status === "connected"} labelOf={t => TYPE_LABEL[t] ?? t} gatewayN={gatewayN} />
+                  failedN={filtered.filter(j => pushed[j.id] && "error" in pushed[j.id]).length} tallyOnline={tally.status === "connected"} tallyCompany={tally.company} labelOf={t => TYPE_LABEL[t] ?? t} gatewayN={gatewayN} />
               </div>
             );
           })()}

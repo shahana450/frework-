@@ -122,6 +122,13 @@ export function setTallyBusiness(id: string) {
   if (company && !tallyManuallyOff()) connectTally({ quiet: true });
 }
 export const tallyBusiness = () => biz;
+/** Short Tally status with the company name, e.g. "Tally · ABC Traders". */
+export function tallyLabel(t: Pick<TallyState, "status" | "company" | "companies">): string {
+  if (t.status === "connected") return t.company ? `Tally · ${t.company}` : t.companies.length ? "Tally · choose company" : "Tally · no company open";
+  if (t.status === "connecting") return `Tally · connecting${t.company ? ` to ${t.company}` : "…"}`;
+  return t.company ? `Tally off · ${t.company}` : "Tally · not connected";
+}
+
 /** The Tally company linked to the active business (read this, never the old device-wide key). */
 export const tallyCompanyNow = () => { load(); return state.company; };
 /** Change the port (Tally page only). */

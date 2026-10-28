@@ -102,8 +102,8 @@ export function JournalTimeline<J extends TJournal>({ journals, lines, labelOf, 
 }
 
 /** Right-hand panel: what needs attention, Tally, voucher types and this view's money in / out. */
-export function TimelineSide({ journals, all, dupNos, readyN, inTallyN, failedN, tallyOnline, labelOf, gatewayN }: {
-  journals: TJournal[]; all: TJournal[]; dupNos: number; readyN: number; inTallyN: number; failedN: number; tallyOnline: boolean; labelOf: (t: string) => string; gatewayN: number;
+export function TimelineSide({ journals, all, dupNos, readyN, inTallyN, failedN, tallyOnline, tallyCompany, labelOf, gatewayN }: {
+  journals: TJournal[]; all: TJournal[]; dupNos: number; readyN: number; inTallyN: number; failedN: number; tallyOnline: boolean; tallyCompany?: string; labelOf: (t: string) => string; gatewayN: number;
 }) {
   const byType = all.reduce<Record<string, number>>((m, j) => { m[j.type] = (m[j.type] ?? 0) + 1; return m; }, {});
   const max = Math.max(1, ...Object.values(byType));
@@ -132,6 +132,7 @@ export function TimelineSide({ journals, all, dupNos, readyN, inTallyN, failedN,
             </div>
           ))}
         </div>
+        <div style={{ fontSize: "0.88rem", color: tallyCompany ? "#F2D58A" : "#C9D3CE" }}>{tallyCompany ? `Company: ${tallyCompany}` : tallyOnline ? "No company open in Tally" : "No Tally company linked yet"}</div>
         {!tallyOnline && <div style={{ fontSize: "0.8rem", color: "#C9D3CE" }}>Open Tally with the company loaded and keep the FreWork Tally Bridge running.</div>}
         <Link href="/finance/tally" style={{ alignSelf: "flex-start", height: 36, padding: "0 16px", borderRadius: 999, background: T.gold, color: T.ink, textDecoration: "none", display: "inline-flex", alignItems: "center", fontSize: "0.86rem" }}>{tallyOnline ? "Tally page →" : "Set up Tally →"}</Link>
       </div>

@@ -4,7 +4,7 @@ import { dueChip } from "@/lib/dueText";
 // FreBook home — a desk, read top to bottom: the question, books at a glance, what needs you today, what's coming up.
 // Cream ground, deep green and gold. Every figure comes from /api/finance/dashboard.
 import { useState, useEffect } from "react";
-import { useTally } from "@/lib/tallyConnection";
+import { useTally, tallyLabel } from "@/lib/tallyConnection";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Dashboard } from "@/lib/dashboard";
@@ -98,7 +98,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
             <span aria-hidden="true" style={{ width: 28, height: 28, borderRadius: 7, display: "grid", placeItems: "center", background: C.green, color: "#E8C27A", fontFamily: SERIF, fontWeight: 700, fontSize: 14 }}>{(bizName || "?").trim()[0]?.toUpperCase()}</span>
             <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.02em" }}>{bizName}</span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: tally.status === "connected" ? C.posSoft : C.goldSoft, color: tally.status === "connected" ? C.pos : C.muted }}>
-              <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor" }} />Tally{tally.status === "connected" ? "" : " off"}
+              <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor" }} />{tallyLabel(tally)}
             </span>
           </Link>
           <div className="hd-controls" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{controls}</div>
