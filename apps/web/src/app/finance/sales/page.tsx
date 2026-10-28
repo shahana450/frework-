@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import PageHero, { HeroAction, HT, SERIF } from "@/components/finance/PageHero";
 
 type Invoice = { id: string; entry_no: string; date: string; narration: string; total_credit: number; status: string; contact_id: string | null };
 type Contact = { id: string; name: string };
@@ -17,6 +18,7 @@ export default function SalesListPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "posted" | "draft">("all");
   const [search, setSearch] = useState("");
+  const [bizName, setBizName] = useState("");
 
   const [totals, setTotals] = useState({ count: 0, total: 0, posted: 0 });
 
@@ -26,6 +28,7 @@ export default function SalesListPage() {
       const saved = (readActiveBusiness(user.id) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
+      supabase.from("fw_fin_businesses").select("name").eq("id", saved).maybeSingle().then(({ data }) => setBizName(data?.name ?? ""));
 
       const [invoicesRes, contactsRes] = await Promise.all([
         supabase.from("fw_fin_journals").select("id,entry_no,date,narration,total_credit,status,contact_id").eq("business_id", saved).eq("type", "sales").order("date", { ascending: false }),
@@ -58,98 +61,67 @@ export default function SalesListPage() {
   const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
   const statusColor = (s: string) => s === "posted" ? "#0B7A55" : s === "draft" ? "#232A63" : "rgba(20,26,58,0.65)";
 
+  const T = HT;
+  const counts = { all: invoices.length, posted: invoices.filter(i => i.status === "posted").length, draft: invoices.filter(i => i.status === "draft").length };
+  const pill = (on: boolean): React.CSSProperties => ({ height: 40, padding: "0 16px", borderRadius: 999, border: `1px solid ${on ? T.green : T.line}`, background: on ? T.green : T.paper, color: on ? "#FFFFFF" : T.ink, fontFamily: SERIF, fontSize: 15, cursor: "pointer" });
+
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
-        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Sales Invoices</span>
-        <div style={{ flex: 1 }} />
-        <Link href="/finance/sales/new" style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "7px 16px", borderRadius: 7, textDecoration: "none", fontWeight: 700, fontSize: "0.82rem" }}>
-          + New Invoice
-        </Link>
-      </nav>
+    <div style={{ minHeight: "100vh", background: T.cream, color: T.ink, fontFamily: SERIF }}>
+      <PageHero eyebrow={`Sales${bizName ? ` · ${bizName}` : ""}`} title="Sales invoices"
+        actions={<><HeroAction href="/finance/chat-book">✦ Chat entry</HeroAction><HeroAction href="/finance/sales/new" primary>+ New invoice</HeroAction></>}
+        tiles={[
+          { label: "Total invoices", value: loading ? "—" : totals.count },
+          { label: "Total billed", value: `${cur()}${fmt(totals.total)}` },
+          { label: "Posted to books", value: `${cur()}${fmt(totals.posted)}`, tone: "good" },
+        ]} />
 
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "2rem" }}>
-        <h1 style={{ margin: "0 0 1rem", fontSize: "1.3rem", fontWeight: 800 }}>Sales Invoices</h1>
-
-        {/* KPI */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
-          {[
-            { label: "Total Invoices", value: totals.count, color: "#1F5EFF", prefix: "" },
-            { label: "Total Billed", value: totals.total, color: "#232A63", prefix: cur() },
-            { label: "Total Posted", value: totals.posted, color: "#0B7A55", prefix: cur() },
-          ].map(k => (
-            <div key={k.label} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 10, padding: "0.85rem 1rem" }}>
-              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>
-                {k.prefix}{typeof k.value === "number" && k.prefix ? fmt(k.value) : k.value}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "rgba(20,26,58,0.60)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.2rem" }}>{k.label}</div>
-            </div>
-          ))}
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 60px", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {(["all", "posted", "draft"] as const).map(f => <button key={f} onClick={() => setFilter(f)} style={pill(filter === f)}>{f[0].toUpperCase() + f.slice(1)} {counts[f]}</button>)}
+          <span style={{ flex: 1 }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoice no., customer…"
+            style={{ width: 340, maxWidth: "100%", height: 42, borderRadius: 999, border: `1px solid ${T.line}`, background: T.paper, padding: "0 18px", fontFamily: SERIF, fontSize: 15, color: T.ink, outline: "none" }} />
         </div>
 
-        {/* Filters */}
-        <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: "0.4rem" }}>
-            {(["all", "posted", "draft"] as const).map(f => (
-              <button key={f} onClick={() => setFilter(f)} style={{ padding: "5px 14px", borderRadius: 7, fontSize: "0.8rem", cursor: "pointer", border: "none", fontWeight: filter === f ? 700 : 400, background: filter === f ? "rgba(35,42,99,0.15)" : "rgba(20,26,58,0.08)", color: filter === f ? "#232A63" : "rgba(20,26,58,0.70)" }}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search invoices…"
-            style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.14)", color: "#141A3A", padding: "6px 12px", borderRadius: 7, fontSize: "0.82rem", outline: "none", flex: 1, maxWidth: 300 }} />
-        </div>
-
-        {/* Table */}
-        <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, overflow: "hidden" }}>
-          {loading ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "rgba(20,26,58,0.55)" }}>Loading…</div>
-          ) : filtered.length === 0 ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "rgba(20,26,58,0.55)" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>🧾</div>
-              <div>{search ? "No invoices match your search." : "No sales invoices yet."}</div>
-              <Link href="/finance/sales/new" style={{ display: "inline-block", marginTop: "1rem", color: "#232A63", textDecoration: "none", fontSize: "0.85rem" }}>→ Create First Invoice</Link>
-            </div>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#FFFFFF" }}>
-                  {["Invoice No", "Date", "Customer", "Narration", "Amount", "Status"].map(h => (
-                    <th key={h} style={{ padding: "0.6rem 1rem", textAlign: h === "Amount" ? "right" : "left", fontSize: "0.65rem", color: "rgba(20,26,58,0.60)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(inv => (
-                  <tr key={inv.id} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
-                    <td style={{ padding: "0.65rem 1rem", fontFamily: "monospace", fontSize: "0.82rem", color: "#232A63" }}>{inv.entry_no}</td>
-                    <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", color: "rgba(20,26,58,0.80)", whiteSpace: "nowrap" }}>
-                      {new Date(inv.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
-                    </td>
-                    <td style={{ padding: "0.65rem 1rem", fontSize: "0.82rem", color: "rgba(20,26,58,0.95)" }}>{contacts[inv.contact_id ?? ""] ?? "—"}</td>
-                    <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(20,26,58,0.80)" }}>{inv.narration}</td>
-                    <td style={{ padding: "0.65rem 1rem", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(inv.total_credit)}</td>
-                    <td style={{ padding: "0.65rem 1rem" }}>
-                      <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: 8, background: `${statusColor(inv.status)}18`, color: statusColor(inv.status), fontWeight: 600, textTransform: "capitalize" }}>
-                        {inv.status}
-                      </span>
-                    </td>
-                  </tr>
+        <div style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 18, overflow: "hidden" }}>
+          {loading ? <div style={{ padding: "3rem", textAlign: "center", color: T.muted, fontStyle: "italic" }}>Loading…</div>
+            : invoices.length === 0 ? (
+              <>
+                <div style={{ padding: "34px 24px 26px", textAlign: "center", borderBottom: `1px solid ${T.line}` }}>
+                  <div style={{ fontSize: 26, fontStyle: "italic" }}>No sales invoices yet</div>
+                  <div style={{ color: "#4A5651", marginTop: 4 }}>Your first GST invoice is three ways away — each lands in your books and GSTR-1.</div>
+                </div>
+                {[
+                  { t: "Fill the invoice form", d: "Customer, items, HSN and GST — totals worked out for you.", href: "/finance/sales/new" },
+                  { t: "Say it on WhatsApp", d: <><i>“Invoice ABC Traders 30,000 + GST”</i> — reply YES to post.</>, href: "/finance/whatsapp" },
+                  { t: "Upload invoices you raised elsewhere", d: "Read and suggested for your review.", href: "/finance/upload" },
+                ].map((s, i) => (
+                  <Link key={s.t} href={s.href} style={{ display: "flex", gap: 16, alignItems: "center", padding: "16px 24px", borderTop: i ? `1px solid ${T.line}` : undefined, color: T.ink, textDecoration: "none" }}>
+                    <span style={{ width: 34, height: 34, borderRadius: 999, border: `1px solid ${T.gold}`, color: T.goldInk, display: "grid", placeItems: "center", flexShrink: 0 }}>{i + 1}</span>
+                    <span><span style={{ display: "block", fontSize: 17 }}>{s.t}</span><span style={{ fontSize: 14, color: "#4A5651" }}>{s.d}</span></span>
+                  </Link>
                 ))}
-              </tbody>
-              <tfoot>
-                <tr style={{ borderTop: "2px solid rgba(35,42,99,0.25)", background: "rgba(35,42,99,0.04)" }}>
-                  <td colSpan={4} style={{ padding: "0.7rem 1rem", fontWeight: 800 }}>Total ({filtered.length} invoices)</td>
-                  <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 900, color: "#232A63", fontVariantNumeric: "tabular-nums" }}>
-                    {cur()}{fmt(filtered.reduce((s, i) => s + i.total_credit, 0))}
-                  </td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
-          )}
+              </>
+            ) : filtered.length === 0 ? <div style={{ padding: "3rem", textAlign: "center", color: T.muted, fontStyle: "italic" }}>No invoices match.</div>
+            : (
+              <>
+                {filtered.map((inv, i) => (
+                  <Link key={inv.id} href={`/finance/invoices/${inv.id}`} style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 24px", borderTop: i ? `1px solid ${T.line}` : undefined, color: T.ink, textDecoration: "none" }}>
+                    <span style={{ width: 78, color: "#4A5651", flexShrink: 0 }}>{new Date(inv.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "block", fontSize: 16, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contacts[inv.contact_id ?? ""] ?? (inv.narration || "—")}</span>
+                      <span style={{ display: "block", fontSize: 13, color: T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.entry_no} · {inv.narration}</span>
+                    </span>
+                    <span style={{ fontSize: 17, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{cur()}{fmt(inv.total_credit)}</span>
+                    <span style={{ width: 70, textAlign: "right", fontSize: 13, color: inv.status === "posted" ? "#0B7A55" : T.goldInk, textTransform: "capitalize" }}>{inv.status}</span>
+                  </Link>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 24px", background: T.green, color: "#FFFFFF" }}>
+                  <i>Total · {filtered.length} invoice{filtered.length === 1 ? "" : "s"}</i>
+                  <span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(filtered.reduce((s, i) => s + i.total_credit, 0))}</span>
+                </div>
+              </>
+            )}
         </div>
       </div>
     </div>
