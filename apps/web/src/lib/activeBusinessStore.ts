@@ -41,6 +41,23 @@ export function setActiveBusiness(userId: string, businessId: string, businessNa
   const same = current.userId === userId && current.businessId === businessId;
   current = { userId, businessId, businessName: businessName ?? (same ? current.businessName : ""), ready: true };
   listeners.forEach(l => l(current));
+  // Tally follows the business: each business pushes only to its own linked Tally company
+  if (!same) void import("./tallyConnection").then(m => m.setTallyBusiness(businessId)).catch(() => { /* Tally page will relink */ });
+}
+
+/** Asks before switching to another business, naming both and the Tally company the new one is linked to.
+ *  Returns true when there is nothing to switch or the user agrees. */
+export function confirmBusinessSwitch(userId: string, toId: string, toName: string, fromName?: string): boolean {
+  if (typeof window === "undefined") return true;
+  const fromId = current.userId === userId ? current.businessId : null;
+  if (!fromId || fromId === toId) return true;
+  let tally = "";
+  try { tally = localStorage.getItem(`fw_tally_company:${toId}`) ?? ""; } catch { /* */ }
+  const from = fromName || current.businessName || "the current business";
+  return window.confirm(
+    `Switch from ${from} to ${toName}?\n\n` +
+    `All pages will show ${toName}'s books.\n` +
+    (tally ? `Tally will connect to ${toName}'s company "${tally}" — entries go only there.` : `${toName} has no Tally company linked yet — Tally stays off for it until you choose one on the Tally page.`));
 }
 
 /** Forget the active business (e.g. after deleting it). */

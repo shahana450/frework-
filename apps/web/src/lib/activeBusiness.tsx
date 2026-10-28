@@ -7,7 +7,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { getActiveBusiness, subscribeActiveBusiness, type ActiveBusiness } from "./activeBusinessStore";
 
 export {
-  type ActiveBusiness, activeBusinessKey, rememberedBusiness, tabBusiness, readActiveBusiness, setActiveBusiness, clearActiveBusiness, getActiveBusiness,
+  type ActiveBusiness, activeBusinessKey, rememberedBusiness, tabBusiness, readActiveBusiness, setActiveBusiness, clearActiveBusiness, getActiveBusiness, confirmBusinessSwitch,
 } from "./activeBusinessStore";
 
 /** For the layout itself (it renders the provider, so it can't read the context). */

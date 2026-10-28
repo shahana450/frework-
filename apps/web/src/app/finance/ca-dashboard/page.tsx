@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { readActiveBusiness, setActiveBusiness } from "@/lib/activeBusiness";
+import { readActiveBusiness, setActiveBusiness, confirmBusinessSwitch } from "@/lib/activeBusiness";
 
 type Client = {
   id: string;
@@ -88,8 +88,9 @@ export default function CADashboardPage() {
   }, []);
 
   const switchClient = (clientId: string) => {
-    setSwitchingTo(clientId);
     if (!userId) return;
+    if (!confirmBusinessSwitch(userId, clientId, clients.find(c => c.id === clientId)?.name ?? "this client")) return;
+    setSwitchingTo(clientId);
     setActiveBusiness(userId, clientId);
     setActiveClient(clientId);
     setTimeout(() => { setSwitchingTo(null); router.push("/finance"); }, 500);

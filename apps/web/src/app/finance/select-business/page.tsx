@@ -3,7 +3,7 @@ import { useEffect, useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { setActiveBusiness } from "@/lib/activeBusiness";
+import { setActiveBusiness, confirmBusinessSwitch } from "@/lib/activeBusiness";
 
 type Business = {
   id: string;
@@ -58,8 +58,9 @@ export default function SelectBusinessPage() {
 
   function enter(biz: Business) {
     if (!userId) return;
+    if (!confirmBusinessSwitch(userId, biz.id, biz.name)) return;
     setSelecting(biz.id);
-    setActiveBusiness(userId, biz.id);
+    setActiveBusiness(userId, biz.id, biz.name);
     router.replace("/finance");
   }
 

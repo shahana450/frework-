@@ -10,7 +10,7 @@ import type { TallyVoucher } from "@/lib/tallyUtils";
 import { formatMoney , cur, activeMoney } from "@/lib/money";
 import Link from "next/link";
 import HomeDesk from "./HomeDesk";
-import { readActiveBusiness, setActiveBusiness } from "@/lib/activeBusiness";
+import { readActiveBusiness, setActiveBusiness, confirmBusinessSwitch } from "@/lib/activeBusiness";
 
 // Dashboard period presets; "fy" uses the financial-year picker
 const PERIODS = [
@@ -375,6 +375,7 @@ export default function FinanceDashboard() {
   }
 
   function switchBiz(biz: Business) {
+    if (user && !confirmBusinessSwitch(user.id, biz.id, biz.name)) return;
     setActiveBiz(biz);
     if (user) { setActiveBusiness(user.id, biz.id); loadStats(biz.id, user.id, null); }
   }
