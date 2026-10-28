@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Gstr1Panel from "./Gstr1Panel";
 import Link from "next/link";
+import PageHero, { HeroAction, HT, SERIF } from "@/components/finance/PageHero";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type GSTSummary = {
@@ -81,45 +82,43 @@ export default function GSTPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
-        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>GST Returns</span>
-        <div style={{ flex: 1 }} />
-        <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
-          style={{ background: "rgba(18,53,45,0.1)", border: "1px solid rgba(18,53,45,0.3)", color: "#10241F", padding: "4px 10px", borderRadius: 6, fontSize: "0.85rem", cursor: "pointer" }}>
-          {monthOptions.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-        </select>
-      </nav>
+      {(() => {
+        const [y, m] = selectedMonth.split("-").map(Number);
+        const nxt = new Date(y, m, 1).toLocaleDateString("en-IN", { month: "short" });
+        return (
+          <PageHero eyebrow={`Goods & services tax · ${monthLabel}`} title="GST returns, from your books"
+            sub={gstin ? `${bizName} · GSTIN ${gstin}` : undefined}
+            actions={<select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} aria-label="Return month"
+              style={{ height: 46, padding: "0 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.28)", background: HT.green, color: "#FFFFFF", fontFamily: SERIF, fontSize: 15, cursor: "pointer" }}>
+              {monthOptions.map(mo => <option key={mo.value} value={mo.value}>{mo.label}</option>)}
+            </select>}
+            tiles={[
+              { label: "Taxable sales", value: summary ? `₹${fmt(summary.taxable_sales ?? summary.total_sales)}` : "—" },
+              { label: "Purchases", value: summary ? `₹${fmt(summary.total_purchases)}` : "—" },
+              ...(gstin ? [{ label: "Net GST payable", value: summary ? `₹${fmt(summary.net_gst_payable)}` : "—", tone: (summary && summary.net_gst_payable > 0 ? "bad" : "good") as "bad" | "good", sub: `GSTR-1 due 11 ${nxt} · GSTR-3B due 20 ${nxt}` }] : []),
+            ]}
+            side={gstin ? undefined : <>
+              <div style={{ fontSize: 17 }}><span style={{ color: HT.rose }}>●</span> GSTIN not set</div>
+              <ol style={{ margin: "8px 0 14px", paddingLeft: 20, fontSize: 14, color: "#D3DCD8", lineHeight: 1.6 }}><li>Add your GSTIN in Business details</li><li>Returns are prepared from posted invoices and bills</li></ol>
+              <HeroAction href="/finance/settings/business" primary>Add GSTIN →</HeroAction>
+            </>} />
+        );
+      })()}
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "2rem" }}>
-        <div style={{ marginBottom: "1.5rem" }}>
-          <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800 }}>GST Returns</h1>
-          {gstin && <div style={{ fontSize: "0.82rem", color: "rgba(16,36,31,0.65)" }}>{bizName} · GSTIN: {gstin}</div>}
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: "0.5rem", borderBottom: "1px solid rgba(16,36,31,0.11)", marginBottom: "1.5rem", paddingBottom: 0 }}>
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 60px" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 18 }}>
           {([
-            { key: "dashboard", label: "Tax Summary" },
-            { key: "gstr1", label: "GSTR-1 (Outward Supplies)" },
-            { key: "gstr3b", label: "GSTR-3B (Summary Return)" },
+            { key: "dashboard", label: "Tax summary" },
+            { key: "gstr1", label: "GSTR-1 · outward supplies" },
+            { key: "gstr3b", label: "GSTR-3B · summary return" },
           ] as const).map(t => (
-            <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
-              background: "none", border: "none", color: activeTab === t.key ? "#12352D" : "rgba(16,36,31,0.70)",
-              padding: "0.6rem 1rem", cursor: "pointer", fontWeight: activeTab === t.key ? 700 : 400, fontSize: "0.88rem",
-              borderBottom: activeTab === t.key ? "2px solid #12352D" : "2px solid transparent", marginBottom: "-1px",
-            }}>{t.label}</button>
+            <button key={t.key} onClick={() => setActiveTab(t.key)} style={{ height: 42, padding: "0 18px", borderRadius: 999, border: `1px solid ${activeTab === t.key ? HT.green : HT.line}`, background: activeTab === t.key ? HT.green : HT.paper, color: activeTab === t.key ? "#FFFFFF" : HT.ink, fontFamily: SERIF, fontSize: 15, cursor: "pointer" }}>{t.label}</button>
           ))}
+          <span style={{ flex: 1 }} />
+          <span style={{ fontSize: 14, color: HT.muted }}>{(() => { const [y, m] = selectedMonth.split("-").map(Number); const nx = new Date(y, m, 1).toLocaleDateString("en-IN", { month: "short" }); return `GSTR-1 due 11 ${nx} · GSTR-3B due 20 ${nx} (monthly)`; })()}</span>
         </div>
 
-        {error && <div style={{ color: "#B4321F", background: "rgba(194,50,31,0.08)", padding: "1rem", borderRadius: 8, marginBottom: "1rem" }}>{error}</div>}
-
-        {!gstin && (
-          <div style={{ background: "rgba(184,120,0,0.08)", border: "1px solid rgba(184,120,0,0.2)", borderRadius: 10, padding: "1rem 1.25rem", marginBottom: "1.5rem", fontSize: "0.85rem", color: "#9A6B22" }}>
-            ⚠ GSTIN not set for this business. <Link href="/finance/settings/business" style={{ color: "#12352D", textDecoration: "none", fontWeight: 600 }}>Add it in Business Details →</Link>
-          </div>
-        )}
+        {error && <div style={{ color: "#B4321F", background: "#FBECE8", padding: "1rem", borderRadius: 12, marginBottom: "1rem" }}>{error}</div>}
 
         {loading ? (
           <div style={{ textAlign: "center", padding: "4rem", color: "rgba(16,36,31,0.55)" }}>Calculating GST…</div>
@@ -127,20 +126,6 @@ export default function GSTPage() {
           <>
             {activeTab === "dashboard" && (
               <>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
-                  {[
-                    { label: "Taxable sales", value: summary.taxable_sales ?? summary.total_sales, color: "#0B7A55" },
-                    { label: "Total Purchases", value: summary.total_purchases, color: "#12352D" },
-                    { label: "Net GST Payable", value: summary.net_gst_payable, color: summary.net_gst_payable > 0 ? "#B4321F" : "#0B7A55" },
-                  ].map(k => (
-                    <div key={k.label} style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.11)", borderRadius: 10, padding: "1.25rem" }}>
-                      <div style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>{k.label}</div>
-                      <div style={{ fontSize: "1.6rem", fontWeight: 800, color: k.color, fontVariantNumeric: "tabular-nums" }}>₹{fmt(k.value)}</div>
-                      <div style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.55)", marginTop: "0.2rem" }}>{monthLabel}</div>
-                    </div>
-                  ))}
-                </div>
-
                 <div style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.11)", borderRadius: 12, overflow: "hidden" }}>
                   <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid rgba(16,36,31,0.11)", fontWeight: 700, fontSize: "0.88rem" }}>GST Computation — {monthLabel}</div>
                   {[
