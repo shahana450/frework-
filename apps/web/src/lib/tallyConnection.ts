@@ -26,6 +26,8 @@ const COMPANY = "fw_tally_company";
 const read = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
 const write = (k: string, v: string | null) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* */ } };
 
+/** What Tally answered when it gave no company name (shown on the Tally page to diagnose). */
+export let lastReply = "";
 let state: TallyState = { port: "7001", company: "", companies: [], status: "idle", message: "", educational: false, checkedAt: 0 };
 let loaded = false;
 let misses = 0;
@@ -78,7 +80,20 @@ export async function connectTally(opts: { port?: string; preferName?: string; q
     const res = await tallyFetch(`http://localhost:${port}`, companiesXml(), 8000);
     // The bridge answers 502 when Tally isn't on this port — never call that "connected"
     if (!res.ok) throw new Error(res.status === 502 ? tallyProblem(port, "bridge502") : tallyProblem(port, "http", res.status));
-    const names = companiesFrom(await res.text());
+    const first = await res.text();
+    let names = companiesFrom(first);
+    let raw = first;
+    // Some Tally versions answer the collection without names: ask the "List of Companies" report instead
+    if (!names.length) {
+      try {
+        const r2 = await tallyFetch(`http://localhost:${port}`, `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Data</TYPE><ID>List of Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES></DESC></BODY></ENVELOPE>`, 8000);
+        raw = await r2.text();
+        names = companiesFrom(raw);
+        if (!names.length) names = [...raw.matchAll(/<(?:COMPANYNAME|SVCURRENTCOMPANY|NAME)\b[^>]*>([^<]{2,})</gi)].map(m => m[1].trim()).filter((v, i, a) => v && a.indexOf(v) === i);
+      } catch { /* keep none */ }
+    }
+    if (!names.length && typeof console !== "undefined") console.warn("[FreBook] Tally gave no company name. Reply:", first.slice(0, 1500), raw === first ? "" : raw.slice(0, 1500));
+    lastReply = names.length ? "" : (raw || first).replace(/\s+/g, " ").slice(0, 400);
     const pick = names.includes(state.company) ? state.company
       : names.find(n => opts.preferName && n.toLowerCase() === opts.preferName.toLowerCase()) ?? names[0] ?? state.company;
     write("fw_tally_port", port);
@@ -87,7 +102,7 @@ export async function connectTally(opts: { port?: string; preferName?: string; q
     try { educational = isEducational(await (await tallyFetch(`http://localhost:${port}`, licenseXml(), 8000)).text()); } catch { /* keep last */ }
     misses = 0;
     set({ port, companies: names, company: pick, status: "connected", educational, checkedAt: Date.now(),
-      message: names.length ? `${names.length} compan${names.length === 1 ? "y" : "ies"} open in Tally` : "Connected to Tally" });
+      message: names.length ? `${names.length} compan${names.length === 1 ? "y" : "ies"} open in Tally` : `Connected, but Tally sent no company name — open your company in Tally (Gateway → Select Company) and press Reconnect.${lastReply ? ` Tally replied: ${lastReply}` : ""}` });
   } catch (e) {
     misses++;
     // A background check needs two misses in a row before calling Tally closed

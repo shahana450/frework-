@@ -368,6 +368,7 @@ export default function TallyPage() {
       setConnStatus("connected");
       if (shared.company) setCompanyName(shared.company);
       if (shared.companies.length) setAllCompanies(shared.companies);
+      else setConnMsg(shared.message);   // connected but no company name: show what Tally replied
     } else if (shared.status === "error") { setConnStatus("error"); setConnMsg(shared.message); }
     else if (shared.status === "idle") setConnStatus(s => (s === "connecting" ? s : "idle"));
   }, [shared.status, shared.company, shared.companies, shared.message]);
@@ -972,7 +973,7 @@ export default function TallyPage() {
               </span>
             </div>
 
-            {connStatus === "error" && connMsg && (
+            {(connStatus === "error" || (connStatus === "connected" && !shared.companies.length)) && connMsg && (
               <div style={{ padding: "0.8rem 1rem", borderRadius: 12, fontSize: "0.86rem", color: "#C2321F", background: "#FDECEA", lineHeight: 1.6 }}>
                 ⚠ {connMsg}
               </div>
