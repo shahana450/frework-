@@ -196,7 +196,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         const { data: prev } = await supabase.from("fw_fin_businesses").select("name").eq("id", had).maybeSingle();
         setBizSwitched({ to: pick.name, from: (prev as { name?: string } | null)?.name ?? "the previous business" });
       }
-      if (pick) { setActiveBusiness(user.id, pick.id, pick.name); setBizName(pick.name); setTallyBusiness(pick.id); }
+      if (pick) { setActiveBusiness(user.id, pick.id, pick.name); setBizName(pick.name); setTallyBusiness(pick.id, pick.name); }
       // Money on every page follows this business's currency (set before any page mounts)
       if (pick) { const { data: m } = await supabase.from("fw_fin_businesses").select("currency,country").eq("id", pick.id).maybeSingle(); setActiveCurrency(m?.currency, m?.country); setIndia(!m?.country || m.country === "IN"); }
       setSubChecked(true);

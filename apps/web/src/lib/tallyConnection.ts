@@ -26,6 +26,32 @@ const COMPANY = "fw_tally_company";
 const read = (k: string, d: string) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
 const write = (k: string, v: string | null) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* */ } };
 
+// A Tally company belongs to one business only. The owner is recorded when a company is chosen (or matched by name);
+// another business never inherits it just because it happens to be open in Tally.
+let bizName = "";
+const OWNER = "fw_tally_owner";
+const cnorm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+const ownerKey = (company: string) => `${OWNER}:${cnorm(company)}`;
+const nameMatches = (company: string, business: string) => !!company && !!business && cnorm(company) === cnorm(business);
+/** The Tally company linked to a business, or "" when it has none (or the saved one belongs to another business). */
+export function tallyCompanyLinked(bizId: string, business = ""): string {
+  const saved = read(`${COMPANY}:${bizId}`, "");
+  if (!saved) return "";
+  const owner = read(ownerKey(saved), "");
+  return owner ? (owner === bizId ? saved : "") : nameMatches(saved, business) ? saved : "";
+}
+/** Records this business as the owner of the company and unlinks it from every other business on this computer. */
+function claim(company: string) {
+  if (!biz || !company) return;
+  write(ownerKey(company), biz);
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i) ?? "";
+      if (k.startsWith(`${COMPANY}:`) && k !== key(COMPANY) && cnorm(localStorage.getItem(k) ?? "") === cnorm(company)) localStorage.removeItem(k);
+    }
+  } catch { /* */ }
+}
+
 /** What Tally answered when it gave no company name (shown on the Tally page to diagnose). */
 export let lastReply = "";
 let state: TallyState = { port: "7001", company: "", companies: [], status: "idle", message: "", educational: false, checkedAt: 0 };
@@ -104,10 +130,12 @@ export async function connectTally(opts: { port?: string; preferName?: string; q
     }
     if (!names.length && typeof console !== "undefined") console.warn("[FreBook] Tally gave no company name. Reply:", first.slice(0, 1500), raw === first ? "" : raw.slice(0, 1500));
     lastReply = names.length ? "" : (raw || first).replace(/\s+/g, " ").slice(0, 400);
-    const pick = names.includes(state.company) ? state.company
-      : names.find(n => opts.preferName && n.toLowerCase() === opts.preferName.toLowerCase()) ?? names[0] ?? state.company;
+    // Keep this business's own company; else one named like the business. Never just take whatever is open first.
+    const want = opts.preferName || bizName;
+    const own = biz ? tallyCompanyLinked(biz, want) : state.company;
+    const pick = (own && names.includes(own) ? own : "") || (names.find(n => nameMatches(n, want)) ?? "") || (names.length ? "" : own);
     write("fw_tally_port", port);
-    if (pick) { write(key(COMPANY), pick); if (pick !== state.company || !opts.quiet) linkOnServer(pick); }
+    if (pick) { write(key(COMPANY), pick); claim(pick); if (pick !== state.company || !opts.quiet) linkOnServer(pick); }
     let educational = state.educational;
     try { educational = isEducational(await (await tallyFetch(`http://localhost:${port}`, licenseXml(), 8000)).text()); } catch { /* keep last */ }
     misses = 0;
@@ -129,7 +157,7 @@ export function disconnectTally() {
 }
 
 /** Choose the Tally company (Tally page only). */
-export function chooseTallyCompany(name: string) { load(); write(key(COMPANY), name); set({ company: name }, false); if (name) linkOnServer(name); }
+export function chooseTallyCompany(name: string) { load(); write(key(COMPANY), name); set({ company: name }, false); if (name) { claim(name); linkOnServer(name); } }
 
 /** Saves which Tally company this business pushes to, so the server can refuse a push to any other company. */
 function linkOnServer(company: string) {
@@ -138,10 +166,14 @@ function linkOnServer(company: string) {
 }
 
 /** Called by the finance layout whenever the active business changes: every Tally surface follows it. */
-export function setTallyBusiness(id: string) {
+export function setTallyBusiness(id: string, name?: string) {
+  if (id === biz && name) bizName = name;
   if (!id || id === biz) return;
+  bizName = name ?? "";   // never carry the previous business's name over
   biz = id; loaded = true; misses = 0;
-  const company = read(key(COMPANY), "");
+  // A company saved here that belongs to another business is dropped: that business's Tally never shows here
+  const company = tallyCompanyLinked(id, bizName);
+  if (!company) write(key(COMPANY), null);
   state = { ...state, port: read("fw_tally_port", "7001"), company, companies: [], status: "idle", message: "", educational: false, checkedAt: 0, ...(company ? restore() : {}) };
   listeners.forEach(l => l(state));
   if (company && !tallyManuallyOff()) connectTally({ quiet: true });

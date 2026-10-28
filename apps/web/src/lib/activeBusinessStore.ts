@@ -1,4 +1,5 @@
 // The one active business (Task 6) — framework-free store behind lib/activeBusiness.tsx (React context + hooks).
+import { tallyCompanyLinked } from "./tallyConnection";
 
 export type ActiveBusiness = { userId: string | null; businessId: string | null; businessName: string; ready: boolean };
 
@@ -42,7 +43,7 @@ export function setActiveBusiness(userId: string, businessId: string, businessNa
   current = { userId, businessId, businessName: businessName ?? (same ? current.businessName : ""), ready: true };
   listeners.forEach(l => l(current));
   // Tally follows the business: each business pushes only to its own linked Tally company
-  if (!same) void import("./tallyConnection").then(m => m.setTallyBusiness(businessId)).catch(() => { /* Tally page will relink */ });
+  if (!same) void import("./tallyConnection").then(m => m.setTallyBusiness(businessId, current.businessName)).catch(() => { /* Tally page will relink */ });
 }
 
 /** Asks before switching to another business, in a FreBook-styled box naming both businesses and the Tally company
@@ -51,11 +52,10 @@ export function confirmBusinessSwitch(userId: string, toId: string, toName: stri
   if (typeof document === "undefined") return Promise.resolve(true);
   const fromId = current.userId === userId ? current.businessId : null;
   if (!fromId || fromId === toId) return Promise.resolve(true);
-  let tally = "";
-  try { tally = localStorage.getItem(`fw_tally_company:${toId}`) ?? ""; } catch { /* */ }
+  const tally = tallyCompanyLinked(toId, toName);   // never another business's company
   const from = fromName || current.businessName || "the current business";
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const mismatch = !!tally && !norm(tally).includes(norm(toName).slice(0, 6)) && !norm(toName).includes(norm(tally).slice(0, 6));
+  const mismatch = !!tally && norm(tally) !== norm(toName);
   const esc = (s: string) => s.replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]!));
   const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
   return new Promise(resolve => {
