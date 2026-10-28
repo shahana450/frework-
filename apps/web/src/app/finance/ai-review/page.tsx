@@ -3,6 +3,7 @@ import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageHero, { HeroAction, HT, SERIF } from "@/components/finance/PageHero";
 import { supabase } from "@/lib/supabase";
 import { saveEntry, NeedsHeadsError } from "@/lib/postEntry";
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
@@ -143,24 +144,16 @@ export default function AIReviewPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
-      <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.8rem", height: 56, flexWrap: "wrap" }}>
-        <Link href="/finance" style={{ color: GOLD, fontWeight: 700, textDecoration: "none" }}>FreWork</Link>
-        <span style={{ color: MUTED }}>›</span>
-        <span style={{ fontWeight: 700 }}>AI Review Queue</span>
-        {pendingCount > 0 && <span style={{ background: GOLD, color: BG, fontSize: "0.7rem", fontWeight: 800, padding: "2px 8px", borderRadius: 10 }}>{pendingCount} to review</span>}
-        <div style={{ flex: 1 }} />
-        <Link href="/finance/upload" style={{ ...btn(GOLD, BG), textDecoration: "none" }}>+ Upload documents</Link>
-      </nav>
+      <PageHero eyebrow="Documents · AI review" title="Nothing posts until you say so"
+        sub="Each suggestion shows the source, what was read, how the entry was built and any duplicate warnings. You approve, edit or reject."
+        actions={<HeroAction href="/finance/upload" primary>+ Upload documents</HeroAction>}
+        tabs={[{ label: "Upload", href: "/finance/upload" }, { label: "Review queue", href: "/finance/ai-review", active: true, count: pendingCount }]} />
 
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "1.5rem" }}>
-        <p style={{ margin: "0 0 1.25rem", color: MUTED, fontSize: "0.85rem", lineHeight: 1.6 }}>
-          Nothing here is in your books yet. Each suggestion shows the source document, what was read from it, how the entry was built and any duplicate warnings. You approve, edit or reject.
-        </p>
-
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 60px" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>
           {(["pending", "accepted", "rejected"] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={btn(filter === f ? GOLD : "rgba(16,36,31,0.08)", filter === f ? BG : MUTED)}>
-              {f === "pending" ? `To review (${pendingCount})` : f === "accepted" ? "Posted" : "Rejected"}
+            <button key={f} onClick={() => setFilter(f)} style={{ height: 40, padding: "0 16px", borderRadius: 999, border: `1px solid ${filter === f ? HT.green : HT.line}`, background: filter === f ? HT.green : HT.paper, color: filter === f ? "#FFFFFF" : HT.ink, fontFamily: SERIF, fontSize: 15, cursor: "pointer" }}>
+              {f === "pending" ? `To review ${pendingCount}` : f === "accepted" ? "Posted" : "Rejected"}
             </button>
           ))}
           <div style={{ flex: 1 }} />
@@ -172,8 +165,22 @@ export default function AIReviewPage() {
 
         {loading ? <div style={{ textAlign: "center", padding: "4rem", color: MUTED }}>Loading…</div>
         : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "4rem", color: MUTED }}>
-            {filter === "pending" ? <>Nothing waiting for review. <Link href="/finance/upload" style={{ color: GOLD }}>Upload bills or statements →</Link></> : `Nothing ${filter === "accepted" ? "posted" : "rejected"} yet.`}
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            <div style={{ background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 18, padding: "40px 24px", textAlign: "center" }}>
+              <div style={{ fontSize: 26, fontStyle: "italic" }}>{filter === "pending" ? "All caught up" : `Nothing ${filter === "accepted" ? "posted" : "rejected"} yet`}</div>
+              {filter === "pending" && <div style={{ color: "#4A5651", marginTop: 6 }}>Upload bills or statements and suggestions will appear here. <Link href="/finance/upload" style={{ color: HT.goldInk }}>Upload →</Link></div>}
+            </div>
+            {filter === "pending" && <div>
+              <div style={{ fontSize: 24, fontStyle: "italic", marginBottom: 12 }}>How each suggestion reads</div>
+              <div style={{ background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 18, overflow: "hidden" }}>
+                {[["Source document", "The bill or statement it came from, one click away."], ["What was read", "Vendor, date, amount and GST, as extracted."], ["The entry", "Debit and credit lines, and why they were chosen."], ["Duplicate check", "A warning if something similar is already in your books."]].map(([t, d], i) => (
+                  <div key={t} style={{ display: "flex", gap: 16, alignItems: "center", padding: "15px 24px", borderTop: i ? `1px solid ${HT.line}` : undefined }}>
+                    <span style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 999, border: `1px solid ${HT.gold}`, color: HT.goldInk, display: "grid", placeItems: "center" }}>{i + 1}</span>
+                    <span><span style={{ display: "block", fontSize: 17 }}>{t}</span><span style={{ fontSize: 14, color: "#4A5651" }}>{d}</span></span>
+                  </div>
+                ))}
+              </div>
+            </div>}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}>
