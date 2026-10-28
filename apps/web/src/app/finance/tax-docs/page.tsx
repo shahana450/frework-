@@ -1,4 +1,6 @@
 "use client";
+import PageHero from "@/components/finance/PageHero";
+import { cur } from "@/lib/money";
 // Tax documents — drop Form 26AS or Form 16 (PDF); FreWork reads every figure and checks 26AS TDS against the books.
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -71,14 +73,16 @@ export default function TaxDocs() {
   const tile = (l: string, v: string, tone?: string) => <div style={{ ...card, padding: "12px 14px" }}><div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted }}>{l}</div><div style={{ fontFamily: MONO, fontSize: 20, fontWeight: 600, color: tone ?? C.ink }}>{v}</div></div>;
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.ink, fontFamily: "'Manrope',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.ink, fontFamily: SERIF }}>
       <input ref={input} type="file" accept=".pdf,application/pdf" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = ""; }} />
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "clamp(16px,3vw,32px)", display: "flex", flexDirection: "column", gap: 16 }}>
-        <header>
-          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.16em", color: "#8A6420" }}>INCOME TAX · TAX CREDIT &amp; TDS CERTIFICATES</div>
-          <h1 style={{ margin: "6px 0 0", fontFamily: SERIF, fontSize: "clamp(1.7rem,3.4vw,2.4rem)", fontWeight: 700 }}>Form 168 &amp; Form 130, <span style={{ fontStyle: "italic", fontWeight: 400, color: "#8A6420" }}>read for you</span></h1>
-          <p style={{ margin: "6px 0 0", fontSize: 14, color: C.muted, maxWidth: 680 }}>Under the Income-tax Act, 2025 the annual tax credit statement is <b>Form 168</b> (earlier Form 26AS) and the salary TDS certificate is <b>Form 130</b> (earlier Form 16). Old forms still apply for FY 2025-26 and earlier — both are read here. Download the statement from the Income-tax portal or the certificate from your employer, and drop it here. FreWork reads every deductor, section and amount, and checks TDS against your books.</p>
-        </header>
+      <PageHero eyebrow="Income tax · tax credit & TDS certificates" title="Form 168 & Form 130," accent={<i>read for you</i>}
+        sub={<>Under the Income-tax Act, 2025 the annual tax credit statement is <b>Form 168</b> (earlier 26AS) and the salary TDS certificate is <b>Form 130</b> (earlier Form 16). Old forms still apply for FY 2025-26 and earlier — both are read here, and TDS is checked against your books.</>}
+        tiles={[
+          { label: "Form 26AS is now", value: "Form 168" },
+          { label: "Form 16 is now", value: "Form 130" },
+          { label: "TDS credits read", value: res ? (res.kind === "26as" ? `${cur()}${Number((res as { total?: number; tdsTotal?: number }).total ?? 0).toLocaleString("en-IN")}` : `${cur()}${Number((res as { form16?: { tdsTotal?: number } }).form16?.tdsTotal ?? 0).toLocaleString("en-IN")}`) : "None yet", tone: res ? "good" : "warn" },
+        ]} />
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 60px", display: "flex", flexDirection: "column", gap: 18 }}>
 
         {/* Get the PDF: the user signs in on the official portal themselves (FreWork never asks for or stores portal passwords) */}
         <section style={{ ...card, display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-start" }}>
