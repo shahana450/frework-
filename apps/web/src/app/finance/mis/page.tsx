@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import type { Dashboard } from "@/lib/dashboard";
+import PageHero, { HeroAction, HT } from "@/components/finance/PageHero";
 
 const C = { ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", forest: "#0F2B25", gold: "#C99A4E", pos: "#0B7A55", neg: "#B4321F" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
-const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 const inr = (n: number) => (n < 0 ? "−" : "") + cur() + Math.abs(Math.round(n || 0)).toLocaleString(activeMoney().locale);
 const pct = (a: number, b: number) => b ? `${a >= b ? "▲" : "▼"} ${Math.abs(Math.round(((a - b) / Math.abs(b)) * 100))}%` : "";
 
@@ -36,62 +36,105 @@ export default function MisPack() {
   const kpi = (label: string, value: number, note?: string, tone?: "pos" | "neg") => (
     <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 14px" }}>
       <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted }}>{label}</div>
-      <div style={{ fontFamily: MONO, fontSize: 22, fontWeight: 600, color: tone === "neg" ? C.neg : tone === "pos" ? C.pos : C.ink }}>{inr(value)}</div>
+      <div style={{ fontSize: 22, fontWeight: 600, color: tone === "neg" ? C.neg : tone === "pos" ? C.pos : C.ink }}>{inr(value)}</div>
       {note && <div style={{ fontSize: 12, color: C.muted }}>{note}</div>}
     </div>
   );
 
+  const card: React.CSSProperties = { background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 16 };
+  const h2: React.CSSProperties = { fontFamily: SERIF, fontSize: 24, fontWeight: 400, fontStyle: "italic", margin: "0 0 12px" };
+  const row = (k: string, v: number, tone?: "pos" | "neg", key?: string) => (
+    <div key={key ?? k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "13px 22px", borderTop: `1px solid ${HT.line}`, fontSize: 15.5 }}>
+      <span>{k}</span><span style={{ fontVariantNumeric: "tabular-nums", color: tone === "pos" ? C.pos : tone === "neg" ? C.neg : C.ink }}>{inr(v)}</span>
+    </div>
+  );
+  const recv = dash ? Math.max(0, dash.receivables) : 0;
+  const adv = dash ? Math.max(0, -dash.receivables) : 0;
+  const days = (iso: string) => Math.ceil((Date.parse(iso) - Date.now()) / 86400000);
+
   return (
-    <div style={{ minHeight: "100vh", background: "#FFFDF8", color: C.ink, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
-      <style>{`@media print { .no-print { display: none !important } aside, nav.fw-topicons, .fw-tabs { display: none !important } main.fw-main { margin-left: 0 !important } @page { size: A4; margin: 14mm } } .mis-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px } @media (max-width: 700px) { .mis-grid { grid-template-columns: minmax(0,1fr) } }`}</style>
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "28px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
-        <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button onClick={() => window.print()} style={{ height: 42, padding: "0 18px", borderRadius: 999, border: "none", background: C.forest, color: "#FFFFFF", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Print / Save as PDF</button>
-        </div>
-        <header style={{ borderBottom: `3px solid ${C.forest}`, paddingBottom: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", color: C.gold }}>MANAGEMENT REPORT · {month.toUpperCase()}</div>
-          <h1 style={{ margin: "4px 0 0", fontFamily: SERIF, fontSize: "2rem" }}>{biz?.name ?? "Your business"}</h1>
-          <div style={{ fontSize: 12.5, color: C.muted }}>{biz?.gstin ? `GSTIN ${biz.gstin} · ` : ""}{dash ? `${dash.period.label} · ` : ""}prepared from posted entries in FreWork</div>
-        </header>
-        {err && <div style={{ color: C.neg, fontWeight: 700 }}>{err}</div>}
-        {!dash && !err && <div style={{ color: C.muted }}>Preparing the report…</div>}
+    <div style={{ minHeight: "100vh", background: HT.cream, color: C.ink, fontFamily: SERIF }}>
+      <style>{`@media print { .no-print { display: none !important } aside, nav.fw-topicons, .fw-tabs { display: none !important } main.fw-main { margin-left: 0 !important } header { -webkit-print-color-adjust: exact; print-color-adjust: exact } @page { size: A4; margin: 12mm } }
+        .mis-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px } .mis-two { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 22px; align-items: start }
+        @media (max-width: 820px) { .mis-grid, .mis-two { grid-template-columns: minmax(0,1fr) } }`}</style>
+      <PageHero eyebrow={`Management report · ${month}`} title={biz?.name ?? "Your business"}
+        sub={`${biz?.gstin ? `GSTIN ${biz.gstin} · ` : ""}${dash ? `FY ${dash.period.label} · ` : ""}prepared from posted entries`}
+        actions={<span className="no-print"><HeroAction onClick={() => window.print()} primary>Print / Save as PDF</HeroAction></span>}
+        tiles={dash ? [
+          { label: "Sales this month", value: inr(dash.monthRevenue) },
+          { label: "Profit this month", value: inr(dash.monthProfit), sub: `Last month ${inr(dash.lastMonthProfit)} ${pct(dash.monthProfit, dash.lastMonthProfit)}`, tone: dash.monthProfit < 0 ? "bad" : "good" },
+          { label: "Cash & bank today", value: inr(dash.cash), tone: dash.cash < 0 ? "bad" : "good" },
+        ] : [{ label: "Preparing the report", value: "…" }]} />
+
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 60px", display: "flex", flexDirection: "column", gap: 26 }}>
+        {err && <div style={{ color: C.neg }}>{err}</div>}
         {dash && <>
           <section>
-            <h2 style={{ fontFamily: SERIF, fontSize: "1.2rem", margin: "0 0 8px" }}>This month</h2>
+            <h2 style={h2}>Year to date · FY {dash.period.label}</h2>
             <div className="mis-grid">
-              {kpi("Sales this month", dash.monthRevenue)}
-              {kpi("Profit this month", dash.monthProfit, `Last month ${inr(dash.lastMonthProfit)} ${pct(dash.monthProfit, dash.lastMonthProfit)}`, dash.monthProfit < 0 ? "neg" : "pos")}
-              {kpi("Cash & bank today", dash.cash, undefined, dash.cash < 0 ? "neg" : undefined)}
+              {[
+                { l: "Income", v: dash.revenue },
+                { l: "Expenses", v: dash.expenses },
+                { l: dash.profit < 0 ? "Net loss" : "Net profit", v: dash.profit, tone: dash.profit < 0 ? "neg" : "pos", note: dash.revenue ? `Margin ${((dash.profit / dash.revenue) * 100).toFixed(1)}%` : undefined },
+              ].map(k => (
+                <div key={k.l} style={{ ...card, padding: "18px 22px" }}>
+                  <div style={{ fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted }}>{k.l}</div>
+                  <div style={{ fontSize: 28, color: k.tone === "neg" ? C.neg : k.tone === "pos" ? C.pos : C.ink, fontVariantNumeric: "tabular-nums" }}>{inr(k.v)}</div>
+                  {k.note && <div style={{ fontSize: 13.5, color: C.muted }}>{k.note}</div>}
+                </div>
+              ))}
             </div>
           </section>
-          <section>
-            <h2 style={{ fontFamily: SERIF, fontSize: "1.2rem", margin: "0 0 8px" }}>Year to date · {dash.period.label}</h2>
-            <div className="mis-grid">
-              {kpi("Income", dash.revenue)}
-              {kpi("Expenses", dash.expenses)}
-              {kpi(dash.profit < 0 ? "Net loss" : "Net profit", dash.profit, dash.revenue ? `Margin ${Math.round((dash.profit / dash.revenue) * 100)}%` : undefined, dash.profit < 0 ? "neg" : "pos")}
-              {kpi("Customers owe you", dash.receivables)}
-              {kpi("You owe suppliers", dash.payables)}
-              {kpi("Working capital", dash.cash + dash.receivables - dash.payables, "Cash + receivables − payables")}
+
+          {dash.insight && <section style={{ ...card, padding: "14px 22px", fontSize: 15 }}><i style={{ color: HT.goldInk }}>Worth a look —</i> {dash.insight.text}</section>}
+
+          <div className="mis-two">
+            <section>
+              <h2 style={h2}>Working capital</h2>
+              <div style={{ ...card, overflow: "hidden" }}>
+                {row("Cash & bank", dash.cash)}
+                {row("Customers owe you", recv)}
+                {adv > 0 && row("Less: advances received from customers", -adv, "neg")}
+                {row("Less: you owe suppliers", -Math.max(0, dash.payables))}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "15px 22px", background: HT.green, color: "#FFFFFF", fontSize: 16 }}>
+                  <b>Working capital</b><span style={{ fontVariantNumeric: "tabular-nums" }}>{inr(dash.cash + dash.receivables - dash.payables)}</span>
+                </div>
+              </div>
+            </section>
+            <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+              <section>
+                <h2 style={h2}>Coming up</h2>
+                <div style={{ ...card, overflow: "hidden" }}>
+                  {(dash.compliance ?? []).slice(0, 4).map((d, i) => {
+                    const x = d as { title?: string; form?: string; due?: string; date?: string; note?: string; period?: string };
+                    const due = x.due ?? x.date ?? "";
+                    const dt = due ? new Date(due + (due.length === 10 ? "T00:00:00" : "")) : null;
+                    return (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 22px", borderTop: i ? `1px solid ${HT.line}` : undefined }}>
+                        {dt && <span style={{ width: 50, flexShrink: 0, textAlign: "center", borderRadius: 10, background: "#FBF1DA", padding: "4px 0", lineHeight: 1.1 }}><span style={{ display: "block", fontSize: 11, color: HT.goldInk }}>{dt.toLocaleDateString("en-IN", { month: "short" }).toUpperCase()}</span><span style={{ fontSize: 20 }}>{dt.getDate()}</span></span>}
+                        <span style={{ flex: 1 }}><span style={{ display: "block", fontSize: 16 }}>{x.title ?? x.form ?? ""}</span><span style={{ fontSize: 13.5, color: C.muted }}>{x.period ?? x.note ?? ""}</span></span>
+                        {due && <span style={{ fontSize: 13.5, color: C.muted, whiteSpace: "nowrap" }}>{days(due) <= 0 ? "due now" : `in ${days(due)} days`}</span>}
+                      </div>
+                    );
+                  })}
+                  {!(dash.compliance ?? []).length && <div style={{ padding: "14px 22px", color: C.muted, fontStyle: "italic" }}>No due dates in view.</div>}
+                </div>
+              </section>
+              <section>
+                <h2 style={h2}>Latest entries</h2>
+                <div style={{ ...card, overflow: "hidden" }}>
+                  {dash.recent.slice(0, 6).map((r, i) => (
+                    <div key={r.id} style={{ display: "flex", gap: 14, padding: "12px 22px", borderTop: i ? `1px solid ${HT.line}` : undefined, fontSize: 15 }}>
+                      <span style={{ width: 54, color: C.muted, flexShrink: 0 }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{(r as { narration?: string }).narration ?? ""}</span>
+                      <span style={{ fontVariantNumeric: "tabular-nums" }}>{inr((r as { amount?: number; total_debit?: number }).amount ?? (r as { total_debit?: number }).total_debit ?? 0)}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
-          </section>
-          {dash.insight && <section style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 14px", fontSize: 14 }}><b>Worth a look:</b> {dash.insight.text}</section>}
-          <section>
-            <h2 style={{ fontFamily: SERIF, fontSize: "1.2rem", margin: "0 0 8px" }}>Coming up</h2>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
-              <tbody>{(dash.compliance ?? []).slice(0, 6).map((d, i) => (
-                <tr key={i} style={{ borderBottom: `1px solid ${C.line}` }}><td style={{ padding: "6px 4px" }}>{(d as { title?: string; form?: string }).title ?? (d as { form?: string }).form ?? ""}</td><td style={{ padding: "6px 4px", color: C.muted }}>{(d as { period?: string }).period ?? ""}</td><td style={{ padding: "6px 4px", textAlign: "right" }}>{(d as { due?: string }).due ? new Date((d as { due: string }).due).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : ""}</td></tr>))}
-                {!(dash.compliance ?? []).length && <tr><td style={{ padding: "6px 4px", color: C.muted }}>No due dates in view.</td></tr>}</tbody>
-            </table>
-          </section>
-          <section>
-            <h2 style={{ fontFamily: SERIF, fontSize: "1.2rem", margin: "0 0 8px" }}>Latest entries</h2>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <tbody>{dash.recent.slice(0, 10).map(r => (
-                <tr key={r.id} style={{ borderBottom: `1px solid ${C.line}` }}><td style={{ padding: "5px 4px", whiteSpace: "nowrap" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</td><td style={{ padding: "5px 4px", fontFamily: MONO, fontSize: 12 }}>{r.entry_no}</td><td style={{ padding: "5px 4px" }}>{r.narration}</td><td style={{ padding: "5px 4px", textAlign: "right", fontFamily: MONO }}>{inr(r.amount)}</td></tr>))}</tbody>
-            </table>
-          </section>
-          <footer style={{ fontSize: 11.5, color: C.muted, borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>Books health {dash.health.score}/100{dash.health.reasons.length ? ` — ${dash.health.reasons.slice(0, 2).join("; ")}` : ""}. Unaudited management figures.</footer>
+          </div>
+          <footer style={{ fontSize: 13, color: C.muted, fontStyle: "italic" }}>Books health {dash.health.score}/100{dash.health.reasons.length ? ` — ${dash.health.reasons.slice(0, 2).join("; ")}` : ""}. Unaudited management figures.</footer>
         </>}
       </div>
     </div>
