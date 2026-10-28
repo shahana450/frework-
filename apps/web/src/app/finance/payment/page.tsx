@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { saveEntry } from "@/lib/postEntry";
 import Link from "next/link";
+import PageHero, { HT, SERIF } from "@/components/finance/PageHero";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Contact = { id: string; name: string; type: string };
@@ -113,30 +114,23 @@ export default function PaymentPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
-        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>Payment Entry</span>
-      </nav>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "1.5rem", maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
-        <div>
-          <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Payment Entry</h1>
-          <p style={{ margin: "0 0 1.5rem", color: "rgba(16,36,31,0.65)", fontSize: "0.82rem" }}>Record customer receipts or vendor payments</p>
-
-          {/* Type Toggle */}
-          <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.5rem" }}>
+      <style>{`@media(max-width:960px){.pe-two{grid-template-columns:minmax(0,1fr) !important}}`}</style>
+      <PageHero eyebrow={`Collect · payment entry`} title="Money in, money out"
+        sub="Record what a customer paid you or what you paid a vendor. FreBook posts it to the bank and party ledgers." />
+      <div style={{ background: HT.green, marginTop: -1 }}>
+        <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 28px 28px" }}>
+          <div role="tablist" style={{ display: "inline-flex", gap: 4, padding: 4, borderRadius: 999, background: "rgba(255,255,255,0.08)" }}>
             {(["receipt", "payment"] as const).map(t => (
-              <button key={t} onClick={() => setPaymentType(t)} style={{
-                padding: "9px 24px", borderRadius: 8, fontWeight: 700, fontSize: "0.88rem", cursor: "pointer", border: "none",
-                background: paymentType === t ? (t === "receipt" ? "#0B7A55" : "#B4321F") : "rgba(16,36,31,0.08)",
-                color: paymentType === t ? "#F4EFE4" : "rgba(16,36,31,0.75)",
-              }}>
-                {t === "receipt" ? "💰 Customer Receipt" : "💳 Vendor Payment"}
+              <button key={t} role="tab" aria-selected={paymentType === t} onClick={() => setPaymentType(t)} style={{ height: 44, padding: "0 22px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: SERIF, fontSize: 16, fontWeight: 700, background: paymentType === t ? HT.cream : "transparent", color: paymentType === t ? HT.ink : "#FFFFFF" }}>
+                {t === "receipt" ? "↓ Customer receipt" : "↑ Vendor payment"}
               </button>
             ))}
           </div>
+        </div>
+      </div>
 
+      <div className="pe-two" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 400px", gap: 24, maxWidth: 1240, margin: "0 auto", padding: "30px 28px 60px", alignItems: "start" }}>
+        <div>
           {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#B4321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
           {success && <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", color: "#0B7A55", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 

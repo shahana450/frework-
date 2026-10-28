@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { saveEntry } from "@/lib/postEntry";
 import Link from "next/link";
+import PageHero, { HT, SERIF } from "@/components/finance/PageHero";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Account = { id: string; code: string; name: string; type: string; sub_type: string | null };
@@ -128,30 +129,22 @@ export default function ExpensesPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
-        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>Record Expense</span>
-      </nav>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "1.5rem", maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
-        {/* Main Form */}
-        <div>
-          <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Record Expense</h1>
-          <p style={{ margin: "0 0 1.5rem", color: "rgba(16,36,31,0.65)", fontSize: "0.82rem" }}>Quick expense entry — journal is auto-created</p>
-
-          {/* Presets */}
-          <div style={{ marginBottom: "1.25rem" }}>
-            <div style={{ fontSize: "0.7rem", color: "rgba(16,36,31,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem" }}>Quick Presets</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {EXPENSE_PRESETS.map(p => (
-                <button key={p.label} onClick={() => applyPreset(p)} style={{ background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.14)", color: "rgba(16,36,31,0.85)", padding: "4px 12px", borderRadius: 14, cursor: "pointer", fontSize: "0.78rem" }}>
-                  {p.label}
-                </button>
-              ))}
-            </div>
+      <style>{`@media(max-width:960px){.ex-two{grid-template-columns:minmax(0,1fr) !important}}`}</style>
+      <PageHero eyebrow="Expenses · record expense" title="Record an expense"
+        sub="Fill in the bill once. FreBook splits out GST and TDS and writes the journal entry for you." />
+      <div style={{ background: HT.green, marginTop: -1 }}>
+        <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 28px 28px" }}>
+          <div style={{ fontSize: 12, letterSpacing: "0.22em", color: "#D3DCD8", marginBottom: 10 }}>QUICK PRESETS</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {EXPENSE_PRESETS.map(p => (
+              <button key={p.label} onClick={() => applyPreset(p)} style={{ height: 42, padding: "0 18px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.3)", background: "transparent", color: "#FFFFFF", fontFamily: SERIF, fontSize: 15, cursor: "pointer" }}>{p.label}</button>
+            ))}
           </div>
+        </div>
+      </div>
 
+      <div className="ex-two" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 390px", gap: 24, maxWidth: 1240, margin: "0 auto", padding: "30px 28px 60px", alignItems: "start" }}>
+        <div>
           {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#B4321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
           {success && <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", color: "#0B7A55", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
@@ -243,9 +236,33 @@ export default function ExpensesPage() {
           </div>
         </div>
 
-        {/* Sidebar — Recent Expenses */}
-        <div>
-          <div style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Expenses</div>
+        {/* Sidebar — what will post, then recent expenses */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {(() => {
+            const expAcc = accounts.find(a => a.id === expenseAccountId)?.name ?? "Expense account";
+            const payAcc = accounts.find(a => a.id === paymentAccountId)?.name ?? "Bank / cash";
+            const f2 = (n: number) => n ? fmt(n) : "—";
+            const rows: [string, number, number][] = [[expAcc, baseAmount, 0], ...(gstAmt ? [[gstType === "igst" ? "IGST input" : "CGST + SGST input", gstAmt, 0] as [string, number, number]] : [["GST input", 0, 0] as [string, number, number]]), ["TDS payable", 0, tdsAmt], [payAcc, 0, netPayable]];
+            return (
+              <div style={{ background: HT.green, color: "#FFFFFF", borderRadius: 18, padding: "22px 24px" }}>
+                <div style={{ fontSize: 12, letterSpacing: "0.24em", color: HT.gold }}>JOURNAL PREVIEW</div>
+                <div style={{ fontSize: 24, fontStyle: "italic", margin: "4px 0 14px" }}>What FreBook will post</div>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 70px 70px", fontSize: 13.5, color: "#C9D3CE", paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.12)" }}><span>Account</span><span style={{ textAlign: "right" }}>Dr</span><span style={{ textAlign: "right" }}>Cr</span></div>
+                {rows.map(([n, dr, cr]) => (
+                  <div key={n} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 70px 70px", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.08)", fontSize: 15 }}>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n}</span>
+                    <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{dr ? f2(dr) : n === "TDS payable" || n === payAcc ? "—" : "0.00"}</span>
+                    <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{cr ? f2(cr) : n === "TDS payable" || n === payAcc ? "0.00" : "—"}</span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderTop: `1px solid ${HT.gold}`, marginTop: 14, paddingTop: 14 }}>
+                  <span>Net paid</span><span style={{ fontSize: 30, color: HT.gold, fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(netPayable)}</span>
+                </div>
+              </div>
+            );
+          })()}
+          <div>
+          <div style={{ display: "flex", alignItems: "baseline", marginBottom: 10 }}><span style={{ flex: 1, fontSize: 24, fontStyle: "italic" }}>Recent expenses</span><Link href="/finance/journals?type=expense" style={{ color: HT.ink }}>View all →</Link></div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {recentExpenses.map(e => (
               <div key={e.id} style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.08)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
@@ -258,9 +275,9 @@ export default function ExpensesPage() {
               </div>
             ))}
             {recentExpenses.length === 0 && (
-              <div style={{ color: "rgba(16,36,31,0.35)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No expenses recorded yet</div>
+              <div style={{ background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 14, color: HT.muted, fontStyle: "italic", textAlign: "center", padding: "1.2rem" }}>No expenses recorded yet. Pick a preset above to start.</div>
             )}
-            <Link href="/finance/journals?type=expense" style={{ color: "#12352D", fontSize: "0.78rem", textAlign: "center", padding: "0.5rem", textDecoration: "none" }}>View all expenses →</Link>
+          </div>
           </div>
         </div>
       </div>
