@@ -4,6 +4,7 @@ import { PdfPasswordError } from "@/lib/pdfUnlock";
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
+import PageHero, { HT } from "@/components/finance/PageHero";
 import { supabase } from "@/lib/supabase";
 import { parseStatementGrid } from "@/lib/bankExcel";
 import { readActiveBusiness } from "@/lib/activeBusiness";
@@ -463,6 +464,7 @@ export default function BankingPage() {
         input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
         ::-webkit-scrollbar { width: 5px; height: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #FFFFFF; border-radius: 3px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 960px) { .bi-two { grid-template-columns: minmax(0,1fr) !important; } }
         .spin { animation: spin 0.8s linear infinite; }
       `}</style>
 
@@ -486,7 +488,10 @@ export default function BankingPage() {
         )}
       </div>
 
-      <div style={{ maxWidth: 1320, margin: "0 auto", padding: "1.5rem" }}>
+      {rows.length === 0 && <PageHero eyebrow="Banking · import statement" title="Bring in your bank"
+        sub="Upload a bank statement in PDF or Excel. FreBook reads every line, suggests the ledger and drafts the journal entry. Nothing posts until you approve it."
+        tabs={[{ label: "Upload", active: true }, { label: "Bank dashboard", href: "/finance/banking" }, { label: "Statement history", href: "/finance/banking/history" }]} />}
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "1.5rem 28px" }}>
 
         {/* ── Upload area (shown when no rows) ── */}
         {rows.length === 0 && restorable && (
@@ -498,8 +503,19 @@ export default function BankingPage() {
         )}
         {rows.length === 0 && (
           <div>
-            <div style={{ marginBottom: "1.5rem" }}>
-              <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.4rem", fontWeight: 800, letterSpacing: "-0.02em" }}>Bank Statement Import</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 16, padding: "14px 22px", marginBottom: 20, fontSize: 15 }}>
+              {["Upload", "Assign ledgers", "Journal entries", "Ledger", "Trial balance", "Financial statements"].map((s, i) => (
+                <span key={s} style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                  {i > 0 && <span aria-hidden="true" style={{ color: HT.gold }}>→</span>}
+                  <span style={{ width: 26, height: 26, borderRadius: 999, display: "grid", placeItems: "center", fontSize: 13, background: i === 0 ? HT.green : "transparent", color: i === 0 ? "#FFFFFF" : HT.muted, border: i === 0 ? "none" : `1px solid ${HT.line}` }}>{i + 1}</span>
+                  <span style={{ color: i === 0 ? HT.ink : HT.muted, fontWeight: i === 0 ? 700 : 400 }}>{s}</span>
+                </span>
+              ))}
+            </div>
+            <div className="bi-two" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 420px", gap: 22, alignItems: "start" }}>
+            <div>
+            <div style={{ display: "none" }}>
+              <h1>Bank Statement Import</h1>
               <p style={{ margin: 0, color: "#6B7570", fontSize: "0.88rem" }}>Upload your bank statement (PDF or Excel). Assign ledger accounts and push directly to Journal Entries → Ledger → Trial Balance → Financial Statements.</p>
             </div>
 
@@ -507,7 +523,7 @@ export default function BankingPage() {
               className="bs-drop"
               onDrop={onDrop} onDragOver={e => e.preventDefault()}
               onClick={() => fileRef.current?.click()}
-              style={{ border: "2px dashed #FFFFFF", borderRadius: 16, padding: "3rem 2rem", textAlign: "center", cursor: "pointer", background: "#FFFDF8" }}
+              style={{ border: `1px dashed ${HT.gold}`, borderRadius: 16, padding: "3.2rem 2rem", textAlign: "center", cursor: "pointer", background: HT.paper, outline: `14px solid ${HT.paper}`, margin: 14 }}
             >
               {parsing ? (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", padding: "1rem 0" }}>
@@ -534,11 +550,12 @@ export default function BankingPage() {
                 </div>
               ) : (
                 <>
-                  <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📄</div>
-                  <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: "0.3rem" }}>Drop bank statement here</div>
-                  <div style={{ color: "#6B7570", fontSize: "0.84rem", marginBottom: "1rem" }}>PDF (parsed by AI) · Excel .xlsx / .xls · CSV</div>
-                  <div style={{ display: "inline-block", background: "#12352D", color: "#fff", padding: "10px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.88rem" }}>
-                    Browse File
+                  <svg aria-hidden="true" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={HT.ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10 }}><path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18" /></svg>
+                  <div style={{ fontSize: 26, fontStyle: "italic", marginBottom: 6 }}>Drop your bank statement here</div>
+                  <div style={{ color: HT.muted, fontSize: 15, marginBottom: 18 }}>PDF (read by AI) · XLSX · XLS · CSV</div>
+                  <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                    <span style={{ height: 48, padding: "0 26px", borderRadius: 999, background: HT.gold, color: HT.ink, fontWeight: 700, fontSize: 16, display: "inline-flex", alignItems: "center" }}>Choose file →</span>
+                    <a href="/finance/whatsapp" onClick={e => e.stopPropagation()} style={{ height: 48, padding: "0 24px", borderRadius: 999, border: `1px solid ${HT.gold}`, color: HT.goldInk, textDecoration: "none", fontSize: 16, display: "inline-flex", alignItems: "center" }}>Send from WhatsApp</a>
                   </div>
                 </>
               )}
@@ -577,6 +594,19 @@ export default function BankingPage() {
                 </div>
               </div>
             )}
+            </div>
+            <aside style={{ background: HT.green, color: "#FFFFFF", borderRadius: 18, padding: "24px 26px" }}>
+              <div style={{ fontSize: 12, letterSpacing: "0.24em", color: HT.gold }}>HOW IT WORKS</div>
+              <div style={{ fontSize: 24, fontStyle: "italic", margin: "4px 0 16px" }}>Statement to books, in three steps</div>
+              {[["Upload", "Pick the bank ledger and drop the PDF or Excel statement."], ["Assign ledgers", "Check the suggested ledger for each line and change any you disagree with."], ["Approve and post", "Approved lines become journal entries and flow through to the ledger, trial balance and financial statements."]].map(([t, d], i) => (
+                <div key={t} style={{ display: "flex", gap: 14, marginBottom: 16 }}>
+                  <span style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 999, border: `1px solid ${HT.gold}`, color: HT.gold, display: "grid", placeItems: "center", fontSize: 14 }}>{i + 1}</span>
+                  <span><span style={{ display: "block", fontSize: 16.5, fontWeight: 700 }}>{t}</span><span style={{ fontSize: 14.5, color: "#D3DCD8", lineHeight: 1.5 }}>{d}</span></span>
+                </div>
+              ))}
+              <div style={{ fontSize: 13.5, color: "#C9D3CE", fontStyle: "italic", borderTop: "1px solid rgba(255,255,255,0.12)", paddingTop: 12 }}>Password-protected PDFs open in your browser — the password is never sent or stored.</div>
+            </aside>
+            </div>
           </div>
         )}
 
