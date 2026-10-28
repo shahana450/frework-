@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 import Link from "next/link";
+import PageHero, { HT, SERIF } from "@/components/finance/PageHero";
 import { readActiveBusiness, setActiveBusiness } from "@/lib/activeBusiness";
 
 type HistoryDoc = {
@@ -58,6 +59,7 @@ export default function UploadPage() {
   const [bizName, setBizName] = useState("");
   const [files, setFiles] = useState<DocFile[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [kindSel, setKindSel] = useState<"sales" | "purchase" | "bank">("purchase");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [history, setHistory] = useState<HistoryDoc[]>([]);
   const [histLoading, setHistLoading] = useState(false);
@@ -270,20 +272,27 @@ export default function UploadPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(18,53,45,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(16,36,31,0.55)" }}>›</span>
-        <span style={{ color: "rgba(16,36,31,0.85)", fontSize: "0.85rem" }}>Upload Documents</span>
-        <div style={{ flex: 1 }} />
-        {bizName && <span style={{ fontSize: "0.78rem", color: "rgba(16,36,31,0.65)" }}>{bizName}</span>}
-      </nav>
+      <PageHero eyebrow={`Documents${bizName ? ` · ${bizName}` : ""}`} title="Upload anything"
+        sub="Drop invoices, bills, receipts or bank statements. FreBook reads vendor, amount and GST and suggests the journal entry — nothing posts until you approve it."
+        tiles={[
+          { label: "Uploaded", value: history.length },
+          { label: "Waiting for review", value: history.filter(h => !h.journal_id && h.status !== "rejected").length, tone: "warn" },
+          { label: "Posted from uploads", value: history.filter(h => h.journal_id).length, tone: "good" },
+        ]}
+        tabs={[{ label: "Upload", href: "/finance/upload", active: true }, { label: "Review queue", href: "/finance/ai-review", count: history.filter(h => !h.journal_id && h.status !== "rejected").length }]} />
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "2rem" }}>
-        <div style={{ marginBottom: "1.5rem" }}>
-          <h1 style={{ margin: "0 0 0.4rem", fontSize: "1.6rem", fontWeight: 800 }}>Upload Anything</h1>
-          <p style={{ margin: 0, color: "rgba(16,36,31,0.75)", fontSize: "0.88rem" }}>
-            Drop invoices, bills, receipts, or bank statements. AI extracts vendor, amount, GST, and suggests journal entries.
-          </p>
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 60px" }}>
+        <div style={{ display: "grid", gap: 14, gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", marginBottom: 18 }}>
+          {[
+              { k: "sales" as const, code: "INV", title: "Sales invoices", desc: "GST invoices you’ve raised to customers" },
+              { k: "purchase" as const, code: "BIL", title: "Purchase bills", desc: "Bills from vendors and suppliers" },
+              { k: "bank" as const, code: "BNK", title: "Bank statements", desc: "PDF or Excel statements for reconciliation" },
+            ].map(t => (
+            <button key={t.k} type="button" onClick={() => t.k === "bank" ? (window.location.href = "/finance/banking/import") : setKindSel(t.k)} style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", borderRadius: 16, textAlign: "left", cursor: "pointer", fontFamily: SERIF, color: HT.ink, background: HT.paper, border: kindSel === t.k ? `2px solid ${HT.green}` : `1px solid ${HT.line}` }}>
+              <span style={{ width: 42, height: 42, flexShrink: 0, borderRadius: 10, background: HT.green, color: HT.gold, display: "grid", placeItems: "center", fontSize: 13 }}>{t.code}</span>
+              <span><span style={{ display: "block", fontSize: 17 }}>{t.title}</span><span style={{ fontSize: 13.5, color: HT.muted }}>{t.desc}</span></span>
+            </button>
+          ))}
         </div>
 
         {/* Drop Zone */}
@@ -293,18 +302,18 @@ export default function UploadPage() {
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
           style={{
-            border: `2px dashed ${dragging ? "#12352D" : "rgba(18,53,45,0.3)"}`,
-            borderRadius: 16, padding: "3rem 2rem", textAlign: "center", cursor: "pointer",
-            background: dragging ? "rgba(18,53,45,0.06)" : "#FFFFFF",
+            border: `1px dashed ${dragging ? HT.green : HT.gold}`, outline: `14px solid ${HT.paper}`, outlineOffset: 0,
+            borderRadius: 14, padding: "3.2rem 2rem", textAlign: "center", cursor: "pointer", margin: "14px 14px 1.5rem",
+            background: dragging ? "#F6EFDF" : HT.paper,
             transition: "all 0.2s", marginBottom: "1.5rem",
           }}
         >
-          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📂</div>
-          <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: "0.4rem" }}>
-            {dragging ? "Drop files here" : "Drop files or click to browse"}
-          </div>
-          <div style={{ color: "rgba(16,36,31,0.65)", fontSize: "0.82rem" }}>
-            PDF, JPG, PNG, XLSX · Invoices, Bills, Receipts, Bank Statements
+          <svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={HT.ink} strokeWidth="1.6" strokeLinecap="round" style={{ marginBottom: 10 }}><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
+          <div style={{ fontSize: 24, fontStyle: "italic", marginBottom: 6 }}>{dragging ? "Drop to upload" : kindSel === "sales" ? "Drop sales invoices here" : "Drop purchase bills here"}</div>
+          <div style={{ color: HT.muted, fontSize: 14.5 }}>PDF · JPG · PNG · XLSX</div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 18, flexWrap: "wrap" }}>
+            <span style={{ height: 46, padding: "0 22px", borderRadius: 999, background: HT.gold, color: HT.ink, fontWeight: 700, display: "inline-flex", alignItems: "center" }}>Choose files →</span>
+            <a href="/finance/whatsapp" onClick={e => e.stopPropagation()} style={{ height: 46, padding: "0 22px", borderRadius: 999, border: `1px solid ${HT.gold}`, color: HT.goldInk, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Send from WhatsApp</a>
           </div>
           <input ref={fileInputRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.csv" style={{ display: "none" }}
             onChange={e => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} />
@@ -405,27 +414,10 @@ export default function UploadPage() {
           </>
         )}
 
-        {/* Tips */}
-        {files.length === 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginTop: "1rem" }}>
-            {[
-              { icon: "🧾", title: "Sales Invoices", desc: "GST invoices you've raised to customers" },
-              { icon: "📦", title: "Purchase Bills", desc: "Bills from vendors and suppliers" },
-              { icon: "🏦", title: "Bank Statements", desc: "PDF or Excel bank statements for reconciliation" },
-            ].map(tip => (
-              <div key={tip.title} style={{ background: "#FFFDF8", border: "1px solid rgba(16,36,31,0.08)", borderRadius: 10, padding: "1rem" }}>
-                <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{tip.icon}</div>
-                <div style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: "0.3rem" }}>{tip.title}</div>
-                <div style={{ fontSize: "0.75rem", color: "rgba(16,36,31,0.65)" }}>{tip.desc}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Upload History */}
         <div style={{ marginTop: "2.5rem" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-            <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>Upload History</h2>
+            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 400, fontStyle: "italic" }}>Upload history</h2>
             {bizId && <button onClick={() => loadHistory(bizId)} style={{ background: "none", border: "none", color: "rgba(16,36,31,0.65)", cursor: "pointer", fontSize: "0.78rem" }}>Refresh</button>}
           </div>
           {histLoading ? (
