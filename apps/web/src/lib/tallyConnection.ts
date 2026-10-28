@@ -117,7 +117,7 @@ export async function connectTally(opts: { port?: string; preferName?: string; q
     misses++;
     // A background check needs two misses in a row before calling Tally closed
     if (opts.quiet && state.status === "connected" && misses < 2) return state;
-    set({ port, status: "error", checkedAt: Date.now(), message: e instanceof Error && /port \d+/.test(e.message) ? e.message : tallyProblem(port, "unreachable") });
+    set({ port, status: "error", checkedAt: Date.now(), message: e instanceof Error && /port \d+/i.test(e.message) ? e.message : tallyProblem(port, "unreachable") });
   }
   return state;
 }
