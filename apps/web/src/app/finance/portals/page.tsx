@@ -1,4 +1,5 @@
 "use client";
+import { SettingsHero } from "@/components/finance/PageHero";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -8,7 +9,7 @@ type Link = { portal: "gst" | "it"; identifier: string; provider: string; status
 type Row = { portal: string; kind: string; form: string; period: string; status: string; arn: string | null; filed_on: string | null; amount: number | null; details: Record<string, unknown>; demo: boolean; fetched_at: string };
 type Data = { links: Link[]; statuses: Row[]; defaults?: { gstin: string; pan: string }; providers?: { gst: { id: string; demo: boolean; credential?: "otp" | "password" }; it: { id: string; demo: boolean; credential?: "otp" | "password" } }; setup_needed?: string };
 
-const C = { ground: "#F2F3F6", tile: "#FFFFFF", grey: "#ECEEF3", line: "#E3E6EE", ink: "#141A3A", muted: "#5A6080", navy: "#232A63", navySoft: "#E6E8F4", orange: "#C2410C", orangeSoft: "#FFF0E8", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB" };
+const C = { ground: "#F4EFE4", tile: "#FFFDF8", grey: "#F3ECDD", line: "#E6DFD0", ink: "#10241F", muted: "#6B7570", navy: "#12352D", navySoft: "#E6DFD0", orange: "#C2410C", orangeSoft: "#FFF0E8", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#B4321F", negSoft: "#FDECEA", warn: "#9A6B22", warnSoft: "#FFF4DB" };
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 const day = (d: string | null) => d ? new Date(d.length > 10 ? d : d + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
 const monthLabel = (p: string) => /^\d{4}-\d{2}$/.test(p) ? new Date(p + "-01T00:00:00").toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : p;
@@ -45,7 +46,7 @@ function PortalCard({ portal, data, bizId, reload }: { portal: "gst" | "it"; dat
   const title = portal === "gst" ? "GST portal" : "Income-tax portal";
   const idLabel = portal === "gst" ? "GSTIN" : "PAN";
   const rows = data.statuses.filter(s => s.portal === portal);
-  const btn = (primary: boolean): React.CSSProperties => ({ height: 42, padding: "0 16px", borderRadius: 11, border: primary ? "none" : `1px solid #C9CEDF`, background: primary ? C.navy : C.tile, color: primary ? "#FFFFFF" : C.ink, fontWeight: 800, fontSize: 14, cursor: busy ? "wait" : "pointer", opacity: busy ? 0.6 : 1 });
+  const btn = (primary: boolean): React.CSSProperties => ({ height: 42, padding: "0 16px", borderRadius: 11, border: primary ? "none" : `1px solid #D9CDB4`, background: primary ? C.navy : C.tile, color: primary ? "#FFFFFF" : C.ink, fontWeight: 800, fontSize: 14, cursor: busy ? "wait" : "pointer", opacity: busy ? 0.6 : 1 });
 
   return (
     <section style={{ background: C.tile, border: `1px solid ${C.line}`, borderRadius: 22, padding: 22, display: "flex", flexDirection: "column", gap: 14 }}>
@@ -182,12 +183,11 @@ export default function PortalsPage() {
   }, [router, load]);
 
   return (
-    <div style={{ minHeight: "100vh", background: C.ground, color: C.ink }}>
-      <div style={{ maxWidth: 980, margin: "0 auto", padding: "28px 20px 100px", display: "flex", flexDirection: "column", gap: 18 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 32 }}>Portal Connect</h1>
-          <p style={{ margin: "6px 0 0", color: C.muted, fontSize: 15, maxWidth: 680, lineHeight: 1.55 }}>Live GST filing status through a licensed GSP. Income-tax details come from the Form 168 / 130 PDFs you upload — passwords are never asked for or stored. Filed returns show as <b>Filed ✓</b> in your Due dates.</p>
-        </div>
+    <div style={{ minHeight: "100vh", background: C.ground, color: C.ink, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <SettingsHero active="portals" eyebrow="Government portals" title="Portal connect"
+        sub="Live GST filing status through a licensed GSP; income-tax credits from the PDFs you upload. Passwords are never asked for or stored." />
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 100px", display: "flex", flexDirection: "column", gap: 18 }}>
+
         {data?.setup_needed && <div style={{ background: C.warnSoft, color: C.warn, borderRadius: 12, padding: "12px 16px", fontWeight: 600 }}>{data.setup_needed}</div>}
         {!data ? <div style={{ color: C.muted }}>Loading…</div> : !data.setup_needed && bizId && (
           <>

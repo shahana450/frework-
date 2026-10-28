@@ -1,4 +1,5 @@
 "use client";
+import { SettingsHero } from "@/components/finance/PageHero";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -11,8 +12,8 @@ type Status = {
   tally: { pushed: number; failed: number; imported: number; last_sync: string | null; company: string | null; setup_needed: boolean };
 };
 
-const BG = "#F5F6FA", BORDER = "rgba(20,26,58,0.13)", TEXT = "#141A3A", MUTED = "rgba(20,26,58,0.75)";
-const GOLD = "#232A63", GREEN = "#0B7A55", RED = "#C2321F", BLUE = "#1F5EFF";
+const BG = "#F4EFE4", BORDER = "rgba(16,36,31,0.13)", TEXT = "#10241F", MUTED = "rgba(16,36,31,0.75)";
+const GOLD = "#12352D", GREEN = "#0B7A55", RED = "#B4321F", BLUE = "#12352D";
 const KIND: Record<Provider["kind"], string> = { accounting: "Accounting software", bank: "Banking", payments: "Payments", commerce: "Commerce" };
 const TRANSPORT: Record<Provider["transport"], string> = { local_bridge: "Runs through the Tally Bridge on your PC", file: "File upload", cloud_api: "Cloud connection" };
 const CAP: Record<string, string> = {
@@ -58,21 +59,16 @@ export default function IntegrationsPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.8rem", height: 56 }}>
-        <Link href="/finance" style={{ color: GOLD, fontWeight: 700, textDecoration: "none" }}>FreWork</Link>
-        <span style={{ color: MUTED }}>›</span>
-        <span style={{ fontWeight: 700 }}>Integrations</span>
-      </nav>
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "1.5rem" }}>
-        <p style={{ margin: "0 0 1.25rem", color: MUTED, fontSize: "0.86rem", lineHeight: 1.6 }}>
-          FreWork is your books. Integrations bring data in or send copies out — everything still passes through FreWork&apos;s checks (balanced entries, year locks, duplicate detection, audit log).
-        </p>
+    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <SettingsHero active="integrations" eyebrow="Integrations" title="Bring data in, send copies out"
+        sub="FreBook is your books. Everything that comes in still passes its checks — balanced entries, year locks, duplicate detection and the audit log." />
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 100px", display: "flex", flexDirection: "column", gap: 18 }}>
+
         {flash && <div role="status" style={{ marginBottom: "1rem", padding: "10px 14px", borderRadius: 10, fontWeight: 600, fontSize: 13.5, background: flash.ok ? "#E3F6EE" : "#FDECEA", color: flash.ok ? GREEN : RED }}>{flash.t}</div>}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {conn.data && <ReviewList data={conn.data} call={conn.call} reload={conn.load} />}
           {PROVIDERS.map(p => (
-            <div key={p.id} style={{ border: `1px solid ${p.status === "available" ? "rgba(35,42,99,0.25)" : BORDER}`, borderRadius: 12, padding: "1rem 1.2rem", background: "#FFFFFF", opacity: p.status === "available" ? 1 : 0.7, display: "flex", gap: "1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div key={p.id} style={{ border: `1px solid ${p.status === "available" ? "rgba(18,53,45,0.25)" : BORDER}`, borderRadius: 12, padding: "1rem 1.2rem", background: "#FFFDF8", opacity: p.status === "available" ? 1 : 0.7, display: "flex", gap: "1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 260, display: "flex", flexDirection: "column", gap: 6 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <strong style={{ fontSize: "0.95rem" }}>{p.name}</strong>

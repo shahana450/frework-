@@ -1,4 +1,5 @@
 "use client";
+import { SettingsHero } from "@/components/finance/PageHero";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -8,7 +9,7 @@ import QRCode from "qrcode";
 type LinkRow = { id: string; phone: string; verified: boolean; code: string | null; code_expires: string | null };
 type Data = { links: LinkRow[]; bot_number?: string | null; live?: boolean; setup_needed?: string };
 
-const C = { ground: "#F2F3F6", tile: "#FFFFFF", grey: "#ECEEF3", line: "#E3E6EE", ink: "#141A3A", muted: "#5A6080", navy: "#232A63", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", warn: "#8A5A00", warnSoft: "#FFF4DB", wa: "#0E7A43" };
+const C = { ground: "#F4EFE4", tile: "#FFFDF8", grey: "#F3ECDD", line: "#E6DFD0", ink: "#10241F", muted: "#6B7570", navy: "#12352D", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#B4321F", warn: "#9A6B22", warnSoft: "#FFF4DB", wa: "#0E7A43" };
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 const pretty = (p: string) => p.startsWith("91") && p.length === 12 ? `+91 ${p.slice(2, 7)} ${p.slice(7)}` : `+${p}`;
 
@@ -55,16 +56,15 @@ export default function WhatsAppPage() {
   const [qr, setQr] = useState("");
   useEffect(() => {
     if (!chatUrl) return;
-    QRCode.toDataURL(chatUrl, { width: 480, margin: 1, color: { dark: "#141A3A", light: "#FFFFFF" } }).then(setQr).catch(() => setQr(""));
+    QRCode.toDataURL(chatUrl, { width: 480, margin: 1, color: { dark: "#10241F", light: "#FFFFFF" } }).then(setQr).catch(() => setQr(""));
   }, [chatUrl]);
 
   return (
-    <div style={{ minHeight: "100vh", background: C.ground, color: C.ink }}>
-      <div style={{ maxWidth: 820, margin: "0 auto", padding: "28px 20px 100px", display: "flex", flexDirection: "column", gap: 18 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 32 }}>FreBook on WhatsApp</h1>
-          <p style={{ margin: "6px 0 0", color: C.muted, fontSize: 15, lineHeight: 1.55, maxWidth: 640 }}>Chat with your books from your phone. Type a transaction or send a bill photo — FreBook drafts the entry and posts it when you reply <b>YES</b>. Ask &ldquo;profit this month&rdquo; or &ldquo;who owes me&rdquo; for instant answers. Your number acts with your FreWork role.</p>
-        </div>
+    <div style={{ minHeight: "100vh", background: C.ground, color: C.ink, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <SettingsHero active="whatsapp" eyebrow="WhatsApp" title="Your books, in WhatsApp"
+        sub="Type a transaction or send a bill photo — FreBook drafts the entry and posts it when you reply YES. Ask “profit this month” or “who owes me” any time." />
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 100px", display: "flex", flexDirection: "column", gap: 18 }}>
+
         {data?.setup_needed && <div style={{ background: C.warnSoft, color: C.warn, borderRadius: 12, padding: "12px 16px", fontWeight: 600 }}>{data.setup_needed}</div>}
         {data && !data.setup_needed && !data.live && <div style={{ background: C.warnSoft, color: C.warn, borderRadius: 12, padding: "12px 16px", fontSize: 14 }}>The FreWork WhatsApp number isn&apos;t switched on yet. You can register your number now; replies start once it&apos;s live.</div>}
 
@@ -87,7 +87,7 @@ export default function WhatsAppPage() {
                   {sent[l.phone] && !sent[l.phone].ok && sent[l.phone].note && <span style={{ fontSize: 13, color: C.neg }}>{sent[l.phone].note}</span>}
                   <span style={{ fontSize: 13, color: C.warn }}>{sent[l.phone]?.ok ? "Or" : "Waiting —"} from this phone send <b style={{ fontFamily: MONO, fontSize: 15 }}>LINK {l.code}</b>{bot ? <> to <a href={`https://wa.me/${bot}?text=${encodeURIComponent(`LINK ${l.code}`)}`} target="_blank" rel="noreferrer" style={{ color: C.wa, fontWeight: 800 }}>{pretty(bot)} ↗</a></> : null}{l.code_expires ? ` (valid till ${new Date(l.code_expires).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })})` : ""}</span></span>}
               <span style={{ flex: 1 }} />
-              <button disabled={busy} onClick={() => { if (window.confirm(`Unlink ${pretty(l.phone)}? It will stop posting to this business.`)) post({ action: "remove", id: l.id }); }} style={{ border: "1px solid #C9CEDF", background: C.tile, color: C.neg, borderRadius: 9, height: 34, padding: "0 12px", fontWeight: 700, cursor: "pointer" }}>Unlink</button>
+              <button disabled={busy} onClick={() => { if (window.confirm(`Unlink ${pretty(l.phone)}? It will stop posting to this business.`)) post({ action: "remove", id: l.id }); }} style={{ border: "1px solid #D9CDB4", background: C.tile, color: C.neg, borderRadius: 9, height: 34, padding: "0 12px", fontWeight: 700, cursor: "pointer" }}>Unlink</button>
             </div>
           ))}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>

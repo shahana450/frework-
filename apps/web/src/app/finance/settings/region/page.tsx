@@ -1,4 +1,5 @@
 "use client";
+import { SettingsHero } from "@/components/finance/PageHero";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -9,9 +10,9 @@ import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type Settings = { country: string; state: string | null; currency: string; timezone: string; locale: string; tax_regime: string; fiscal_year_start: string };
 
-const BG = "#F5F6FA", BORDER = "rgba(20,26,58,0.14)", TEXT = "#141A3A", MUTED = "rgba(20,26,58,0.75)";
-const GOLD = "#232A63", GREEN = "#0B7A55", RED = "#C2321F", AMBER = "#8A5A00";
-const input: React.CSSProperties = { width: "100%", boxSizing: "border-box", background: "rgba(20,26,58,0.08)", border: `1px solid ${BORDER}`, color: TEXT, padding: "8px 11px", borderRadius: 7, fontSize: "0.86rem", fontFamily: "inherit" };
+const BG = "#F4EFE4", BORDER = "rgba(16,36,31,0.14)", TEXT = "#10241F", MUTED = "rgba(16,36,31,0.75)";
+const GOLD = "#12352D", GREEN = "#0B7A55", RED = "#B4321F", AMBER = "#9A6B22";
+const input: React.CSSProperties = { width: "100%", boxSizing: "border-box", background: "rgba(16,36,31,0.08)", border: `1px solid ${BORDER}`, color: TEXT, padding: "8px 11px", borderRadius: 7, fontSize: "0.86rem", fontFamily: "inherit" };
 const label: React.CSSProperties = { display: "block", fontSize: "0.68rem", color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 };
 
 export default function RegionSettingsPage() {
@@ -56,16 +57,11 @@ export default function RegionSettingsPage() {
   const note = s ? COUNTRY_TAX[s.country]?.note : undefined;
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.8rem", height: 56 }}>
-        <Link href="/finance" style={{ color: GOLD, fontWeight: 700, textDecoration: "none" }}>FreWork</Link>
-        <span style={{ color: MUTED }}>›</span>
-        <span style={{ fontWeight: 700 }}>Region & Currency</span>
-      </nav>
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "1.75rem 1.5rem" }}>
-        <p style={{ margin: "0 0 1.25rem", color: MUTED, fontSize: "0.85rem", lineHeight: 1.6 }}>
-          Where your business operates and the currency your books are kept in. The accounting core is the same everywhere; tax rules come from the country&apos;s tax module.
-        </p>
+    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <SettingsHero active="region" eyebrow="Region" title="Region & currency"
+        sub="Where the business operates and the currency its books are kept in. Tax rules come from the country’s tax module." />
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 100px", display: "flex", flexDirection: "column", gap: 18 }}>
+
         {setupNeeded && <div style={{ border: `1px solid rgba(184,120,0,0.3)`, color: AMBER, borderRadius: 8, padding: "0.7rem 0.9rem", fontSize: "0.82rem", marginBottom: "1rem" }}>Run the Phase 7 database update (2026-10-06_phase7_international.sql) in Supabase to save these settings.</div>}
         {!s ? <div style={{ color: MUTED }}>{msg?.text ?? "Loading…"}</div> : (
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>

@@ -1,4 +1,5 @@
 "use client";
+import { SettingsHero } from "@/components/finance/PageHero";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -12,7 +13,7 @@ const TYPES = [["proprietorship", "Proprietorship"], ["partnership", "Partnershi
 const REG = [["regular", "Regular"], ["composition", "Composition"], ["unregistered", "Not registered"]];
 
 type P = Record<string, string>;
-const C = { bg: "#F5F6FA", surface: "#FFFFFF", line: "#E1E4EE", strong: "#C9CEDF", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA" };
+const C = { bg: "#F4EFE4", surface: "#FFFDF8", line: "#E6DFD0", strong: "#D9CDB4", ink: "#10241F", muted: "#6B7570", primary: "#12352D", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#B4321F", negSoft: "#FDECEA" };
 
 export default function BusinessDetailsPage() {
   const router = useRouter();
@@ -68,14 +69,14 @@ export default function BusinessDetailsPage() {
       <span style={{ fontSize: 12.5, fontWeight: 600, color: C.muted }}>{label}</span>
       <input value={p?.[k] ?? ""} disabled={!canEdit} type={opts.type ?? "text"} placeholder={opts.ph}
         onChange={e => k === "gstin" ? onGstin(e.target.value) : set(k, e.target.value)}
-        style={{ height: 44, borderRadius: 11, border: `1px solid ${C.line}`, padding: "0 12px", fontSize: 15, color: C.ink, background: canEdit ? C.surface : "#F7F8FC", fontFamily: opts.mono ? "'IBM Plex Mono',monospace" : "inherit", textTransform: opts.mono ? "uppercase" : undefined }} />
+        style={{ height: 44, borderRadius: 11, border: `1px solid ${C.line}`, padding: "0 12px", fontSize: 15, color: C.ink, background: canEdit ? C.surface : "#F8F3E8", fontFamily: opts.mono ? "'IBM Plex Mono',monospace" : "inherit", textTransform: opts.mono ? "uppercase" : undefined }} />
       {opts.hint && <span style={{ fontSize: 12, color: C.muted }}>{opts.hint}</span>}
     </label>
   );
   const select = (k: string, label: string, list: string[][]) => (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <span style={{ fontSize: 12.5, fontWeight: 600, color: C.muted }}>{label}</span>
-      <select value={p?.[k] ?? ""} disabled={!canEdit} onChange={e => set(k, e.target.value)} style={{ height: 44, borderRadius: 11, border: `1px solid ${C.line}`, padding: "0 10px", fontSize: 15, color: C.ink, background: canEdit ? C.surface : "#F7F8FC" }}>
+      <select value={p?.[k] ?? ""} disabled={!canEdit} onChange={e => set(k, e.target.value)} style={{ height: 44, borderRadius: 11, border: `1px solid ${C.line}`, padding: "0 10px", fontSize: 15, color: C.ink, background: canEdit ? C.surface : "#F8F3E8" }}>
         <option value="">Choose…</option>
         {list.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
@@ -89,14 +90,21 @@ export default function BusinessDetailsPage() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.ink }}>
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.ink, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
       <style>{`.bd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}@media(max-width:700px){.bd-grid{grid-template-columns:minmax(0,1fr)}}`}</style>
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "32px 20px 120px", display: "flex", flexDirection: "column", gap: 20 }}>
-        <div>
-          <div style={{ fontSize: 14, color: C.muted }}><Link href="/finance" style={{ color: C.muted, textDecoration: "none" }}>FreBook</Link> / Settings</div>
-          <h1 style={{ margin: "6px 0 0", fontSize: 34 }}>Business details</h1>
-          <p style={{ margin: "6px 0 0", color: C.muted, fontSize: 15 }}>Shown on your invoices, GST returns and reports. {!canEdit && p && "Only the owner or an admin can change these."}</p>
-        </div>
+      {(() => {
+        const keys = ["name", "legal_name", "business_type", "phone", "email", "gstin", "pan", "address", "city", "pincode", "logo_url"] as const;
+        const filled = p ? keys.filter(k => String((p as Record<string, unknown>)[k] ?? "").trim()).length : 0;
+        const pr = p as Record<string, string> | null;
+        return <SettingsHero active="business" eyebrow="Business" title={pr?.name || "Business details"}
+          sub={<>Shown on your invoices, GST returns and reports.{!canEdit && p ? " Only the owner or an admin can change these." : ""}</>}
+          tiles={[
+            { label: "Profile complete", value: `${Math.round((filled / keys.length) * 100)}%`, bar: filled / keys.length },
+            { label: "GSTIN", value: pr?.gstin || "Not added", sub: pr?.gstin ? undefined : "Needed for GST returns", tone: pr?.gstin ? "good" : "warn" },
+            { label: "Business type", value: (pr?.business_type || "—").replace(/_/g, " ").replace(/^./, s => s.toUpperCase()), sub: pr?.state || undefined },
+          ]} />;
+      })()}
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 28px 100px", display: "flex", flexDirection: "column", gap: 18 }}>
 
         {!p ? <div style={{ color: msg ? C.neg : C.muted }}>{msg?.text ?? "Loading…"}</div> : (
           <>
@@ -121,7 +129,7 @@ export default function BusinessDetailsPage() {
               {field("city", "City")}
               <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: C.muted }}>State</span>
-                <select value={p.state ?? ""} disabled={!canEdit} onChange={e => set("state", e.target.value)} style={{ height: 44, borderRadius: 11, border: `1px solid ${C.line}`, padding: "0 10px", fontSize: 15, color: C.ink, background: canEdit ? C.surface : "#F7F8FC" }}>
+                <select value={p.state ?? ""} disabled={!canEdit} onChange={e => set("state", e.target.value)} style={{ height: 44, borderRadius: 11, border: `1px solid ${C.line}`, padding: "0 10px", fontSize: 15, color: C.ink, background: canEdit ? C.surface : "#F8F3E8" }}>
                   <option value="">Choose…</option>
                   {STATES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -131,7 +139,7 @@ export default function BusinessDetailsPage() {
 
             {role && <DataControls businessId={bizId} businessName={orig?.name ?? ""} role={role} />}
 
-            <div style={{ position: "sticky", bottom: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: C.surface, border: `1px solid ${C.strong}`, borderRadius: 16, padding: "12px 14px", boxShadow: "0 18px 40px -20px rgba(20,26,58,0.35)" }}>
+            <div style={{ position: "sticky", bottom: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: C.surface, border: `1px solid ${C.strong}`, borderRadius: 16, padding: "12px 14px", boxShadow: "0 18px 40px -20px rgba(16,36,31,0.35)" }}>
               {msg && <span role="status" style={{ flex: 1, minWidth: 200, fontSize: 14, fontWeight: 600, color: msg.ok ? C.pos : C.neg }}>{msg.text}</span>}
               {!msg && <span style={{ flex: 1, minWidth: 200, fontSize: 14, color: C.muted }}>{dirty ? "You have unsaved changes." : "All changes saved."}</span>}
               <Link href="/finance/setup" style={{ height: 44, padding: "0 16px", borderRadius: 12, border: `1px solid ${C.strong}`, color: C.ink, fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", textDecoration: "none" }}>＋ Add another business</Link>

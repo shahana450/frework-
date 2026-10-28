@@ -8,11 +8,11 @@ type Line = { ledger: string; head: string; dr: number; cr: number };
 type Item = { id: string; provider: string; external_id: string; kind: string; date: string; description: string; party: string | null; amount: number; currency: string | null; lines: Line[]; status: string; journal_id: string | null };
 export type ConnData = { connections: Conn[]; items: Item[]; oauth_ready?: { zoho_books: boolean; quickbooks: boolean }; key_ready?: boolean; bank_feed_demo?: boolean; setup_needed?: string };
 
-const C = { ink: "#141A3A", muted: "#5A6080", line: "#E3E6EE", navy: "#232A63", grey: "#ECEEF3", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB" };
+const C = { ink: "#10241F", muted: "#6B7570", line: "#E3E6EE", navy: "#12352D", grey: "#ECEEF3", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#B4321F", negSoft: "#FDECEA", warn: "#9A6B22", warnSoft: "#FFF4DB" };
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 const NAME: Record<string, string> = { razorpay: "Razorpay", shopify: "Shopify", zoho_books: "Zoho Books", quickbooks: "QuickBooks", bank_feed: "Bank feed" };
 const inp: React.CSSProperties = { height: 38, borderRadius: 9, border: `1px solid ${C.line}`, padding: "0 10px", fontSize: 13.5, color: C.ink, minWidth: 0, flex: 1 };
-const btn = (primary: boolean, busy = false): React.CSSProperties => ({ height: 38, padding: "0 14px", borderRadius: 9, border: primary ? "none" : "1px solid #C9CEDF", background: primary ? C.navy : "#FFFFFF", color: primary ? "#FFFFFF" : C.ink, fontWeight: 800, fontSize: 13, cursor: busy ? "wait" : "pointer", opacity: busy ? 0.6 : 1, whiteSpace: "nowrap" });
+const btn = (primary: boolean, busy = false): React.CSSProperties => ({ height: 38, padding: "0 14px", borderRadius: 9, border: primary ? "none" : "1px solid #D9CDB4", background: primary ? C.navy : "#FFFFFF", color: primary ? "#FFFFFF" : C.ink, fontWeight: 800, fontSize: 13, cursor: busy ? "wait" : "pointer", opacity: busy ? 0.6 : 1, whiteSpace: "nowrap" });
 
 export function useConnectors(bizId: string) {
   const [data, setData] = useState<ConnData | null>(null);
@@ -113,7 +113,7 @@ export function ReviewList({ data, call, reload }: { data: ConnData; call: (p: R
   const fmt = (n: number, cur: string | null) => (cur && cur !== "INR" ? cur + " " : "₹") + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
   return (
-    <section id="review" style={{ background: "#FFFFFF", border: `1px solid ${C.line}`, borderRadius: 14, padding: "1rem 1.2rem", display: "flex", flexDirection: "column", gap: 10 }}>
+    <section id="review" style={{ background: "#FFFDF8", border: `1px solid ${C.line}`, borderRadius: 14, padding: "1rem 1.2rem", display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <strong style={{ fontSize: "1rem" }}>Fetched items</strong>
         {(["new", "posted", "ignored"] as const).map(t => (

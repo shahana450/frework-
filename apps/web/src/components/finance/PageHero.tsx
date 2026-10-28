@@ -17,6 +17,20 @@ export function HeroAction({ href, onClick, children, primary, disabled, title }
   return href ? <Link href={href} title={title} style={style}>{children}</Link> : <button type="button" onClick={onClick} disabled={disabled} title={title} style={style}>{children}</button>;
 }
 
+const SETTINGS_TABS: { key: string; label: string; href: string }[] = [
+  { key: "business", label: "Business", href: "/finance/settings/business" },
+  { key: "region", label: "Region & currency", href: "/finance/settings/region" },
+  { key: "team", label: "Team & access", href: "/finance/team" },
+  { key: "whatsapp", label: "WhatsApp", href: "/finance/whatsapp" },
+  { key: "portals", label: "Portal connect", href: "/finance/portals" },
+  { key: "integrations", label: "Integrations", href: "/finance/integrations" },
+];
+/** Header shared by every Settings page, with the same six tabs. */
+export function SettingsHero({ active, eyebrow, title, sub, tiles, actions }: { active: string; eyebrow: string; title: ReactNode; sub?: ReactNode; tiles?: HeroTile[]; actions?: ReactNode }) {
+  return <PageHero eyebrow={`Settings · ${eyebrow}`} title={title} sub={sub} tiles={tiles} actions={actions}
+    tabs={SETTINGS_TABS.map(t => ({ label: t.label, href: t.href, active: t.key === active }))} />;
+}
+
 export default function PageHero({ eyebrow, title, accent, sub, actions, tiles, side, tabs }: {
   eyebrow: string; title: ReactNode; accent?: ReactNode; sub?: ReactNode; actions?: ReactNode;
   tiles?: HeroTile[]; side?: ReactNode; tabs?: HeroTab[];
