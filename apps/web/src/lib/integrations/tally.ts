@@ -82,7 +82,15 @@ export function parseImportReply(text: string): { ok: boolean; created: number; 
 }
 
 export const isEducational = (licenseReply: string) => /<FPEDU[^>]*>\s*Yes/i.test(licenseReply);
-export const companiesFrom = (reply: string) => [...reply.matchAll(/<COMPANY\s+NAME="([^"]+)"/gi)].map(m => xmlDec(m[1]));
+// Tally replies in different shapes by version: <COMPANY NAME="X">, <COMPANY><NAME>X</NAME></COMPANY>, or the current company
+export const companiesFrom = (reply: string) => {
+  const names = new Set<string>();
+  for (const m of reply.matchAll(/<COMPANY\b[^>]*\bNAME="([^"]+)"/gi)) names.add(xmlDec(m[1]).trim());
+  for (const blk of reply.matchAll(/<COMPANY\b[^>]*>([\s\S]*?)<\/COMPANY>/gi))
+    for (const m of blk[1].matchAll(/<(NAME|COMPANYNAME|BASICCOMPANYNAME)\b[^>]*>([^<]+)<\/\1>/gi)) names.add(xmlDec(m[2]).trim());
+  for (const m of reply.matchAll(/<SVCURRENTCOMPANY\b[^>]*>([^<]+)</gi)) names.add(xmlDec(m[1]).trim());
+  return [...names].filter(Boolean);
+};
 export const ledgersFrom = (reply: string) => [...reply.matchAll(/<LEDGER NAME="([^"]+)"[\s\S]*?<PARENT[^>]*>([^<]*)</gi)].map(m => ({ name: xmlDec(m[1]), parent: xmlDec(m[2]) }));
 
 /** Educational (unlicensed) TallyPrime accepts only these days of the month. */
