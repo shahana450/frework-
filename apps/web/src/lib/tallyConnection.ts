@@ -5,7 +5,7 @@
 // B5: the link is PER BUSINESS. Company, session and the Disconnect flag are stored under the active business, so a
 // business never shows (or pushes to) another business's Tally company. The port is per computer.
 import { useEffect, useState } from "react";
-import { tallyFetch } from "./tallyUtils";
+import { tallyFetch, findTallyPort } from "./tallyUtils";
 import { companiesXml, companiesFrom, licenseXml, isEducational, tallyProblem } from "./integrations/tally";
 
 export type TallyState = {
@@ -74,10 +74,20 @@ export async function connectTally(opts: { port?: string; preferName?: string; q
   load();
   if (!opts.quiet) write(key(OFF), null);                       // an explicit Connect turns it back on
   if (opts.quiet && tallyManuallyOff()) return state;       // stay off until the user connects again
-  const port = (opts.port ?? state.port).replace(/\D/g, "") || "7001";
+  let port = (opts.port ?? state.port).replace(/\D/g, "") || "7001";
   if (!opts.quiet) set({ status: "connecting", message: "" }, false);
   try {
-    const res = await tallyFetch(`http://localhost:${port}`, companiesXml(), 8000);
+    let res = await tallyFetch(`http://localhost:${port}`, companiesXml(), 8000);
+    // Port 9999 is usually Tally's licence server, not Tally: it answers "License server is Running" and never lists companies
+    if (res.ok) {
+      const peek = await res.clone().text();
+      if (/License server is Running/i.test(peek)) {
+        const found = await findTallyPort(companiesXml(), port);
+        if (!found || /License server is Running/i.test(await found.res.clone().text()))
+          throw new Error(`Port ${port} is Tally's licence server, not Tally. In TallyPrime press F1 (Help) → Settings → Connectivity, note the port (usually 9000), enter it here and press Reconnect.`);
+        port = found.port; res = found.res;
+      }
+    }
     // The bridge answers 502 when Tally isn't on this port — never call that "connected"
     if (!res.ok) throw new Error(res.status === 502 ? tallyProblem(port, "bridge502") : tallyProblem(port, "http", res.status));
     const first = await res.text();
