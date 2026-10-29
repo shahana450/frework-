@@ -44,18 +44,38 @@ function tryExtensionBridge(url: string, body: string, timeoutMs: number): Promi
   });
 }
 
-export function tallyFetch(url: string, body: string, timeoutMs = 15000): Promise<Response> {
-  const opts = { method: "POST", headers: { "Content-Type": "text/xml" }, body, signal: AbortSignal.timeout(timeoutMs) };
-  return fetch(url, opts)
-    .catch(() => {
-      // Try desktop bridge proxy (localhost:7002 — Chrome allows localhost on HTTPS)
-      const port = url.match(/:(\d+)/)?.[1] ?? "7001";
-      return fetch("http://localhost:7002", { method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port }, body, signal: AbortSignal.timeout(timeoutMs) });
-    })
-    .catch(() => {
-      // Try Chrome extension bridge (works even without the bridge app)
-      return tryExtensionBridge(url, body, timeoutMs);
-    });
+// Three ways to reach Tally from the browser: directly, through the FreWork Tally Bridge app (localhost:7002), or
+// through the Chrome extension. The one that answered last is tried first with the full wait (a month of vouchers can
+// take a while to export); a route that hasn't answered yet only gets a short try, so a dead route never eats the time.
+type Route = "direct" | "bridge" | "ext";
+let lastGood: Route | null = null;
+const PROBE_MS = 8000;
+
+function viaRoute(route: Route, url: string, body: string, ms: number): Promise<Response> {
+  if (route === "direct") return fetch(url, { method: "POST", headers: { "Content-Type": "text/xml" }, body, signal: AbortSignal.timeout(ms) });
+  if (route === "bridge") {
+    const port = url.match(/:(\d+)/)?.[1] ?? "7001";
+    return fetch("http://localhost:7002", { method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port }, body, signal: AbortSignal.timeout(ms) });
+  }
+  return tryExtensionBridge(url, body, ms);
+}
+
+export async function tallyFetch(url: string, body: string, timeoutMs = 15000): Promise<Response> {
+  const order: Route[] = lastGood ? [lastGood, ...(["direct", "bridge", "ext"] as Route[]).filter(r => r !== lastGood)] : ["direct", "bridge", "ext"];
+  let lastErr: unknown = null;
+  for (const route of order) {
+    // The proven route gets the whole wait; untested routes a short probe (unless the caller asked for less)
+    const ms = route === lastGood ? timeoutMs : Math.min(timeoutMs, PROBE_MS);
+    try {
+      const res = await viaRoute(route, url, body, ms);
+      lastGood = route;
+      return res;
+    } catch (e) {
+      lastErr = e;
+      if (route === lastGood) lastGood = null;   // it stopped working; let the others be tried and win
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(tallyProblem(url.match(/:(\d+)/)?.[1], "unreachable"));
 }
 
 /** The bridge answers 502 when Tally isn't on the port asked for. Tries the ports Tally is usually set to. */
