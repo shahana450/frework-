@@ -45,11 +45,13 @@ function tryExtensionBridge(url: string, body: string, timeoutMs: number): Promi
 }
 
 // Three ways to reach Tally from the browser: directly, through the FreWork Tally Bridge app (localhost:7002), or
-// through the Chrome extension. The one that answered last is tried first with the full wait (a month of vouchers can
-// take a while to export); a route that hasn't answered yet only gets a short try, so a dead route never eats the time.
+// through the Chrome extension. Direct and bridge fail within milliseconds when they aren't there, so each gets the
+// full wait (a year of vouchers can take ~30 s to export). The route that answered last is tried first and is kept in
+// the browser, so every page and every request uses it.
 type Route = "direct" | "bridge" | "ext";
-let lastGood: Route | null = null;
-const PROBE_MS = 8000;
+const ROUTE_KEY = "fw_tally_route";
+const readRoute = (): Route | null => { try { const r = localStorage.getItem(ROUTE_KEY); return r === "direct" || r === "bridge" || r === "ext" ? r : null; } catch { return null; } };
+const saveRoute = (r: Route | null) => { try { if (r) localStorage.setItem(ROUTE_KEY, r); else localStorage.removeItem(ROUTE_KEY); } catch { /* */ } };
 
 function viaRoute(route: Route, url: string, body: string, ms: number): Promise<Response> {
   if (route === "direct") return fetch(url, { method: "POST", headers: { "Content-Type": "text/xml" }, body, signal: AbortSignal.timeout(ms) });
@@ -61,18 +63,19 @@ function viaRoute(route: Route, url: string, body: string, ms: number): Promise<
 }
 
 export async function tallyFetch(url: string, body: string, timeoutMs = 15000): Promise<Response> {
-  const order: Route[] = lastGood ? [lastGood, ...(["direct", "bridge", "ext"] as Route[]).filter(r => r !== lastGood)] : ["direct", "bridge", "ext"];
+  const last = readRoute();
+  const order: Route[] = last ? [last, ...(["direct", "bridge", "ext"] as Route[]).filter(r => r !== last)] : ["direct", "bridge", "ext"];
   let lastErr: unknown = null;
   for (const route of order) {
-    // The proven route gets the whole wait; untested routes a short probe (unless the caller asked for less)
-    const ms = route === lastGood ? timeoutMs : Math.min(timeoutMs, PROBE_MS);
     try {
-      const res = await viaRoute(route, url, body, ms);
-      lastGood = route;
+      const res = await viaRoute(route, url, body, timeoutMs);
+      if (route !== last) saveRoute(route);
       return res;
     } catch (e) {
       lastErr = e;
-      if (route === lastGood) lastGood = null;   // it stopped working; let the others be tried and win
+      // A timeout on the route that works means Tally itself is slow — don't wander off to dead routes
+      if (route === last && e instanceof Error && /timeout|timed out|abort/i.test(`${e.name} ${e.message}`)) break;
+      if (route === last) saveRoute(null);
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error(tallyProblem(url.match(/:(\d+)/)?.[1], "unreachable"));
