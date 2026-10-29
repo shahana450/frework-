@@ -1,7 +1,7 @@
 "use client";
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { findTallyPort } from "@/lib/tallyUtils";
+import { findTallyPort, tallyFetch } from "@/lib/tallyUtils";
 import { tallyProblem, companiesXml } from "@/lib/integrations/tally";
 import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow, setTallyBusy } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -11,52 +11,7 @@ import { downloadApiFile } from "@/lib/apiAuthClient";
 import Link from "next/link";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 
-// ── Chrome extension bridge ──────────────────────────────────────────────────
-// Lets HTTPS pages reach Tally's HTTP server via the FreWork Tally Bridge extension.
-
-let _bridgeReady = false;
-if (typeof window !== "undefined") {
-  window.addEventListener("message", (e) => {
-    if (e.data?.type === "TALLY_BRIDGE_READY") _bridgeReady = true;
-  });
-}
-
-function tryExtensionBridge(url: string, body: string, timeoutMs: number): Promise<Response> {
-  return new Promise<Response>((resolve, reject) => {
-    const id = Math.random().toString(36).slice(2);
-    let settled = false;
-    const timeout = setTimeout(() => {
-      if (settled) return; settled = true;
-      window.removeEventListener("message", handler);
-      const port = url.match(/:(\d+)/)?.[1] ?? "7001";
-      reject(new Error(
-        _bridgeReady
-          ? `Tally did not answer through the Chrome extension. ${tallyProblem(port, "unreachable")}`
-          : tallyProblem(port, "unreachable")
-      ));
-    }, Math.min(timeoutMs, 8000));
-    function handler(e: MessageEvent) {
-      if (e.data?.type !== "TALLY_BRIDGE_RESPONSE" || e.data.id !== id) return;
-      if (settled) return; settled = true;
-      clearTimeout(timeout);
-      window.removeEventListener("message", handler);
-      if (e.data.ok) resolve(new Response(e.data.text, { status: e.data.status ?? 200 }));
-      else reject(new Error(`${e.data.error ?? "Bridge error"} — ${tallyProblem(url.match(/:(\d+)/)?.[1], "unreachable")}`));
-    }
-    window.addEventListener("message", handler);
-    window.postMessage({ type: "TALLY_BRIDGE_REQUEST", id, url, method: "POST", body, timeout: timeoutMs }, "*");
-  });
-}
-
-function tallyFetch(url: string, body: string, timeoutMs = 15000): Promise<Response> {
-  const opts = { method: "POST", headers: { "Content-Type": "text/xml" }, body, signal: AbortSignal.timeout(timeoutMs) };
-  return fetch(url, opts)
-    .catch(() => {
-      const port = url.match(/:(\d+)/)?.[1] ?? "7001";
-      return fetch("http://localhost:7002", { method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port }, body, signal: AbortSignal.timeout(Math.min(timeoutMs, 8000)) });
-    })
-    .catch(() => tryExtensionBridge(url, body, timeoutMs));
-}
+// Reaching Tally (direct, Tally Bridge or Chrome extension) is shared: lib/tallyUtils.ts — never a local copy.
 
 // ── Tally XML helpers ────────────────────────────────────────────────────────
 
