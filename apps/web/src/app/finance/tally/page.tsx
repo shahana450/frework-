@@ -497,21 +497,47 @@ export default function TallyPage() {
 
       // Fetch ONE month at a time with a pause — prevents Tally from freezing
       const allVouchers: ReturnType<typeof parseTallyVouchers> = [];
+      // A month that fails is NOT an empty month: retry it once (Tally can stall on a heavy month), then stop if Tally
+      // has stopped answering, and say which months weren't read instead of reporting "no vouchers".
+      const failed: string[] = [];
+      let partialNote = "";
+      let stoppedAt = "";
+      const fetchMonth = async (mFrom: string, mTo: string, timeout: number) => {
+        const fd = mFrom.replace(/-/g, ""), td = mTo.replace(/-/g, "");
+        const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+        const res = await tallyFetch(tallyUrl, xml, timeout);
+        if (!res.ok) throw new Error(`Tally answered ${res.status}`);
+        return parseTallyVouchers(await res.text());
+      };
       for (let i = 0; i < months.length; i++) {
         const { from: mFrom, to: mTo, label } = months[i];
         setSyncProgress(`Fetching ${label} (${i + 1}/${months.length})…`);
-        const results = await (async () => {
-          const { from: mFrom2, to: mTo2 } = { from: mFrom, to: mTo };
-          const fd = mFrom2.replace(/-/g,""), td = mTo2.replace(/-/g,"");
-          const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-          try {
-            const res = await tallyFetch(tallyUrl, xml, 30000);
-            return parseTallyVouchers(await res.text());
-          } catch { return []; }
-        })();
+        let results: ReturnType<typeof parseTallyVouchers> | null = null;
+        try { results = await fetchMonth(mFrom, mTo, 30000); }
+        catch {
+          setSyncProgress(`${label} is taking long — trying again…`);
+          await new Promise(r => setTimeout(r, 3000));
+          try { results = await fetchMonth(mFrom, mTo, 60000); } catch { results = null; }
+        }
+        if (results === null) {
+          failed.push(label);
+          // Two months in a row failing means Tally has stopped responding — don't keep hammering it
+          if (failed.length >= 2 && failed[failed.length - 2] === months[i - 1]?.label) { stoppedAt = label; break; }
+          continue;
+        }
         allVouchers.push(...results);
         // Pause between months — lets Tally breathe, prevents UI freeze
-        if (i < months.length - 1) await new Promise(r => setTimeout(r, 200));
+        if (i < months.length - 1) await new Promise(r => setTimeout(r, 400));
+      }
+
+      if (failed.length) {
+        const skipped = stoppedAt ? months.slice(months.findIndex(m => m.label === stoppedAt) + 1).map(m => m.label) : [];
+        const notRead = [...failed, ...skipped];
+        if (!allVouchers.length) {
+          setImportVoucherResult({ ok: false, msg: `Tally stopped responding while reading ${failed[0]}, so nothing was imported. Check Tally isn't frozen (close any open report, or restart Tally and the FreWork Tally Bridge), press Connect, and import again — try a shorter date range if a month is very large.` });
+          setSyncing(null); return;
+        }
+        partialNote = ` Tally stopped responding — these months were NOT read: ${notRead.join(", ")}. Import that range again to add them (vouchers already imported are skipped).`;
       }
 
       if (!allVouchers.length) {
@@ -524,7 +550,7 @@ export default function TallyPage() {
       // Through FreWork's posting engine: validated, year-lock aware, audit-logged, never imported twice
       const sum = await importTallyVouchers(bizId, allVouchers as never, { ledgerGroups: groups, company: companyName || null, onProgress: setSyncProgress });
       const imported = sum.imported;
-      setImportVoucherResult({ ok: sum.failedCount === 0, msg: summaryText(sum) });
+      setImportVoucherResult({ ok: sum.failedCount === 0 && !partialNote, msg: summaryText(sum) + partialNote });
       setAutoSyncDone(true);
       try { localStorage.setItem("fw_tally_last_import", Date.now().toString()); } catch { /* */ }
       // Auto-redirect back if came from another page
