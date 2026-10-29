@@ -83,7 +83,7 @@ async function sendOnce(url: string, body: string, timeoutMs: number): Promise<R
     } catch (e) {
       lastErr = e;
       // A timeout on the route that works means Tally itself is slow — don't wander off to dead routes
-      if (route === last && e instanceof Error && /timeout|timed out|abort/i.test(e.name + " " + e.message)) break;
+      if (route === last && e instanceof Error && /timeout|timed out|abort/i.test(e.name + " " + e.message)) { lastErr = new Error("Tally is busy or frozen. Close Tally (Task Manager if it says Not responding), open it again with the company, restart the FreWork Tally Bridge, then press Connect."); break; }
       if (route === last) saveRoute(null);
     }
   }
