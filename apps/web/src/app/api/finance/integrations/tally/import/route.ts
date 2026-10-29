@@ -66,7 +66,13 @@ export async function POST(req: NextRequest) {
     const CONCURRENCY = 8;
     for (let i = 0; i < fresh.length; i += CONCURRENCY) {
       await Promise.all(fresh.slice(i, i + CONCURRENCY).map(async ({ v, entryNo }) => {
-        const lines = v.lines.map(l => ({ accountId: resolved.ids.get(xmlDec(l.ledgerName))?.id ?? "", dr: l.isDeemed ? Math.abs(l.amount) : 0, cr: l.isDeemed ? 0 : Math.abs(l.amount) }));
+        const raw = v.lines.map(l => ({ accountId: resolved.ids.get(xmlDec(l.ledgerName))?.id ?? "", dr: l.isDeemed ? Math.abs(l.amount) : 0, cr: l.isDeemed ? 0 : Math.abs(l.amount) }));
+        // Tally allows one ledger on both sides of a voucher (e.g. Salary Dr 30,000 and Cr 2,000); FreWork's books don't.
+        // Net each ledger to one line — its balance is exactly what Tally shows. Lines that cancel out are dropped.
+        const net = new Map<string, number>();
+        for (const l of raw) net.set(l.accountId, Math.round(((net.get(l.accountId) ?? 0) + l.dr - l.cr) * 100) / 100);
+        const lines = [...net].filter(([, n]) => Math.abs(n) >= 0.005).map(([accountId, n]) => ({ accountId, dr: n > 0 ? n : 0, cr: n < 0 ? -n : 0 }));
+        if (!lines.length) { skipped++; return; }   // the voucher cancels itself out — nothing to post
         try {
           await postJournal(supabase, {
             businessId: business_id, actorId: gate.user.id, date: String(v.date).slice(0, 10), type: tallyVoucherTypeToFP(v.voucherType),
