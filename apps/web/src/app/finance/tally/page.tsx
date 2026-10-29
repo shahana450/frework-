@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { readTallyLedgerGroups, importTallyVouchers, summaryText } from "@/lib/integrations/tallyClient";
 import { downloadApiFile } from "@/lib/apiAuthClient";
 import Link from "next/link";
+import MatchBooksPanel from "./MatchBooksPanel";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 
 // Reaching Tally (direct, Tally Bridge or Chrome extension) is shared: lib/tallyUtils.ts — never a local copy.
@@ -949,6 +950,7 @@ export default function TallyPage() {
                     {importVoucherResult.ok && <a href="/finance/audit" style={{ marginLeft: 10, color: "#0F2B25", fontWeight: 800 }}>View analysis →</a>}
                   </div>
                 )}
+                {connStatus === "connected" && <MatchBooksPanel bizId={bizId} tallyUrl={tallyUrl} company={companyName} from={from} to={to} />}
               </div>
               <div style={{ border: "1px solid #EFE8D9", borderRadius: 16, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>

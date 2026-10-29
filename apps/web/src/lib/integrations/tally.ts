@@ -127,7 +127,7 @@ export function headForTallyGroup(parent: string): LedgerHead | null {
     /sundry debtors/.test(p) ? "debtors" : /sundry creditors/.test(p) ? "creditors" :
     /duties & taxes|duties and taxes/.test(p) ? "duties" : /fixed assets/.test(p) ? "fixed_asset" :
     /capital account|reserves/.test(p) ? "capital" : /loans \(liability\)|secured loans|unsecured loans/.test(p) ? "loan" :
-    /loans & advances|deposits/.test(p) ? "advances" : /current assets|stock-in-hand|investments/.test(p) ? "current_asset" :
+    /loans & advances|deposits/.test(p) ? "advances" : /stock-in-hand|stock in hand/.test(p) ? "stock" : /current assets|investments/.test(p) ? "current_asset" :
     /current liabilities|provisions/.test(p) ? "current_liability" : /sales accounts/.test(p) ? "sales" :
     /purchase accounts/.test(p) ? "purchase" : /direct expenses/.test(p) ? "direct_expense" :
     /indirect expenses/.test(p) ? "indirect_expense" : /direct incomes|indirect incomes/.test(p) ? "indirect_income" : null;
