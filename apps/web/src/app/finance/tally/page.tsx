@@ -353,7 +353,7 @@ export default function TallyPage() {
         // Update fw_tally_fy_id so dashboard/audit also pick up the correct FY
         localStorage.setItem("fw_tally_fy_id", cur.id);
       }
-      const { count, data: jData } = await supabase.from("fw_fin_journals").select("id,entry_no,date,narration,type,total_debit,total_credit", { count: "exact" }).eq("business_id", saved).eq("status", "posted").order("date");
+      const { count, data: jData } = await supabase.from("fw_fin_journals").select("id,entry_no,date,narration,type,total_debit,total_credit", { count: "exact" }).eq("business_id", saved).eq("status", "posted").not("entry_no", "like", "TLY-%").order("date");   // entries that came from Tally are never pushed back
       setJournalCount(count ?? 0);
       if (jData?.length) { setJournals(jData); setPreviewOpen(true); }
 
@@ -394,7 +394,8 @@ export default function TallyPage() {
       .from("fw_fin_journals")
       .select("id,entry_no,date,narration,type,total_debit,total_credit")
       .eq("business_id", bizId)
-      .eq("status", "posted");
+      .eq("status", "posted")
+      .not("entry_no", "like", "TLY-%");   // came from Tally: never pushed back (it would duplicate in Tally)
     if (from) query = query.gte("date", from);
     if (to) query = query.lte("date", to);
     const { data } = await query.order("date");
@@ -504,9 +505,9 @@ export default function TallyPage() {
       let partialNote = "";
       let lastError = "";
       let stoppedAt = "";
-      const fetchMonth = async (mFrom: string, mTo: string, timeout: number) => {
+      const fetchMonth = async (mFrom: string, mTo: string, timeout: number, withItems = true) => {
         const fd = mFrom.replace(/-/g, ""), td = mTo.replace(/-/g, "");
-        const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries,AllInventoryEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+        const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries${withItems ? ",AllInventoryEntries" : ""}</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
         const res = await tallyFetch(tallyUrl, xml, timeout);
         const text = await res.text();
         if (!res.ok && !/<ENVELOPE|<VOUCHER/i.test(text)) throw new Error(`Tally answered ${res.status}: ${text.replace(/\s+/g, " ").slice(0, 160)}`);
@@ -519,9 +520,24 @@ export default function TallyPage() {
         try { results = await fetchMonth(mFrom, mTo, 30000); }
         catch (e) {
           lastError = e instanceof Error ? e.message : String(e);
-          setSyncProgress(`${label} is taking long — trying again…`);
-          await new Promise(r => setTimeout(r, 3000));
-          try { results = await fetchMonth(mFrom, mTo, 60000); } catch (e) { results = null; lastError = e instanceof Error ? e.message : String(e); }
+          // A heavy month: read it a week at a time; a week that still won't come is read without item details
+          const pieces: [string, string][] = [];
+          for (let d = new Date(mFrom + "T00:00:00Z"); d.toISOString().slice(0, 10) <= mTo; d = new Date(d.getTime() + 7 * 86400000)) {
+            const end = new Date(Math.min(d.getTime() + 6 * 86400000, Date.parse(mTo + "T00:00:00Z")));
+            pieces.push([d.toISOString().slice(0, 10), end.toISOString().slice(0, 10)]);
+          }
+          const got: ReturnType<typeof parseTallyVouchers> = [];
+          let pieceFails = 0;
+          for (let k = 0; k < pieces.length; k++) {
+            const [a, b] = pieces[k];
+            setSyncProgress(`${label} is large — reading week ${k + 1} of ${pieces.length}…`);
+            try { got.push(...await fetchMonth(a, b, 60000)); continue; } catch (e2) { lastError = e2 instanceof Error ? e2.message : String(e2); }
+            try { got.push(...await fetchMonth(a, b, 60000, false)); partialNote ||= " Some weeks were read without item details; item-invoice vouchers from those weeks may not balance."; }
+            catch (e3) { pieceFails++; lastError = e3 instanceof Error ? e3.message : String(e3); }
+            await new Promise(r => setTimeout(r, 400));
+          }
+          results = pieceFails === pieces.length ? null : got;
+          if (pieceFails && results) partialNote += ` ${pieceFails} week(s) of ${label} couldn't be read.`;
         }
         if (results === null) {
           failed.push(label);
@@ -541,7 +557,7 @@ export default function TallyPage() {
           setImportVoucherResult({ ok: false, msg: `Tally stopped responding while reading ${failed[0]}, so nothing was imported. Check Tally isn't frozen (close any open report, or restart Tally and the FreWork Tally Bridge), press Connect, and import again — try a shorter date range if a month is very large.${lastError ? ` Details: ${lastError}` : ""}` });
           setTallyBusy(false); setSyncing(null); return;
         }
-        partialNote = ` Tally stopped responding — these months were NOT read: ${notRead.join(", ")}. Import that range again to add them (vouchers already imported are skipped).`;
+        partialNote += ` Tally stopped responding — these months were NOT read: ${notRead.join(", ")}. Import that range again to add them (vouchers already imported are skipped).`;
       }
 
       if (!allVouchers.length) {

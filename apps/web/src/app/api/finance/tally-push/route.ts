@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase.from("fw_fin_journals")
       .select("id,entry_no,date,narration,type,fw_fin_journal_lines(dr_amount,cr_amount,fw_fin_chart_of_accounts(name,type,sub_type))")
-      .in("id", journal_ids.slice(0, 200)).eq("business_id", business_id).eq("status", "posted").order("date");
+      .in("id", journal_ids.slice(0, 200)).eq("business_id", business_id).eq("status", "posted").not("entry_no", "like", "TLY-%").order("date");   // imported from Tally: never sent back
     if (error) return serverError("tally-push", error, "We couldn't prepare these entries for Tally.");
     if (!data?.length) return NextResponse.json({ error: "None of these entries can be pushed (only posted entries can)." }, { status: 404 });
 
