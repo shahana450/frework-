@@ -436,7 +436,8 @@ export default function FreBookPage() {
       }
 
       const res = await fetch(file ? "/api/finance/chat-book" : "/api/finance/chat-book/fast", { method: "POST", body, ...(file ? {} : { headers: { "Content-Type": "application/json" } }) });
-      const data = await res.json();
+      // A server timeout replies with a plain-text page, not JSON
+      const data = await res.json().catch(() => ({ error: res.status === 504 || res.status >= 500 ? "FreBook took too long to answer — please send that again." : "Something went wrong — please send that again." }));
       if (!res.ok) throw new Error(data.error ?? "Error");
 
       // A document with several vouchers → review them all in the bulk table

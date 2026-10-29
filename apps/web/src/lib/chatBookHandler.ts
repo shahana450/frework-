@@ -164,7 +164,8 @@ Never invent facts; leave out what is not shown.`,
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6", max_tokens: 1500,
       system: intentSystemFor(biz), messages: claudeMessages,
-    });
+    }, { timeout: 45000, maxRetries: 1 }).catch(e => { console.error("chat-book intent", e); return null; });
+    if (!response) return NextResponse.json({ error: "FreBook’s AI is slow right now — please send that again." }, { status: 503 });
 
     const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
