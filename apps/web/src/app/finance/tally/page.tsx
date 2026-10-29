@@ -3,7 +3,7 @@ import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { findTallyPort } from "@/lib/tallyUtils";
 import { tallyProblem } from "@/lib/integrations/tally";
-import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow } from "@/lib/tallyConnection";
+import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow, setTallyBusy } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readTallyLedgerGroups, importTallyVouchers, summaryText } from "@/lib/integrations/tallyClient";
@@ -496,6 +496,7 @@ export default function TallyPage() {
       const months = monthsInRange(from || defaultFrom, to || defaultTo);
 
       // Fetch ONE month at a time with a pause — prevents Tally from freezing
+      setTallyBusy(true);   // background checks wait while Tally exports
       const allVouchers: ReturnType<typeof parseTallyVouchers> = [];
       // A month that fails is NOT an empty month: retry it once (Tally can stall on a heavy month), then stop if Tally
       // has stopped answering, and say which months weren't read instead of reporting "no vouchers".
@@ -535,14 +536,14 @@ export default function TallyPage() {
         const notRead = [...failed, ...skipped];
         if (!allVouchers.length) {
           setImportVoucherResult({ ok: false, msg: `Tally stopped responding while reading ${failed[0]}, so nothing was imported. Check Tally isn't frozen (close any open report, or restart Tally and the FreWork Tally Bridge), press Connect, and import again — try a shorter date range if a month is very large.` });
-          setSyncing(null); return;
+          setTallyBusy(false); setSyncing(null); return;
         }
         partialNote = ` Tally stopped responding — these months were NOT read: ${notRead.join(", ")}. Import that range again to add them (vouchers already imported are skipped).`;
       }
 
       if (!allVouchers.length) {
         setImportVoucherResult({ ok: false, msg: `No vouchers found in Tally for ${from} to ${to}. Try changing the date range — your Tally data may be for a different financial year (e.g. 01-04-2025 to 31-03-2026).` });
-        setSyncing(null); return;
+        setTallyBusy(false); setSyncing(null); return;
       }
 
       setSyncProgress("Reading ledger groups from Tally…");
@@ -562,6 +563,7 @@ export default function TallyPage() {
     } catch (e: unknown) {
       setImportVoucherResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" });
     }
+    setTallyBusy(false);
     setSyncing(null);
   }, [bizId, connStatus, tallyUrl, from, to]);
 

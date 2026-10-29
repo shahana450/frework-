@@ -27,7 +27,7 @@ function tryExtensionBridge(url: string, body: string, timeoutMs: number): Promi
           ? `Tally did not answer through the Chrome extension. ${tallyProblem(port, "unreachable")}`
           : tallyProblem(port, "unreachable")
       ));
-    }, Math.min(timeoutMs, 8000));
+    }, timeoutMs);
 
     function handler(e: MessageEvent) {
       if (e.data?.type !== "TALLY_BRIDGE_RESPONSE" || e.data.id !== id) return;
@@ -50,7 +50,7 @@ export function tallyFetch(url: string, body: string, timeoutMs = 15000): Promis
     .catch(() => {
       // Try desktop bridge proxy (localhost:7002 — Chrome allows localhost on HTTPS)
       const port = url.match(/:(\d+)/)?.[1] ?? "7001";
-      return fetch("http://localhost:7002", { method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port }, body, signal: AbortSignal.timeout(Math.min(timeoutMs, 8000)) });
+      return fetch("http://localhost:7002", { method: "POST", headers: { "Content-Type": "text/xml", "X-Tally-Port": port }, body, signal: AbortSignal.timeout(timeoutMs) });
     })
     .catch(() => {
       // Try Chrome extension bridge (works even without the bridge app)

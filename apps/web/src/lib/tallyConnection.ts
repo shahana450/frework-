@@ -193,9 +193,14 @@ export function setTallyPort(port: string) { load(); const p = port.replace(/\D/
 
 // One quiet check a minute for the whole app (and when you come back to the tab) — never while disconnected
 let timer: ReturnType<typeof setInterval> | null = null;
+/** A long Tally job (voucher import, push) is running: background checks wait, so a busy Tally is not marked as closed. */
+let busyUntil = 0;
+export function setTallyBusy(on: boolean) { busyUntil = on ? Date.now() + 30 * 60 * 1000 : 0; }
+const tallyBusy = () => Date.now() < busyUntil;
+
 function startWatch() {
   if (timer || typeof window === "undefined") return;
-  const tick = () => { if (listeners.size && state.company && !tallyManuallyOff() && document.visibilityState === "visible") connectTally({ quiet: true }); };
+  const tick = () => { if (!tallyBusy() && listeners.size && state.company && !tallyManuallyOff() && document.visibilityState === "visible") connectTally({ quiet: true }); };
   timer = setInterval(tick, 60000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && Date.now() - state.checkedAt > 30000) tick(); });
 }
