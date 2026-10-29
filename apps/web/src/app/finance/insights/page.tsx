@@ -38,12 +38,19 @@ export default function InsightsPage() {
     });
   }, []);
 
+  const [fyY, setFyY] = useState(() => { const n = new Date(); return n.getMonth() >= 3 ? n.getFullYear() : n.getFullYear() - 1; });
+
   async function loadInsights(bid: string) {
     setLoading(true);
-
-    // Every posted line this financial year, by account type (chat entries, invoices, bank imports — not just "sales" vouchers)
+    try {
+    // The current financial year — or, when it has no entries yet, the latest year that does (e.g. books just imported from Tally)
     const now = new Date();
-    const fyStart = `${now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1}-04-01`;
+    let y = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    const { data: last } = await supabase.from("fw_fin_journals").select("date").eq("business_id", bid).eq("status", "posted").order("date", { ascending: false }).limit(1).maybeSingle();
+    const lastDate = (last as { date?: string } | null)?.date ?? "";
+    if (lastDate && lastDate < `${y}-04-01`) { const d = new Date(lastDate + "T00:00:00"); y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; }
+    setFyY(y);
+    const fyStart = `${y}-04-01`, fyEnd = `${y + 1}-03-31`;
     type Line = {
       dr_amount: number; cr_amount: number;
       fw_fin_chart_of_accounts: { name: string; type: string; sub_type: string | null } | null;
@@ -56,6 +63,7 @@ export default function InsightsPage() {
         .select("dr_amount, cr_amount, fw_fin_chart_of_accounts!inner(name, type, sub_type), fw_fin_journals!inner(status, business_id, date)")
         .eq("fw_fin_journals.business_id", bid)
         .eq("fw_fin_journals.status", "posted")
+        .gte("fw_fin_journals.date", fyStart).lte("fw_fin_journals.date", fyEnd)
         .order("id").range(from, from + 999);
       const got = (data as unknown as Line[]) ?? [];
       lList.push(...got);
@@ -101,8 +109,7 @@ export default function InsightsPage() {
     // Cash & bank: asset ledgers that are cash or bank
     const isCash = (l: Line) => l.fw_fin_chart_of_accounts?.type === "asset" && (["cash", "bank"].includes(l.fw_fin_chart_of_accounts?.sub_type ?? "") || /\b(cash|bank)\b/i.test(l.fw_fin_chart_of_accounts?.name ?? ""));
     setCashBalance(lList.filter(isCash).reduce((s, l) => s + (l.dr_amount || 0) - (l.cr_amount || 0), 0));
-
-    setLoading(false);
+    } finally { setLoading(false); }
   }
 
   const inr = (n: number) => `${n < 0 ? "−" : ""}${cur()}${Math.abs(Math.round(n)).toLocaleString(activeMoney().locale)}`;
@@ -110,11 +117,10 @@ export default function InsightsPage() {
 
   // Every month of the financial year up to now, so gaps show
   const now = new Date();
-  const fyY = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
   const fyLabel = `${fyY}-${String(fyY + 1).slice(2)}`;
   const byMonth = new Map(monthlyData.map(m => [m.month, m]));
   const months: MonthData[] = [];
-  for (let d = new Date(fyY, 3, 1); d <= now; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+  for (let d = new Date(fyY, 3, 1); d <= now && d < new Date(fyY + 1, 3, 1); d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
     const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     months.push(byMonth.get(k) ?? { month: k, revenue: 0, expenses: 0, profit: 0 });
   }
