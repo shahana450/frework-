@@ -9,6 +9,7 @@ const sum = (lines: { amount: number; isDeemed: boolean }[], dr: boolean) => Mat
 // Anonymised item-invoice purchase: party Cr 2197, Purchase (inventory allocation) Dr 1861.94, GST Dr 335.06+0.44? —
 // Tally writes debits as negative AMOUNTs and credits as positive, with a round-off credit of 0.44.
 const ITEM_INVOICE = `<ENVELOPE><VOUCHER REMOTEID="abc-1" VCHTYPE="Purchase"><DATE>20250405</DATE><VOUCHERTYPENAME>Purchase</VOUCHERTYPENAME><VOUCHERNUMBER>5</VOUCHERNUMBER>
+<LEDGERENTRIES.LIST><LEDGERNAME>Asha Traders</LEDGERNAME><AMOUNT>2197.00</AMOUNT></LEDGERENTRIES.LIST>
 <ALLLEDGERENTRIES.LIST><LEDGERNAME>Asha Traders</LEDGERNAME><ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE><AMOUNT>2197.00</AMOUNT>
   <BILLALLOCATIONS.LIST><NAME>INV-77</NAME><AMOUNT>2197.00</AMOUNT></BILLALLOCATIONS.LIST></ALLLEDGERENTRIES.LIST>
 <ALLLEDGERENTRIES.LIST><LEDGERNAME>Input CGST</LEDGERNAME><ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE><AMOUNT>-167.72</AMOUNT></ALLLEDGERENTRIES.LIST>
@@ -47,4 +48,9 @@ test("plain journal still reads by sign", () => {
     <ALLLEDGERENTRIES.LIST><LEDGERNAME>Rent</LEDGERNAME><ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE><AMOUNT>-25000.00</AMOUNT></ALLLEDGERENTRIES.LIST>
     <ALLLEDGERENTRIES.LIST><LEDGERNAME>HDFC Bank</LEDGERNAME><ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE><AMOUNT>25000.00</AMOUNT></ALLLEDGERENTRIES.LIST></VOUCHER>`);
   assert.deepEqual(v.lines.map(l => [l.ledgerName, l.isDeemed]), [["Rent", true], ["HDFC Bank", false]]);
+});
+
+test("Tally sends ledger lines under LEDGERENTRIES too; they are not counted twice", () => {
+  const [v] = parseTallyVouchers(ITEM_INVOICE);
+  assert.equal(v.lines.filter(l => l.ledgerName === "Asha Traders").length, 1);
 });

@@ -1,7 +1,7 @@
 "use client";
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { findTallyPort, tallyFetch } from "@/lib/tallyUtils";
+import { findTallyPort, tallyFetch, parseTallyVouchers } from "@/lib/tallyUtils";
 import { tallyProblem, companiesXml } from "@/lib/integrations/tally";
 import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow, setTallyBusy } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -174,37 +174,7 @@ type TallyVoucher = {
   lines: { ledgerName: string; amount: number; isDeemed: boolean }[];
 };
 
-function parseTallyVouchers(xml: string): TallyVoucher[] {
-  const results: TallyVoucher[] = [];
-  const vRe = /<VOUCHER[^>]*>([\s\S]*?)<\/VOUCHER>/gi;
-  let vm;
-  while ((vm = vRe.exec(xml)) !== null) {
-    const block = vm[1];
-
-    const rawDate = (block.match(/<DATE[^>]*>([^<]+)<\/DATE>/i) ?? [])[1]?.trim() ?? "";
-    let date = "";
-    if (/^\d{8}$/.test(rawDate)) date = `${rawDate.slice(0,4)}-${rawDate.slice(4,6)}-${rawDate.slice(6,8)}`;
-
-    const voucherType = (block.match(/<VOUCHERTYPENAME[^>]*>([^<]+)<\/VOUCHERTYPENAME>/i) ?? [])[1]?.trim() ?? "Journal";
-    const voucherNumber = (block.match(/<VOUCHERNUMBER[^>]*>([^<]+)<\/VOUCHERNUMBER>/i) ?? [])[1]?.trim() ?? "";
-    const narration = (block.match(/<NARRATION[^>]*>([^<]*)<\/NARRATION>/i) ?? [])[1]?.trim() ?? "";
-
-    const lines: TallyVoucher["lines"] = [];
-    const entryRe = /<ALLLEDGERENTRIES\.LIST[^>]*>([\s\S]*?)<\/ALLLEDGERENTRIES\.LIST>/gi;
-    let em;
-    while ((em = entryRe.exec(block)) !== null) {
-      const eb = em[1];
-      const ledgerName = (eb.match(/<LEDGERNAME[^>]*>([^<]+)<\/LEDGERNAME>/i) ?? [])[1]?.trim() ?? "";
-      const amtStr = (eb.match(/<AMOUNT[^>]*>([^<]+)<\/AMOUNT>/i) ?? [])[1]?.trim() ?? "0";
-      const isDeemed = /Yes/i.test((eb.match(/<ISDEEMEDPOSITIVE[^>]*>([^<]+)<\/ISDEEMEDPOSITIVE>/i) ?? [])[1] ?? "");
-      const amount = Math.abs(parseFloat(amtStr) || 0);
-      if (ledgerName && amount > 0) lines.push({ ledgerName, amount, isDeemed });
-    }
-
-    if (date && lines.length >= 1) results.push({ date, voucherType, voucherNumber, narration, lines });
-  }
-  return results;
-}
+// Voucher XML is read by the shared reader (lib/tallyUtils.ts) — never a local copy.
 
 function tallyVoucherTypeToFP(t: string): string {
   const exact: Record<string,string> = {

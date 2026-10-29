@@ -118,7 +118,7 @@ export function parseTallyVouchers(xml: string): TallyVoucher[] {
     // Ledger lines: ALLLEDGERENTRIES (accounting vouchers, party / tax / round-off lines) plus, for item invoices, the
     // purchase / sales ledger inside ALLINVENTORYENTRIES → ACCOUNTINGALLOCATIONS. Tally's sign is the truth: a negative
     // AMOUNT is a debit, a positive one a credit. ISDEEMEDPOSITIVE only decides when the amount carries no sign.
-    const entryRe = /<(ALLLEDGERENTRIES|LEDGERENTRIES|ACCOUNTINGALLOCATIONS)\.LIST[^>]*>([\s\S]*?)<\/\1\.LIST>/gi;
+    const entryRe = /<(ALLLEDGERENTRIES|ACCOUNTINGALLOCATIONS)\.LIST[^>]*>([\s\S]*?)<\/\1\.LIST>/gi;
     let em;
     while ((em = entryRe.exec(block)) !== null) {
       const eb = em[2];
