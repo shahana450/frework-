@@ -129,8 +129,8 @@ export function headForTallyGroup(parent: string): LedgerHead | null {
     /capital account|reserves/.test(p) ? "capital" : /loans \(liability\)|secured loans|unsecured loans/.test(p) ? "loan" :
     /loans & advances|deposits/.test(p) ? "advances" : /stock-in-hand|stock in hand/.test(p) ? "stock" : /current assets|investments/.test(p) ? "current_asset" :
     /current liabilities|provisions/.test(p) ? "current_liability" : /sales accounts/.test(p) ? "sales" :
-    /purchase accounts/.test(p) ? "purchase" : /direct expenses/.test(p) ? "direct_expense" :
-    /indirect expenses/.test(p) ? "indirect_expense" : /direct incomes|indirect incomes/.test(p) ? "indirect_income" : null;
+    /purchase accounts/.test(p) ? "purchase" : /indirect expenses/.test(p) ? "indirect_expense" : /^direct expenses/.test(p) ? "direct_expense" :
+    /direct incomes|indirect incomes/.test(p) ? "indirect_income" : null;   // "indirect" is checked first: "direct expenses" sits inside it
   return key ? headByKey(key) ?? null : null;
 }
 

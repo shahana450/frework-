@@ -45,3 +45,9 @@ test("stock: opening, closing and the year's change from Stock-in-Hand", () => {
   const s = stockFigures(ledgerBooksFrom(LEDGERS), groupsFrom(GROUPS));
   assert.deepEqual(s, { ledgers: ["STOCK IN HAND"], opening: 6892964, closing: 6154846, change: 738118 });
 });
+
+test("Indirect Expenses is not read as Direct Expenses", () => {
+  const g = groupsFrom(GROUPS);
+  assert.equal(headKeyFor("Indirect Expenses", g), "indirect_expense");
+  assert.equal(headKeyFor("Direct Expenses", {}), "direct_expense");
+});
