@@ -2,7 +2,7 @@
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { findTallyPort } from "@/lib/tallyUtils";
-import { tallyProblem } from "@/lib/integrations/tally";
+import { tallyProblem, companiesXml } from "@/lib/integrations/tally";
 import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow, setTallyBusy } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -494,83 +494,32 @@ export default function TallyPage() {
       const fyStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
       const defaultFrom = `${fyStartYear}-04-01`;
       const defaultTo = `${fyStartYear + 1}-03-31`;
-      const months = monthsInRange(from || defaultFrom, to || defaultTo);
-
-      // Fetch ONE month at a time with a pause — prevents Tally from freezing
-      setTallyBusy(true);   // background checks wait while Tally exports
+      const rangeFrom = from || defaultFrom, rangeTo = to || defaultTo;
+      // Tally ignores the date range on a voucher collection and sends every voucher of the company's period, so it is
+      // asked ONCE for the range and the vouchers outside it are dropped here (asking month by month fetched the whole
+      // year twelve times). One retry with a longer wait if Tally is slow.
       const allVouchers: ReturnType<typeof parseTallyVouchers> = [];
-      // A month that fails is NOT an empty month: retry it once (Tally can stall on a heavy month), then stop if Tally
-      // has stopped answering, and say which months weren't read instead of reporting "no vouchers".
-      const failed: string[] = [];
       let partialNote = "";
-      let lastError = "";
-      let stoppedAt = "";
-      const fetchMonth = async (mFrom: string, mTo: string, timeout: number, withItems = true) => {
-        const fd = mFrom.replace(/-/g, ""), td = mTo.replace(/-/g, "");
-        const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries${withItems ? ",AllInventoryEntries" : ""}</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
-        const res = await tallyFetch(tallyUrl, xml, timeout);
-        const text = await res.text();
-        if (!res.ok && !/<ENVELOPE|<VOUCHER/i.test(text)) throw new Error(`Tally answered ${res.status}: ${text.replace(/\s+/g, " ").slice(0, 160)}`);
-        return parseTallyVouchers(text);
-      };
-      for (let i = 0; i < months.length; i++) {
-        const { from: mFrom, to: mTo, label } = months[i];
-        setSyncProgress(`Fetching ${label} (${i + 1}/${months.length})…`);
-        // Fast read first (ledger lines only — what Tally exports quickly), with one retry on a stall
-        let results: ReturnType<typeof parseTallyVouchers> | null = null;
-        try { results = await fetchMonth(mFrom, mTo, 30000, false); }
-        catch (e) {
-          lastError = e instanceof Error ? e.message : String(e);
-          setSyncProgress(`${label} is taking long — trying again…`);
-          await new Promise(r => setTimeout(r, 3000));
-          try { results = await fetchMonth(mFrom, mTo, 60000, false); } catch (e2) { results = null; lastError = e2 instanceof Error ? e2.message : String(e2); }
-        }
-        // Item invoices keep the purchase / sales ledger in the item details. Only when this month has vouchers that
-        // don't balance, ask for those details — a week at a time so Tally isn't overloaded. If Tally can't, keep the fast read.
-        const unbalanced = (v: ReturnType<typeof parseTallyVouchers>[number]) => {
-          const d = v.lines.filter(l => l.isDeemed).reduce((s, l) => s + l.amount, 0), cr = v.lines.filter(l => !l.isDeemed).reduce((s, l) => s + l.amount, 0);
-          return Math.abs(d - cr) > 0.005;
-        };
-        if (results && results.some(unbalanced)) {
-          const pieces: [string, string][] = [];
-          for (let d = new Date(mFrom + "T00:00:00Z"); d.toISOString().slice(0, 10) <= mTo; d = new Date(d.getTime() + 7 * 86400000)) {
-            const end = new Date(Math.min(d.getTime() + 6 * 86400000, Date.parse(mTo + "T00:00:00Z")));
-            pieces.push([d.toISOString().slice(0, 10), end.toISOString().slice(0, 10)]);
-          }
-          const key = (v: { date: string; voucherType: string; voucherNumber: string; guid?: string | null }) => v.guid || `${v.date}|${v.voucherType}|${v.voucherNumber}`;
-          const better = new Map<string, ReturnType<typeof parseTallyVouchers>[number]>();
-          let detailFails = 0;
-          for (let k = 0; k < pieces.length; k++) {
-            const [a, b] = pieces[k];
-            if (!results.some(v => v.date >= a && v.date <= b && unbalanced(v))) continue;
-            setSyncProgress(`${label}: reading item details, week ${k + 1} of ${pieces.length}…`);
-            try { for (const v of await fetchMonth(a, b, 60000, true)) if (!unbalanced(v)) better.set(key(v), v); }
-            catch { detailFails++; }
-            await new Promise(r => setTimeout(r, 400));
-          }
-          if (better.size) results = results.map(v => (unbalanced(v) && better.get(key(v))) || v);
-          if (detailFails) partialNote ||= " Item details couldn't be read for some weeks; item-invoice vouchers from those weeks may be listed as not balanced — import again later to retry them.";
-        }
-        if (results === null) {
-          failed.push(label);
-          // Two months in a row failing means Tally has stopped responding — don't keep hammering it
-          if (failed.length >= 2 && failed[failed.length - 2] === months[i - 1]?.label) { stoppedAt = label; break; }
-          continue;
-        }
-        allVouchers.push(...results);
-        // Pause between months — lets Tally breathe, prevents UI freeze
-        if (i < months.length - 1) await new Promise(r => setTimeout(r, 400));
+      const fd = rangeFrom.replace(/-/g, ""), td = rangeTo.replace(/-/g, "");
+      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries,AllInventoryEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+      setTallyBusy(true);   // background checks wait while Tally exports
+      // A quick request first, so the route that answers (bridge or extension) is known and gets the long wait
+      await tallyFetch(tallyUrl, companiesXml(), 8000).then(r => r.text()).catch(() => null);
+      let text = "", lastError = "";
+      for (const [k, wait] of [[1, 120000], [2, 240000]] as const) {
+        setSyncProgress(k === 1 ? "Reading vouchers from Tally — about 30 seconds for a year…" : "Tally is slow — trying once more (up to 4 minutes)…");
+        try { const res = await tallyFetch(tallyUrl, xml, wait); text = await res.text(); if (/<VOUCHER[ >]/i.test(text) || /<ENVELOPE/i.test(text)) break; lastError = text.replace(/\s+/g, " ").slice(0, 160); }
+        catch (e) { lastError = e instanceof Error ? e.message : String(e); }
+        text = "";
       }
-
-      if (failed.length) {
-        const skipped = stoppedAt ? months.slice(months.findIndex(m => m.label === stoppedAt) + 1).map(m => m.label) : [];
-        const notRead = [...failed, ...skipped];
-        if (!allVouchers.length) {
-          setImportVoucherResult({ ok: false, msg: `Tally stopped responding while reading ${failed[0]}, so nothing was imported. Check Tally isn't frozen (close any open report, or restart Tally and the FreWork Tally Bridge), press Connect, and import again — try a shorter date range if a month is very large.${lastError ? ` Details: ${lastError}` : ""}` });
-          setTallyBusy(false); setSyncing(null); return;
-        }
-        partialNote += ` Tally stopped responding — these months were NOT read: ${notRead.join(", ")}. Import that range again to add them (vouchers already imported are skipped).`;
+      if (!text) {
+        setImportVoucherResult({ ok: false, msg: `Tally didn't send the vouchers. Check Tally isn't frozen (close any open report, or restart Tally and the FreWork Tally Bridge), press Reconnect, and import again.${lastError ? ` Details: ${lastError}` : ""}` });
+        setTallyBusy(false); setSyncing(null); return;
       }
+      setSyncProgress("Reading the vouchers…");
+      const read = parseTallyVouchers(text);
+      allVouchers.push(...read.filter(v => v.date >= rangeFrom && v.date <= rangeTo));
+      if (read.length && !allVouchers.length) partialNote = ` Tally sent ${read.length} vouchers, none dated ${rangeFrom} to ${rangeTo}.`;
 
       if (!allVouchers.length) {
         setImportVoucherResult({ ok: false, msg: `No vouchers found in Tally for ${from} to ${to}. Try changing the date range — your Tally data may be for a different financial year (e.g. 01-04-2025 to 31-03-2026).` });
