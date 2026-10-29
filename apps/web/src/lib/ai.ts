@@ -36,12 +36,21 @@ async function geminiCreate(params: CreateParams) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any = {};
   for (let i = 0; i < attempts.length; i++) {
-    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${attempts[i]}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
-      body: JSON.stringify(body),
-    });
-    data = await res.json();
+    // The free tier sometimes hangs rather than failing: give each try 12 s (40 s with a document), then treat it as busy
+    const hasFile = params.messages.some(m => typeof m.content !== "string" && m.content.some(b => b.type !== "text"));
+    try {
+      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${attempts[i]}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(hasFile ? 40000 : 12000),
+      });
+      data = await res.json();
+    } catch (e) {
+      if (!(e instanceof Error && /timeout|abort/i.test(e.name + e.message))) throw e;
+      res = new Response(null, { status: 503 }); data = { error: { message: "high demand (timed out)" } };
+      continue;
+    }
     // Large output budgets can exceed the model's limit — shrink before touching thinking settings
     if (res.status === 400 && (generationConfig.maxOutputTokens as number) > 8192) {
       generationConfig.maxOutputTokens = (generationConfig.maxOutputTokens as number) > 16384 ? 16384 : 8192;
