@@ -112,14 +112,19 @@ export function parseTallyVouchers(xml: string): TallyVoucher[] {
     const voucherNumber = (block.match(/<VOUCHERNUMBER[^>]*>([^<]+)<\/VOUCHERNUMBER>/i) ?? [])[1]?.trim() ?? "";
     const narration = (block.match(/<NARRATION[^>]*>([^<]*)<\/NARRATION>/i) ?? [])[1]?.trim() ?? "";
     const lines: TallyVoucher["lines"] = [];
-    const entryRe = /<ALLLEDGERENTRIES\.LIST[^>]*>([\s\S]*?)<\/ALLLEDGERENTRIES\.LIST>/gi;
+    // Ledger lines: ALLLEDGERENTRIES (accounting vouchers, party / tax / round-off lines) plus, for item invoices, the
+    // purchase / sales ledger inside ALLINVENTORYENTRIES → ACCOUNTINGALLOCATIONS. Tally's sign is the truth: a negative
+    // AMOUNT is a debit, a positive one a credit. ISDEEMEDPOSITIVE only decides when the amount carries no sign.
+    const entryRe = /<(ALLLEDGERENTRIES|LEDGERENTRIES|ACCOUNTINGALLOCATIONS)\.LIST[^>]*>([\s\S]*?)<\/\1\.LIST>/gi;
     let em;
     while ((em = entryRe.exec(block)) !== null) {
-      const eb = em[1];
+      const eb = em[2];
       const ledgerName = (eb.match(/<LEDGERNAME[^>]*>([^<]+)<\/LEDGERNAME>/i) ?? [])[1]?.trim() ?? "";
       const amtStr = (eb.match(/<AMOUNT[^>]*>([^<]+)<\/AMOUNT>/i) ?? [])[1]?.trim() ?? "0";
-      const isDeemed = /Yes/i.test((eb.match(/<ISDEEMEDPOSITIVE[^>]*>([^<]+)<\/ISDEEMEDPOSITIVE>/i) ?? [])[1] ?? "");
-      const amount = Math.abs(parseFloat(amtStr) || 0);
+      const raw = parseFloat(amtStr.replace(/,/g, "")) || 0;
+      const flag = /Yes/i.test((eb.match(/<ISDEEMEDPOSITIVE[^>]*>([^<]+)<\/ISDEEMEDPOSITIVE>/i) ?? [])[1] ?? "");
+      const isDeemed = raw < 0 ? true : raw > 0 ? false : flag;
+      const amount = Math.round(Math.abs(raw) * 100) / 100;
       if (ledgerName && amount > 0) lines.push({ ledgerName, amount, isDeemed });
     }
     if (date && lines.length >= 1) results.push({ date, voucherType, voucherNumber, narration, lines, remoteId, guid, masterId });
@@ -186,4 +191,4 @@ export function monthsInRange(startIso: string, endIso: string): { from: string;
 }
 
 export const VOUCHER_FETCH_XML = (fd: string, td: string) =>
-  `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+  `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Vouchers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Vouchers" ISMODIFY="No"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries,AllInventoryEntries</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
