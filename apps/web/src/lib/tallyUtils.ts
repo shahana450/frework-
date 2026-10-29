@@ -62,7 +62,14 @@ function viaRoute(route: Route, url: string, body: string, ms: number): Promise<
   return tryExtensionBridge(url, body, ms);
 }
 
-export async function tallyFetch(url: string, body: string, timeoutMs = 15000): Promise<Response> {
+// Tally answers one request at a time and its screen freezes while it works, so FreWork never sends a second request
+// before the first is fully answered — every page, every tab-local caller, waits its turn here.
+let queue: Promise<unknown> = Promise.resolve();
+let inFlight = 0;
+/** A Tally request is running or waiting: background checks should skip this round. */
+export const tallyQueueBusy = () => inFlight > 0;
+
+async function sendOnce(url: string, body: string, timeoutMs: number): Promise<Response> {
   const last = readRoute();
   const order: Route[] = last ? [last, ...(["direct", "bridge", "ext"] as Route[]).filter(r => r !== last)] : ["direct", "bridge", "ext"];
   let lastErr: unknown = null;
@@ -70,15 +77,40 @@ export async function tallyFetch(url: string, body: string, timeoutMs = 15000): 
     try {
       const res = await viaRoute(route, url, body, timeoutMs);
       if (route !== last) saveRoute(route);
-      return res;
+      // Read the whole reply inside the turn, so the next request starts only after Tally has finished sending
+      const text = await res.text();
+      return new Response(text, { status: res.status, headers: { "Content-Type": res.headers.get("Content-Type") ?? "text/xml" } });
     } catch (e) {
       lastErr = e;
       // A timeout on the route that works means Tally itself is slow — don't wander off to dead routes
-      if (route === last && e instanceof Error && /timeout|timed out|abort/i.test(`${e.name} ${e.message}`)) break;
+      if (route === last && e instanceof Error && /timeout|timed out|abort/i.test(e.name + " " + e.message)) break;
       if (route === last) saveRoute(null);
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error(tallyProblem(url.match(/:(\d+)/)?.[1], "unreachable"));
+}
+
+export function tallyFetch(url: string, body: string, timeoutMs = 15000): Promise<Response> {
+  inFlight++;
+  const run = queue.then(() => sendOnce(url, body, timeoutMs));
+  queue = run.catch(() => undefined).finally(() => { inFlight--; });
+  return run;
+}
+
+// ── Vouchers by period ────────────────────────────────────────────────────────
+// Tally ignores SVFROMDATE/SVTODATE on a voucher collection and returns the whole year (tens of MB), which freezes it.
+// A FILTERS formula limits the reply to the dates asked for. Tally keeps TDL definitions by name, so each request gets
+// a fresh formula name — a reused name can return an earlier request's range.
+const tdlDate = (iso: string) => { const [y, m, d] = iso.split("-").map(Number); return d + "-" + ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m - 1] + "-" + y; };
+let seq = 0;
+export function vouchersInRangeXml(fromIso: string, toIso: string, withItems = true, company?: string | null): string {
+  const f = "FPR" + Date.now().toString(36) + (++seq);
+  const cv = company ? "<SVCURRENTCOMPANY>" + company.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</SVCURRENTCOMPANY>" : "";
+  return "<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>" + f + "V</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>"
+    + "<SVFROMDATE>" + fromIso.replace(/-/g, "") + "</SVFROMDATE><SVTODATE>" + toIso.replace(/-/g, "") + "</SVTODATE>" + cv + "</STATICVARIABLES><TDL><TDLMESSAGE>"
+    + "<COLLECTION NAME=\"" + f + "V\" ISMODIFY=\"No\"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries" + (withItems ? ",AllInventoryEntries" : "") + "</FETCH><FILTERS>" + f + "</FILTERS></COLLECTION>"
+    + "<SYSTEM TYPE=\"Formulae\" NAME=\"" + f + "\">$Date &gt;= $$Date:\"" + tdlDate(fromIso) + "\" AND $Date &lt;= $$Date:\"" + tdlDate(toIso) + "\"</SYSTEM>"
+    + "</TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>";
 }
 
 /** The bridge answers 502 when Tally isn't on the port asked for. Tries the ports Tally is usually set to. */

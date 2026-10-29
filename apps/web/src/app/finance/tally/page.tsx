@@ -1,7 +1,7 @@
 "use client";
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { findTallyPort, tallyFetch, parseTallyVouchers } from "@/lib/tallyUtils";
+import { findTallyPort, tallyFetch, parseTallyVouchers, vouchersInRangeXml } from "@/lib/tallyUtils";
 import { tallyProblem, companiesXml } from "@/lib/integrations/tally";
 import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow, setTallyBusy } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -431,20 +431,43 @@ export default function TallyPage() {
       setTallyBusy(true);   // background checks wait while Tally exports
       // A quick request first, so the route that answers (bridge or extension) is known and gets the long wait
       await tallyFetch(tallyUrl, companiesXml(), 8000).then(r => r.text()).catch(() => null);
-      let text = "", lastError = "";
-      for (const [k, wait] of [[1, 120000], [2, 240000]] as const) {
-        setSyncProgress(k === 1 ? "Reading vouchers from Tally — about 30 seconds for a year…" : "Tally is slow — trying once more (up to 4 minutes)…");
-        try { const res = await tallyFetch(tallyUrl, xml, wait); text = await res.text(); if (/<VOUCHER[ >]/i.test(text) || /<ENVELOPE/i.test(text)) break; lastError = text.replace(/\s+/g, " ").slice(0, 160); }
-        catch (e) { lastError = e instanceof Error ? e.message : String(e); }
-        text = "";
+      let lastError = "";
+      // Month by month with a date filter: small replies, so Tally stays usable. If Tally ignores the filter
+      // (a month comes back empty when the year has vouchers, or with other months in it), fall back to one request.
+      const seen = new Set<string>();
+      const keep = (v: ReturnType<typeof parseTallyVouchers>[number]) => {
+        const k = v.guid || v.remoteId || (v.date + "|" + v.voucherType + "|" + v.voucherNumber);
+        if (seen.has(k) || v.date < rangeFrom || v.date > rangeTo) return; seen.add(k); allVouchers.push(v);
+      };
+      let filterOk = true;
+      const months = monthsInRange(rangeFrom, rangeTo);
+      for (let i = 0; i < months.length && filterOk; i++) {
+        const m = months[i];
+        setSyncProgress("Reading " + m.label + " from Tally (" + (i + 1) + "/" + months.length + ")…");
+        try {
+          const t = await (await tallyFetch(tallyUrl, vouchersInRangeXml(m.from, m.to, true, companyName || null), 90000)).text();
+          const got = parseTallyVouchers(t);
+          if (got.some(v => v.date < m.from || v.date > m.to)) { filterOk = false; got.forEach(keep); break; }   // filter ignored
+          got.forEach(keep);
+        } catch (e) { lastError = e instanceof Error ? e.message : String(e); filterOk = false; }
       }
-      if (!text) {
-        setImportVoucherResult({ ok: false, msg: `Tally didn't send the vouchers. Check Tally isn't frozen (close any open report, or restart Tally and the FreWork Tally Bridge), press Reconnect, and import again.${lastError ? ` Details: ${lastError}` : ""}` });
-        setTallyBusy(false); setSyncing(null); return;
+      if (filterOk && !allVouchers.length) filterOk = false;   // every month empty: check with one request before saying "none"
+      if (!filterOk) {
+        let text = "";
+        for (const [k, wait] of [[1, 120000], [2, 240000]] as const) {
+          setSyncProgress(k === 1 ? "Reading the year from Tally in one go — about 30 seconds…" : "Tally is slow — trying once more (up to 4 minutes)…");
+          try { const res = await tallyFetch(tallyUrl, xml, wait); text = await res.text(); if (/<VOUCHER[ >]/i.test(text) || /<ENVELOPE/i.test(text)) break; lastError = text.replace(/\s+/g, " ").slice(0, 160); }
+          catch (e) { lastError = e instanceof Error ? e.message : String(e); }
+          text = "";
+        }
+        if (!text && !allVouchers.length) {
+          setImportVoucherResult({ ok: false, msg: "Tally didn't send the vouchers. Check Tally isn't frozen (close any open report, or restart Tally and the FreWork Tally Bridge), press Reconnect, and import again." + (lastError ? " Details: " + lastError : "") });
+          setTallyBusy(false); setSyncing(null); return;
+        }
+        if (text) parseTallyVouchers(text).forEach(keep);
       }
       setSyncProgress("Reading the vouchers…");
-      const read = parseTallyVouchers(text);
-      allVouchers.push(...read.filter(v => v.date >= rangeFrom && v.date <= rangeTo));
+      const read = allVouchers;
       if (read.length && !allVouchers.length) partialNote = ` Tally sent ${read.length} vouchers, none dated ${rangeFrom} to ${rangeTo}.`;
 
       if (!allVouchers.length) {

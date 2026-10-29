@@ -5,7 +5,7 @@
 // B5: the link is PER BUSINESS. Company, session and the Disconnect flag are stored under the active business, so a
 // business never shows (or pushes to) another business's Tally company. The port is per computer.
 import { useEffect, useState } from "react";
-import { tallyFetch, findTallyPort } from "./tallyUtils";
+import { tallyFetch, findTallyPort, tallyQueueBusy } from "./tallyUtils";
 import { companiesXml, companiesFrom, licenseXml, isEducational, tallyProblem } from "./integrations/tally";
 
 export type TallyState = {
@@ -200,7 +200,7 @@ const tallyBusy = () => Date.now() < busyUntil;
 
 function startWatch() {
   if (timer || typeof window === "undefined") return;
-  const tick = () => { if (!tallyBusy() && listeners.size && state.company && !tallyManuallyOff() && document.visibilityState === "visible") connectTally({ quiet: true }); };
+  const tick = () => { if (!tallyBusy() && !tallyQueueBusy() && listeners.size && state.company && !tallyManuallyOff() && document.visibilityState === "visible") connectTally({ quiet: true }); };
   timer = setInterval(tick, 60000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && Date.now() - state.checkedAt > 30000) tick(); });
 }
