@@ -4,15 +4,17 @@
 import { headForTallyGroup, xmlDec, xmlEsc } from "./tally";
 
 const tallyDate = (iso: string) => iso.slice(0, 10).replace(/-/g, "");
+let seq = 0;
+const uid = (b: string) => b + Date.now().toString(36) + (++seq);   // Tally caches TDL by name: a fresh name each time
 const companyVar = (company?: string | null) => company ? `<SVCURRENTCOMPANY>${xmlEsc(company)}</SVCURRENTCOMPANY>` : "";
 
 /** Every ledger with its group and its opening / closing balance for the period. */
-export const ledgerBooksXml = (fromIso: string, toIso: string, company?: string | null) =>
-  `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_LedBal</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${tallyDate(fromIso)}</SVFROMDATE><SVTODATE>${tallyDate(toIso)}</SVTODATE>${companyVar(company)}</STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_LedBal" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent,OpeningBalance,ClosingBalance</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+export const ledgerBooksXml = (fromIso: string, toIso: string, company?: string | null, id = uid("FPLB")) =>
+  `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>${id}</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${tallyDate(fromIso)}</SVFROMDATE><SVTODATE>${tallyDate(toIso)}</SVTODATE>${companyVar(company)}</STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="${id}" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent,OpeningBalance,ClosingBalance</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
 
 /** Every group with its parent, so a ledger in a sub-group can be traced to its primary group. */
-export const groupsXml = (company?: string | null) =>
-  `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Grp</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>${companyVar(company)}</STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Grp" ISMODIFY="No"><TYPE>Group</TYPE><FETCH>Name,Parent</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+export const groupsXml = (company?: string | null, id = uid("FPGR")) =>
+  `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>${id}</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>${companyVar(company)}</STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="${id}" ISMODIFY="No"><TYPE>Group</TYPE><FETCH>Name,Parent</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
 
 export type TallyLedgerBook = { name: string; parent: string; opening: number; closing: number };
 

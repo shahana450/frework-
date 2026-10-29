@@ -25,8 +25,8 @@ export default function MatchBooksPanel({ bizId, tallyUrl, company, from, to }: 
       // 1. Read Tally's groups and every ledger's opening / closing balance (a second or two)
       say("Reading ledgers and groups from Tally…");
       const [gTxt, lTxt] = await Promise.all([
-        tallyFetch(tallyUrl, groupsXml(company || null), 60000).then(r => r.text()),
-        tallyFetch(tallyUrl, ledgerBooksXml(from, to, company || null), 120000).then(r => r.text()),
+        tallyFetch(tallyUrl, groupsXml(company || null), 180000).then(r => r.text()),
+        tallyFetch(tallyUrl, ledgerBooksXml(from, to, company || null), 240000).then(r => r.text()),
       ]);
       const groups = groupsFrom(gTxt), ledgers = ledgerBooksFrom(lTxt);
       if (!ledgers.length) { say("Tally sent no ledgers — check the company open in Tally.", false); return; }
