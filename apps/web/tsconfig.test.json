@@ -10,5 +10,5 @@
     "outDir": ".test-dist",
     "rootDir": "."
   },
-  "include": ["tests/accounting/**/*.ts"]
+  "include": ["tests/accounting/**/*.ts", "tests/bankmail/**/*.ts"]
 }
