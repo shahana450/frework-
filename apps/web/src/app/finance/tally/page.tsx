@@ -516,28 +516,40 @@ export default function TallyPage() {
       for (let i = 0; i < months.length; i++) {
         const { from: mFrom, to: mTo, label } = months[i];
         setSyncProgress(`Fetching ${label} (${i + 1}/${months.length})…`);
+        // Fast read first (ledger lines only — what Tally exports quickly), with one retry on a stall
         let results: ReturnType<typeof parseTallyVouchers> | null = null;
-        try { results = await fetchMonth(mFrom, mTo, 30000); }
+        try { results = await fetchMonth(mFrom, mTo, 30000, false); }
         catch (e) {
           lastError = e instanceof Error ? e.message : String(e);
-          // A heavy month: read it a week at a time; a week that still won't come is read without item details
+          setSyncProgress(`${label} is taking long — trying again…`);
+          await new Promise(r => setTimeout(r, 3000));
+          try { results = await fetchMonth(mFrom, mTo, 60000, false); } catch (e2) { results = null; lastError = e2 instanceof Error ? e2.message : String(e2); }
+        }
+        // Item invoices keep the purchase / sales ledger in the item details. Only when this month has vouchers that
+        // don't balance, ask for those details — a week at a time so Tally isn't overloaded. If Tally can't, keep the fast read.
+        const unbalanced = (v: ReturnType<typeof parseTallyVouchers>[number]) => {
+          const d = v.lines.filter(l => l.isDeemed).reduce((s, l) => s + l.amount, 0), cr = v.lines.filter(l => !l.isDeemed).reduce((s, l) => s + l.amount, 0);
+          return Math.abs(d - cr) > 0.005;
+        };
+        if (results && results.some(unbalanced)) {
           const pieces: [string, string][] = [];
           for (let d = new Date(mFrom + "T00:00:00Z"); d.toISOString().slice(0, 10) <= mTo; d = new Date(d.getTime() + 7 * 86400000)) {
             const end = new Date(Math.min(d.getTime() + 6 * 86400000, Date.parse(mTo + "T00:00:00Z")));
             pieces.push([d.toISOString().slice(0, 10), end.toISOString().slice(0, 10)]);
           }
-          const got: ReturnType<typeof parseTallyVouchers> = [];
-          let pieceFails = 0;
+          const key = (v: { date: string; voucherType: string; voucherNumber: string; guid?: string | null }) => v.guid || `${v.date}|${v.voucherType}|${v.voucherNumber}`;
+          const better = new Map<string, ReturnType<typeof parseTallyVouchers>[number]>();
+          let detailFails = 0;
           for (let k = 0; k < pieces.length; k++) {
             const [a, b] = pieces[k];
-            setSyncProgress(`${label} is large — reading week ${k + 1} of ${pieces.length}…`);
-            try { got.push(...await fetchMonth(a, b, 60000)); continue; } catch (e2) { lastError = e2 instanceof Error ? e2.message : String(e2); }
-            try { got.push(...await fetchMonth(a, b, 60000, false)); partialNote ||= " Some weeks were read without item details; item-invoice vouchers from those weeks may not balance."; }
-            catch (e3) { pieceFails++; lastError = e3 instanceof Error ? e3.message : String(e3); }
+            if (!results.some(v => v.date >= a && v.date <= b && unbalanced(v))) continue;
+            setSyncProgress(`${label}: reading item details, week ${k + 1} of ${pieces.length}…`);
+            try { for (const v of await fetchMonth(a, b, 60000, true)) if (!unbalanced(v)) better.set(key(v), v); }
+            catch { detailFails++; }
             await new Promise(r => setTimeout(r, 400));
           }
-          results = pieceFails === pieces.length ? null : got;
-          if (pieceFails && results) partialNote += ` ${pieceFails} week(s) of ${label} couldn't be read.`;
+          if (better.size) results = results.map(v => (unbalanced(v) && better.get(key(v))) || v);
+          if (detailFails) partialNote ||= " Item details couldn't be read for some weeks; item-invoice vouchers from those weeks may be listed as not balanced — import again later to retry them.";
         }
         if (results === null) {
           failed.push(label);
