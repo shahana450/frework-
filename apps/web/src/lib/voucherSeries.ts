@@ -29,5 +29,6 @@ export function voucherKind(requested: string, lines: { cashBank: boolean; dr: n
   if (out && !into) return "payment";
   if (into && !out) return "receipt";
   // Anything else (incl. an asset bought on credit) is a journal, never "purchase"
-  return t === "purchase" ? "journal" : t || "journal";
+  // A "payment"/"receipt" with no cash or bank line (e.g. an expense on credit) is a journal too
+  return ["purchase", "payment", "receipt", "contra"].includes(t) ? "journal" : t || "journal";
 }
