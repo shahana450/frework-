@@ -498,8 +498,14 @@ export default function TallyPage() {
     if (!bizId || connStatus !== "connected") return;
     if (!confirm("This will delete ALL existing Tally-imported entries (TLY-xxxx) and re-import fresh from Tally. Continue?")) return;
     setSyncing("importVouchers"); setImportVoucherResult(null); setSyncProgress("Clearing old Tally entries…");
-    await fetch("/api/finance/tally-imports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action: "clear" }) });
+    const cr = await fetch("/api/finance/tally-imports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action: "clear" }) }).catch(() => null);
     setSyncing(null); setSyncProgress(null);
+    // Stop if the clear didn't finish — importing now would skip the entries still there as "already imported"
+    if (!cr || !cr.ok) {
+      const j = cr ? await cr.json().catch(() => ({})) : {};
+      setImportVoucherResult({ ok: false, msg: "Couldn't clear the old Tally entries" + (j.error ? `: ${j.error}` : "") + ". Nothing was re-imported — try again." });
+      return;
+    }
     await importVouchers();
   }, [bizId, connStatus, importVouchers]);
 

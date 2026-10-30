@@ -38,6 +38,15 @@ export async function POST(req: NextRequest) {
         ids.push(...chunk.filter(id => !has.has(id)));
       }
     }
+    // Other entries can point at these (a receipt settling an invoice, a reversal pair). Unlink them first — otherwise
+    // the entry delete is refused after its lines are already gone, leaving empty entries behind.
+    for (let i = 0; i < ids.length; i += 100) {
+      const batch = ids.slice(i, i + 100);
+      for (const col of ["against_invoice_id", "reversal_of", "reversed_by"]) {
+        const u = await supabase.from("fw_fin_journals").update({ [col]: null }).eq("business_id", business_id).in(col, batch);
+        if (u.error && !/column .* does not exist|schema cache/i.test(u.error.message)) return serverError("tally-imports", u.error);
+      }
+    }
     for (let i = 0; i < ids.length; i += 100) {
       const batch = ids.slice(i, i + 100);
       const a = await supabase.from("fw_fin_journal_lines").delete().in("journal_id", batch);
