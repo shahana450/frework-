@@ -177,7 +177,7 @@ Never invent facts; leave out what is not shown.`,
     // A question about the books: compute the answer from posted entries
     if (ai.kind === "query") {
       const tool = (TOOLS as readonly string[]).includes(ai.tool ?? "") ? ai.tool as Tool : "search";
-      const fyPeriod: Period = fy ? { from: fy.start_date, to: fy.end_date, label: `FY ${fy.label}` } : { from: "2000-01-01", to: today, label: "all time" };
+      const fyPeriod: Period = fy ? { from: fy.start_date, to: fy.end_date, label: `FY ${fy.label.replace(/^FY\s*/i, "")}` } : { from: "2000-01-01", to: today, label: "all time" };
       const defaultP = tool === "compare" ? monthPeriod(today, 0) : fyPeriod;
       const p = resolvePeriod(ai.period, defaultP);
       const p2 = resolvePeriod(ai.period2, tool === "compare" ? monthPeriod(p.from, -1) : fyPeriod);

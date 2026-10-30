@@ -88,7 +88,7 @@ export default function OpeningBalancesPage() {
         <section style={{ background: C.tile, border: `1px solid ${C.line}`, borderRadius: 22, padding: 22, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
           <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: C.muted }}>Opening balances for
             <select value={fyId} onChange={e => setFyId(e.target.value)} style={{ ...cell, height: 42, width: 230, fontSize: 14 }}>
-              {fys.map(f => <option key={f.id} value={f.id}>FY {f.label} — opens {f.start_date}</option>)}
+              {fys.map(f => <option key={f.id} value={f.id}>FY {f.label.replace(/^FY\s*/i, "")} — opens {f.start_date}</option>)}
             </select>
           </label>
           <label style={{ height: 42, padding: "0 18px", borderRadius: 11, background: C.navy, color: "#FFFFFF", fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", cursor: busy ? "wait" : "pointer", opacity: busy || already ? 0.6 : 1 }}>

@@ -207,7 +207,7 @@ Works once and expires soon. Don't forward this link — it signs in as you. Sha
 
   if (ai.kind === "query") {
     const tool = (TOOLS as readonly string[]).includes(ai.tool ?? "") ? ai.tool as Tool : "search";
-    const fyP: Period = fy ? { from: fy.start_date, to: fy.end_date, label: `FY ${fy.label}` } : { from: "2000-01-01", to: today, label: "all time" };
+    const fyP: Period = fy ? { from: fy.start_date, to: fy.end_date, label: `FY ${fy.label.replace(/^FY\s*/i, "")}` } : { from: "2000-01-01", to: today, label: "all time" };
     const p = resolvePeriod(ai.period, tool === "compare" ? monthPeriod(today, 0) : fyP);
     const p2 = resolvePeriod(ai.period2, tool === "compare" ? monthPeriod(p.from, -1) : fyP);
     const upto = [p.to, p2.to, today].sort().pop()!;

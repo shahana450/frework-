@@ -297,7 +297,7 @@ export default function BooksPage() {
             <Link href="/finance/chat-book" style={ghost()}>✦ Chat entry</Link>
             <select value={allYears ? "all" : fy?.id ?? ""} onChange={e => { if (e.target.value === "all") setAllYears(true); else { setAllYears(false); setFy(fys.find(f => f.id === e.target.value) ?? null); } }} style={{ ...ghost(), background: T.green }}>
               <option value="all">All years</option>
-              {fys.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
+              {fys.map(f => <option key={f.id} value={f.id}>FY {f.label.replace(/^FY\s*/i, "")}</option>)}
             </select>
           </div>
           <div className="bk-tiles">

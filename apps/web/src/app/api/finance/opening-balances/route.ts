@@ -84,10 +84,10 @@ export async function POST(req: NextRequest) {
 
     const { data: fy } = await supabase.from("fw_fin_financial_years").select("id,label,start_date,is_locked").eq("business_id", bizId!).eq("id", body.fy_id ?? "").maybeSingle();
     if (!fy) return NextResponse.json({ error: "Choose the financial year these balances open." }, { status: 400 });
-    if (fy.is_locked && !can(gate.role, "lock")) return NextResponse.json({ error: `FY ${fy.label} is locked. Only the owner or an admin can post into it.` }, { status: 403 });
+    if (fy.is_locked && !can(gate.role, "lock")) return NextResponse.json({ error: `FY ${fy.label.replace(/^FY\s*/i, "")} is locked. Only the owner or an admin can post into it.` }, { status: 403 });
     const key = keyFor(fy.id);
     const { data: prior } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId!).eq("metadata->>client_key", key).neq("status", "voided").limit(1).maybeSingle();
-    if (prior) return NextResponse.json({ error: `Opening balances for FY ${fy.label} are already posted as ${prior.entry_no}. Reverse that entry first to post them again.` }, { status: 409 });
+    if (prior) return NextResponse.json({ error: `Opening balances for FY ${fy.label.replace(/^FY\s*/i, "")} are already posted as ${prior.entry_no}. Reverse that entry first to post them again.` }, { status: 409 });
 
     const heads = Object.fromEntries(plan.lines.map(l => [l.ledger, l.head]));
     const resolved = await resolveLedgers(supabase, bizId!, plan.lines.map(l => ({ name: l.ledger })), heads, "Opening balances");

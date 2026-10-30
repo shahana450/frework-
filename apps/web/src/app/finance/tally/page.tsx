@@ -1144,7 +1144,7 @@ export default function TallyPage() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
                 <select value={fyId ?? ""} onChange={e => setFyId(e.target.value)} className="tb-input" style={{ fontSize: "0.8125rem" }}>
-                  {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
+                  {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label.replace(/^FY\s*/i, "")}</option>)}
                 </select>
                 <a href="#" onClick={e => { e.preventDefault(); downloadApiFile(buildExportUrl(), "FreWork-Tally-Export.xml").catch(err => alert(err.message)); }} className="tb-btn" style={{ background: "transparent", border: "1px solid #E6DFD0", color: "#5E6B66", padding: "8px 16px", textDecoration: "none", fontSize: "0.8125rem" }}>
                   Download XML

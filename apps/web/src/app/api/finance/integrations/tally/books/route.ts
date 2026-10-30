@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         : [{ accountId: stockId, dr: amt, cr: 0 }, { accountId: changeId, dr: 0, cr: amt }];
       const posted = await postJournal(supabase, {
         businessId: bizId!, actorId: gate.user.id, date: fy.end_date, type: "journal", source: "tally_import", force: fy.is_locked,
-        narration: `Change in stock for FY ${fy.label}: opening ₹${opening.toLocaleString("en-IN")} → closing ₹${closing.toLocaleString("en-IN")} (from Tally's ${stockName})`,
+        narration: `Change in stock for FY ${fy.label.replace(/^FY\s*/i, "")}: opening ₹${opening.toLocaleString("en-IN")} → closing ₹${closing.toLocaleString("en-IN")} (from Tally's ${stockName})`,
         lines, metadata: { client_key: clientKey, tally_stock: { opening, closing, change, ledger: stockName } },
       });
       await logAudit(supabase, { businessId: bizId!, actor: gate.user.id, action: "tally_stock", source: "integration", detail: { fy: fy.label, entry_no: posted.entryNo, opening, closing, change } });

@@ -58,7 +58,7 @@ export default function FinancialYearPage() {
 
     const { error: e } = await supabase.from("fw_fin_financial_years").insert({
       business_id: bizId,
-      label: newLabel,
+      label: newLabel.trim().replace(/^FY\s*/i, ""),   // "FY" is added wherever a year is shown
       start_date: newStart,
       end_date: endD.toISOString().split("T")[0],
       is_current: false,

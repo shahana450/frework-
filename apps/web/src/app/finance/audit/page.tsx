@@ -625,7 +625,7 @@ export default function AuditPage() {
         )}
         <div style={{ flex: 1 }} />
         <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} style={inp}>
-          {fys.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
+          {fys.map(f => <option key={f.id} value={f.id}>FY {f.label.replace(/^FY\s*/i, "")}</option>)}
         </select>
         <Link href="/finance/audit/gst-recon" style={{ fontSize: "0.78rem", color: "#5B4BC4", background: "rgba(91,75,196,0.08)", border: "1px solid rgba(91,75,196,0.2)", padding: "5px 12px", borderRadius: 7, textDecoration: "none", fontWeight: 600 }}>
           🏷 GST Recon

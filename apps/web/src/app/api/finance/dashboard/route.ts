@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     const y = new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1;
     const pf = sp.get("from"), pt = sp.get("to"), iso = /^\d{4}-\d{2}-\d{2}$/;
     const custom = pf && pt && iso.test(pf) && iso.test(pt) && pf <= pt ? { from: pf, to: pt, label: (sp.get("label") ?? "").slice(0, 40) || `${pf} to ${pt}` } : null;
-    const period = custom ?? (fy ? { from: fy.start_date, to: fy.end_date, label: `FY ${fy.label}` } : { from: `${y}-04-01`, to: `${y + 1}-03-31`, label: `FY ${y}-${String(y + 1).slice(2)}` });
+    const period = custom ?? (fy ? { from: fy.start_date, to: fy.end_date, label: `FY ${fy.label.replace(/^FY\s*/i, "")}` } : { from: `${y}-04-01`, to: `${y + 1}-03-31`, label: `FY ${y}-${String(y + 1).slice(2)}` });
 
     const books = await loadQueryBooks(supabase, bizId!, [period.to, today].sort().pop()!);
     if (books.error) return serverError("dashboard", books.error, "We couldn't load your dashboard right now.");

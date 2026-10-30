@@ -23,7 +23,7 @@ export function HeroFyPicker({ years, value, onChange }: { years: { id: string; 
   return (
     <select value={value} onChange={e => onChange(e.target.value)} aria-label="Financial year" title="Financial year"
       style={{ height: 48, padding: "0 18px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.28)", background: "transparent", color: "#FFFFFF", fontFamily: SERIF, fontSize: 15, cursor: "pointer" }}>
-      {years.map(y => <option key={y.id} value={y.id} style={{ color: "#10241F" }}>FY {y.label}</option>)}
+      {years.map(y => <option key={y.id} value={y.id} style={{ color: "#10241F" }}>FY {y.label.replace(/^FY\s*/i, "")}</option>)}
     </select>
   );
 }

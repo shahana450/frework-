@@ -668,7 +668,7 @@ export default function FinanceDashboard() {
                 controls={<>
                   <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} title="Financial year"
                     style={{ height: 36, background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: 10, padding: "0 10px", fontSize: 12.5, color: "#10241F" }}>
-                    {financialYears.map(f => <option key={f.id} value={f.id}>FY {f.label}</option>)}
+                    {financialYears.map(f => <option key={f.id} value={f.id}>FY {f.label.replace(/^FY\s*/i, "")}</option>)}
                     {financialYears.length === 0 && <option value="">FY {fyLabel}</option>}
                     {missingFy && <option value="__create">＋ FY {missingFy.label} — create</option>}
                   </select>

@@ -199,7 +199,7 @@ export default function ReportsPage() {
           </div>
           {financialYears.length > 0 && (
             <select value={fyId ?? ""} onChange={e => { setFyId(e.target.value); if (bizId) writeSelectedFy(bizId, e.target.value); }} style={{ ...btn(false), paddingRight: 10 }}>
-              {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
+              {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label.replace(/^FY\s*/i, "")}</option>)}
             </select>
           )}
           {tbData && plData && bsData && (
