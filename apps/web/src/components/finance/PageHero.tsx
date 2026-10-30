@@ -17,6 +17,17 @@ export function HeroAction({ href, onClick, children, primary, disabled, title }
   return href ? <Link href={href} title={title} style={style}>{children}</Link> : <button type="button" onClick={onClick} disabled={disabled} title={title} style={style}>{children}</button>;
 }
 
+/** Financial-year chooser for the dark hero; the choice is shared by every tab (see lib/selectedFy). */
+export function HeroFyPicker({ years, value, onChange }: { years: { id: string; label: string }[]; value: string; onChange: (id: string) => void }) {
+  if (!years.length) return null;
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)} aria-label="Financial year" title="Financial year"
+      style={{ height: 48, padding: "0 18px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.28)", background: "transparent", color: "#FFFFFF", fontFamily: SERIF, fontSize: 15, cursor: "pointer" }}>
+      {years.map(y => <option key={y.id} value={y.id} style={{ color: "#10241F" }}>FY {y.label}</option>)}
+    </select>
+  );
+}
+
 const SETTINGS_TABS: { key: string; label: string; href: string }[] = [
   { key: "business", label: "Business", href: "/finance/settings/business" },
   { key: "region", label: "Region & currency", href: "/finance/settings/region" },

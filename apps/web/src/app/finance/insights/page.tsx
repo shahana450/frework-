@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { readActiveBusiness } from "@/lib/activeBusiness";
-import PageHero, { HeroAction, HT, SERIF } from "@/components/finance/PageHero";
+import { useFinancialYear } from "@/lib/selectedFy";
+import PageHero, { HeroAction, HeroFyPicker, HT, SERIF } from "@/components/finance/PageHero";
 
 type MonthData = { month: string; revenue: number; expenses: number; profit: number };
 type TopAccount = { name: string; amount: number; type: string };
@@ -34,13 +35,15 @@ export default function InsightsPage() {
       setBizId(saved);
       const { data: biz } = await supabase.from("fw_fin_businesses").select("name,gstin").eq("id", saved).single();
       setBizName(biz?.name ?? ""); setGstin((biz as { gstin?: string | null } | null)?.gstin ?? "");
-      await loadInsights(saved);
     });
   }, []);
 
   const [fyY, setFyY] = useState(() => { const n = new Date(); return n.getMonth() >= 3 ? n.getFullYear() : n.getFullYear() - 1; });
 
-  async function loadInsights(bid: string) {
+  const { years, fy, setFy, loaded } = useFinancialYear(bizId);
+  useEffect(() => { if (bizId && loaded) loadInsights(bizId, fy?.start_date); }, [bizId, fy, loaded]);
+
+  async function loadInsights(bid: string, chosenStart?: string) {
     setLoading(true);
     try {
     // The current financial year — or, when it has no entries yet, the latest year that does (e.g. books just imported from Tally)
@@ -48,7 +51,8 @@ export default function InsightsPage() {
     let y = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
     const { data: last } = await supabase.from("fw_fin_journals").select("date").eq("business_id", bid).eq("status", "posted").order("date", { ascending: false }).limit(1).maybeSingle();
     const lastDate = (last as { date?: string } | null)?.date ?? "";
-    if (lastDate && lastDate < `${y}-04-01`) { const d = new Date(lastDate + "T00:00:00"); y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; }
+    if (chosenStart) y = +chosenStart.slice(0, 4);
+    else if (lastDate && lastDate < `${y}-04-01`) { const d = new Date(lastDate + "T00:00:00"); y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; }
     setFyY(y);
     const fyStart = `${y}-04-01`, fyEnd = `${y + 1}-03-31`;
     type Line = {
@@ -154,7 +158,7 @@ export default function InsightsPage() {
     <div style={{ minHeight: "100vh", background: HT.cream, color: HT.ink, fontFamily: SERIF }}>
       <style>{`.in-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}@media(max-width:900px){.in-two{grid-template-columns:minmax(0,1fr)}}`}</style>
       <PageHero eyebrow={`AI insights · FY ${fyLabel} to date`} title={headline}
-        actions={<HeroAction onClick={() => document.getElementById("in-ask")?.focus()}>✦ Ask your books</HeroAction>}
+        actions={<span style={{ display: "inline-flex", gap: 10 }}><HeroFyPicker years={years} value={fy?.id ?? ""} onChange={setFy} /><HeroAction onClick={() => document.getElementById("in-ask")?.focus()}>✦ Ask your books</HeroAction></span>}
         tiles={[
           { label: "Revenue", value: inr(totalRevenue) },
           { label: "Expenses", value: inr(totalExpenses) },

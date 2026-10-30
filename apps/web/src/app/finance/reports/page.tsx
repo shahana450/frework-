@@ -1,4 +1,5 @@
 "use client";
+import { readSelectedFy, writeSelectedFy } from "@/lib/selectedFy";
 import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -145,7 +146,8 @@ export default function ReportsPage() {
       }
       setFinancialYears(list);
       const containing = list.find(f => f.start_date <= today && f.end_date >= today);
-      setFyId((containing ?? list[0]).id);
+      const shared = readSelectedFy(saved);   // the year chosen on any tab
+      setFyId((list.find(f => f.id === shared) ?? containing ?? list[0]).id);
     });
   }, []);
 
@@ -196,7 +198,7 @@ export default function ReportsPage() {
             ))}
           </div>
           {financialYears.length > 0 && (
-            <select value={fyId ?? ""} onChange={e => setFyId(e.target.value)} style={{ ...btn(false), paddingRight: 10 }}>
+            <select value={fyId ?? ""} onChange={e => { setFyId(e.target.value); if (bizId) writeSelectedFy(bizId, e.target.value); }} style={{ ...btn(false), paddingRight: 10 }}>
               {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label}</option>)}
             </select>
           )}

@@ -1,4 +1,5 @@
 "use client";
+import { readSelectedFy, writeSelectedFy } from "@/lib/selectedFy";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useTally, disconnectTally , tallyCompanyNow } from "@/lib/tallyConnection";
 import TallyBar from "@/components/TallyBar";
@@ -285,9 +286,10 @@ export default function FinanceDashboard() {
       : `${today.getFullYear() - 1}-04-01`;
     // Today's year wins; the Tally sync year is only a fallback
     const todayIso = today.toLocaleDateString("en-CA");
+    const sharedFy = readSelectedFy(bizId);   // the year chosen on any tab
     const activeFy = selectedFyId
       ? allFys.find(f => f.id === selectedFyId)
-      : allFys.find(f => f.start_date <= todayIso && f.end_date >= todayIso)
+      : (sharedFy ? allFys.find(f => f.id === sharedFy) : undefined) ?? allFys.find(f => f.start_date <= todayIso && f.end_date >= todayIso)
         ?? allFys.find(f => f.start_date === curFyStart)
         ?? (tallyFyId ? allFys.find(f => f.id === tallyFyId) : undefined)
         ?? allFys.find(f => f.is_current)
@@ -395,6 +397,7 @@ export default function FinanceDashboard() {
   function switchFy(selectedId: string) {
     if (selectedId === "__create") { createCurrentFy(); return; }
     setFyId(selectedId);
+    if (activeBiz) writeSelectedFy(activeBiz.id, selectedId);
     if (activeBiz && user) loadStats(activeBiz.id, user.id, selectedId);
   }
 

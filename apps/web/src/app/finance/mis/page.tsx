@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import type { Dashboard } from "@/lib/dashboard";
-import PageHero, { HeroAction, HT } from "@/components/finance/PageHero";
+import { useFinancialYear } from "@/lib/selectedFy";
+import PageHero, { HeroAction, HeroFyPicker, HT } from "@/components/finance/PageHero";
 
 const C = { ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", forest: "#0F2B25", gold: "#C99A4E", pos: "#0B7A55", neg: "#B4321F" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
@@ -18,6 +19,8 @@ export default function MisPack() {
   const [dash, setDash] = useState<Dashboard | null>(null);
   const [biz, setBiz] = useState<{ name: string; gstin: string | null } | null>(null);
   const [err, setErr] = useState("");
+  const [bizId, setBizId] = useState<string | null>(null);
+  const { years, fy, setFy } = useFinancialYear(bizId);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -26,11 +29,19 @@ export default function MisPack() {
       if (!id) { router.push("/finance/setup"); return; }
       const { data: b } = await supabase.from("fw_fin_businesses").select("name,gstin").eq("id", id).single();
       setBiz(b ? { name: b.name, gstin: b.gstin } : null);
-      const r = await fetch(`/api/finance/dashboard?business_id=${id}`).catch(() => null);
-      const d = r ? await r.json().catch(() => ({})) : {};
-      if (!r || !r.ok) setErr(d.error ?? "Couldn't load the figures."); else setDash(d as Dashboard);
+      setBizId(id);
     });
   }, [router]);
+
+  // Figures for the chosen financial year
+  useEffect(() => {
+    if (!bizId || !fy) return;
+    setDash(null); setErr("");
+    fetch(`/api/finance/dashboard?business_id=${bizId}&fy_id=${fy.id}`).then(async r => {
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) setErr(d.error ?? "Couldn't load the figures."); else setDash(d as Dashboard);
+    }).catch(() => setErr("Couldn't load the figures."));
+  }, [bizId, fy]);
 
   const month = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
   const kpi = (label: string, value: number, note?: string, tone?: "pos" | "neg") => (
@@ -58,8 +69,8 @@ export default function MisPack() {
         .mis-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px } .mis-two { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 22px; align-items: start }
         @media (max-width: 820px) { .mis-grid, .mis-two { grid-template-columns: minmax(0,1fr) } }`}</style>
       <PageHero eyebrow={`Management report · ${month}`} title={biz?.name ?? "Your business"}
-        sub={`${biz?.gstin ? `GSTIN ${biz.gstin} · ` : ""}${dash ? `FY ${dash.period.label} · ` : ""}prepared from posted entries`}
-        actions={<span className="no-print"><HeroAction onClick={() => window.print()} primary>Print / Save as PDF</HeroAction></span>}
+        sub={`${biz?.gstin ? `GSTIN ${biz.gstin} · ` : ""}${dash ? `${dash.period.label} · ` : ""}prepared from posted entries`}
+        actions={<span className="no-print" style={{ display: "inline-flex", gap: 10 }}><HeroFyPicker years={years} value={fy?.id ?? ""} onChange={setFy} /><HeroAction onClick={() => window.print()} primary>Print / Save as PDF</HeroAction></span>}
         tiles={dash ? [
           { label: "Sales this month", value: inr(dash.monthRevenue) },
           { label: "Profit this month", value: inr(dash.monthProfit), sub: `Last month ${inr(dash.lastMonthProfit)} ${pct(dash.monthProfit, dash.lastMonthProfit)}`, tone: dash.monthProfit < 0 ? "bad" : "good" },
@@ -70,7 +81,7 @@ export default function MisPack() {
         {err && <div style={{ color: C.neg }}>{err}</div>}
         {dash && <>
           <section>
-            <h2 style={h2}>Year to date · FY {dash.period.label}</h2>
+            <h2 style={h2}>Year to date · {dash.period.label}</h2>
             <div className="mis-grid">
               {[
                 { l: "Income", v: dash.revenue },
