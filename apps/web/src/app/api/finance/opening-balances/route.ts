@@ -65,13 +65,18 @@ export async function POST(req: NextRequest) {
     }
 
     // 2) Post the reviewed rows as one opening entry
-    const body = await req.json().catch(() => ({})) as { business_id?: string; fy_id?: string; rows?: TbRow[]; retained?: string; retained_head?: string; closing_stock?: number; stock_ledger?: string; difference_to?: string | null; preview?: boolean };
+    const body = await req.json().catch(() => ({})) as { business_id?: string; fy_id?: string; rows?: TbRow[]; retained?: string; retained_head?: string; closing_stock?: number; stock_ledger?: string; small_difference_to?: string; difference_to?: string | null; preview?: boolean };
     const bizId = body.business_id;
     const gate = await requireBusiness(req, bizId, { write: true });
     if (gate instanceof NextResponse) return gate;
     const rows = (body.rows ?? []).slice(0, 1000);
     const missingHead = rows.filter(r => r.ledger?.trim() && !cleanHead(r.head)).map(r => r.ledger);
     const plan = planOpening(rows.map(r => ({ ...r, head: cleanHead(r.head) })), { retained: (body.retained || "Capital Account").trim(), retainedHead: cleanHead(body.retained_head) || "capital", closingStock: body.closing_stock, stockLedger: (body.stock_ledger || "").trim() || undefined, differenceTo: body.difference_to || null });
+    // A few rupees out (e.g. paise left off a typed figure) → to the named ledger when the caller allows it
+    if (plan.difference !== 0 && !body.difference_to && body.small_difference_to && Math.abs(plan.difference) < 10) {
+      body.difference_to = body.small_difference_to.trim();
+      Object.assign(plan, planOpening(rows.map(r => ({ ...r, head: cleanHead(r.head) })), { retained: (body.retained || "Capital Account").trim(), retainedHead: cleanHead(body.retained_head) || "capital", closingStock: body.closing_stock, stockLedger: (body.stock_ledger || "").trim() || undefined, differenceTo: body.difference_to }));
+    }
     if (body.preview) return NextResponse.json({ plan, missing_head: missingHead });
     if (missingHead.length) return NextResponse.json({ error: `Choose a group for: ${missingHead.slice(0, 8).join(", ")}${missingHead.length > 8 ? "…" : ""}`, missing_head: missingHead }, { status: 400 });
     if (plan.difference !== 0 && !body.difference_to) return NextResponse.json({ error: `Debits and credits differ by ₹${Math.abs(plan.difference).toLocaleString("en-IN")}. Fix the rows, or choose a ledger for the difference.`, plan }, { status: 422 });

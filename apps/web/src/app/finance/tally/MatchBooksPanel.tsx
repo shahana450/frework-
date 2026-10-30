@@ -22,7 +22,7 @@ export default function MatchBooksPanel({ bizId, tallyUrl, company, from, to }: 
   const [closingStock, setClosingStock] = useState("");
   const [openingStock, setOpeningStock] = useState("");
   const [tallyResult, setTallyResult] = useState("");
-  const [resultKind, setResultKind] = useState<"loss" | "profit">("loss");
+  const [resultKind, setResultKind] = useState<"loss" | "profit">("profit");
   // The figures typed in are kept per business and year on this device, so they're there next time
   const memKey = bizId ? `fw_tally_match:${bizId}:${from}` : "";
   useEffect(() => {
@@ -66,7 +66,7 @@ export default function MatchBooksPanel({ bizId, tallyUrl, company, from, to }: 
       if (!stockInLedger && typedOpeningStock) rows.push({ ledger: "Stock-in-Hand", head: "stock", debit: typedOpeningStock, credit: 0 });
       if (!rows.length) say("Opening balances: none in Tally.");
       else {
-        const r = await post("/api/finance/opening-balances", { business_id: bizId, fy_id: fy.id, rows, retained: "Capital Account", retained_head: "capital" });
+        const r = await post("/api/finance/opening-balances", { business_id: bizId, fy_id: fy.id, rows, retained: "Capital Account", retained_head: "capital", small_difference_to: "Opening Balance Difference" });
         const j = await r.json().catch(() => ({}));
         say(r.ok ? `Opening balances: ${rows.length} ledgers posted as ${j.entry_no}.` : `Opening balances: ${j.error ?? "couldn't post"}`, r.ok || r.status === 409);
       }
@@ -115,9 +115,14 @@ export default function MatchBooksPanel({ bizId, tallyUrl, company, from, to }: 
         <label style={fieldStyle}>Tally&apos;s net result for the year
           <input value={tallyResult} onChange={e => setTallyResult(e.target.value)} inputMode="decimal" placeholder="0.00" style={inputStyle} />
         </label>
-        <select value={resultKind} onChange={e => setResultKind(e.target.value as "loss" | "profit")} aria-label="Profit or loss" style={{ ...inputStyle, padding: "0 8px" }}>
-          <option value="loss">Loss</option><option value="profit">Profit</option>
-        </select>
+        <div role="radiogroup" aria-label="Profit or loss" style={{ display: "flex", gap: 6 }}>
+          {(["profit", "loss"] as const).map(k => (
+            <button key={k} type="button" role="radio" aria-checked={resultKind === k} onClick={() => setResultKind(k)}
+              style={{ ...inputStyle, padding: "0 14px", cursor: "pointer", fontWeight: 700, background: resultKind === k ? (k === "profit" ? "#0B7A55" : "#B4321F") : "#FFFFFF", color: resultKind === k ? "#FFFFFF" : "#5E6B66", border: resultKind === k ? "none" : inputStyle.border }}>
+              {k === "profit" ? "Profit" : "Loss"}
+            </button>
+          ))}
+        </div>
       </div>
       <button onClick={run} disabled={busy || !bizId} style={{ height: 42, borderRadius: 10, border: "1px solid #12352D", background: "#12352D", color: "#FFFFFF", fontWeight: 700, cursor: busy ? "wait" : "pointer", fontFamily: "inherit" }}>
         {busy ? "Matching with Tally…" : `Match ${from.slice(0, 4)}-${to.slice(2, 4)} books with Tally`}
