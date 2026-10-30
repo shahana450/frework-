@@ -451,13 +451,12 @@ export default function TallyPage() {
           got.forEach(keep);
         } catch (e) { lastError = e instanceof Error ? e.message : String(e); failed = true; break; }
       }
-      // Some Tally installs (e.g. Educational mode) send nothing for a month filter. Then ask once for the Day Book of
-      // the whole period and keep the dates in range — never after a failure, when Tally is already struggling.
+      // Some Tally installs (e.g. Educational mode) send nothing for a month filter. Then read the whole period in one
+      // request (a big reply — Tally is busy for a minute or two) and keep the dates in range. Never after a failure,
+      // when Tally is already struggling. (The Day Book report isn't used: it ignores the dates and sends one day.)
       if (!failed && !allVouchers.length) {
-        setSyncProgress("Tally sent nothing month by month — reading the Day Book for the whole period…");
-        const day = "<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Data</TYPE><ID>Day Book</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>" + fd + "</SVFROMDATE><SVTODATE>" + td + "</SVTODATE><EXPLODEFLAG>Yes</EXPLODEFLAG>"
-          + (companyName ? "<SVCURRENTCOMPANY>" + companyName.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</SVCURRENTCOMPANY>" : "") + "</STATICVARIABLES></DESC></BODY></ENVELOPE>";
-        try { parseTallyVouchers(await (await tallyFetch(tallyUrl, day, 120000)).text()).forEach(keep); }
+        setSyncProgress("Tally sent nothing month by month — reading the whole year in one go. This can take 1–3 minutes; leave Tally alone…");
+        try { parseTallyVouchers(await (await tallyFetch(tallyUrl, xml.replace(/FP_Vouchers/g, "FPY" + Date.now().toString(36)), 240000)).text()).forEach(keep); }
         catch (e) { lastError = e instanceof Error ? e.message : String(e); failed = true; }
       }
       if (failed) {

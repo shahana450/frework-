@@ -150,18 +150,31 @@ export function parseTallyVouchers(xml: string): TallyVoucher[] {
     // Ledger lines: ALLLEDGERENTRIES (accounting vouchers, party / tax / round-off lines) plus, for item invoices, the
     // purchase / sales ledger inside ALLINVENTORYENTRIES → ACCOUNTINGALLOCATIONS. Tally's sign is the truth: a negative
     // AMOUNT is a debit, a positive one a credit. ISDEEMEDPOSITIVE only decides when the amount carries no sign.
-    const entryRe = /<(ALLLEDGERENTRIES|ACCOUNTINGALLOCATIONS)\.LIST[^>]*>([\s\S]*?)<\/\1\.LIST>/gi;
-    let em;
-    while ((em = entryRe.exec(block)) !== null) {
-      const eb = em[2];
-      const ledgerName = (eb.match(/<LEDGERNAME[^>]*>([^<]+)<\/LEDGERNAME>/i) ?? [])[1]?.trim() ?? "";
-      const amtStr = (eb.match(/<AMOUNT[^>]*>([^<]+)<\/AMOUNT>/i) ?? [])[1]?.trim() ?? "0";
-      const raw = parseFloat(amtStr.replace(/,/g, "")) || 0;
-      const flag = /Yes/i.test((eb.match(/<ISDEEMEDPOSITIVE[^>]*>([^<]+)<\/ISDEEMEDPOSITIVE>/i) ?? [])[1] ?? "");
-      const isDeemed = raw < 0 ? true : raw > 0 ? false : flag;
-      const amount = Math.round(Math.abs(raw) * 100) / 100;
-      if (ledgerName && amount > 0) lines.push({ ledgerName, amount, isDeemed });
-    }
+    // A collection export repeats each line under LEDGERENTRIES too, so those are skipped — but the Day Book report
+    // sends an item invoice's party / tax / round-off lines ONLY under LEDGERENTRIES, so then they're the ones to read.
+    // Some companies also list an item invoice's purchase / sales ledger inside ALLLEDGERENTRIES — then the
+    // ACCOUNTINGALLOCATIONS copy would count it twice, so those are added only when the voucher doesn't balance without.
+    const read = (re: RegExp) => {
+      const out: TallyVoucher["lines"] = [];
+      let em;
+      while ((em = re.exec(block)) !== null) {
+        const eb = em[1];
+        const ledgerName = (eb.match(/<LEDGERNAME[^>]*>([^<]+)<\/LEDGERNAME>/i) ?? [])[1]?.trim() ?? "";
+        const amtStr = (eb.match(/<AMOUNT[^>]*>([^<]+)<\/AMOUNT>/i) ?? [])[1]?.trim() ?? "0";
+        const raw = parseFloat(amtStr.replace(/,/g, "")) || 0;
+        const flag = /Yes/i.test((eb.match(/<ISDEEMEDPOSITIVE[^>]*>([^<]+)<\/ISDEEMEDPOSITIVE>/i) ?? [])[1] ?? "");
+        const isDeemed = raw < 0 ? true : raw > 0 ? false : flag;
+        const amount = Math.round(Math.abs(raw) * 100) / 100;
+        if (ledgerName && amount > 0) out.push({ ledgerName, amount, isDeemed });
+      }
+      return out;
+    };
+    const net = (ls: TallyVoucher["lines"]) => Math.round(ls.reduce((s, l) => s + (l.isDeemed ? l.amount : -l.amount), 0) * 100) / 100;
+    const all = read(/<ALLLEDGERENTRIES\.LIST[^>]*>([\s\S]*?)<\/ALLLEDGERENTRIES\.LIST>/gi);
+    const alloc = read(/<ACCOUNTINGALLOCATIONS\.LIST[^>]*>([\s\S]*?)<\/ACCOUNTINGALLOCATIONS\.LIST>/gi);
+    const base = all.length ? all : read(/<(?<![A-Z])LEDGERENTRIES\.LIST[^>]*>([\s\S]*?)<\/LEDGERENTRIES\.LIST>/gi);
+    lines.push(...base);
+    if (alloc.length && (!base.length || Math.abs(net(base)) >= 0.01)) lines.push(...alloc);
     if (date && lines.length >= 1) results.push({ date, voucherType, voucherNumber, narration, lines, remoteId, guid, masterId });
   }
   return results;
