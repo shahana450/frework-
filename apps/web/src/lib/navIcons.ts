@@ -37,6 +37,7 @@ const P = {
   bulb: "M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z",
   plane: "M3 13l18-8-6 16-3-7zM12 14l3-3",
   building: "M5 21V4h9v17M14 9h5v12M8 8h3M8 12h3M8 16h3M3 21h18",
+  gear: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z",
   globe: "M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z",
   link: "M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1",
   team: "M12 11a3 3 0 100-6 3 3 0 000 6zM6 20a6 6 0 0112 0M5 11a2.5 2.5 0 100-5M19 11a2.5 2.5 0 100-5",
@@ -54,7 +55,7 @@ const BY_PATH: Record<string, string> = {
   "/finance/reports?tab=profit_loss": P.trend, "/finance/reports?tab=balance_sheet": P.columns, "/finance/reports?tab=cash_flow": P.drop, "/finance/recap": P.calendar,
   "/finance/audit": P.search, "/finance/gst": P.percent, "/finance/audit/gst-recon": P.sync, "/finance/tds": P.tag,
   "/finance/ai-review": P.robot, "/finance/upload": P.clip, "/finance/shelf": P.shelf, "/finance/insights": P.bulb, "/finance/virtual-ca": P.plane,
-  "/finance/settings/business": P.building, "/finance/settings/region": P.globe, "/finance/integrations": P.link, "/finance/portals": P.bank, "/finance/whatsapp": P.whatsapp, "/finance/fy": P.calendar,
+  "/finance/settings/business": P.building, "/finance/settings": P.gear, "/finance/settings/region": P.globe, "/finance/integrations": P.link, "/finance/portals": P.bank, "/finance/whatsapp": P.whatsapp, "/finance/fy": P.calendar,
   "/finance/team": P.team, "/finance/tally": P.plug, "/finance/ca-dashboard": P.briefcase, "/finance/help": P.help, "/dashboard": P.home,
 };
 

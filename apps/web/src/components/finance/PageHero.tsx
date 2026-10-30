@@ -31,6 +31,7 @@ export function HeroFyPicker({ years, value, onChange }: { years: { id: string; 
 const SETTINGS_TABS: { key: string; label: string; href: string }[] = [
   { key: "business", label: "Business", href: "/finance/settings/business" },
   { key: "region", label: "Region & currency", href: "/finance/settings/region" },
+  { key: "fy", label: "Financial years", href: "/finance/fy" },
   { key: "team", label: "Team & access", href: "/finance/team" },
   { key: "whatsapp", label: "WhatsApp", href: "/finance/whatsapp" },
   { key: "portals", label: "Portal connect", href: "/finance/portals" },
