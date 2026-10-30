@@ -12,7 +12,7 @@ export const maxDuration = 300;
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-type InVoucher = { date: string; voucherType: string; voucherNumber: string; narration: string; lines: { ledgerName: string; amount: number; isDeemed: boolean }[] };
+type InVoucher = { date: string; voucherType: string; voucherNumber: string; narration: string; seq?: number; lines: { ledgerName: string; amount: number; isDeemed: boolean }[] };
 
 // Tally → FreWork. Every voucher goes through the posting engine (balance, year lock, audit log)
 // and keeps Tally's number as its entry number, so importing the same voucher twice is impossible.
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     const todo = vouchers.map(v => {
       const k = `${v.voucherType}|${v.date}`;
       const n = (seq.get(k) ?? 0) + 1; seq.set(k, n);
-      return { v, entryNo: importEntryNo(v, n) };
+      return { v, entryNo: importEntryNo(v, Number.isInteger(v.seq) && v.seq! > 0 ? v.seq! : n) };   // the browser's count covers every batch
     });
     const have = new Map<string, { id: string; total: number }>();
     for (let i = 0; i < todo.length; i += 300) {

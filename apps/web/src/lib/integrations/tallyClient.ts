@@ -28,8 +28,12 @@ export async function readTallyVouchers(tallyUrl: string, from: string, to: stri
 /** Sends vouchers to FreWork's import endpoint in batches. Nothing is written to the database from the browser. */
 export async function importTallyVouchers(businessId: string, vouchers: TallyVoucher[], opts: { ledgerGroups?: Record<string, string>; company?: string | null; onProgress?: (msg: string) => void } = {}): Promise<ImportSummary> {
   const sum: ImportSummary = { imported: 0, skipped: 0, fromFreWork: 0, failedCount: 0, failed: [], newLedgers: 0 };
-  for (let i = 0; i < vouchers.length; i += 100) {
-    const batch = vouchers.slice(i, i + 100);
+  // Vouchers without a number are told apart by type, date and their order that day — counted over the WHOLE import,
+  // so two on the same day in different batches never get the same entry number (the second used to be skipped)
+  const seen = new Map<string, number>();
+  const numbered = vouchers.map(v => { const k = `${v.voucherType}|${v.date}`; const n = (seen.get(k) ?? 0) + 1; seen.set(k, n); return { ...v, seq: n }; });
+  for (let i = 0; i < numbered.length; i += 100) {
+    const batch = numbered.slice(i, i + 100);
     opts.onProgress?.(`Importing ${i + 1}–${i + batch.length} of ${vouchers.length}…`);
     const res = await fetch("/api/finance/integrations/tally/import", {
       method: "POST", headers: { "Content-Type": "application/json" },
