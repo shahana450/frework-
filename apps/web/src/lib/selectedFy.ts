@@ -36,7 +36,11 @@ export function useFinancialYear(bizId: string | null | undefined) {
     if (!bizId) return;
     let live = true;
     supabase.from("fw_fin_financial_years").select("id,label,start_date,end_date").eq("business_id", bizId).order("start_date", { ascending: false })
-      .then(({ data }) => { if (!live) return; const list = (data ?? []) as FyOption[]; setYears(list); setFyState(pickFy(list, bizId)); setLoaded(true); });
+      .then(({ data }) => { if (!live) return; const saved = readSelectedFy(bizId);
+        // A year saved twice shows once (figures go by its dates, so either copy gives the same numbers)
+        const byDates = new Map<string, FyOption>();
+        for (const f of (data ?? []) as FyOption[]) { const k = f.start_date + "|" + f.end_date; if (!byDates.has(k) || f.id === saved) byDates.set(k, f); }
+        const list = [...byDates.values()]; setYears(list); setFyState(pickFy(list, bizId)); setLoaded(true); });
     const on = (e: Event) => { const d = (e as CustomEvent).detail; if (d?.bizId === bizId) setYears(list => { setFyState(y => list.find(f => f.id === d.fyId) ?? y); return list; }); };
     window.addEventListener(EVT, on);
     return () => { live = false; window.removeEventListener(EVT, on); };

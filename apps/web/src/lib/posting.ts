@@ -144,6 +144,9 @@ async function ensureFinancialYear(sb: SupabaseClient, businessId: string, date:
     const s = iso(start), e = iso(end), y = start.getUTCFullYear();
     const label = s.slice(5) === "01-01" ? String(y) : `${y}-${String(y + 1).slice(2)}`;
     const current = today >= s && today <= e;
+    // Several entries posted at once can each try to open the same year: open it only once
+    const { data: have } = await sb.from("fw_fin_financial_years").select("id").eq("business_id", businessId).eq("start_date", s).limit(1);
+    if (have?.length) { if (date <= e) return; start = new Date(end); start.setUTCDate(start.getUTCDate() + 1); continue; }
     const { data: row } = await sb.from("fw_fin_financial_years").insert({ business_id: businessId, label, start_date: s, end_date: e, is_current: current }).select("id").single();
     if (current && row) await sb.from("fw_fin_financial_years").update({ is_current: false }).eq("business_id", businessId).neq("id", row.id);
     if (date <= e) return;
