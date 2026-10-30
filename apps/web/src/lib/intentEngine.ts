@@ -127,7 +127,18 @@ export async function loadQueryBooks(sb: SupabaseClient, businessId: string, unt
   const chunks: string[][] = [];
   for (let i = 0; i < heads.length; i += 300) chunks.push(heads.slice(i, i + 300).map(h => h.id));
   for (let i = 0; i < chunks.length; i += 6) {
-    const res = await Promise.all(chunks.slice(i, i + 6).map(ids => sb.from("fw_fin_journal_lines").select("journal_id,account_id,dr_amount,cr_amount").in("journal_id", ids)));
+    // A read returns at most 1,000 rows, and 300 entries can have more lines than that (Tally vouchers often do):
+    // page through each chunk until it's all read, or totals come out short
+    const readChunk = async (ids: string[]) => {
+      const all: unknown[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await sb.from("fw_fin_journal_lines").select("id,journal_id,account_id,dr_amount,cr_amount").in("journal_id", ids).order("id").range(from, from + 999);
+        if (error) return { data: null, error };
+        all.push(...(data ?? []));
+        if (!data || data.length < 1000) return { data: all, error: null };
+      }
+    };
+    const res = await Promise.all(chunks.slice(i, i + 6).map(readChunk));
     for (const { data, error } of res) {
       if (error) return { accounts, journals: [], error };
       for (const l of (data ?? []) as { journal_id: string; account_id: string; dr_amount: number; cr_amount: number }[]) {

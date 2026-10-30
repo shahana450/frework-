@@ -210,9 +210,9 @@ export default function JournalsPage() {
     if (!todo.length) return;
     todo.forEach(id => checkedIncome.current.add(id));
     (async () => {
-      for (let i = 0; i < todo.length; i += 100) {
+      for (let i = 0; i < todo.length; i += 50) {
         const { data: ls } = await supabase.from("fw_fin_journal_lines")
-          .select("journal_id,dr_amount,cr_amount,fw_fin_chart_of_accounts(name,type,sub_type)").in("journal_id", todo.slice(i, i + 100));
+          .select("journal_id,dr_amount,cr_amount,fw_fin_chart_of_accounts(name,type,sub_type)").in("journal_id", todo.slice(i, i + 50));
         const byJ = new Map<string, { dr: number; cr: number; account: string; accountType: string | null; subType: string | null }[]>();
         for (const l of (ls ?? []) as unknown as { journal_id: string; dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { name: string; type: string; sub_type: string | null } | null }[]) {
           const a = byJ.get(l.journal_id) ?? [];

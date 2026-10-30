@@ -352,9 +352,9 @@ export default function FinanceDashboard() {
                n.includes("advertisement") || n.includes("bank charges") || n.includes("audit fee");
       };
 
-      for (let i = 0; i < postedIds.length; i += 200) {
+      for (let i = 0; i < postedIds.length; i += 50) {
         const { data: lines } = await supabase.from("fw_fin_journal_lines")
-          .select("account_id,dr_amount,cr_amount").in("journal_id", postedIds.slice(i, i + 200));
+          .select("account_id,dr_amount,cr_amount").in("journal_id", postedIds.slice(i, i + 50));
         for (const l of lines ?? []) {
           if (isIncome(l.account_id))  salesRev  += (l.cr_amount || 0) - (l.dr_amount || 0);
           if (isExpense(l.account_id)) expTotal  += (l.dr_amount || 0) - (l.cr_amount || 0);

@@ -40,9 +40,9 @@ export async function GET(req: NextRequest) {
     const lines = new Map<string, { dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { name: string } | null }[]>();
     // chunks run in parallel — sequential round-trips were the slow part on big books
     const chunks: string[][] = [];
-    for (let i = 0; i < ids.length; i += 300) chunks.push(ids.slice(i, i + 300));
-    for (let i = 0; i < chunks.length; i += 8) {
-      const results = await Promise.all(chunks.slice(i, i + 8).map(chunk => supabase.from("fw_fin_journal_lines")
+    for (let i = 0; i < ids.length; i += 50) chunks.push(ids.slice(i, i + 50));
+    for (let i = 0; i < chunks.length; i += 12) {
+      const results = await Promise.all(chunks.slice(i, i + 12).map(chunk => supabase.from("fw_fin_journal_lines")
         .select("journal_id,dr_amount,cr_amount,fw_fin_chart_of_accounts(name)").in("journal_id", chunk)));
       for (const { data, error } of results) {
         if (error) throw error;
