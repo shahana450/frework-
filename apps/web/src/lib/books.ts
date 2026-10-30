@@ -156,7 +156,7 @@ export async function loadBookLines(sb: SupabaseClient, businessId: string, end:
     const results = await Promise.all(chunks.slice(c, c + 8).map(async chunk => {
       const got: BookLine[] = [];
       for (let from = 0; ; from += 1000) {
-        const { data, error } = await sb.from("fw_fin_journal_lines").select("journal_id,account_id,dr_amount,cr_amount").in("journal_id", chunk).range(from, from + 999);
+        const { data, error } = await sb.from("fw_fin_journal_lines").select("journal_id,account_id,dr_amount,cr_amount").in("journal_id", chunk).order("id").range(from, from + 999);
         if (error) throw new Error(error.message);
         for (const l of data ?? []) got.push({ account_id: l.account_id, dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0, date: dateOf.get(l.journal_id) ?? "" });
         if (!data || data.length < 1000) break;
