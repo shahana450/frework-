@@ -122,15 +122,16 @@ export function explainTallyError(raw: string, educational: boolean, port?: stri
 /** Maps a Tally group (primary or common sub-group) to a FreWork ledger head. */
 export function headForTallyGroup(parent: string): LedgerHead | null {
   const p = parent.toLowerCase();
+  // Singular or plural, as companies often rename or re-create Tally's groups ("Current Asset", "Sundry Debtor")
   const key =
-    /bank (accounts|od)|bank occ/.test(p) ? "bank" : /cash-in-hand|cash in hand/.test(p) ? "cash" :
-    /sundry debtors/.test(p) ? "debtors" : /sundry creditors/.test(p) ? "creditors" :
-    /duties & taxes|duties and taxes/.test(p) ? "duties" : /fixed assets/.test(p) ? "fixed_asset" :
-    /capital account|reserves/.test(p) ? "capital" : /loans \(liability\)|secured loans|unsecured loans/.test(p) ? "loan" :
-    /loans & advances|deposits/.test(p) ? "advances" : /stock-in-hand|stock in hand/.test(p) ? "stock" : /current assets|investments/.test(p) ? "current_asset" :
-    /current liabilities|provisions/.test(p) ? "current_liability" : /sales accounts/.test(p) ? "sales" :
-    /purchase accounts/.test(p) ? "purchase" : /indirect expenses/.test(p) ? "indirect_expense" : /^direct expenses/.test(p) ? "direct_expense" :
-    /direct incomes|indirect incomes/.test(p) ? "indirect_income" : null;   // "indirect" is checked first: "direct expenses" sits inside it
+    /bank (accounts?|od)|bank occ/.test(p) ? "bank" : /cash-in-hand|cash in hand/.test(p) ? "cash" :
+    /sundry debtors?/.test(p) ? "debtors" : /sundry creditors?/.test(p) ? "creditors" :
+    /duties & tax(es)?|duties and tax(es)?/.test(p) ? "duties" : /fixed assets?/.test(p) ? "fixed_asset" :
+    /capital accounts?|reserves?/.test(p) ? "capital" : /loans? \(liability\)|secured loans?|unsecured loans?/.test(p) ? "loan" :
+    /loans? & advances?|deposits?/.test(p) ? "advances" : /stock-in-hand|stock in hand/.test(p) ? "stock" : /current assets?|investments?/.test(p) ? "current_asset" :
+    /current liabilit(y|ies)|provisions?/.test(p) ? "current_liability" : /sales accounts?/.test(p) ? "sales" :
+    /purchase accounts?/.test(p) ? "purchase" : /indirect expenses?/.test(p) ? "indirect_expense" : /^direct expenses?/.test(p) ? "direct_expense" :
+    /direct incomes?|indirect incomes?/.test(p) ? "indirect_income" : null;   // "indirect" is checked first: "direct expenses" sits inside it
   return key ? headByKey(key) ?? null : null;
 }
 

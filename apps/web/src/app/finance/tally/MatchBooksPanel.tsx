@@ -69,6 +69,9 @@ export default function MatchBooksPanel({ bizId, tallyUrl, company, from, to }: 
         const r = await post("/api/finance/opening-balances", { business_id: bizId, fy_id: fy.id, rows, retained: "Capital Account", retained_head: "capital", small_difference_to: "Opening Balance Difference" });
         const j = await r.json().catch(() => ({}));
         say(r.ok ? `Opening balances: ${rows.length} ledgers posted as ${j.entry_no}.` : `Opening balances: ${j.error ?? "couldn't post"}`, r.ok || r.status === 409);
+        // Say which ledgers were left out because their Tally group isn't one FreWork knows — the usual cause of a difference
+        const unknown = withHead.filter(l => Math.abs(l.opening) >= 0.005 && !l.head);
+        if (!r.ok && unknown.length) say(`Left out — group not recognised: ${unknown.slice(0, 8).map(l => `${l.name} (${l.parent || "no group"}) ${inr(Math.abs(l.opening))}`).join(", ")}${unknown.length > 8 ? `, and ${unknown.length - 8} more` : ""}. Tell FreBook support the group name.`, false);
       }
 
       // 4. Change in stock. A Stock-in-Hand ledger gives the opening; a company that keeps stock in items (inventory)
