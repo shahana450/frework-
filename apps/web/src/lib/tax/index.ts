@@ -35,7 +35,8 @@ export const IN_GST: TaxModule = {
   withholding: { name: "TDS", payableLedger: "TDS Payable", receivableLedger: "TDS Receivable" },
   aiRules: `GST (India): same state as the business → intra (CGST+SGST); different state, "inter-state" or IGST → inter.
 "including GST" → inclusive=true with the total as amount; "plus GST" → inclusive=false with the pre-tax amount.
-TDS: only when mentioned — 194J professional 10%, 194C contractor 1%/2%, 194I rent 10%, 194A interest 10%.`,
+TDS: only when mentioned — 194J professional 10%, 194C contractor 1%/2%, 194I rent 10%, 194A interest 10%.
+Works contract / contractor / sub-contract / labour contract / civil work / job work is a SERVICE, never "Purchase": debit "Contract Charges" (expense; or the asset ledger if the user says it is capital work, e.g. building construction). TDS on contractors (Income-tax Act 2025 s.393(1) Table Sl. 6(i), was 194C) applies even if not mentioned when one payment is above ₹30,000 or the year's total above ₹1,00,000: 2% if the party is a firm/company/LLP ("Co.", "Ltd", "LLP", "& Co", "Pvt") — 1% if an individual or HUF; if unclear, use 2% and say so in "reason". Credit the party with the net amount and "TDS Payable" with the TDS.`,
 };
 
 export const NO_TAX: TaxModule = {
