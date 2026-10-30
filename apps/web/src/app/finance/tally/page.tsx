@@ -451,7 +451,15 @@ export default function TallyPage() {
           got.forEach(keep);
         } catch (e) { lastError = e instanceof Error ? e.message : String(e); failed = true; break; }
       }
-      // Never fall back to one whole-year request: that reply is tens of MB and freezes Tally
+      // Some Tally installs (e.g. Educational mode) send nothing for a month filter. Then ask once for the Day Book of
+      // the whole period and keep the dates in range — never after a failure, when Tally is already struggling.
+      if (!failed && !allVouchers.length) {
+        setSyncProgress("Tally sent nothing month by month — reading the Day Book for the whole period…");
+        const day = "<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Data</TYPE><ID>Day Book</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>" + fd + "</SVFROMDATE><SVTODATE>" + td + "</SVTODATE><EXPLODEFLAG>Yes</EXPLODEFLAG>"
+          + (companyName ? "<SVCURRENTCOMPANY>" + companyName.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</SVCURRENTCOMPANY>" : "") + "</STATICVARIABLES></DESC></BODY></ENVELOPE>";
+        try { parseTallyVouchers(await (await tallyFetch(tallyUrl, day, 120000)).text()).forEach(keep); }
+        catch (e) { lastError = e instanceof Error ? e.message : String(e); failed = true; }
+      }
       if (failed) {
         setImportVoucherResult({ ok: false, msg: "Tally stopped answering. Restart Tally and the FreWork Tally Bridge, press Connect, then import again." + (lastError ? " (" + lastError + ")" : "") });
         setTallyBusy(false); setSyncing(null); return;
