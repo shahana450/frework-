@@ -421,6 +421,17 @@ export default function TallyPage() {
       const defaultFrom = `${fyStartYear}-04-01`;
       const defaultTo = `${fyStartYear + 1}-03-31`;
       const rangeFrom = from || defaultFrom, rangeTo = to || defaultTo;
+      // Entries can only be posted inside a financial year: open the year being imported if the business hasn't got it
+      // (one April–March year at a time, so a range like 1-Apr-25 to 31-Mar-26 opens FY 2025-26)
+      {
+        const { data: fys } = await supabase.from("fw_fin_financial_years").select("start_date,end_date").eq("business_id", bizId);
+        const covered = (d: string) => (fys ?? []).some(f => f.start_date <= d && f.end_date >= d);
+        for (let y = +rangeFrom.slice(0, 4) - (+rangeFrom.slice(5, 7) < 4 ? 1 : 0); `${y}-04-01` <= rangeTo; y++) {
+          const s = `${y}-04-01`, e = `${y + 1}-03-31`;
+          if (covered(s) || covered(e) || (fys ?? []).some(f => f.start_date <= e && f.end_date >= s)) continue;   // never overlap a year
+          await supabase.from("fw_fin_financial_years").insert({ business_id: bizId, label: `${y}-${String(y + 1).slice(2)}`, start_date: s, end_date: e, is_current: false });
+        }
+      }
       // Tally ignores the date range on a voucher collection and sends every voucher of the company's period, so it is
       // asked ONCE for the range and the vouchers outside it are dropped here (asking month by month fetched the whole
       // year twelve times). One retry with a longer wait if Tally is slow.
