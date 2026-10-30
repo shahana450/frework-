@@ -9,6 +9,7 @@ export type Resolved =
   | { ok: false; needHeads: { account: string; suggested: string }[]; willCreate: { account: string; head: string }[] };
 
 const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, " ");
+const GENERIC = new Set(["a", "c", "ac", "account", "bank", "ltd", "limited", "pvt", "private", "co", "the", "and", "of", "india"]);
 
 export function makeFinder(accounts: { id: string; name: string }[]) {
   const exact = new Map(accounts.map(a => [norm(a.name), a]));
@@ -16,8 +17,18 @@ export function makeFinder(accounts: { id: string; name: string }[]) {
     const key = norm(name);
     const hit = exact.get(key);
     if (hit) return hit;
-    // Close variants only ("HDFC" ↔ "HDFC Bank"), never short fragments
-    for (const [k, v] of exact) if (k.length > 3 && key.length > 3 && (k.includes(key) || key.includes(k))) return v;
+    // Close variants only ("HDFC" ↔ "HDFC Bank"): every WORD of the shorter name is a word of the longer one.
+    // Never part of a word — "Rent" must not catch "Jikku Jose Current Account".
+    const words = (s: string) => s.split(/[^a-z0-9]+/).filter(Boolean);
+    const kw = words(key);
+    for (const [k, v] of exact) {
+      if (k.length <= 3 || key.length <= 3) continue;
+      const w = words(k);
+      const [short, long] = w.length <= kw.length ? [w, new Set(kw)] : [kw, new Set(w)];
+      // …and the extra words are only generic ones ("Rent" ≠ "Rent Payable", but "HDFC" = "HDFC Bank A/c")
+      const extra = [...long].filter(x => !short.includes(x));
+      if (short.length && short.every(x => long.has(x)) && extra.every(x => GENERIC.has(x))) return v;
+    }
     return undefined;
   };
 }
