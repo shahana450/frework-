@@ -3,7 +3,7 @@
 import { tallyFetch, parseTallyVouchers, monthsInRange, type TallyVoucher } from "../tallyUtils";
 import { ledgersXml, ledgersFrom, vouchersXml } from "./tally";
 
-export type ImportSummary = { imported: number; skipped: number; fromFreWork: number; failedCount: number; failed: { voucher: string; error: string }[]; newLedgers: number };
+export type ImportSummary = { imported: number; repaired?: number; skipped: number; fromFreWork: number; failedCount: number; failed: { voucher: string; error: string }[]; newLedgers: number };
 
 /** Ledger → Tally group, so imported ledgers land under the same head as in Tally. */
 export async function readTallyLedgerGroups(tallyUrl: string, company?: string | null): Promise<Record<string, string>> {
@@ -37,13 +37,13 @@ export async function importTallyVouchers(businessId: string, vouchers: TallyVou
     });
     const d = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(d.error ?? "Import failed. Please try again.");
-    sum.imported += d.imported ?? 0; sum.skipped += d.skipped ?? 0; sum.fromFreWork += d.from_frework ?? 0; sum.failedCount += d.failed_count ?? 0;
+    sum.imported += d.imported ?? 0; sum.repaired = (sum.repaired ?? 0) + (d.repaired ?? 0); sum.skipped += d.skipped ?? 0; sum.fromFreWork += d.from_frework ?? 0; sum.failedCount += d.failed_count ?? 0;
     sum.failed.push(...(d.failed ?? [])); sum.newLedgers += (d.created_ledgers ?? []).length;
   }
   return sum;
 }
 
 export const summaryText = (s: ImportSummary) =>
-  s.imported || s.skipped || s.fromFreWork || s.failedCount
-    ? `✓ Imported ${s.imported} voucher${s.imported === 1 ? "" : "s"}${s.skipped ? `, ${s.skipped} already imported earlier` : ""}${s.fromFreWork ? `, ${s.fromFreWork} skipped — pushed from FreWork, already in your books` : ""}${s.newLedgers ? `, ${s.newLedgers} new ledger${s.newLedgers > 1 ? "s" : ""}` : ""}${s.failedCount ? `. ${s.failedCount} not imported — e.g. ${s.failed[0]?.voucher}: ${s.failed[0]?.error}` : "."}`
+  s.imported || s.repaired || s.skipped || s.fromFreWork || s.failedCount
+    ? `✓ Imported ${s.imported} voucher${s.imported === 1 ? "" : "s"}${s.repaired ? `, ${s.repaired} corrected to match Tally` : ""}${s.skipped ? `, ${s.skipped} already imported earlier` : ""}${s.fromFreWork ? `, ${s.fromFreWork} skipped — pushed from FreWork, already in your books` : ""}${s.newLedgers ? `, ${s.newLedgers} new ledger${s.newLedgers > 1 ? "s" : ""}` : ""}${s.failedCount ? `. ${s.failedCount} not imported — e.g. ${s.failed[0]?.voucher}: ${s.failed[0]?.error}` : "."}`
     : "No vouchers found in Tally for this period.";
