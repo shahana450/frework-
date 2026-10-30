@@ -3,7 +3,7 @@
 // the opening balances, and the year's change in stock — then compare FreWork's profit or loss with Tally's.
 // Tally is asked only for groups and opening balances: asking it for year-end balances makes it total every voucher,
 // which freezes some installs. FreWork works the year-end figures out from the imported vouchers instead.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { tallyFetch } from "@/lib/tallyUtils";
 import { ledgerOpeningsXml, groupsXml, ledgerBooksFrom, groupsFrom, headKeyFor, drCr, stockFigures } from "@/lib/integrations/tallyBooks";
@@ -23,6 +23,19 @@ export default function MatchBooksPanel({ bizId, tallyUrl, company, from, to }: 
   const [openingStock, setOpeningStock] = useState("");
   const [tallyResult, setTallyResult] = useState("");
   const [resultKind, setResultKind] = useState<"loss" | "profit">("loss");
+  // The figures typed in are kept per business and year on this device, so they're there next time
+  const memKey = bizId ? `fw_tally_match:${bizId}:${from}` : "";
+  useEffect(() => {
+    if (!memKey) return;
+    try {
+      const m = JSON.parse(localStorage.getItem(memKey) ?? "null") as { o?: string; c?: string; r?: string; k?: "loss" | "profit" } | null;
+      if (m) { setOpeningStock(m.o ?? ""); setClosingStock(m.c ?? ""); setTallyResult(m.r ?? ""); if (m.k) setResultKind(m.k); }
+    } catch { /* nothing saved */ }
+  }, [memKey]);
+  useEffect(() => {
+    if (!memKey || (!openingStock && !closingStock && !tallyResult)) return;
+    try { localStorage.setItem(memKey, JSON.stringify({ o: openingStock, c: closingStock, r: tallyResult, k: resultKind })); } catch { /* private mode */ }
+  }, [memKey, openingStock, closingStock, tallyResult, resultKind]);
   const say = (t: string, ok = true) => setSteps(s => [...s, { t, ok }]);
 
   async function run() {
