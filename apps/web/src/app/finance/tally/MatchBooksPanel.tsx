@@ -48,7 +48,11 @@ export default function MatchBooksPanel({ bizId, tallyUrl, company, from, to }: 
       say("Reading ledgers and opening balances from Tally…");
       const ledgers = ledgerBooksFrom(await (await tallyFetch(tallyUrl, ledgerOpeningsXml(company || null), 90000)).text());
       if (!ledgers.length) { say("Tally sent no ledgers — check the company open in Tally.", false); return; }
-      const withHead = ledgers.map(l => ({ ...l, head: headKeyFor(l.parent, groups) }));
+      // Tally's own "Profit & Loss A/c" sits at the top level (no group) and carries the profits of earlier years
+      const withHead = ledgers.map(l => ({ ...l, head: headKeyFor(l.parent, groups) || (/^profit\s*&\s*loss\s*a\/?c$/i.test(l.name.trim()) ? "capital" : null) }));
+      // A company that keeps stock in items has no stock ledger: its opening stock is typed in and added to the openings
+      const stockInLedger = stockFigures(ledgers.map(l => ({ ...l, closing: 0 })), groups).ledgers.length > 0;
+      const typedOpeningStock = amount(openingStock);
 
       // 2. Groups: every FreWork ledger takes its Tally group
       const rg = await (await post("/api/finance/integrations/tally/books", { business_id: bizId, action: "regroup", ledgers: withHead.filter(l => l.head).map(l => ({ name: l.name, head: l.head })) })).json();
@@ -58,6 +62,8 @@ export default function MatchBooksPanel({ bizId, tallyUrl, company, from, to }: 
       const { data: fy } = await supabase.from("fw_fin_financial_years").select("id,label").eq("business_id", bizId).eq("start_date", from).maybeSingle();
       if (!fy) { say(`No FreWork financial year starts on ${from} — create it, then run this again.`, false); return; }
       const rows = withHead.filter(l => Math.abs(l.opening) >= 0.005 && l.head).map(l => { const x = drCr(l.opening); return { ledger: l.name, head: l.head!, debit: x.dr, credit: x.cr }; });
+      // Opening stock as a debit row (Tally's openings already hold last year's profit in its Profit & Loss A/c)
+      if (!stockInLedger && typedOpeningStock) rows.push({ ledger: "Stock-in-Hand", head: "stock", debit: typedOpeningStock, credit: 0 });
       if (!rows.length) say("Opening balances: none in Tally.");
       else {
         const r = await post("/api/finance/opening-balances", { business_id: bizId, fy_id: fy.id, rows, retained: "Capital Account", retained_head: "capital" });
