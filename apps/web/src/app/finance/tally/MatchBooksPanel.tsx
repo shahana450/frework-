@@ -20,6 +20,7 @@ export default function MatchBooksPanel({ bizId, tallyUrl, company, from, to }: 
   const [steps, setSteps] = useState<{ t: string; ok: boolean }[]>([]);
   const [pl, setPl] = useState<number | null>(null);
   const [closingStock, setClosingStock] = useState("");
+  const [openingStock, setOpeningStock] = useState("");
   const [tallyResult, setTallyResult] = useState("");
   const [resultKind, setResultKind] = useState<"loss" | "profit">("loss");
   const say = (t: string, ok = true) => setSteps(s => [...s, { t, ok }]);
@@ -51,14 +52,16 @@ export default function MatchBooksPanel({ bizId, tallyUrl, company, from, to }: 
         say(r.ok ? `Opening balances: ${rows.length} ledgers posted as ${j.entry_no}.` : `Opening balances: ${j.error ?? "couldn't post"}`, r.ok || r.status === 409);
       }
 
-      // 4. Change in stock: opening from Tally, closing typed in from Tally's Balance Sheet
+      // 4. Change in stock. A Stock-in-Hand ledger gives the opening; a company that keeps stock in items (inventory)
+      //    has none, so the opening is typed in from Tally's P&L. The closing is always typed in.
       const st = stockFigures(ledgers.map(l => ({ ...l, closing: 0 })), groups);
-      const closing = amount(closingStock);
-      if (!st.ledgers.length) say("Stock: no Stock-in-Hand ledger in Tally.");
-      else if (closing === null) say("Stock: type the closing stock from Tally's Balance Sheet above, then match again.", false);
+      const closing = amount(closingStock), typedOpening = amount(openingStock);
+      const opening = typedOpening ?? (st.ledgers.length ? st.opening : null);
+      const stockLedger = st.ledgers[0] ?? "Stock-in-Hand";
+      if (closing === null || opening === null) say("Stock: type the opening and closing stock from Tally's Profit & Loss above, then match again.", false);
       else {
-        const s = await (await post("/api/finance/integrations/tally/books", { business_id: bizId, action: "stock", fy_id: fy.id, stock_ledger: st.ledgers[0], opening: st.opening, closing })).json();
-        say(s.error ? `Stock: ${s.error}` : s.already ? `Stock: already posted as ${s.entry_no}.` : s.nothing ? "Stock: no change in the year." : `Stock: opening ${inr(st.opening)} → closing ${inr(closing)}, posted as ${s.entry_no}.`, !s.error);
+        const s = await (await post("/api/finance/integrations/tally/books", { business_id: bizId, action: "stock", fy_id: fy.id, stock_ledger: stockLedger, opening, closing })).json();
+        say(s.error ? `Stock: ${s.error}` : s.already ? `Stock: already posted as ${s.entry_no}.` : s.nothing ? "Stock: no change in the year." : `Stock: opening ${inr(opening)} → closing ${inr(closing)}, posted as ${s.entry_no}.`, !s.error);
       }
 
       // 5. FreWork's profit or loss for the year, against Tally's
@@ -84,7 +87,10 @@ export default function MatchBooksPanel({ bizId, tallyUrl, company, from, to }: 
         <div style={{ fontSize: "0.78rem", color: "#5E6B66", lineHeight: 1.5 }}>After importing vouchers: puts each ledger in its Tally group, brings in opening balances and the year&apos;s change in stock, then compares FreWork&apos;s profit or loss with Tally&apos;s.</div>
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
-        <label style={fieldStyle}>Closing stock (Tally Balance Sheet)
+        <label style={fieldStyle}>Opening stock (Tally P&amp;L)
+          <input value={openingStock} onChange={e => setOpeningStock(e.target.value)} inputMode="decimal" placeholder="0.00" style={inputStyle} />
+        </label>
+        <label style={fieldStyle}>Closing stock (Tally P&amp;L)
           <input value={closingStock} onChange={e => setClosingStock(e.target.value)} inputMode="decimal" placeholder="0.00" style={inputStyle} />
         </label>
         <label style={fieldStyle}>Tally&apos;s net result for the year
