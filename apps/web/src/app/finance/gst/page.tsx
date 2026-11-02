@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Gstr1Panel from "./Gstr1Panel";
 import Link from "next/link";
-import PageHero, { HeroAction, HT, SERIF } from "@/components/finance/PageHero";
+import PageHero, { HeroAction, HeroFyPicker, HT, SERIF } from "@/components/finance/PageHero";
+import { useFinancialYear } from "@/lib/selectedFy";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 
 type GSTSummary = {
@@ -36,13 +37,30 @@ function getMonthOptions() {
   return result;
 }
 
+/** Months of a financial year, latest first */
+function monthsOfYear(startIso: string, endIso: string) {
+  const out: { value: string; label: string }[] = [];
+  for (let d = new Date(startIso.slice(0, 7) + "-01T00:00:00"); d.toISOString().slice(0, 7) <= endIso.slice(0, 7); d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+    const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    out.push({ value: v, label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}` });
+  }
+  return out.reverse();
+}
+
 export default function GSTPage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
   const [gstin, setGstin] = useState("");
   const [bizName, setBizName] = useState("");
-  const monthOptions = getMonthOptions();
-  const [selectedMonth, setSelectedMonth] = useState(monthOptions[0].value);
+  // The financial year (shared with every tab), then a month inside it — April to March, latest first, none in the future
+  const { years, fy, setFy } = useFinancialYear(bizId);
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const monthOptions = fy ? monthsOfYear(fy.start_date, fy.end_date).filter(m => m.value <= thisMonth) : getMonthOptions();
+  if (!monthOptions.length) monthOptions.push(...getMonthOptions());
+  const [selectedMonth, setSelectedMonth] = useState(getMonthOptions()[0].value);
+  useEffect(() => { if (monthOptions.length && !monthOptions.some(m => m.value === selectedMonth)) setSelectedMonth(monthOptions[0].value); },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fy?.id]);
   const [summary, setSummary] = useState<GSTSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -88,10 +106,10 @@ export default function GSTPage() {
         return (
           <PageHero eyebrow={`Goods & services tax · ${monthLabel}`} title="GST returns, from your books"
             sub={gstin ? `${bizName} · GSTIN ${gstin}` : undefined}
-            actions={<select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} aria-label="Return month"
+            actions={<span style={{ display: "inline-flex", gap: 10, flexWrap: "wrap" }}><HeroFyPicker years={years} value={fy?.id ?? ""} onChange={setFy} /><select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} aria-label="Return month"
               style={{ height: 46, padding: "0 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.28)", background: HT.green, color: "#FFFFFF", fontFamily: SERIF, fontSize: 15, cursor: "pointer" }}>
               {monthOptions.map(mo => <option key={mo.value} value={mo.value}>{mo.label}</option>)}
-            </select>}
+            </select></span>}
             tiles={[
               { label: "Taxable sales", value: summary ? `₹${fmt(summary.taxable_sales ?? summary.total_sales)}` : "—" },
               { label: "Purchases", value: summary ? `₹${fmt(summary.total_purchases)}` : "—" },
