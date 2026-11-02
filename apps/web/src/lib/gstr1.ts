@@ -151,7 +151,7 @@ export function buildGstr1(gstin: string, homeState: string | null, period: stri
   }
 
   // The portal's template wants the version and hash fields the offline tool writes
-  const json: Record<string, unknown> = { gstin, fp: `${period.slice(5, 7)}${period.slice(0, 4)}`, version: "GST3.2.1", hash: "hash" };
+  const json: Record<string, unknown> = { gstin, fp: `${period.slice(5, 7)}${period.slice(0, 4)}`, version: "GST3.0.4", hash: "hash" };
   if (b2b.size) json.b2b = [...b2b].map(([ctin, inv]) => ({ ctin, inv }));
   if (b2cl.size) json.b2cl = [...b2cl].map(([pos, inv]) => ({ pos, inv }));
   if (b2cs.size) json.b2cs = [...b2cs.values()].filter(x => x.txval !== 0).map(x => x.sply_ty === "INTER" ? { sply_ty: x.sply_ty, rt: x.rt, typ: x.typ, pos: x.pos, txval: x.txval, iamt: x.iamt, csamt: x.csamt } : { sply_ty: x.sply_ty, rt: x.rt, typ: x.typ, pos: x.pos, txval: x.txval, camt: x.camt, samt: x.samt, csamt: x.csamt });
@@ -161,5 +161,18 @@ export function buildGstr1(gstin: string, homeState: string | null, period: stri
   if (hsnB2b.size || hsnB2c.size) json.hsn = { ...(hsnB2b.size ? { hsn_b2b: hsnList(hsnB2b) } : {}), ...(hsnB2c.size ? { hsn_b2c: hsnList(hsnB2c) } : {}) };
   if ([...hsnB2b.values(), ...hsnB2c.values()].some(x => !x.hsn_sc)) issues.push({ level: "error", text: "Some sales have no HSN / SAC code, and the portal rejects the file without one. Enter the HSN / SAC to use in the box above (e.g. 998311 for management consultancy), or add it to those invoices." });
 
+  // The portal's checks: CGST and SGST are equal halves (paise differences in the books are evened out — the total
+  // tax is unchanged), and blank text fields are left out rather than sent empty.
+  const even = (o: Record<string, unknown>) => {
+    if (typeof o.camt === "number" && typeof o.samt === "number" && o.camt !== o.samt && Math.abs(o.camt - o.samt) <= 1) {
+      const half = Math.round(((o.camt + o.samt) / 2) * 100) / 100; o.camt = half; o.samt = half;
+    }
+    for (const k of Object.keys(o)) if (o[k] === "" || o[k] === null || o[k] === undefined) delete o[k];
+    for (const v of Object.values(o)) {
+      if (Array.isArray(v)) v.forEach(x => x && typeof x === "object" && even(x as Record<string, unknown>));
+      else if (v && typeof v === "object") even(v as Record<string, unknown>);
+    }
+  };
+  even(json);
   return { json, issues, totals: [...tot.values()] };
 }
