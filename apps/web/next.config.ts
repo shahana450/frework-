@@ -13,7 +13,7 @@ const CSP = [
   "img-src 'self' data: blob: https:",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.phonepe.com https://api-preprod.phonepe.com http://localhost:7001 http://localhost:7002 http://127.0.0.1:7001 http://127.0.0.1:7002",
   "frame-src 'self' https://mercury.phonepe.com https://api.razorpay.com",
-  "frame-ancestors 'none'",
+  "frame-ancestors 'self'",   // only FreWork itself may frame its pages (FreBook windows); other sites never
   "base-uri 'self'",
   "form-action 'self' https://mercury.phonepe.com",
   "object-src 'none'",
@@ -38,7 +38,7 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: [
-          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Content-Security-Policy", value: CSP },
           // Never a wildcard: pages and API answer only to frework.online
           { key: "Access-Control-Allow-Origin", value: "https://frework.online" },

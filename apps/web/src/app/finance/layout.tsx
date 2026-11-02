@@ -4,6 +4,7 @@ import { financeTitle } from "@/lib/dueText";
 import { useState, useEffect, useRef } from "react";
 import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
 import { useTallyAutoCatchUp, AUTO_PUSH_EVENT } from "@/lib/tallyAutoCatchUp";
+import WindowDock, { openInWindow } from "@/components/finance/WindowDock";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PAYMENTS_LIVE } from "@/lib/plans";
@@ -20,6 +21,9 @@ import { ActiveBusinessProvider, useActiveBusinessStore, setActiveBusiness, read
 const FINANCE_CSS = `
   .fw-topicons { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 2px; overflow-x: auto; margin: 10px 16px 0; padding: 6px; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid #E6DFD0; border-radius: 18px; box-shadow: 0 10px 28px -20px rgba(15,43,37,0.55); scrollbar-width: none; }
   .fw-topicons::-webkit-scrollbar { display: none; }
+  .fw-topicons a .win { position: absolute; top: 2px; right: 4px; width: 18px; height: 18px; border-radius: 6px; display: none; align-items: center; justify-content: center; font-size: 12px; background: #12352D; color: #FFFFFF; cursor: pointer; }
+  .fw-topicons a:hover .win { display: flex; }
+  @media (hover: none) { .fw-topicons a .win { display: none !important; } }
   .fw-topicons a { position: relative; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 70px; padding: 7px 10px 8px; border-radius: 13px; text-decoration: none; color: #4A5752; font-size: 11.5px; font-weight: 700; white-space: nowrap; transition: background .18s, color .18s, transform .18s; }
   .fw-topicons a .ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: #F4EEE2; color: #0F2B25; transition: background .18s, color .18s, transform .18s; }
   .fw-topicons a:hover, .fw-topicons a:focus-visible { background: #FBF7EE; color: #0F2B25; outline: none; }
@@ -117,6 +121,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const [accountant, setAccountant] = useState(false);
   const [reviewCount, setReviewCount] = useState(0);
   const [search, setSearch] = useState("");
+  // Shown inside a FreBook window (WindowDock): the page alone, no menus
+  const [embedded, setEmbedded] = useState(false);
+  useEffect(() => { try { setEmbedded(new URLSearchParams(window.location.search).get("embed") === "1" || window.self !== window.top); } catch { setEmbedded(true); } }, []);
   // The one active business (Task 6): resolved here, shown in the header, provided to every page
   const active = useActiveBusinessStore();
   useTallyAutoCatchUp(active.businessId, tallyState);
@@ -227,6 +234,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
   // Don't show sidebar on setup/pricing/admin pages, and wait for sub check
   if (UNGUARDED.some(p => pathname.startsWith(p))) return <ActiveBusinessProvider>{children}</ActiveBusinessProvider>;
+  if (embedded) return <ActiveBusinessProvider>{children}</ActiveBusinessProvider>;
   if (!subChecked) return <div style={{ minHeight: "100vh", background: "#F5F6FA" }} />;
 
   const sidebarW = collapsed ? 96 : 240;
@@ -417,9 +425,11 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             {(viewOnly ? [{ href: "/finance/client", label: "Home" }, ...TOP_ICONS.filter(t => VIEW_ONLY_ICONS.includes(t.href))] : TOP_ICONS).filter(t => india || !t.href.startsWith("/finance/gst")).map(t => {
               const on = t.href.includes("?") ? pathname + search === t.href : t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
               return (
-                <Link key={t.href} href={t.href} className={[on ? "on" : "", ["/finance/books", "/finance/reports?tab=trial_balance", "/finance/gst/returns"].includes(t.href) ? "grp" : ""].join(" ").trim() || undefined} title={t.label} aria-current={on ? "page" : undefined}>
+                <Link key={t.href} href={t.href} onClick={e => { if (e.shiftKey) { e.preventDefault(); openInWindow(t.href, t.label); } }} className={[on ? "on" : "", ["/finance/books", "/finance/reports?tab=trial_balance", "/finance/gst/returns"].includes(t.href) ? "grp" : ""].join(" ").trim() || undefined} title={t.label} aria-current={on ? "page" : undefined}>
                   <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(t.href)} /></svg></span>
                   <span>{t.label}</span>
+                  <span className="win" role="button" tabIndex={-1} title={`Open ${t.label} in a window (or Shift+click)`} aria-label={`Open ${t.label} in a window`}
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); openInWindow(t.href, t.label); }}>⧉</span>
                 </Link>
               );
             })}
@@ -433,6 +443,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
           </div>
         )}
         <ActiveBusinessProvider>{children}</ActiveBusinessProvider>
+        <WindowDock />
       </main>
 
       {/* Phone tab bar */}
