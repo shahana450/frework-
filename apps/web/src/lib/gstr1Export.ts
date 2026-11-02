@@ -45,11 +45,23 @@ export const monthLabel = (month: string) => new Date(`${month}-01T00:00:00Z`).t
 export async function buildMonthGstr1(sb: SupabaseClient, bizId: string, month: string): Promise<Gstr1 & { gstin: string; fileName: string }> {
   const { from, to } = monthRange(month);
   const [rows, { data: biz }, { data: contacts }] = await Promise.all([
-    monthJournals(sb, bizId, from, to, ["sales", "credit_note"]),
+    monthJournals(sb, bizId, from, to),
     sb.from("fw_fin_businesses").select("gstin,state").eq("id", bizId).single(),
     sb.from("fw_fin_contacts").select("id,name,gstin,state").eq("business_id", bizId),
   ]);
-  const src: SrcJournal[] = rows.map(j => ({
+  // A sale is any entry that charges output GST against a sales / income ledger — a sales invoice, or a sale booked as a
+  // journal (bulk templates, Tally, older entries). Output GST credited = a sale; debited = a credit note.
+  const isOutput = (n: string) => /\b(output|payable)\b/i.test(n) && /\b(cgst|sgst|igst|utgst|cess)\b/i.test(n) && !/\b(rcm|reverse)\b/i.test(n);
+  const saleLike = rows.filter(j => {
+    if (j.type === "sales" || j.type === "credit_note") return true;
+    const ls = j.fw_fin_journal_lines ?? [];
+    return ls.some(l => isOutput(l.fw_fin_chart_of_accounts?.name ?? "")) && ls.some(l => l.fw_fin_chart_of_accounts?.type === "income");
+  }).map(j => {
+    if (j.type === "sales" || j.type === "credit_note") return j;
+    const out = (j.fw_fin_journal_lines ?? []).filter(l => isOutput(l.fw_fin_chart_of_accounts?.name ?? "")).reduce((s, l) => s + (Number(l.cr_amount) || 0) - (Number(l.dr_amount) || 0), 0);
+    return { ...j, type: out >= 0 ? "sales" : "credit_note" };
+  });
+  const src: SrcJournal[] = saleLike.map(j => ({
     id: j.id, entry_no: j.entry_no, date: String(j.date).slice(0, 10), type: j.type, reference_no: j.reference_no, party_name: j.party_name ?? null,
     contact_id: j.contact_id ?? null, total: Number(j.total_debit) || 0, metadata: j.metadata ?? null,
     lines: (j.fw_fin_journal_lines ?? []).map(l => ({ dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0, account: l.fw_fin_chart_of_accounts?.name ?? "" })),
@@ -58,8 +70,9 @@ export async function buildMonthGstr1(sb: SupabaseClient, bizId: string, month: 
   // GSTR-1 reports invoices: only the INV series (and CN/DN notes). Old-format numbers are listed as issues.
   const inSeries = (s: SrcJournal) => /^(INV|CN|DN)\//.test(s.entry_no ?? "");
   const left = src.filter(s => !inSeries(s));
-  const result = buildGstr1(gstin, (biz as { state?: string } | null)?.state ?? null, month, docsFromJournals(src.filter(inSeries), contacts ?? []));
-  if (left.length) result.issues.push({ level: "warn", text: `${left.length} sale entr${left.length === 1 ? "y is" : "ies are"} not in the INV invoice series (e.g. ${left.slice(0, 3).map(s => s.entry_no).join(", ")}) and ${left.length === 1 ? "was" : "were"} left out. Renumber them (Phase 2 repair) or raise proper invoices.` });
+  // Every sale is reported; ones outside the INV / CN / DN series are flagged so their invoice numbers get checked
+  const result = buildGstr1(gstin, (biz as { state?: string } | null)?.state ?? null, month, docsFromJournals(src, contacts ?? []));
+  if (left.length) result.issues.push({ level: "warn", text: `${left.length} sale${left.length === 1 ? " was" : "s were"} booked outside the INV invoice series (e.g. ${left.slice(0, 3).map(s => s.entry_no).join(", ")}). They're included — check each one's invoice number (its reference) before filing.` });
   return { ...result, gstin, fileName: `GSTR1_${gstin || "GSTIN"}_${month.slice(5, 7)}${month.slice(0, 4)}.json` };
 }
 
