@@ -41,7 +41,8 @@ const RULES: [RegExp, string][] = [
   [/interest (income|received)|discount received|commission received|rent received|other income|dividend/, "indirect_income"],
   [/^purchases?\b|purchase (a\/c|account)|raw material|stock purchase/, "purchase"],
   [/freight inward|carriage inward|wages|factory|manufacturing|power and fuel|coolie|loading|unloading|hamali/, "direct_expense"],
-  [/rent|salary|salaries|electricity|telephone|internet|printing|stationery|travel|conveyance|fees|audit|repairs|maintenance|insurance|advertis|bank charges|office|depreciation|interest (paid|on)|postage|courier|fuel|staff welfare|expense|charges|cleaning|housekeeping|painting|security|sweeping|garden|pest control|water|refreshment|tea|donation|subscription|software|legal|professional|consultancy|commission paid|discount allowed|bad debts?/, "indirect_expense"],
+  // Whole words only: "rent" must not catch "Current Account", nor "tea" catch "Steam"
+  [/\b(rent|salary|salaries|electricity|telephone|internet|printing|stationery|travel\w*|conveyance|fees?|audit|repairs?|maintenance|insurance|advertis\w*|bank charges|office|depreciation|interest (paid|on)|postage|courier|fuel|staff welfare|expenses?|charges?|cleaning|housekeeping|painting|security|sweeping|garden|pest control|water|refreshments?|tea|donations?|subscriptions?|software|legal|professional|consultancy|commission paid|discount allowed|bad debts?)\b/, "indirect_expense"],
 ];
 
 // Head for a ledger name, or null when the name doesn't make it clear

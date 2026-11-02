@@ -471,8 +471,19 @@ function TBGrouped({ data }: { data: TBData }) {
   const GROUPS: [string, string][] = [["asset", "Assets"], ["liability", "Liabilities"], ["income", "Income"], ["expense", "Expenses"], ["equity", "Equity"]];
   const [shut, setShut] = useState<Set<string>>(new Set());
   const flip = (k: string) => setShut(s => { const x = new Set(s); if (x.has(k)) x.delete(k); else x.add(k); return x; });
-  const known = new Set(GROUPS.map(g => g[0]));
-  const groups = [...GROUPS, ["__other", "Other"] as [string, string]].map(([k, l]) => ({ k, l, rows: data.accounts.filter(a => k === "__other" ? !known.has(a.type) : a.type === k) })).filter(g => g.rows.length);
+  // The report names each ledger's group ("Current Assets", "Capital & Reserves", "Indirect Expenses"…) — sort those into
+  // the five classes the same way the Balance Sheet and P&L do, so a ledger never lands under "Other" by its label
+  const classOf = (t: string) => {
+    const s = (t || "").toLowerCase();
+    if (["asset", "liability", "income", "expense", "equity"].includes(s)) return s;
+    if (/capital|reserve|equity|partner|proprietor/.test(s)) return "equity";
+    if (/expense|purchase|cost of/.test(s)) return "expense";
+    if (/income|sales|revenue/.test(s)) return "income";
+    if (/liabilit|loan|borrow|creditor|payable|duties|provision/.test(s)) return "liability";
+    if (/asset|stock|inventor|bank|cash|debtor|receivable|advance|deposit|investment/.test(s)) return "asset";
+    return "__other";
+  };
+  const groups = [...GROUPS, ["__other", "Other"] as [string, string]].map(([k, l]) => ({ k, l, rows: data.accounts.filter(a => classOf(a.type) === k) })).filter(g => g.rows.length);
   const cell: React.CSSProperties = { padding: "11px 24px", textAlign: "right", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" };
   const v = (n: number) => n > 0.005 ? fmt(n) : "—";
   const diff = Math.abs(data.total_dr - data.total_cr);

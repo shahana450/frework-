@@ -12,6 +12,8 @@ const QUICK: { key: string; label: string }[] = [
   { key: "fixed_asset", label: "Fixed asset" },
   { key: "stock", label: "Stock" },
   { key: "bank", label: "Bank" },
+  { key: "cash", label: "Cash" },
+  { key: "capital", label: "Capital" },
 ];
 
 /** Best first guess for a new ledger from its name and which side of cash/bank it sits on. */
@@ -20,6 +22,8 @@ export function guessGroup(name: string, side?: "in" | "out" | "party" | null): 
   if (/accumulated depreciation|acc\.? ?dep|provision for depreciation|depreciation (reserve|fund)/.test(n)) return "fixed_asset";
   if (/credit\s*card/.test(n)) return "current_liability";
   if (/\b(bank|hdfc|icici|sbi|axis|kotak|federal|canara|pnb|yes bank|idfc|indusind)\b/.test(n)) return "bank";
+  // Cash in hand — but not cash sales / purchases / discounts
+  if (/\b(cash|petty cash|cash[- ]in[- ]hand)\b/.test(n) && !/\b(sales?|purchases?|discount|credit|deposit)\b/.test(n)) return "cash";
   if (/\b(gst|cgst|sgst|igst|tds|tcs|cess)\b/.test(n)) return "duties";
   // Things owned and used for years — before the expense words, so "Furniture & Fixtures" isn't an expense
   if (/\b(plant|machiner(y|ies)|furniture|fixtures?|fittings|computers?|laptops?|printers?|vehicles?|motor car|car|scooter|building|land|equipments?|air ?conditioners?|\bac\b|generator|inverter|mobile phones?|tools?|moulds?|electrical installations?|office equipment)\b/.test(n) && !/\b(repairs?|maintenance|hire|rent|charges?|expenses?|accessor(y|ies))\b/.test(n)) return "fixed_asset";

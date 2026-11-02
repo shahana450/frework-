@@ -1190,7 +1190,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
         <div style={{ flex: 1 }} />
         <div style={{ fontFamily: MONO, fontWeight: 800, fontSize: "1.1rem", color: TEXT }}>{fmt(totalDr)}</div>
         {/* Status comes from FreBook's checks — "Ready" only when nothing was assumed */}
-        {msg.verdict && (() => {
+        {msg.verdict && !isPosted && !isCancelled && (() => {
           const st = msg.verdict.status;
           const [bg, fg, label] = st === "ready" ? ["rgba(11,122,85,0.1)", GREEN, "✓ Ready"] : st === "blocked" ? ["rgba(194,50,31,0.1)", RED, "⛔ Can't post"] : ["rgba(184,120,0,0.12)", AMBER, "Needs review"];
           return <span style={{ fontSize: "0.7rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: bg, color: fg }}>{label}</span>;
@@ -1358,7 +1358,8 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
       )}
 
       {/* Warnings */}
-      {tx.warnings.length > 0 && (
+      {/* Once posted the entry is final: draft-time warnings ("will be created", "check…") no longer apply */}
+      {tx.warnings.length > 0 && !isPosted && !isCancelled && (
         <div style={{ padding: "0.4rem 1rem", borderTop: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", gap: 3 }}>
           {tx.warnings.map((w, i) => <div key={i} style={{ fontSize: "0.74rem", color: AMBER }}>⚠ {w}</div>)}
         </div>
