@@ -13,15 +13,22 @@ export default function Gstr1Panel({ bizId, month, monthLabel }: { bizId: string
   const [data, setData] = useState<(Gstr1 & { gstin: string }) | null>(null);
   const [err, setErr] = useState("");
   const [showAll, setShowAll] = useState(false);
+  // HSN / SAC for sales that have none (kept per business on this device) — the portal rejects a blank code
+  const hsnKey = `fw_gst_default_hsn:${bizId}`;
+  const [hsn, setHsn] = useState("");
+  const [hsnUsed, setHsnUsed] = useState("");
+  useEffect(() => { try { const v = localStorage.getItem(hsnKey) ?? ""; setHsn(v); setHsnUsed(v); } catch { /* */ } }, [hsnKey]);
+  const hsnQ = /^d{4,8}$/.test(hsnUsed) ? `&hsn=${hsnUsed}` : "";
+  const applyHsn = () => { const v = hsn.trim(); try { localStorage.setItem(hsnKey, v); } catch { /* */ } setHsnUsed(v); };
 
   useEffect(() => {
     if (!bizId) return;
     setData(null); setErr("");
-    fetch(`/api/finance/gst?business_id=${bizId}&month=${month}&report=gstr1`).then(async r => {
+    fetch(`/api/finance/gst?business_id=${bizId}&month=${month}&report=gstr1${hsnQ}`).then(async r => {
       const d = await r.json().catch(() => ({}));
       if (!r.ok) setErr(d.error ?? "Couldn't prepare GSTR-1."); else setData(d);
     });
-  }, [bizId, month]);
+  }, [bizId, month, hsnQ]);
 
   if (err) return <div style={{ color: C.neg, background: C.negSoft, padding: 16, borderRadius: 10 }}>{err}</div>;
   if (!data) return <div style={{ padding: 40, textAlign: "center", color: C.muted }}>Preparing GSTR-1 for {monthLabel}…</div>;
@@ -29,7 +36,7 @@ export default function Gstr1Panel({ bizId, month, monthLabel }: { bizId: string
   const errors = data.issues.filter(i => i.level === "error"), warns = data.issues.filter(i => i.level === "warn");
   const sum = data.totals.reduce((s, t) => ({ taxable: s.taxable + t.taxable, igst: s.igst + t.igst, cgst: s.cgst + t.cgst, sgst: s.sgst + t.sgst }), { taxable: 0, igst: 0, cgst: 0, sgst: 0 });
   const shown = showAll ? data.issues : data.issues.slice(0, 8);
-  const download = () => downloadApiFile(`/api/finance/gst?business_id=${bizId}&month=${month}&report=gstr1_json`, `GSTR1_${month}.json`).catch(e => alert(e.message));
+  const download = () => downloadApiFile(`/api/finance/gst?business_id=${bizId}&month=${month}&report=gstr1_json${hsnQ}`, `GSTR1_${month}.json`).catch(e => alert(e.message));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -40,6 +47,10 @@ export default function Gstr1Panel({ bizId, month, monthLabel }: { bizId: string
             : warns.length ? `Ready to upload — ${warns.length} thing${warns.length > 1 ? "s" : ""} worth checking.`
             : "Ready to upload."}
         </span>
+        <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#2E3B36", fontWeight: 600 }}>HSN / SAC for sales without one
+          <input value={hsn} onChange={e => setHsn(e.target.value.replace(/D/g, "").slice(0, 8))} onBlur={applyHsn} onKeyDown={e => e.key === "Enter" && applyHsn()} inputMode="numeric" placeholder="e.g. 998311"
+            style={{ width: 110, height: 36, borderRadius: 8, border: "1px solid #D9CDB2", padding: "0 10px", fontFamily: "inherit", fontSize: 14, background: "#FFFFFF", color: "#10241F" }} />
+        </label>
         <button onClick={download} disabled={!data.totals.length} style={{ height: 40, padding: "0 18px", borderRadius: 10, border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, fontSize: 14, cursor: data.totals.length ? "pointer" : "default", opacity: data.totals.length ? 1 : 0.5 }}>Download GSTR-1 JSON</button>
       </div>
 

@@ -42,7 +42,7 @@ export const monthRange = (month: string) => ({ from: `${month}-01`, to: new Dat
 export const monthLabel = (month: string) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
 
 /** GSTR-1 for the month (YYYY-MM): the return plus any issues to fix before filing. */
-export async function buildMonthGstr1(sb: SupabaseClient, bizId: string, month: string): Promise<Gstr1 & { gstin: string; fileName: string }> {
+export async function buildMonthGstr1(sb: SupabaseClient, bizId: string, month: string, opts: { defaultHsn?: string | null } = {}): Promise<Gstr1 & { gstin: string; fileName: string }> {
   const { from, to } = monthRange(month);
   const [rows, { data: biz }, { data: contacts }] = await Promise.all([
     monthJournals(sb, bizId, from, to),
@@ -98,7 +98,7 @@ export async function buildMonthGstr1(sb: SupabaseClient, bizId: string, month: 
   const inSeries = (s: SrcJournal) => /^(INV|CN|DN)\//.test(s.entry_no ?? "");
   const left = src.filter(s => !inSeries(s));
   // Every sale is reported; ones outside the INV / CN / DN series are flagged so their invoice numbers get checked
-  const result = buildGstr1(gstin, (biz as { state?: string } | null)?.state ?? null, month, docsFromJournals(src, contacts ?? []));
+  const result = buildGstr1(gstin, (biz as { state?: string } | null)?.state ?? null, month, docsFromJournals(src, contacts ?? []), opts);
   for (const t of computedNotes) result.issues.push({ level: "warn", text: t });
   if (left.length) result.issues.push({ level: "warn", text: `${left.length} sale${left.length === 1 ? " was" : "s were"} booked outside the INV invoice series (e.g. ${left.slice(0, 3).map(s => s.entry_no).join(", ")}). They're included — check each one's invoice number (its reference) before filing.` });
   return { ...result, gstin, fileName: `GSTR1_${gstin || "GSTIN"}_${month.slice(5, 7)}${month.slice(0, 4)}.json` };

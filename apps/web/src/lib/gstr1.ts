@@ -64,7 +64,9 @@ function byRate(items: Item[]): Item[] {
   return [...m.values()];
 }
 
-export function buildGstr1(gstin: string, homeState: string | null, period: string /* YYYY-MM */, docs: Doc[]): Gstr1 {
+export function buildGstr1(gstin: string, homeState: string | null, period: string /* YYYY-MM */, docs: Doc[], opts: { defaultHsn?: string | null } = {}): Gstr1 {
+  // The HSN / SAC to use where an entry has none (e.g. a service business's SAC, given on the GSTR-1 tab)
+  const fallbackHsn = opts.defaultHsn && /^\d{4,8}$/.test(opts.defaultHsn.trim()) ? opts.defaultHsn.trim() : "";
   const issues: Issue[] = [];
   const home = stateCode(homeState) ?? (GSTIN_RE.test(gstin) ? gstin.slice(0, 2) : null);
   if (!GSTIN_RE.test(gstin)) issues.push({ level: "error", text: "Your business GSTIN is missing or invalid — add it in Settings → Business Details." });
@@ -138,15 +140,18 @@ export function buildGstr1(gstin: string, homeState: string | null, period: stri
     // HSN summary (Table 12), split into B2B and B2C
     const target = registered ? hsnB2b : hsnB2c;
     for (const i of d.items.filter(x => RATES.includes(x.rate))) {
-      const code = (i.hsn && /^\d{4,8}$/.test(i.hsn)) ? i.hsn : "";
-      const k = `${code}|${i.rate}|${i.uqc ?? "NOS"}`;
-      const x = target.get(k) ?? { hsn_sc: code, desc: (i.desc ?? "").slice(0, 30), uqc: i.uqc ?? "NOS", qty: 0, rt: i.rate, txval: 0, iamt: 0, camt: 0, samt: 0, csamt: 0 };
+      const code = (i.hsn && /^\d{4,8}$/.test(i.hsn)) ? i.hsn : fallbackHsn;
+      // Services (SAC, 99…) are reported with unit NA and no quantity
+      const uqc = /^99/.test(code) ? "NA" : (i.uqc ?? "NOS");
+      const k = `${code}|${i.rate}|${uqc}`;
+      const x = target.get(k) ?? { hsn_sc: code, desc: (i.desc ?? "").slice(0, 30), uqc, qty: 0, rt: i.rate, txval: 0, iamt: 0, camt: 0, samt: 0, csamt: 0 };
       x.qty = r2(x.qty + sign * (i.qty ?? 0)); x.txval = r2(x.txval + sign * i.taxable); x.iamt = r2(x.iamt + sign * i.igst); x.camt = r2(x.camt + sign * i.cgst); x.samt = r2(x.samt + sign * i.sgst); x.csamt = r2(x.csamt + sign * (i.cess ?? 0));
       target.set(k, x);
     }
   }
 
-  const json: Record<string, unknown> = { gstin, fp: `${period.slice(5, 7)}${period.slice(0, 4)}` };
+  // The portal's template wants the version and hash fields the offline tool writes
+  const json: Record<string, unknown> = { gstin, fp: `${period.slice(5, 7)}${period.slice(0, 4)}`, version: "GST3.2.1", hash: "hash" };
   if (b2b.size) json.b2b = [...b2b].map(([ctin, inv]) => ({ ctin, inv }));
   if (b2cl.size) json.b2cl = [...b2cl].map(([pos, inv]) => ({ pos, inv }));
   if (b2cs.size) json.b2cs = [...b2cs.values()].filter(x => x.txval !== 0).map(x => x.sply_ty === "INTER" ? { sply_ty: x.sply_ty, rt: x.rt, typ: x.typ, pos: x.pos, txval: x.txval, iamt: x.iamt, csamt: x.csamt } : { sply_ty: x.sply_ty, rt: x.rt, typ: x.typ, pos: x.pos, txval: x.txval, camt: x.camt, samt: x.samt, csamt: x.csamt });
@@ -154,7 +159,7 @@ export function buildGstr1(gstin: string, homeState: string | null, period: stri
   if (cdnur.length) json.cdnur = cdnur;
   const hsnList = (m: typeof hsnB2b) => [...m.values()].map((x, k) => ({ num: k + 1, ...x }));
   if (hsnB2b.size || hsnB2c.size) json.hsn = { ...(hsnB2b.size ? { hsn_b2b: hsnList(hsnB2b) } : {}), ...(hsnB2c.size ? { hsn_b2c: hsnList(hsnB2c) } : {}) };
-  if ([...hsnB2b.values(), ...hsnB2c.values()].some(x => !x.hsn_sc)) issues.push({ level: "warn", text: "Some HSN summary lines have no HSN code. The portal requires 4 digits (turnover up to ₹5 crore) or 6 digits (above) — add HSN to those invoices before filing." });
+  if ([...hsnB2b.values(), ...hsnB2c.values()].some(x => !x.hsn_sc)) issues.push({ level: "error", text: "Some sales have no HSN / SAC code, and the portal rejects the file without one. Enter the HSN / SAC to use in the box above (e.g. 998311 for management consultancy), or add it to those invoices." });
 
   return { json, issues, totals: [...tot.values()] };
 }

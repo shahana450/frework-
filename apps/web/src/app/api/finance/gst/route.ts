@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (report === "gstr1" || report === "gstr1_json") {
-      const result = await buildMonthGstr1(supabase, bizId!, month);
+      const result = await buildMonthGstr1(supabase, bizId!, month, { defaultHsn: searchParams.get("hsn") });
       if (report === "gstr1_json") {
         await fileGstr1(supabase, bizId!, gate.user.id, month, result);
         return new NextResponse(JSON.stringify(result.json, null, 2), {

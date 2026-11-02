@@ -63,7 +63,13 @@ test("GSTR-1 sections: B2B, B2CS, B2CL, credit notes and HSN", () => {
   const svc = j.hsn.hsn_b2b.find((h: any) => h.hsn_sc === "998314");
   assert.equal(svc.txval, 100000);
   assert.ok(r.issues.some(i => i.doc === "INV-102" && /no item detail/.test(i.text)), "derived invoices are flagged");
-  assert.ok(!r.issues.some(i => i.level === "error"), JSON.stringify(r.issues.filter(i => i.level === "error")));
+  // The portal rejects a blank HSN: entries without one are an error until a code is given…
+  assert.deepEqual(r.issues.filter(i => i.level === "error").map(i => /no HSN \/ SAC/.test(i.text)), [true]);
+  // …and a default SAC fills them (services report unit NA); the file carries the version / hash fields
+  const r2 = buildGstr1(GSTIN, "Kerala", "2026-09", docs, { defaultHsn: "998311" });
+  assert.ok(!r2.issues.some(i => i.level === "error"), JSON.stringify(r2.issues.filter(i => i.level === "error")));
+  assert.ok([...(r2.json as any).hsn.hsn_b2b, ...((r2.json as any).hsn.hsn_b2c ?? [])].every((h: any) => /^\d{4,8}$/.test(h.hsn_sc)));
+  assert.deepEqual([(r2.json as any).version, (r2.json as any).hash], ["GST3.2.1", "hash"]);
 });
 
 test("problems are reported instead of guessed", () => {
