@@ -451,7 +451,9 @@ export default function TallyPage() {
         if (seen.has(k) || v.date < rangeFrom || v.date > rangeTo) return; seen.add(k); allVouchers.push(v);
       };
       let filterOk = true, failed = false;
-      const months = monthsInRange(rangeFrom, rangeTo);
+      // Tally's date filter (a TDL formula per month) froze some companies and returned nothing on others, so the
+      // vouchers are read in ONE plain request for the period (below) and the dates kept here. No month requests.
+      const months: ReturnType<typeof monthsInRange> = [];
       for (let i = 0; i < months.length && filterOk; i++) {
         const m = months[i];
         setSyncProgress("Reading " + m.label + " from Tally (" + (i + 1) + "/" + months.length + ")…");
@@ -466,7 +468,7 @@ export default function TallyPage() {
       // request (a big reply — Tally is busy for a minute or two) and keep the dates in range. Never after a failure,
       // when Tally is already struggling. (The Day Book report isn't used: it ignores the dates and sends one day.)
       if (!failed && !allVouchers.length) {
-        setSyncProgress("Tally sent nothing month by month — reading the whole year in one go. This can take 1–3 minutes; leave Tally alone…");
+        setSyncProgress("Reading the vouchers from Tally in one go — this can take 1–3 minutes; leave Tally alone…");
         try { parseTallyVouchers(await (await tallyFetch(tallyUrl, xml.replace(/FP_Vouchers/g, "FPY" + Date.now().toString(36)), 240000)).text()).forEach(keep); }
         catch (e) { lastError = e instanceof Error ? e.message : String(e); failed = true; }
       }
