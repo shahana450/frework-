@@ -1,4 +1,5 @@
 "use client";
+import GstFilingStrip from "@/components/finance/GstFilingStrip";
 import { readSelectedFy, writeSelectedFy } from "@/lib/selectedFy";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useTally, disconnectTally , tallyCompanyNow } from "@/lib/tallyConnection";
@@ -676,6 +677,7 @@ export default function FinanceDashboard() {
                     style={{ height: 36, background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: 10, padding: "0 10px", fontSize: 12.5, color: "#10241F" }}>
                     {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
                   </select>
+                  <GstFilingStrip bizId={activeBiz.id} gstin={activeBiz.gstin ?? ""} />
                   {periodKey === "custom" && <>
                     <input type="date" aria-label="From" value={custom.from} onChange={e => setCustom(c => ({ ...c, from: e.target.value }))} style={{ height: 40, border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 8px", fontSize: 13, color: "#141A3A", background: "#FFFFFF" }} />
                     <input type="date" aria-label="To" value={custom.to} min={custom.from || undefined} onChange={e => setCustom(c => ({ ...c, to: e.target.value }))} style={{ height: 40, border: "1px solid #E1E4EE", borderRadius: 11, padding: "0 8px", fontSize: 13, color: "#141A3A", background: "#FFFFFF" }} />
