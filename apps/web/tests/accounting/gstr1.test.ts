@@ -69,7 +69,7 @@ test("GSTR-1 sections: B2B, B2CS, B2CL, credit notes and HSN", () => {
   const r2 = buildGstr1(GSTIN, "Kerala", "2026-09", docs, { defaultHsn: "998311" });
   assert.ok(!r2.issues.some(i => i.level === "error"), JSON.stringify(r2.issues.filter(i => i.level === "error")));
   assert.ok([...(r2.json as any).hsn.hsn_b2b, ...((r2.json as any).hsn.hsn_b2c ?? [])].every((h: any) => /^\d{4,8}$/.test(h.hsn_sc)));
-  assert.deepEqual([(r2.json as any).version, (r2.json as any).hash], ["GST3.0.4", "hash"]);
+  assert.deepEqual([(r2.json as any).version, (r2.json as any).hash], ["GST3.1.6", "hash"]);
 });
 
 test("problems are reported instead of guessed", () => {
