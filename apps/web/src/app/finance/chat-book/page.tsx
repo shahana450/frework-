@@ -220,6 +220,8 @@ export default function FreBookPage() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // The box grows as you type; back to its normal size once the message is sent
+  useEffect(() => { if (!input && inputRef.current) inputRef.current.style.height = ""; }, [input]);
   const recognitionRef = useRef<unknown>(null);
   const voiceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [voiceInterim, setVoiceInterim] = useState("");
@@ -994,19 +996,27 @@ export default function FreBookPage() {
               ))}
             </div>
 
-            <div className="fb-box" style={{ background: "#FFFFFF", border: "1px solid #D9CDB2", borderRadius: 22, boxShadow: "0 22px 50px -32px rgba(15,43,37,0.55)", padding: "6px 8px 8px 16px" }}>
+            <style>{`.fb-box{transition:border-color .15s,box-shadow .15s}.fb-box:focus-within{border-color:#C9A24A !important;box-shadow:0 0 0 4px rgba(201,162,74,.16),0 26px 60px -34px rgba(15,43,37,.6) !important}.fb-input:focus,.fb-input:focus-visible{outline:none !important;box-shadow:none !important}.fb-input::placeholder{color:#9AA39F}.fb-ico:hover{background:#F4EFE4 !important;color:#12352D !important}`}</style>
+            <div className="fb-box" style={{ position: "relative", background: "linear-gradient(180deg,#FFFFFF 0%,#FFFDF8 100%)", border: "1px solid #D9CDB2", borderRadius: 24, boxShadow: "0 22px 50px -32px rgba(15,43,37,0.55)", padding: "14px 10px 10px 20px", overflow: "hidden" }}>
+              <div aria-hidden="true" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 3, background: "linear-gradient(90deg,#12352D,#C9A24A,#12352D)" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9A7A2E", marginBottom: 2 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /></svg>
+                {messages[messages.length - 1]?.transaction?.status === "needs_clarification" ? "FreBook is waiting for your answer" : "Record a transaction or ask your books"}
+              </div>
               <textarea
+                className="fb-input"
+                onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 260) + "px"; }}
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
                 aria-label="Describe a transaction or ask a question"
                 placeholder={messages[messages.length - 1]?.transaction?.status === "needs_clarification" ? "Type your answer…" : ex("Tell FreBook what happened — e.g. Paid office rent ₹25,000 from the bank")}
-                rows={2}
-                style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: "none", color: "#10241F", padding: "10px 2px 6px", fontSize: "1rem", fontFamily: "inherit", outline: "none", resize: "none", lineHeight: 1.5 }}
+                rows={4}
+                style={{ width: "100%", boxSizing: "border-box", minHeight: 112, maxHeight: 260, background: "transparent", border: "none", color: "#10241F", padding: "8px 4px 8px 0", fontSize: "1.06rem", fontFamily: "inherit", outline: "none", resize: "none", lineHeight: 1.6, overflowY: "auto" }}
               />
               <input ref={fileRef} type="file" accept="image/*,.pdf,.doc,.docx,.xlsx,.xls,.csv,.txt" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, borderTop: "1px solid #F0E9DA", paddingTop: 8, marginRight: -2 }}>
                 {[
                   { t: "Attach bill, invoice, statement, Excel, Word or photo", d: "M21 11.5l-8.6 8.6a5 5 0 01-7.1-7.1l8.6-8.6a3.5 3.5 0 015 5l-8.6 8.6a2 2 0 01-2.8-2.8l7.9-7.9", run: () => fileRef.current?.click() },
                   { t: "Snap a bill with your camera", d: "M4 8h3l2-3h6l2 3h3v11H4zM12 10a3.5 3.5 0 100 7 3.5 3.5 0 000-7", run: () => cameraRef.current?.click() },
