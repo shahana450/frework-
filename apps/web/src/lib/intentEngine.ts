@@ -110,12 +110,12 @@ export async function loadQueryBooks(sb: SupabaseClient, businessId: string, unt
     if (!data || data.length < 1000) break;
   }
   // Journals first, then their lines in chunks: a joined read of lines per journal times out on big books
-  const heads: { id: string; date: string; entry_no: string; narration: string | null; type: string; party_name?: string | null }[] = [];
+  const heads: { id: string; date: string; entry_no: string; narration: string | null; type: string; reference_no?: string | null; party_name?: string | null }[] = [];
   // Count first, then read the pages in parallel
   const base = () => sb.from("fw_fin_journals").select("id", { count: "exact", head: true }).eq("business_id", businessId).eq("status", "posted").lte("date", until);
   const { count, error: cErr } = await base();
   if (cErr) return { accounts, journals: [], error: cErr };
-  const pageOf = (from: number, withParty: boolean) => sb.from("fw_fin_journals").select(`id,date,entry_no,narration,type${withParty ? ",party_name" : ""}`).eq("business_id", businessId).eq("status", "posted").lte("date", until).order("date").order("id").range(from, from + 999);
+  const pageOf = (from: number, withParty: boolean) => sb.from("fw_fin_journals").select(`id,date,entry_no,narration,type,reference_no${withParty ? ",party_name" : ""}`).eq("business_id", businessId).eq("status", "posted").lte("date", until).order("date").order("id").range(from, from + 999);
   let withParty = true;
   const starts: number[] = [];
   for (let f = 0; f < Math.max(count ?? 0, 1); f += 1000) starts.push(f);
@@ -149,7 +149,7 @@ export async function loadQueryBooks(sb: SupabaseClient, businessId: string, unt
       }
     }
   }
-  const journals: QJournal[] = heads.map(j => ({ id: j.id, date: String(j.date).slice(0, 10), entry_no: j.entry_no, narration: j.narration ?? "", type: j.type, party_name: j.party_name ?? null, lines: lines.get(j.id) ?? [] }));
+  const journals: QJournal[] = heads.map(j => ({ id: j.id, date: String(j.date).slice(0, 10), entry_no: j.entry_no, narration: j.narration ?? "", type: j.type, party_name: j.party_name ?? null, reference_no: j.reference_no ?? null, lines: lines.get(j.id) ?? [] }));
   return { accounts, journals };
 }
 

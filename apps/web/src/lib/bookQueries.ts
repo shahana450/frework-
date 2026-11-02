@@ -5,7 +5,7 @@ import { formatMoney, DEFAULT_MONEY, type MoneyFormat } from "./money";
 import { isReceivable, isPayable } from "./partyBalances";
 
 export type QJournal = {
-  id: string; date: string; entry_no: string; narration: string; type: string; party_name: string | null;
+  id: string; date: string; entry_no: string; narration: string; type: string; party_name: string | null; reference_no?: string | null;
   lines: { account_id: string; dr: number; cr: number }[];
 };
 export type Period = { from: string; to: string; label: string };

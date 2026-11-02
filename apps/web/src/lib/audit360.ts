@@ -7,8 +7,8 @@ export type AuditAccount = { id: string; name: string; type: string; sub_type: s
 export type AuditStatus = "ok" | "warn" | "fail" | "na";
 export type AuditItem = { journal_id?: string; entry_no?: string; date?: string; amount?: number; note: string };
 export type AuditCheck = {
-  id: string; section: "books" | "cash_law"; title: string; law?: string;
-  status: AuditStatus; summary: string; books?: number | null; items: AuditItem[];
+  id: string; section: "books" | "cash_law" | "gstr1" | "gstr3b" | "gstr2b" | "tds_received" | "tds_deducted"; title: string; law?: string;
+  status: AuditStatus; summary: string; books?: number | null; portal?: number | null; diff?: number | null; items: AuditItem[];
 };
 export type AuditReport = { period: { from: string; to: string }; checks: AuditCheck[]; score: number; counts: Record<AuditStatus, number> };
 
@@ -23,6 +23,14 @@ const isCapitalOrLoanIn = (a?: AuditAccount) => !!a && (a.type === "equity" || i
 
 const item = (j: QJournal, amount: number, note: string): AuditItem => ({ journal_id: j.id, entry_no: j.entry_no, date: j.date, amount: r2(amount), note });
 const top = (items: AuditItem[], n = 50) => items.sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0)).slice(0, n);
+
+/** Score: matched = full marks, to check = half, problem = none; checks not run don't count. */
+export function scoreChecks(checks: AuditCheck[]) {
+  const counts: Record<AuditStatus, number> = { ok: 0, warn: 0, fail: 0, na: 0 };
+  for (const c of checks) counts[c.status]++;
+  const scored = checks.length - counts.na;
+  return { counts, score: scored ? Math.round(((counts.ok + counts.warn * 0.5) / scored) * 100) : 100 };
+}
 
 export function runAudit360(accounts: AuditAccount[], journals: QJournal[], period: { from: string; to: string }, opts: { today: string; drafts?: number; openingPosted?: boolean }): AuditReport {
   const acc = new Map(accounts.map(a => [a.id, a]));
