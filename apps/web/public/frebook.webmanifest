@@ -3,10 +3,10 @@
   "name": "FreBook — Chat in. Books out.",
   "short_name": "FreBook",
   "description": "Tell FreBook your transactions in plain language — it posts proper journal entries to your FreWork books.",
-  "start_url": "/finance/chat-book?source=app",
+  "start_url": "/finance?source=app",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#1E2457",
   "theme_color": "#1E2457",
   "categories": ["finance", "business", "productivity"],
@@ -17,6 +17,7 @@
   ],
   "shortcuts": [
     { "name": "New entry", "url": "/finance/chat-book?source=app" },
+    { "name": "Tally", "url": "/finance/tally" },
     { "name": "Books", "url": "/finance/books" },
     { "name": "Reports", "url": "/finance/reports" }
   ]

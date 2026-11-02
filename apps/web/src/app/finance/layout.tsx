@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
 import { useTallyAutoCatchUp, AUTO_PUSH_EVENT } from "@/lib/tallyAutoCatchUp";
 import WindowDock, { openInWindow } from "@/components/finance/WindowDock";
+import InstallApp from "@/components/finance/InstallApp";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PAYMENTS_LIVE } from "@/lib/plans";
@@ -444,6 +445,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         )}
         <ActiveBusinessProvider>{children}</ActiveBusinessProvider>
         <WindowDock />
+        <InstallApp />
       </main>
 
       {/* Phone tab bar */}

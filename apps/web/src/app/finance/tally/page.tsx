@@ -453,10 +453,17 @@ export default function TallyPage() {
       let filterOk = true, failed = false;
       // In pieces by AlterID: a quick list of the period's vouchers, then a few hundred at a time — every reply small,
       // so Tally keeps answering whatever the company's size. A slow piece makes the next ones smaller.
-      let pieces = false;
+      let pieces = false, maxSeen = 0, upToDate = false;
+      // Change-only sync: after a full import FreWork remembers the highest AlterID it read (per business, company and
+      // period, on this computer); later imports read only vouchers created or changed since. "Clear & re-import" resets it.
+      const syncKey = `fw_tally_alter:${bizId}:${(companyName || "").toLowerCase().replace(/[^a-z0-9]/g, "")}:${rangeFrom}:${rangeTo}`;
       try {
         setSyncProgress("Listing the vouchers in Tally…");
-        const ids = alterIdsInRange(await (await tallyFetch(tallyUrl, alterIdIndexXml(rangeFrom, rangeTo, companyName || null), 120000)).text(), rangeFrom, rangeTo);
+        const all = alterIdsInRange(await (await tallyFetch(tallyUrl, alterIdIndexXml(rangeFrom, rangeTo, companyName || null), 120000)).text(), rangeFrom, rangeTo);
+        let last = 0; try { last = Number(localStorage.getItem(syncKey) ?? 0) || 0; } catch { /* */ }
+        maxSeen = all.length ? all[all.length - 1] : 0;
+        const ids = last ? all.filter(a => a > last) : all;
+        if (last && all.length && !ids.length) upToDate = true;
         if (ids.length) {
           pieces = true;
           let size = 400;
@@ -502,6 +509,10 @@ export default function TallyPage() {
           }
         } catch (e) { lastError = e instanceof Error ? e.message : String(e); failed = true; }
       }
+      if (upToDate && !failed) {
+        setImportVoucherResult({ ok: true, msg: "✓ Up to date — no new or changed vouchers in Tally since the last sync." });
+        setTallyBusy(false); setSyncing(null); return;
+      }
       if (failed) {
         setImportVoucherResult({ ok: false, msg: "Tally stopped answering. Restart Tally and the FreWork Tally Bridge, press Connect, then import again." + (lastError ? " (" + lastError + ")" : "") });
         setTallyBusy(false); setSyncing(null); return;
@@ -521,6 +532,8 @@ export default function TallyPage() {
       const sum = await importTallyVouchers(bizId, allVouchers as never, { ledgerGroups: groups, company: companyName || null, onProgress: setSyncProgress });
       const imported = sum.imported;
       setImportVoucherResult({ ok: sum.failedCount === 0 && !partialNote, msg: summaryText(sum) + partialNote });
+      // Remember how far this sync got — only when every voucher went in, so failures are read again next time
+      if (pieces && maxSeen && sum.failedCount === 0) { try { localStorage.setItem(syncKey, String(maxSeen)); } catch { /* */ } }
       setAutoSyncDone(true);
       try { localStorage.setItem("fw_tally_last_import", Date.now().toString()); } catch { /* */ }
       // Auto-redirect back if came from another page
@@ -543,6 +556,8 @@ export default function TallyPage() {
     setSyncing("importVouchers"); setImportVoucherResult(null); setSyncProgress("Clearing old Tally entries…");
     const cr = await fetch("/api/finance/tally-imports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action: "clear" }) }).catch(() => null);
     setSyncing(null); setSyncProgress(null);
+    // Everything is read again after a clear
+    try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i) ?? ""; if (k.startsWith(`fw_tally_alter:${bizId}:`)) localStorage.removeItem(k); } } catch { /* */ }
     // Stop if the clear didn't finish — importing now would skip the entries still there as "already imported"
     if (!cr || !cr.ok) {
       const j = cr ? await cr.json().catch(() => ({})) : {};
