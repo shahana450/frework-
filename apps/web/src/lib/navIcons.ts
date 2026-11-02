@@ -55,7 +55,7 @@ const BY_PATH: Record<string, string> = {
   "/finance/reports?tab=profit_loss": P.trend, "/finance/reports?tab=balance_sheet": P.columns, "/finance/reports?tab=cash_flow": P.drop, "/finance/recap": P.calendar,
   "/finance/audit": P.search, "/finance/gst": P.percent, "/finance/audit/gst-recon": P.sync, "/finance/tds": P.tag,
   "/finance/ai-review": P.robot, "/finance/upload": P.clip, "/finance/shelf": P.shelf, "/finance/insights": P.bulb, "/finance/virtual-ca": P.plane,
-  "/finance/settings/business": P.building, "/finance/settings": P.gear, "/finance/audit360": P.shield, "/finance/client": P.home, "/finance/inventory": P.bag, "/finance/clients": P.users, "/finance/settings/region": P.globe, "/finance/integrations": P.link, "/finance/portals": P.bank, "/finance/whatsapp": P.whatsapp, "/finance/fy": P.calendar,
+  "/finance/settings/business": P.building, "/finance/settings": P.gear, "/finance/audit360": P.shield, "/finance/client": P.home, "/finance/inventory": P.bag, "/finance/gst/desk": P.columns, "/finance/clients": P.users, "/finance/settings/region": P.globe, "/finance/integrations": P.link, "/finance/portals": P.bank, "/finance/whatsapp": P.whatsapp, "/finance/fy": P.calendar,
   "/finance/team": P.team, "/finance/tally": P.plug, "/finance/ca-dashboard": P.briefcase, "/finance/help": P.help, "/dashboard": P.home,
 };
 

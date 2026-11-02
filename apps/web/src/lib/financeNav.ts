@@ -46,6 +46,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "🗓", label: "Monthly Recap", href: "/finance/recap" },
     { icon: "🔍", label: "Analysis & Audit", href: "/finance/audit", accountant: true },
     { icon: "🧮", label: "GST Returns", href: "/finance/gst/returns", india: true },
+    { icon: "🗂", label: "GST Desk (all clients)", href: "/finance/gst/desk", india: true },
     { icon: "📄", label: "GSTR-1", href: "/finance/gst", india: true },
     { icon: "📄", label: "GSTR-3B", href: "/finance/gst/3b", india: true },
     { icon: "📄", label: "GSTR-9 Annual", href: "/finance/gst/annual", india: true, accountant: true },
