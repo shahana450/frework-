@@ -90,26 +90,63 @@ async function sendOnce(url: string, body: string, timeoutMs: number): Promise<R
   throw lastErr instanceof Error ? lastErr : new Error(tallyProblem(url.match(/:(\d+)/)?.[1], "unreachable"));
 }
 
+/** Tally applies a period only when it's written TYPE="Date" as "1-Apr-2025" — "20250401" is silently ignored and
+ *  the whole company's data comes back (which froze Tally on big companies). Every request is corrected here. */
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+export const tallyDates = (xml: string) => xml.replace(/<(SVFROMDATE|SVTODATE|SVCURRENTDATE)(?:\s+TYPE="Date")?>\s*(\d{4})-?(\d{2})-?(\d{2})\s*<\/\1>/g,
+  (_m, tag: string, y: string, mo: string, d: string) => `<${tag} TYPE="Date">${Number(d)}-${MON[Number(mo) - 1]}-${y}</${tag}>`);
+
 export function tallyFetch(url: string, body: string, timeoutMs = 15000): Promise<Response> {
   inFlight++;
+  body = tallyDates(body);
   const run = queue.then(() => sendOnce(url, body, timeoutMs));
   queue = run.catch(() => undefined).finally(() => { inFlight--; });
   return run;
 }
 
+// ── Vouchers by type ──────────────────────────────────────────────────────────
+// Tally ignores the date range on a voucher collection, and on these installs a date filter formula never matches —
+// a multi-year company then sends every voucher it has (hundreds of MB) and freezes. A filter on the voucher TYPE
+// works and is quick, so vouchers are read one type at a time and the dates are kept in the browser.
+const xmlText = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+let tseq = 0;
+const companyTag = (company?: string | null) => company ? "<SVCURRENTCOMPANY>" + xmlText(company) + "</SVCURRENTCOMPANY>" : "";
+/** Every voucher's date and type only — small, so Tally answers in seconds even for a big company. */
+export function voucherIndexXml(company?: string | null): string {
+  const id = "FPI" + Date.now().toString(36) + (++tseq);
+  return "<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>" + id + "</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>" + companyTag(company)
+    + "</STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME=\"" + id + "\" ISMODIFY=\"No\"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>";
+}
+/** Voucher types that have vouchers in the period, with how many — from the index above. */
+export function voucherTypesInRange(xml: string, fromIso: string, toIso: string): { type: string; count: number }[] {
+  const by = new Map<string, number>();
+  for (const m of xml.matchAll(/<VOUCHER\b([^>]*)>([\s\S]*?)<\/VOUCHER>/gi)) {
+    const type = ((m[1].match(/VCHTYPE="([^"]*)"/i) ?? [])[1] ?? (m[2].match(/<VOUCHERTYPENAME[^>]*>([^<]*)</i) ?? [])[1] ?? "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').trim();
+    const d = (m[2].match(/<DATE[^>]*>(\d{8})</i) ?? [])[1] ?? "";
+    const iso = d ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : "";
+    if (type && iso >= fromIso && iso <= toIso) by.set(type, (by.get(type) ?? 0) + 1);
+  }
+  return [...by].map(([type, count]) => ({ type, count })).sort((a, b) => a.count - b.count);
+}
+/** All vouchers of one type, with their ledger lines. */
+export function vouchersOfTypeXml(type: string, company?: string | null): string {
+  const id = "FPT" + Date.now().toString(36) + (++tseq), f = id + "F";
+  return "<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>" + id + "</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>" + companyTag(company)
+    + "</STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME=\"" + id + "\" ISMODIFY=\"No\"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries</FETCH><FILTER>" + f + "</FILTER></COLLECTION>"
+    + "<SYSTEM TYPE=\"Formulae\" NAME=\"" + f + "\">$VoucherTypeName = \"" + xmlText(type) + "\"</SYSTEM></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>";
+}
+
 // ── Vouchers by period ────────────────────────────────────────────────────────
-// Tally ignores SVFROMDATE/SVTODATE on a voucher collection and returns the whole year (tens of MB), which freezes it.
-// A FILTERS formula limits the reply to the dates asked for. Tally keeps TDL definitions by name, so each request gets
-// a fresh formula name — a reused name can return an earlier request's range.
+// The period, written TYPE="Date" as "1-Apr-2025", limits the reply to the dates asked for (no filter formula — that
+// froze some companies). Each request gets a fresh collection name: Tally keeps TDL definitions by name.
 const tdlDate = (iso: string) => { const [y, m, d] = iso.split("-").map(Number); return d + "-" + ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m - 1] + "-" + y; };
 let seq = 0;
 export function vouchersInRangeXml(fromIso: string, toIso: string, withItems = true, company?: string | null): string {
   const f = "FPR" + Date.now().toString(36) + (++seq);
   const cv = company ? "<SVCURRENTCOMPANY>" + company.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</SVCURRENTCOMPANY>" : "";
   return "<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>" + f + "V</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>"
-    + "<SVFROMDATE>" + fromIso.replace(/-/g, "") + "</SVFROMDATE><SVTODATE>" + toIso.replace(/-/g, "") + "</SVTODATE>" + cv + "</STATICVARIABLES><TDL><TDLMESSAGE>"
-    + "<COLLECTION NAME=\"" + f + "V\" ISMODIFY=\"No\"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries" + (withItems ? ",AllInventoryEntries" : "") + "</FETCH><FILTERS>" + f + "</FILTERS></COLLECTION>"
-    + "<SYSTEM TYPE=\"Formulae\" NAME=\"" + f + "\">$Date &gt;= $$Date:\"" + tdlDate(fromIso) + "\" AND $Date &lt;= $$Date:\"" + tdlDate(toIso) + "\"</SYSTEM>"
+    + "<SVFROMDATE TYPE=\"Date\">" + tdlDate(fromIso) + "</SVFROMDATE><SVTODATE TYPE=\"Date\">" + tdlDate(toIso) + "</SVTODATE>" + cv + "</STATICVARIABLES><TDL><TDLMESSAGE>"
+    + "<COLLECTION NAME=\"" + f + "V\" ISMODIFY=\"No\"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AllLedgerEntries" + (withItems ? ",AllInventoryEntries" : "") + "</FETCH></COLLECTION>"
     + "</TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>";
 }
 

@@ -1,7 +1,7 @@
 "use client";
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { findTallyPort, tallyFetch, parseTallyVouchers, vouchersInRangeXml } from "@/lib/tallyUtils";
+import { findTallyPort, tallyFetch, parseTallyVouchers, vouchersInRangeXml, voucherIndexXml, voucherTypesInRange, vouchersOfTypeXml } from "@/lib/tallyUtils";
 import { tallyProblem, companiesXml } from "@/lib/integrations/tally";
 import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow, setTallyBusy } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -451,26 +451,33 @@ export default function TallyPage() {
         if (seen.has(k) || v.date < rangeFrom || v.date > rangeTo) return; seen.add(k); allVouchers.push(v);
       };
       let filterOk = true, failed = false;
-      // Tally's date filter (a TDL formula per month) froze some companies and returned nothing on others, so the
-      // vouchers are read in ONE plain request for the period (below) and the dates kept here. No month requests.
-      const months: ReturnType<typeof monthsInRange> = [];
+      // Month by month: the period (sent as Tally honours it — see tallyDates) keeps each reply small, so Tally keeps
+      // answering even for a company with years of data. Ledger lines only — the stock details made replies huge.
+      const months = monthsInRange(rangeFrom, rangeTo);
       for (let i = 0; i < months.length && filterOk; i++) {
         const m = months[i];
         setSyncProgress("Reading " + m.label + " from Tally (" + (i + 1) + "/" + months.length + ")…");
         try {
-          const t = await (await tallyFetch(tallyUrl, vouchersInRangeXml(m.from, m.to, true, companyName || null), 90000)).text();
+          const t = await (await tallyFetch(tallyUrl, vouchersInRangeXml(m.from, m.to, false, companyName || null), 120000)).text();
           const got = parseTallyVouchers(t);
           if (got.some(v => v.date < m.from || v.date > m.to)) { filterOk = false; got.forEach(keep); break; }   // filter ignored
           got.forEach(keep);
         } catch (e) { lastError = e instanceof Error ? e.message : String(e); failed = true; break; }
       }
-      // Some Tally installs (e.g. Educational mode) send nothing for a month filter. Then read the whole period in one
-      // request (a big reply — Tally is busy for a minute or two) and keep the dates in range. Never after a failure,
-      // when Tally is already struggling. (The Day Book report isn't used: it ignores the dates and sends one day.)
+      // Every month came back empty (some installs): list the period's vouchers by type and read one type at a time.
+      // Never after a failure, when Tally is already struggling.
+      const withPeriod = (x: string) => x.replace("</STATICVARIABLES>", `<SVFROMDATE>${fd}</SVFROMDATE><SVTODATE>${td}</SVTODATE></STATICVARIABLES>`);
       if (!failed && !allVouchers.length) {
-        setSyncProgress("Reading the vouchers from Tally in one go — this can take 1–3 minutes; leave Tally alone…");
-        try { parseTallyVouchers(await (await tallyFetch(tallyUrl, xml.replace(/FP_Vouchers/g, "FPY" + Date.now().toString(36)), 240000)).text()).forEach(keep); }
-        catch (e) { lastError = e instanceof Error ? e.message : String(e); failed = true; }
+        // 1. A quick list of every voucher's date and type; 2. each type that has vouchers in the period, one request
+        //    at a time (small replies, so Tally keeps answering even for a company with years of data)
+        try {
+          setSyncProgress("Listing the vouchers in Tally…");
+          const types = voucherTypesInRange(await (await tallyFetch(tallyUrl, withPeriod(voucherIndexXml(companyName || null)), 120000)).text(), rangeFrom, rangeTo);
+          for (let i = 0; i < types.length; i++) {
+            setSyncProgress(`Reading ${types[i].type} vouchers (${types[i].count}) — ${i + 1} of ${types.length}…`);
+            parseTallyVouchers(await (await tallyFetch(tallyUrl, withPeriod(vouchersOfTypeXml(types[i].type, companyName || null)), 180000)).text()).forEach(keep);
+          }
+        } catch (e) { lastError = e instanceof Error ? e.message : String(e); failed = true; }
       }
       if (failed) {
         setImportVoucherResult({ ok: false, msg: "Tally stopped answering. Restart Tally and the FreWork Tally Bridge, press Connect, then import again." + (lastError ? " (" + lastError + ")" : "") });

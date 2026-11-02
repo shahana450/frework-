@@ -54,3 +54,17 @@ test("Tally sends ledger lines under LEDGERENTRIES too; they are not counted twi
   const [v] = parseTallyVouchers(ITEM_INVOICE);
   assert.equal(v.lines.filter(l => l.ledgerName === "Asha Traders").length, 1);
 });
+
+test("voucher index: types with vouchers inside the period, smallest first", async () => {
+  const { voucherTypesInRange, vouchersOfTypeXml } = await import("../../src/lib/tallyUtils");
+  const xml = `<ENVELOPE><VOUCHER VCHTYPE="Sales" ACTION="Create"><DATE>20250405</DATE></VOUCHER><VOUCHER VCHTYPE="Sales"><DATE>20250406</DATE></VOUCHER>
+    <VOUCHER VCHTYPE="Payment"><DATE>20250410</DATE></VOUCHER><VOUCHER VCHTYPE="Payment"><DATE>20240410</DATE></VOUCHER><VOUCHER VCHTYPE="B2C &amp; Sales"><DATE>20260331</DATE></VOUCHER></ENVELOPE>`;
+  assert.deepEqual(voucherTypesInRange(xml, "2025-04-01", "2026-03-31"), [{ type: "Payment", count: 1 }, { type: "B2C & Sales", count: 1 }, { type: "Sales", count: 2 }]);
+  assert.match(vouchersOfTypeXml("B2C & Sales"), /\$VoucherTypeName = "B2C &amp; Sales"/);
+});
+
+test("dates sent to Tally use the form it honours (TYPE=\"Date\", 1-Apr-2025)", async () => {
+  const { tallyDates } = await import("../../src/lib/tallyUtils");
+  assert.equal(tallyDates("<SVFROMDATE>20250401</SVFROMDATE><SVTODATE>2026-03-31</SVTODATE>"), '<SVFROMDATE TYPE="Date">1-Apr-2025</SVFROMDATE><SVTODATE TYPE="Date">31-Mar-2026</SVTODATE>');
+  assert.equal(tallyDates('<SVFROMDATE TYPE="Date">1-Apr-2025</SVFROMDATE>'), '<SVFROMDATE TYPE="Date">1-Apr-2025</SVFROMDATE>');
+});
