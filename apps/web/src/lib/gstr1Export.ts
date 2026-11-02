@@ -61,7 +61,34 @@ export async function buildMonthGstr1(sb: SupabaseClient, bizId: string, month: 
     const out = (j.fw_fin_journal_lines ?? []).filter(l => isOutput(l.fw_fin_chart_of_accounts?.name ?? "")).reduce((s, l) => s + (Number(l.cr_amount) || 0) - (Number(l.dr_amount) || 0), 0);
     return { ...j, type: out >= 0 ? "sales" : "credit_note" };
   });
-  const src: SrcJournal[] = saleLike.map(j => ({
+  // A month-end GST computation entry (receipts booked GST-inclusive to income, then Dr Income / Cr Output GST) holds the
+  // tax but not the sale: the sales value is the income those receipts credited. Such an entry becomes one B2C summary
+  // line — taxable = the month's net credit to that income ledger, tax = the output GST it carves out.
+  type Row = typeof rows[number];
+  const incomeNet = (j: Row) => (j.fw_fin_journal_lines ?? []).filter(l => l.fw_fin_chart_of_accounts?.type === "income").reduce((s, l) => s + (Number(l.cr_amount) || 0) - (Number(l.dr_amount) || 0), 0);
+  const computations = saleLike.filter(j => !rows.find(r => r.id === j.id && (r.type === "sales" || r.type === "credit_note")) && incomeNet(j) < 0 && j.type === "sales");
+  const computedNotes: string[] = [];
+  const computed = computations.map(j => {
+    const incomes = new Set((j.fw_fin_journal_lines ?? []).filter(l => l.fw_fin_chart_of_accounts?.type === "income").map(l => l.fw_fin_chart_of_accounts?.name ?? ""));
+    let taxable = rows.filter(r => !saleLike.some(s => s.id === r.id && !computations.includes(s))).reduce((s, r) => s + (r.fw_fin_journal_lines ?? []).filter(l => incomes.has(l.fw_fin_chart_of_accounts?.name ?? "")).reduce((t, l) => t + (Number(l.cr_amount) || 0) - (Number(l.dr_amount) || 0), 0), 0);
+    const taxLines = (j.fw_fin_journal_lines ?? []).filter(l => isOutput(l.fw_fin_chart_of_accounts?.name ?? ""));
+    const tax = taxLines.reduce((s, l) => s + (Number(l.cr_amount) || 0) - (Number(l.dr_amount) || 0), 0);
+    // The rate is in the ledger names ("Output CGST @ 9%" → 18%) or the narration ("@18%"). Taxable = tax ÷ rate: often
+    // only part of the receipts is taxable (pass-through fees), so the month's income can't be used directly.
+    const names = taxLines.map(l => l.fw_fin_chart_of_accounts?.name ?? "");
+    const pct = (s: string) => Number((s.match(/@\s*(\d+(?:\.\d+)?)\s*%/) ?? [])[1]) || 0;
+    const half = names.filter(n => /cgst|sgst|utgst/i.test(n)).map(pct).find(Boolean), full = names.filter(n => /igst/i.test(n)).map(pct).find(Boolean);
+    const rate = full || (half ? half * 2 : 0) || pct(String((j as { narration?: string }).narration ?? ""));
+    const fromRate = rate > 0 ? Math.round(tax / (rate / 100) * 100) / 100 : 0;
+    if (fromRate > 0) {
+      if (taxable - fromRate > 1) computedNotes.push(`${j.entry_no}: output GST at ${rate}% covers ₹${fromRate.toLocaleString("en-IN")} of the month's ₹${(Math.round(taxable * 100) / 100).toLocaleString("en-IN")} income — report the remaining ₹${(Math.round((taxable - fromRate) * 100) / 100).toLocaleString("en-IN")} as exempt / nil-rated / non-GST if that's what it is.`);
+      taxable = fromRate;
+    }
+    return { ...j, party_name: null, contact_id: null, reference_no: j.reference_no || j.entry_no, total_debit: Math.round((taxable + tax) * 100) / 100,
+      fw_fin_journal_lines: [{ dr_amount: 0, cr_amount: Math.round(taxable * 100) / 100, fw_fin_chart_of_accounts: { name: [...incomes][0] ?? "Sales", type: "income" } }, ...taxLines] } as Row;
+  });
+  const docsSrc = [...saleLike.filter(j => !computations.includes(j)), ...computed];
+  const src: SrcJournal[] = docsSrc.map(j => ({
     id: j.id, entry_no: j.entry_no, date: String(j.date).slice(0, 10), type: j.type, reference_no: j.reference_no, party_name: j.party_name ?? null,
     contact_id: j.contact_id ?? null, total: Number(j.total_debit) || 0, metadata: j.metadata ?? null,
     lines: (j.fw_fin_journal_lines ?? []).map(l => ({ dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0, account: l.fw_fin_chart_of_accounts?.name ?? "" })),
@@ -72,6 +99,7 @@ export async function buildMonthGstr1(sb: SupabaseClient, bizId: string, month: 
   const left = src.filter(s => !inSeries(s));
   // Every sale is reported; ones outside the INV / CN / DN series are flagged so their invoice numbers get checked
   const result = buildGstr1(gstin, (biz as { state?: string } | null)?.state ?? null, month, docsFromJournals(src, contacts ?? []));
+  for (const t of computedNotes) result.issues.push({ level: "warn", text: t });
   if (left.length) result.issues.push({ level: "warn", text: `${left.length} sale${left.length === 1 ? " was" : "s were"} booked outside the INV invoice series (e.g. ${left.slice(0, 3).map(s => s.entry_no).join(", ")}). They're included — check each one's invoice number (its reference) before filing.` });
   return { ...result, gstin, fileName: `GSTR1_${gstin || "GSTIN"}_${month.slice(5, 7)}${month.slice(0, 4)}.json` };
 }
