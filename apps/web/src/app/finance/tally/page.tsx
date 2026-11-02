@@ -10,6 +10,7 @@ import { readTallyLedgerGroups, importTallyVouchers, summaryText } from "@/lib/i
 import { downloadApiFile } from "@/lib/apiAuthClient";
 import Link from "next/link";
 import MatchBooksPanel from "./MatchBooksPanel";
+import { tallyAutoSyncOn, setTallyAutoSync, lastAutoSync } from "@/lib/tallyAutoSync";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 
 // Reaching Tally (direct, Tally Bridge or Chrome extension) is shared: lib/tallyUtils.ts — never a local copy.
@@ -1028,6 +1029,7 @@ export default function TallyPage() {
                   Clear Tally imports &amp; re-import
                 </button>
                 <div style={{ fontSize: "0.76rem", color: "#5E6B66" }}>Entries FreWork pushed to Tally are skipped — they&apos;re already in your books.</div>
+                {bizId && <AutoSyncToggle bizId={bizId} />}
                 {importVoucherResult && (
                   <div role="status" style={{ padding: "0.7rem 0.9rem", borderRadius: 10, fontSize: "0.85rem", fontWeight: 600, color: importVoucherResult.ok ? "#0B7A55" : "#8A5A00", background: importVoucherResult.ok ? "#E3F6EE" : "#FFF4DB" }}>
                     {importVoucherResult.msg}
@@ -1203,5 +1205,20 @@ export default function TallyPage() {
 
       </div>
     </div>
+  );
+}
+
+// Automatic change-only sync from Tally while FreBook is open (see lib/tallyAutoSync)
+function AutoSyncToggle({ bizId }: { bizId: string }) {
+  const [on, setOn] = useState(false);
+  const [last, setLast] = useState<ReturnType<typeof lastAutoSync>>(null);
+  useEffect(() => { setOn(tallyAutoSyncOn(bizId)); setLast(lastAutoSync(bizId)); const id = setInterval(() => setLast(lastAutoSync(bizId)), 30000); return () => clearInterval(id); }, [bizId]);
+  return (
+    <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.82rem", color: "#2E3B36", cursor: "pointer" }}>
+      <input type="checkbox" checked={on} onChange={e => { setTallyAutoSync(bizId, e.target.checked); setOn(e.target.checked); }} style={{ marginTop: 3 }} />
+      <span><b>Sync from Tally automatically</b> — every 10 minutes while FreBook is open, only new or changed vouchers.
+        {last && <span style={{ display: "block", color: last.ok ? "#0B7A55" : "#8A5A00" }}>Last: {new Date(last.at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} · {last.text}</span>}
+      </span>
+    </label>
   );
 }

@@ -210,7 +210,7 @@ let timer: ReturnType<typeof setInterval> | null = null;
 /** A long Tally job (voucher import, push) is running: background checks wait, so a busy Tally is not marked as closed. */
 let busyUntil = 0;
 export function setTallyBusy(on: boolean) { busyUntil = on ? Date.now() + 30 * 60 * 1000 : 0; }
-const tallyBusy = () => Date.now() < busyUntil;
+export const tallyBusy = () => Date.now() < busyUntil;
 
 function startWatch() {
   if (timer || typeof window === "undefined") return;

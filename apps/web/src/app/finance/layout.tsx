@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
 import { useTallyAutoCatchUp, AUTO_PUSH_EVENT } from "@/lib/tallyAutoCatchUp";
 import WindowDock, { openInWindow } from "@/components/finance/WindowDock";
+import { useTallyAutoSync, AUTOSYNC_EVENT } from "@/lib/tallyAutoSync";
 import InstallApp from "@/components/finance/InstallApp";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -128,6 +129,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   // The one active business (Task 6): resolved here, shown in the header, provided to every page
   const active = useActiveBusinessStore();
   useTallyAutoCatchUp(active.businessId, tallyState);
+  useTallyAutoSync(active.businessId, tallyState);
   // View-only (a client, or a CA reviewer): checked with the server for the active business
   const [viewOnly, setViewOnly] = useState(false);
   useEffect(() => {
@@ -150,7 +152,10 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     let tm: ReturnType<typeof setTimeout>;
     const on = (e: Event) => { setAutoToast((e as CustomEvent).detail); clearTimeout(tm); tm = setTimeout(() => setAutoToast(null), 8000); };
-    window.addEventListener(AUTO_PUSH_EVENT, on); return () => { window.removeEventListener(AUTO_PUSH_EVENT, on); clearTimeout(tm); };
+    // Automatic Tally sync speaks only when something came across or went wrong
+    const onSync = (e: Event) => { const d = (e as CustomEvent).detail as { ok: boolean; text: string }; if (!d.ok || !/up to date|no changes/.test(d.text)) on(e); };
+    window.addEventListener(AUTO_PUSH_EVENT, on); window.addEventListener(AUTOSYNC_EVENT, onSync);
+    return () => { window.removeEventListener(AUTO_PUSH_EVENT, on); window.removeEventListener(AUTOSYNC_EVENT, onSync); clearTimeout(tm); };
   }, []);   // pushes WhatsApp/other-device entries when Auto-push is on
 
   useEffect(() => { try { setAccountant(localStorage.getItem("fw_nav_mode") === "accountant"); } catch { /* */ } }, []);
