@@ -112,8 +112,8 @@ export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId,
         </div>
 
         {need.length > 0 && (
-          <div style={{ background: "#FFF4DB", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-            <b style={{ fontSize: 14 }}>New ledgers — we picked the likely group (✓). Change any that are wrong, then post.</b>
+          <div style={{ background: "#FFF4DB", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 8, maxHeight: "40vh", overflowY: "auto", flexShrink: 0, borderBottom: "1px solid #EADBB8" }}>
+            <b style={{ fontSize: 14 }}>{need.length} new ledger{need.length === 1 ? "" : "s"} — we picked the likely group (✓). Change any that are wrong, then post. <span style={{ fontWeight: 400, color: C.muted }}>(Scroll this box; the Post button stays below.)</span></b>
             <span style={{ fontSize: 12.5, color: C.muted }}>{tally.status === "connected" ? (tallyLedgers ? `${Object.keys(tallyLedgers).length} ledgers loaded from Tally${tally.company ? ` (${tally.company})` : ""}. Matches are filled in — change any you like.` : "Loading ledgers from Tally…") : "Connect Tally (Tally page) to pick from your Tally ledgers."}</span>
             {tallyLedgers && <datalist id="tally-ledgers">{Object.keys(tallyLedgers).sort().map(l => <option key={l} value={l}>{tallyLedgers[l]}</option>)}</datalist>}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -138,7 +138,7 @@ export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId,
           </div>
         )}
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "14px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ flex: 1, minHeight: 140, overflowY: "auto", padding: "14px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
           {entries.map(e => {
             const posted = done[e.row], fail = failed[e.row];
             return (
@@ -167,7 +167,7 @@ export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId,
           })}
         </div>
 
-        <div style={{ borderTop: `1px solid ${C.line}`, background: "#FFFFFF", padding: "12px 20px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ borderTop: `1px solid ${C.line}`, background: "#FFFFFF", padding: "12px 20px", flexShrink: 0, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <button onClick={() => setSel(new Set(chosen.length === ok.filter(e => !done[e.row]).length ? [] : ok.map(e => e.row)))} style={btn(false)}>{chosen.length === ok.filter(e => !done[e.row]).length ? "Clear" : "Select all"}</button>
           <span role="status" style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: msg.startsWith("✓") ? C.pos : C.muted }}>{msg || `${chosen.length} selected · ${cur()}${inr(chosen.reduce((s, e) => s + e.debit, 0)) || "0.00"}`}</span>
           <button onClick={onClose} style={btn(false)}>Close</button>
