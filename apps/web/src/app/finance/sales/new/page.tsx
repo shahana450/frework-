@@ -182,6 +182,15 @@ export default function NewSalesInvoicePage() {
         ],
       });
       setDone({ entry: r.entry_no ?? invoiceNo, total, customer: who });
+      // Stock out for lines that are stocked items (matched by name); quietly skipped before the inventory step is run
+      if (r.status === "posted" && r.id) {
+        const sold = lines.map((l, i) => ({ name: l.description.trim().toLowerCase(), qty: parseFloat(l.qty) || 0, taxable: t.calc[i]?.taxable ?? 0 })).filter(x => x.name && x.qty > 0);
+        if (sold.length) void supabase.from("fw_fin_items").select("id,name,is_service,track_stock").eq("business_id", bizId).then(({ data }) => {
+          const by = new Map(((data ?? []) as { id: string; name: string; is_service: boolean; track_stock?: boolean }[]).filter(x => !x.is_service && x.track_stock !== false).map(x => [x.name.trim().toLowerCase(), x.id]));
+          const moves = sold.filter(x => by.has(x.name)).map(x => ({ business_id: bizId, item_id: by.get(x.name), date: invoiceDate, qty: -x.qty, rate: x.qty ? x.taxable / x.qty : 0, kind: "sale", journal_id: r.id }));
+          if (moves.length) void supabase.from("fw_fin_stock_moves").insert(moves).then(() => null, () => null);
+        });
+      }
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn't save the invoice."); }
     setSaving(false);
   }
