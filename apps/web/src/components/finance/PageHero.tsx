@@ -33,6 +33,7 @@ const SETTINGS_TABS: { key: string; label: string; href: string }[] = [
   { key: "region", label: "Region & currency", href: "/finance/settings/region" },
   { key: "fy", label: "Financial years", href: "/finance/fy" },
   { key: "team", label: "Team & access", href: "/finance/team" },
+  { key: "clients", label: "Client access", href: "/finance/clients" },
   { key: "whatsapp", label: "WhatsApp", href: "/finance/whatsapp" },
   { key: "portals", label: "Portal connect", href: "/finance/portals" },
   { key: "integrations", label: "Integrations", href: "/finance/integrations" },

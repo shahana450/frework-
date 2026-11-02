@@ -70,6 +70,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "💬", label: "WhatsApp", href: "/finance/whatsapp" },
     { icon: "📅", label: "Financial Years", href: "/finance/fy", accountant: true },
     { icon: "🫂", label: "Team & Access", href: "/finance/team" },
+    { icon: "👁", label: "Client Access", href: "/finance/clients" },
     { icon: "🔌", label: "Tally", href: "/finance/tally" },
     { icon: "🏢", label: "CA Dashboard", href: "/finance/ca-dashboard", accountant: true },
     { icon: "❓", label: "Help & FAQ", href: "/finance/help" },

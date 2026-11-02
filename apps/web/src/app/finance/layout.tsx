@@ -69,6 +69,9 @@ const SHORT: Record<string, string> = {
 };
 const shortLabel = (l: string) => SHORT[l] ?? l;
 
+// A client given view-only access sees reports and documents, never the tools that record or change entries
+const VIEW_ONLY_ICONS = ["/finance/books", "/finance/journals", "/finance/ledger", "/finance/receivables", "/finance/payables", "/finance/reports?tab=trial_balance", "/finance/reports?tab=profit_loss", "/finance/reports?tab=balance_sheet", "/finance/gst/returns", "/finance/shelf", "/finance/audit360", "/finance/help"];
+const WRITE_PAGES = ["/finance/chat-book", "/finance/inbox", "/finance/sales/new", "/finance/purchases/new", "/finance/journals/new", "/finance/tally", "/finance/settings", "/finance/team", "/finance/clients", "/finance/banking/import", "/finance/opening-balances", "/finance/fy", "/finance/integrations", "/finance/portals", "/finance/whatsapp", "/finance/payment", "/finance/expenses", "/finance/credit-note", "/finance/debit-note"];
 const UNGUARDED = ["/finance/pricing", "/finance/setup", "/finance/admin", "/finance/help"];
 
 const TOP_ICONS = [
@@ -117,6 +120,17 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   // The one active business (Task 6): resolved here, shown in the header, provided to every page
   const active = useActiveBusinessStore();
   useTallyAutoCatchUp(active.businessId, tallyState);
+  // View-only (a client, or a CA reviewer): checked with the server for the active business
+  const [viewOnly, setViewOnly] = useState(false);
+  useEffect(() => {
+    if (!active.businessId) return;
+    let live = true;
+    fetch(`/api/finance/my-role?business_id=${active.businessId}`).then(r => r.ok ? r.json() : null).then(d => { if (live && d) setViewOnly(!d.canPost); }).catch(() => null);
+    return () => { live = false; };
+  }, [active.businessId]);
+  useEffect(() => {
+    if (viewOnly && (pathname === "/finance" || WRITE_PAGES.some(w => pathname.startsWith(w)))) router.replace("/finance/client");
+  }, [viewOnly, pathname, router]);
   // A referral link used at sign-up is applied once, now that the account exists
   useEffect(() => {
     let code = ""; try { code = localStorage.getItem("fw_ref") ?? ""; } catch { /* */ }
@@ -329,7 +343,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         {/* Nav groups */}
         <nav style={{ flex: 1, padding: "8px 0" }}>
           {FINANCE_NAV.map(group => {
-            const items = group.items.filter(i => (accountant || !i.accountant) && (india || !i.india));
+            const items = group.items.filter(i => (accountant || !i.accountant) && (india || !i.india) && !(viewOnly && (i.href === "/finance" || WRITE_PAGES.some(w => i.href.startsWith(w)))));
             if (!items.length) return null;
             return (
               <div key={group.label || "top"} style={{ marginBottom: 4 }}>
@@ -400,7 +414,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         {/* Main icons along the top (FreBook has its own top bar) */}
         {!pathname.startsWith("/finance/chat-book") && (
           <nav className="fw-topicons" aria-label="Main sections">
-            {TOP_ICONS.filter(t => india || !t.href.startsWith("/finance/gst")).map(t => {
+            {(viewOnly ? [{ href: "/finance/client", label: "Home" }, ...TOP_ICONS.filter(t => VIEW_ONLY_ICONS.includes(t.href))] : TOP_ICONS).filter(t => india || !t.href.startsWith("/finance/gst")).map(t => {
               const on = t.href.includes("?") ? pathname + search === t.href : t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
               return (
                 <Link key={t.href} href={t.href} className={[on ? "on" : "", ["/finance/books", "/finance/reports?tab=trial_balance", "/finance/gst/returns"].includes(t.href) ? "grp" : ""].join(" ").trim() || undefined} title={t.label} aria-current={on ? "page" : undefined}>

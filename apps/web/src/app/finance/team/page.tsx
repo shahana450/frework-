@@ -12,7 +12,7 @@ const ROLES = [
   { value: "admin", label: "Admin", desc: "Full access — can post, edit, close FY, manage team" },
   { value: "accountant", label: "Accountant", desc: "Can create/edit journals, upload docs, run reports" },
   { value: "ca_reviewer", label: "CA / Reviewer", desc: "Read-only + can review AI suggestions, add comments" },
-  { value: "viewer", label: "Viewer", desc: "Read-only access to reports and ledgers" },
+  { value: "viewer", label: "Client / Viewer", desc: "View only — reports, ledgers and documents of this business; can't change anything" },
 ];
 
 export default function TeamPage() {
