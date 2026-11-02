@@ -1,7 +1,7 @@
 "use client";
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { findTallyPort, tallyFetch, parseTallyVouchers, vouchersInRangeXml, voucherIndexXml, voucherTypesInRange, vouchersOfTypeXml } from "@/lib/tallyUtils";
+import { findTallyPort, tallyFetch, parseTallyVouchers, vouchersInRangeXml, voucherIndexXml, voucherTypesInRange, vouchersOfTypeXml, alterIdIndexXml, alterIdsInRange, vouchersByAlterIdXml } from "@/lib/tallyUtils";
 import { tallyProblem, companiesXml } from "@/lib/integrations/tally";
 import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow, setTallyBusy } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -451,9 +451,32 @@ export default function TallyPage() {
         if (seen.has(k) || v.date < rangeFrom || v.date > rangeTo) return; seen.add(k); allVouchers.push(v);
       };
       let filterOk = true, failed = false;
-      // Month by month: the period (sent as Tally honours it — see tallyDates) keeps each reply small, so Tally keeps
-      // answering even for a company with years of data. Ledger lines only — the stock details made replies huge.
-      const months = monthsInRange(rangeFrom, rangeTo);
+      // In pieces by AlterID: a quick list of the period's vouchers, then a few hundred at a time — every reply small,
+      // so Tally keeps answering whatever the company's size. A slow piece makes the next ones smaller.
+      let pieces = false;
+      try {
+        setSyncProgress("Listing the vouchers in Tally…");
+        const ids = alterIdsInRange(await (await tallyFetch(tallyUrl, alterIdIndexXml(rangeFrom, rangeTo, companyName || null), 120000)).text(), rangeFrom, rangeTo);
+        if (ids.length) {
+          pieces = true;
+          let size = 400;
+          for (let i = 0; i < ids.length;) {
+            const j = Math.min(i + size, ids.length);
+            setSyncProgress(`Reading vouchers ${i + 1}–${j} of ${ids.length} from Tally…`);
+            const t0 = Date.now();
+            try {
+              parseTallyVouchers(await (await tallyFetch(tallyUrl, vouchersByAlterIdXml(ids[i], ids[j - 1], rangeFrom, rangeTo, companyName || null), 90000)).text()).forEach(keep);
+              i = j;
+              if (Date.now() - t0 > 30000 && size > 50) size = Math.floor(size / 2);
+            } catch (e) {
+              if (size > 50 && !/stopped|refused|unreachable/i.test(e instanceof Error ? e.message : "")) { size = Math.floor(size / 2); continue; }   // too big: retry smaller
+              throw e;
+            }
+          }
+        }
+      } catch (e) { lastError = e instanceof Error ? e.message : String(e); failed = true; }
+      // Month by month only when Tally gave no AlterIDs (older releases)
+      const months = pieces || failed ? [] : monthsInRange(rangeFrom, rangeTo);
       for (let i = 0; i < months.length && filterOk; i++) {
         const m = months[i];
         setSyncProgress("Reading " + m.label + " from Tally (" + (i + 1) + "/" + months.length + ")…");

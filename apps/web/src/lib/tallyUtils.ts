@@ -104,6 +104,35 @@ export function tallyFetch(url: string, body: string, timeoutMs = 15000): Promis
   return run;
 }
 
+// ── Vouchers in pieces, by AlterID ────────────────────────────────────────────
+// Every voucher has an AlterID (a number that rises whenever a voucher is created or changed). A filter on it works
+// and is fast, so vouchers are read a few hundred at a time — each reply small, Tally answering in seconds, whatever
+// the company's size (8,000 vouchers a year: 500 per piece in ~8 s). The period is sent too (tallyDates writes it).
+const periodTags = (fromIso: string, toIso: string) => `<SVFROMDATE>${fromIso}</SVFROMDATE><SVTODATE>${toIso}</SVTODATE>`;
+/** Every voucher's date and AlterID in the period — small, quick. */
+export function alterIdIndexXml(fromIso: string, toIso: string, company?: string | null): string {
+  const id = "FPX" + Date.now().toString(36) + (++tseq);
+  return "<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>" + id + "</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>" + periodTags(fromIso, toIso) + companyTag(company)
+    + "</STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME=\"" + id + "\" ISMODIFY=\"No\"><TYPE>Voucher</TYPE><FETCH>Date,AlterID</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>";
+}
+/** AlterIDs of the vouchers dated inside the period, lowest first. */
+export function alterIdsInRange(xml: string, fromIso: string, toIso: string): number[] {
+  const out: number[] = [];
+  for (const m of xml.matchAll(/<VOUCHER\b[^>]*>([\s\S]*?)<\/VOUCHER>/gi)) {
+    const d = (m[1].match(/<DATE[^>]*>(\d{8})</i) ?? [])[1] ?? "", a = Number((m[1].match(/<ALTERID[^>]*>\s*(\d+)\s*</i) ?? [])[1]);
+    const iso = d ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : "";
+    if (a && iso >= fromIso && iso <= toIso) out.push(a);
+  }
+  return [...new Set(out)].sort((x, y) => x - y);
+}
+/** The vouchers whose AlterID is between lo and hi (inclusive), with their ledger lines. */
+export function vouchersByAlterIdXml(lo: number, hi: number, fromIso: string, toIso: string, company?: string | null): string {
+  const id = "FPA" + Date.now().toString(36) + (++tseq), f = id + "F";
+  return "<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>" + id + "</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>" + periodTags(fromIso, toIso) + companyTag(company)
+    + "</STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME=\"" + id + "\" ISMODIFY=\"No\"><TYPE>Voucher</TYPE><FETCH>Date,VoucherTypeName,VoucherNumber,Narration,AlterID,AllLedgerEntries</FETCH><FILTER>" + f + "</FILTER></COLLECTION>"
+    + "<SYSTEM TYPE=\"Formulae\" NAME=\"" + f + "\">$AlterID &gt;= " + Math.floor(lo) + " AND $AlterID &lt;= " + Math.floor(hi) + "</SYSTEM></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>";
+}
+
 // ── Vouchers by type ──────────────────────────────────────────────────────────
 // Tally ignores the date range on a voucher collection, and on these installs a date filter formula never matches —
 // a multi-year company then sends every voucher it has (hundreds of MB) and freezes. A filter on the voucher TYPE

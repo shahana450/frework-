@@ -68,3 +68,10 @@ test("dates sent to Tally use the form it honours (TYPE=\"Date\", 1-Apr-2025)", 
   assert.equal(tallyDates("<SVFROMDATE>20250401</SVFROMDATE><SVTODATE>2026-03-31</SVTODATE>"), '<SVFROMDATE TYPE="Date">1-Apr-2025</SVFROMDATE><SVTODATE TYPE="Date">31-Mar-2026</SVTODATE>');
   assert.equal(tallyDates('<SVFROMDATE TYPE="Date">1-Apr-2025</SVFROMDATE>'), '<SVFROMDATE TYPE="Date">1-Apr-2025</SVFROMDATE>');
 });
+
+test("AlterID pieces: ids of vouchers inside the period, lowest first; piece request filters on AlterID", async () => {
+  const { alterIdsInRange, vouchersByAlterIdXml } = await import("../../src/lib/tallyUtils");
+  const xml = `<VOUCHER VCHTYPE="Sales"><DATE TYPE="Date">20250405</DATE><ALTERID> 40012</ALTERID></VOUCHER><VOUCHER><DATE>20240405</DATE><ALTERID>100</ALTERID></VOUCHER><VOUCHER><DATE>20250501</DATE><ALTERID>39001</ALTERID></VOUCHER>`;
+  assert.deepEqual(alterIdsInRange(xml, "2025-04-01", "2026-03-31"), [39001, 40012]);
+  assert.match(vouchersByAlterIdXml(39001, 40012, "2025-04-01", "2026-03-31"), /\$AlterID &gt;= 39001 AND \$AlterID &lt;= 40012/);
+});
