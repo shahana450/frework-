@@ -17,6 +17,9 @@ import { buildMonthGstr1, fileGstr1, monthLabel } from "../gstr1Export";
 import { monthFromText } from "../monthFromText";
 import { loginToken, loginUrl } from "./loginLink";
 import { loadOverdue, listMessage } from "../collectAlert";
+import { loadInvoiceDoc } from "../invoiceLoad";
+import { invoicePdf } from "../invoicePdf";
+import { waPost } from "./transport";
 
 type Link = { business_id: string; user_id: string; name: string };
 type Session = { phone: string; business_id: string | null; pending: { parsed?: ParsedTransaction; key?: string; original?: string; picking?: boolean; heads?: Record<string, string>; asking?: string[]; queue?: ParsedTransaction[] } | null; history: { role: "user" | "assistant"; content: string }[]; picking?: boolean };
@@ -130,8 +133,26 @@ ${token ? loginUrl(token, path, link.business_id) : `frework.online${path}`}`;
   if (/^(invoice|inv|invoice pdf|send invoice)\s*$/i.test(m.text.trim())) {
     const id = (sess.pending as { lastSale?: string } | null)?.lastSale;
     if (!id) return "No recent sale to make an invoice for. Post a sale first, then reply *INVOICE*.";
+    // The invoice itself, as a PDF in this chat — ready to forward to the customer
+    let sentPdf = "";
+    try {
+      const inv = await loadInvoiceDoc(sb, link.business_id, id);
+      if (inv) {
+        const fileName = `Invoice-${(inv.doc.invoiceNo || inv.entryNo).replace(/[^A-Za-z0-9-]+/g, "-")}.pdf`;
+        const shelf = await fileToShelf(sb, { businessId: link.business_id, actorId: link.user_id, rack: "bills", title: `Sales invoice ${inv.doc.invoiceNo || inv.entryNo}`, fileName, mime: "application/pdf",
+          bytes: await invoicePdf(inv.doc), source: "upload", fy: fyOfDate(inv.doc.date || new Date().toLocaleDateString("en-CA")), docType: "Sales invoice" });
+        const { data: it } = shelf ? await sb.from("fw_fin_shelf_items").select("file_path").eq("id", shelf.id).maybeSingle() : { data: null };
+        const url = it?.file_path ? (await sb.storage.from("shelf").createSignedUrl(it.file_path, 7 * 86400, { download: fileName })).data?.signedUrl : null;
+        if (url) {
+          const r = await waPost({ messaging_product: "whatsapp", to: m.from, type: "document", document: { link: url, filename: fileName, caption: `${inv.doc.title} ${inv.doc.invoiceNo} · ${inv.doc.buyer.name || "Customer"}` } });
+          sentPdf = r?.ok ? `📄 Invoice *${inv.doc.invoiceNo}* sent above as a PDF — forward it to your customer.` : `📄 Invoice PDF (link works 7 days):\n${url}`;
+        }
+      }
+    } catch (e) { console.error("whatsapp invoice pdf", e); }
     const token = await loginToken(sb, link.user_id);
-    if (!token) return "❌ Couldn't make the invoice link. Open Journal entries in the app and press Invoice.";
+    const edit = token ? `\n\nTo change it (customer details, items, notes), open it in FreBook — the link signs in as you, don't forward it:\n${loginUrl(token, `/finance/invoices/${id}`, link.business_id)}` : "";
+    if (sentPdf) return sentPdf + edit;
+    if (!token) return "❌ Couldn't make the invoice. Open Journal entries in the app and press Invoice.";
     return `🧾 Your invoice — view, edit, then *Print / PDF* to download or share:
 ${loginUrl(token, `/finance/invoices/${id}`, link.business_id)}
 
@@ -284,7 +305,7 @@ async function postPending(sb: SupabaseClient, link: Link, actorId: string, p: {
     const isSale = /^(sale|sales)$/i.test(t.transaction_type);
     await save({ pending: isSale ? { lastSale: posted.id } : null });
     return `✅ Posted as *${posted.entryNo}* · ${link.name}${resolved.created.length ? `\nNew ledger${resolved.created.length > 1 ? "s" : ""}: ${resolved.created.map(c => c.name).join(", ")}` : ""}`
-      + (isSale ? "\n\nNeed the invoice? Reply *INVOICE* to view, edit or download it." : DASH_HINT);
+      + (isSale ? "\n\nNeed the invoice? Reply *INVOICE* — the PDF comes here, ready to forward." : DASH_HINT);
   } catch (e) {
     const err = postingErrorMessage(e);
     if (err.code === "POSSIBLE_DUPLICATE") return `⚠️ ${err.message}\n\nReply *POST ANYWAY* if this is a separate transaction, or *NO* to drop it.`;
