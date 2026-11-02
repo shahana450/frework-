@@ -53,7 +53,7 @@ test("GSTR-1 sections: B2B, B2CS, B2CL, credit notes and HSN", () => {
   const local = j.b2b.find((x: any) => x.ctin === LOCAL).inv[0];
   assert.deepEqual(local.itms[0].itm_det, { txval: 10000, rt: 18, camt: 900, samt: 900, csamt: 0 });
 
-  assert.deepEqual(j.b2cs, [{ sply_ty: "INTRA", rt: 5, typ: "OE", pos: "32", txval: 2000, camt: 50, samt: 50, csamt: 0 }]);
+  assert.deepEqual(j.b2cs, [{ pos: "32", typ: "OE", txval: 2000, iamt: 0, camt: 50, samt: 50, csamt: 0, rt: 5, sply_ty: "INTRA" }]);
   assert.equal(j.b2cl[0].pos, "33");
   assert.equal(j.b2cl[0].inv[0].itms[0].itm_det.iamt, 36000);
 
@@ -69,7 +69,7 @@ test("GSTR-1 sections: B2B, B2CS, B2CL, credit notes and HSN", () => {
   const r2 = buildGstr1(GSTIN, "Kerala", "2026-09", docs, { defaultHsn: "998311" });
   assert.ok(!r2.issues.some(i => i.level === "error"), JSON.stringify(r2.issues.filter(i => i.level === "error")));
   assert.ok([...(r2.json as any).hsn.hsn_b2b, ...((r2.json as any).hsn.hsn_b2c ?? [])].every((h: any) => /^\d{4,8}$/.test(h.hsn_sc)));
-  assert.deepEqual([(r2.json as any).version, (r2.json as any).hash], ["GST3.1.6", "hash"]);
+  assert.deepEqual([(r2.json as any).version, (r2.json as any).hash], ["GST2.2", "hash"]);
 });
 
 test("problems are reported instead of guessed", () => {

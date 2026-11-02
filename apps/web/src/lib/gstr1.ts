@@ -151,22 +151,22 @@ export function buildGstr1(gstin: string, homeState: string | null, period: stri
   }
 
   // The portal's template wants the version and hash fields the offline tool writes
-  const json: Record<string, unknown> = { gstin, fp: `${period.slice(5, 7)}${period.slice(0, 4)}`, version: "GST3.1.6", hash: "hash" };
+  const json: Record<string, unknown> = { gstin, fp: `${period.slice(5, 7)}${period.slice(0, 4)}`, version: "GST2.2", hash: "hash", gt: 0, cur_gt: 0 };
   if (b2b.size) json.b2b = [...b2b].map(([ctin, inv]) => ({ ctin, inv }));
   if (b2cl.size) json.b2cl = [...b2cl].map(([pos, inv]) => ({ pos, inv }));
-  if (b2cs.size) json.b2cs = [...b2cs.values()].filter(x => x.txval !== 0).map(x => x.sply_ty === "INTER" ? { sply_ty: x.sply_ty, rt: x.rt, typ: x.typ, pos: x.pos, txval: x.txval, iamt: x.iamt, csamt: x.csamt } : { sply_ty: x.sply_ty, rt: x.rt, typ: x.typ, pos: x.pos, txval: x.txval, camt: x.camt, samt: x.samt, csamt: x.csamt });
+  if (b2cs.size) json.b2cs = [...b2cs.values()].filter(x => x.txval !== 0).map(x => ({ pos: x.pos, typ: x.typ, txval: x.txval, iamt: x.sply_ty === "INTER" ? x.iamt : 0, camt: x.sply_ty === "INTER" ? 0 : x.camt, samt: x.sply_ty === "INTER" ? 0 : x.samt, csamt: x.csamt, rt: x.rt, sply_ty: x.sply_ty }));
   if (cdnr.size) json.cdnr = [...cdnr].map(([ctin, nt]) => ({ ctin, nt }));
   if (cdnur.length) json.cdnur = cdnur;
-  const hsnList = (m: typeof hsnB2b) => [...m.values()].map((x, k) => ({ ...x, num: k + 1 }));   // hsn_sc first, as the portal expects
-  // The template wants hsn_b2b present even when every sale is B2C
-  json.hsn = { hsn_b2b: hsnList(hsnB2b), ...(hsnB2c.size ? { hsn_b2c: hsnList(hsnB2c) } : {}) };
+  const hsnList = (m: typeof hsnB2b) => [...m.values()].map((x, k) => ({ ...x, user_desc: x.desc, qty: /^99/.test(x.hsn_sc) ? 0 : x.qty, num: k + 1 }));   // services carry no quantity   // hsn_sc first, as the portal expects
+  // Empty tables are left out (as files the portal accepts do)
+  if (hsnB2b.size || hsnB2c.size) json.hsn = { ...(hsnB2b.size ? { hsn_b2b: hsnList(hsnB2b) } : {}), ...(hsnB2c.size ? { hsn_b2c: hsnList(hsnB2c) } : {}) };
   // Table 13 — documents issued: the invoice / credit-note / debit-note numbers used, first to last
   // A journal number (a month-end GST computation) isn't a document issued to customers
   const series = (kind: Doc["kind"]) => docs.filter(d => d.kind === kind && d.no && !/^JV\//i.test(d.no)).map(d => d.no).sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
   const docDet = ([["invoice", 1, "Invoices for outward supply"], ["debit_note", 4, "Debit Note"], ["credit_note", 5, "Credit Note"]] as const)
     .map(([kind, num, typ]) => ({ list: series(kind), num, typ })).filter(x => x.list.length)
-    .map(x => ({ doc_num: x.num, doc_typ: x.typ, docs: [{ num: 1, from: x.list[0], to: x.list[x.list.length - 1], totnum: x.list.length, cancel: 0, net_issue: x.list.length }] }));
-  json.doc_issue = { doc_det: docDet };
+    .map(x => ({ doc_num: x.num, docs: [{ num: 1, from: x.list[0], to: x.list[x.list.length - 1], totnum: x.list.length, cancel: 0, net_issue: x.list.length }] }));
+  if (docDet.length) json.doc_issue = { doc_det: docDet };
   if ([...hsnB2b.values(), ...hsnB2c.values()].some(x => !x.hsn_sc)) issues.push({ level: "error", text: "Some sales have no HSN / SAC code, and the portal rejects the file without one. Enter the HSN / SAC to use in the box above (e.g. 998311 for management consultancy), or add it to those invoices." });
 
   // The portal's checks: CGST and SGST are equal halves (paise differences in the books are evened out — the total
