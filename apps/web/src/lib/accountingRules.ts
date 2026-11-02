@@ -99,7 +99,10 @@ function buildLocal(intent: Intent, tax: TaxModule, registered = true): RuleResu
     const g0 = intent.gst;
     const full = tax.split(stated, g0.rate ?? 0, g0.inclusive ?? true, g0.supply ?? "intra").gross;
     const selling = intent.action === "sale" || intent.action === "receipt_from_customer";
-    if (!selling) { warnings.push(`Not GST-registered: the ${tax.taxName} of ₹${r2(full - (g0.inclusive ?? true ? tax.split(stated, g0.rate ?? 0, true, g0.supply ?? "intra").taxable : stated))} is part of the cost — no input credit.`); stated = r2(full); }
+    // A bill read item by item: its GST is each item's own, and the stated amount is already the bill total
+    const billItems = (intent.items ?? []).filter(i => Number(i.taxable) > 0);
+    if (!selling && billItems.length) warnings.push(`Not GST-registered: the ${tax.taxName} of ₹${r2(billItems.reduce((s, i) => s + r2(Number(i.taxable) * (Number(i.rate) || 0) / 100), 0))} is part of the cost — no input credit.`);
+    else if (!selling) { warnings.push(`Not GST-registered: the ${tax.taxName} of ₹${r2(full - (g0.inclusive ?? true ? tax.split(stated, g0.rate ?? 0, true, g0.supply ?? "intra").taxable : stated))} is part of the cost — no input credit.`); stated = r2(full); }
     else warnings.push(`Not GST-registered: no ${tax.taxName} is charged on this sale.${g0.inclusive === false ? " Recorded at the amount without GST." : ""}`);
     intent = { ...intent, gst: { ...g0, applicable: false } };
   }
@@ -170,8 +173,17 @@ function buildLocal(intent: Intent, tax: TaxModule, registered = true): RuleResu
               const t = taxBy.get(c.inputLedger) ?? { ledger: c.inputLedger, code: c.code, amt: 0 };
               t.amt = r2(t.amt + c.amount); taxBy.set(c.inputLedger, t);
             }
-          } else if (stated > 0 && totalTaxable > 0) cost = cost / totalTaxable * stated;   // no GST claim: the bill total is the cost
+          } else {
+            // No GST claim: each item costs its own value plus its own GST (a 0% laptop gets none of the fridge's GST)
+            cost = cost * (1 + (Number(it.rate) || 0) / 100);
+          }
           itemLines.push({ acc: it.account.trim(), amt: r2(cost), kind: it.kind, desc: it.description?.trim() || "" });
+        }
+        // Without a GST claim the bill total is the cost: if the items (with their GST) don't add up to it — rates misread —
+        // share the difference in proportion to each item's own cost, so the entry still matches the bill
+        if (!rated && stated > 0) {
+          const sumCost = itemLines.reduce((s, v) => s + v.amt, 0);
+          if (sumCost > 0 && Math.abs(sumCost - stated) > 1) for (const v of itemLines) v.amt = r2(v.amt / sumCost * stated);
         }
         // One line per bill item (item-wise), labelled with the item
         for (const v of itemLines) lines.push(DR(v.acc, v.amt, v.desc ? `Item: ${v.desc}` : v.kind === "asset" ? "Fixed asset" : v.kind === "purchase" ? "Purchases (stock for sale)" : "Expense", v.kind === "asset" ? "asset" : "expense"));

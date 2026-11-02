@@ -37,3 +37,20 @@ test("paise rounding on the bill goes to Round Off", () => {
   assert.deepEqual(r.lines.find(l => l.account === "Round Off") && [r.lines.find(l => l.account === "Round Off")!.debit], [0.5]);
   assert.equal(r.lines.at(-1)?.credit, 24102);
 });
+
+test("not GST-registered: each item costs its own value + its own GST (a 0% item gets none)", () => {
+  const r = buildEntry({
+    action: "purchase", amount: 71451.42, payment_mode: "bank", payment_account: "Bank Account", counter_account: null, party_name: null,
+    gst: { applicable: true, rate: 18, inclusive: false, supply: "inter" },
+    items: [
+      { account: "Purchases", kind: "purchase", taxable: 3538.82, rate: 18 },
+      { account: "Purchases", kind: "purchase", taxable: 15338.82, rate: 18 },
+      { account: "Purchases", kind: "purchase", taxable: 3538.82, rate: 18 },
+      { account: "Computer", kind: "asset", taxable: 45000, rate: 0 },
+    ],
+  }, { taxRegistered: false });
+  const debits = r.lines.filter(l => l.debit > 0).map(l => [l.account, l.debit]);
+  assert.deepEqual(debits.slice(0, 4), [["Purchases", 4175.81], ["Purchases", 18099.81], ["Purchases", 4175.81], ["Computer", 45000]]);
+  assert.equal(r.lines.find(l => l.credit > 0 && l.account === "Bank Account")?.credit, 71451.42);
+  assert.ok(r.warnings.some(w => w.includes("₹4034.97")));
+});

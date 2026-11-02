@@ -329,7 +329,7 @@ export async function interpret(sb: SupabaseClient, ai: AiIntent, accounts: { na
     needs_clarification: !missing.length ? [] : missing[0] === "payment_account" && intent.payment_mode === "bank" && banks.length > 1
       ? [`Which bank — ${banks.slice(0, 5).map(b => b.name).join(", ")}?`]
       : [questionFor(missing[0], intent)],
-    warnings: [...(notOurs ? [`⚠ ${notOurs}`] : []), ...rr.warnings, ...lines.filter(l => l.is_new_account).map(l => `New ledger "${l.account}" will be created.`)],
+    warnings: [...(notOurs ? [`⚠ ${notOurs}`] : []), ...rr.warnings, ...[...new Set(lines.filter(l => l.is_new_account).map(l => l.account))].map(a => `New ledger "${a}" will be created.`)],
     rule: rr.rule, counter_account: intent.counter_account, history_evidence, fx: rr.fx ?? null,
   };
 }
