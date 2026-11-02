@@ -2,8 +2,8 @@
 // Auto-push catch-up: entries posted where Tally can't be reached (WhatsApp, another device) are pushed by any open
 // FreWork finance page once Tally is connected here and Auto-push is on. Only entries posted after it was switched on.
 import { useEffect, useRef } from "react";
-import { tallyAutoPushOn, tallyAutoPushSince, type TallyState } from "@/lib/tallyConnection";
-import { pushToTally, loadPushStatus } from "@/lib/tallyPushRun";
+import { tallyAutoPushOn, tallyAutoPushSince, tallyAutoPushBusinesses, type TallyState } from "@/lib/tallyConnection";
+import { pushToTally, loadPushStatus, verifyOpenCompany } from "@/lib/tallyPushRun";
 
 let running = false;
 const lastTry = new Map<string, number>();   // a failed entry is retried, but at most every 10 minutes
@@ -13,7 +13,7 @@ export const AUTO_PUSH_EVENT = "fw:tally-autopush";   // detail: { text: string;
 
 const say = (ok: boolean, text: string) => window.dispatchEvent(new CustomEvent(AUTO_PUSH_EVENT, { detail: { ok, text } }));
 
-async function catchUp(bizId: string, t: TallyState) {
+async function catchUp(bizId: string, t: TallyState, quiet = false) {
   if (running || !tallyAutoPushOn(bizId) || t.status !== "connected" || !t.company) return;
   running = true;
   try {
@@ -27,6 +27,8 @@ async function catchUp(bizId: string, t: TallyState) {
     const todo = ((d.todo ?? []) as { id: string; date: string; entry_no: string }[])
       .filter(r => !(status[r.id] && "at" in status[r.id]) && now - (lastTry.get(r.id) ?? 0) > RETRY_MS);
     if (!todo.length) return;
+    // Another business's company: push only while that company is open in Tally, and say nothing when it isn't
+    if (quiet && await verifyOpenCompany(t.port, t.company)) return;
     todo.forEach(r => lastTry.set(r.id, now));
     const r = await pushToTally({ bizId, ids: todo.map(x => x.id), dates: Object.fromEntries(todo.map(x => [x.id, x.date])), company: t.company, port: t.port, educational: t.educational });
     const what = todo.length === 1 ? todo[0].entry_no : `${todo.length} entries`;
@@ -34,13 +36,21 @@ async function catchUp(bizId: string, t: TallyState) {
   } catch (e) { say(false, `Auto-push stopped: ${e instanceof Error ? e.message : "error"}`); } finally { running = false; }
 }
 
+// The open business first, then every other business on this computer with Auto-push on — each pushed to its own
+// Tally company (the push checks that company is open in Tally first). One business at a time.
+async function catchUpAll(bizId: string | null | undefined, t: TallyState) {
+  if (t.status !== "connected") return;
+  if (bizId && t.company) await catchUp(bizId, t);
+  for (const o of tallyAutoPushBusinesses()) if (o.bizId !== bizId) await catchUp(o.bizId, { ...t, company: o.company }, true);
+}
+
 export function useTallyAutoCatchUp(bizId: string | null | undefined, t: TallyState) {
   const ref = useRef(t); ref.current = t;
   useEffect(() => {
-    if (!bizId || t.status !== "connected" || !t.company) return;
-    if (tallyAutoPushOn(bizId) && !announced.has(bizId)) { announced.add(bizId); say(true, `Auto-push is watching for new entries (WhatsApp too) → Tally "${t.company}".`); }
-    void catchUp(bizId, ref.current);
-    const id = setInterval(() => void catchUp(bizId, ref.current), 45000);
+    if (t.status !== "connected") return;
+    if (bizId && t.company && tallyAutoPushOn(bizId) && !announced.has(bizId)) { announced.add(bizId); say(true, `Auto-push is watching for new entries (WhatsApp too) → Tally "${t.company}".`); }
+    void catchUpAll(bizId, ref.current);
+    const id = setInterval(() => void catchUpAll(bizId, ref.current), 45000);
     return () => clearInterval(id);
   }, [bizId, t.status, t.company]);
 }

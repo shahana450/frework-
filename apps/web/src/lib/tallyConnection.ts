@@ -72,6 +72,20 @@ const autoRaw = (bizId: string) => read(`${AUTO}:${bizId}`, "") || read(AUTO, ""
 export const tallyAutoPushOn = (bizId: string) => !!bizId && autoRaw(bizId) !== "";
 export const setTallyAutoPush = (bizId: string, on: boolean) => { write(`${AUTO}:${bizId}`, on ? new Date().toISOString() : null); write(AUTO, null); };
 /** When auto-push was switched on — entries posted after this (e.g. from WhatsApp) are caught up. Older flags: last 24 h. */
+/** Every business on this computer with Auto-push on and its own Tally company — WhatsApp entries for any of them are
+ *  pushed whenever Tally is reachable, not only for the business open in FreBook right now. */
+export function tallyAutoPushBusinesses(): { bizId: string; company: string }[] {
+  const out: { bizId: string; company: string }[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i) ?? "";
+      if (!k.startsWith(`${AUTO}:`) || !localStorage.getItem(k)) continue;
+      const bizId = k.slice(AUTO.length + 1), company = tallyCompanyLinked(bizId);
+      if (bizId && company) out.push({ bizId, company });
+    }
+  } catch { /* */ }
+  return out;
+}
 export const tallyAutoPushSince = (bizId: string) => { const v = autoRaw(bizId); return !v || v === "1" ? new Date(Date.now() - 86400000).toISOString() : v; };
 
 function restore() {
