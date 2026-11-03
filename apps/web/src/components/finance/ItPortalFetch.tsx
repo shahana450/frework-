@@ -5,7 +5,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const C = { ink: "#141A3A", muted: "#5A6080", line: "#E1E4EE", blue: "#1F5EFF", deep: "#232A63", soft: "#EAF2FF", good: "#0B7A55", goodSoft: "#E3F6EE", bad: "#C2321F", badSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB" };
-const ITEMS: [string, string][] = [["notices", "Notices"], ["26as", "26AS"], ["ais", "AIS"], ["tis", "TIS"], ["filed_returns", "Filed returns"]];
+// AIS / TIS are left out: the AIS site didn't download reliably. The worker still supports them, to switch back on later.
+const ITEMS: [string, string][] = [["notices", "Notices"], ["26as", "26AS"], ["filed_returns", "Filed returns"]];
 const fyNow = () => { const d = new Date(); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `${y - 1}-${String(y).slice(2)}`; };
 type Phase = "form" | "working" | "otp" | "running" | "done";
 type Report = { item: string; ok: boolean; note: string }[];
@@ -18,7 +19,7 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [consent, setConsent] = useState(false);
-  const [items, setItems] = useState<Record<string, boolean>>({ notices: true, "26as": true, ais: true, tis: true, filed_returns: false });
+  const [items, setItems] = useState<Record<string, boolean>>({ notices: true, "26as": true, filed_returns: false });
   const [fy, setFy] = useState(fyNow());
   const [phase, setPhase] = useState<Phase>("form");
   const [status, setStatus] = useState("");
@@ -109,7 +110,8 @@ export default function ItPortalFetch({ bizId, onSaved }: { bizId: string; onSav
     <section aria-label="Fetch from the Income-tax portal" style={{ background: "#FFFFFF", border: `1px solid ${C.line}`, borderRadius: 18, padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
       <div>
         <div style={{ fontSize: 17, fontWeight: 800, color: C.ink }}>Get documents from the Income-tax portal</div>
-        <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>Notices, 26AS, AIS, TIS — saved on the Shelf automatically</div>
+        <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>Notices, 26AS and filed returns — saved on the Shelf automatically</div>
+        <div style={{ fontSize: 12.5, color: C.muted, marginTop: 4 }}>AIS / TIS: download them on the portal (AIS menu → Proceed → Download PDF) and drop the file on this page.</div>
       </div>
 
       {!configured ? <div style={{ fontSize: 13, color: C.warn, background: C.warnSoft, padding: "10px 12px", borderRadius: 10 }}>The Income-tax portal link isn&apos;t switched on yet.</div>
