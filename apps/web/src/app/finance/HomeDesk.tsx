@@ -6,6 +6,7 @@ import { dueChip } from "@/lib/dueText";
 import { useState, useEffect } from "react";
 import { useTally, tallyLabel } from "@/lib/tallyConnection";
 import Link from "next/link";
+import { useBrand } from "@/lib/brand";
 import { useRouter } from "next/navigation";
 import type { Dashboard } from "@/lib/dashboard";
 
@@ -26,6 +27,7 @@ type Props = { dash: (Dashboard & { taxDesk?: TaxDesk }) | null; bizName: string
 
 export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, onRetry }: Props) {
   const india = activeCountry() === "IN";
+  const brand = useBrand().name;
   const router = useRouter();
   const tally = useTally();
   const [mode, setMode] = useState<"record" | "ask">("record");
@@ -119,7 +121,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
           </div>
           <textarea id="hd-chat" aria-label="Describe a transaction or ask a question" rows={3} value={text} onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); go(text); } }}
-            placeholder={mode === "record" ? (india ? "Tell FreBook what happened — e.g. Paid office rent ₹25,000 from the bank for October" : `Tell FreBook what happened — e.g. Paid office rent ${cur()}2,500 from the bank for October`) : "Ask about your books — e.g. Who owes me for more than 60 days?"}
+            placeholder={mode === "record" ? (india ? `Tell ${brand} what happened — e.g. Paid office rent ₹25,000 from the bank for October` : `Tell ${brand} what happened — e.g. Paid office rent ${cur()}2,500 from the bank for October`) : "Ask about your books — e.g. Who owes me for more than 60 days?"}
             style={{ width: "100%", minHeight: 96, resize: "vertical", boxSizing: "border-box", border: "none", outline: "none", background: "transparent", padding: "8px 6px", fontSize: 16, lineHeight: 1.55, color: C.ink, fontFamily: "inherit" }} />
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {!fromWa && <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill or attach a PDF" style={{ height: 40, padding: "0 12px", flexShrink: 0, borderRadius: 10, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 6, color: C.muted, textDecoration: "none", fontSize: 13, fontWeight: 700 }}>
@@ -258,7 +260,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         <Link href="/finance/inbox" className="lift" style={{ ...tile, border: `1.5px dashed ${C.goldLine}`, background: "transparent", textDecoration: "none", color: C.ink }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M4 15v5h16v-5" /></svg>
           <h2 style={{ ...h2, fontSize: 18 }}>Smart Inbox</h2>
-          <span style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>Drop bank statements, bills and invoices — FreBook reads them and drafts the entries for you to confirm.</span>
+          <span style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>Drop bank statements, bills and invoices — {brand} reads them and drafts the entries for you to confirm.</span>
           <span style={{ marginTop: "auto", fontSize: 12.5, fontWeight: 700, color: C.gold }}>Open Smart Inbox →</span>
         </Link>
 

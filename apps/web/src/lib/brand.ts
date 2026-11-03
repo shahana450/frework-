@@ -51,7 +51,10 @@ export const BRAND_CSS: Record<string, string> = {
 [data-brand="cswa"] .fw-topicons a .win { background: #1F1F9E; }
 [data-brand="cswa"] .fw-tip { background: #1F1F9E; border-color: rgba(185,196,255,0.4); }
 [data-brand="cswa"] .fw-main h1 { color: #1F1F9E; }
-[data-brand="cswa"] .fw-main button[style*="18, 53, 45"], [data-brand="cswa"] .fw-main button[style*="15, 43, 37"], [data-brand="cswa"] .fw-main a[style*="18, 53, 45"] { background: #1F1F9E !important; }
+[data-brand="cswa"] .fw-main [style*="background: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main [style*="background: rgb(15, 43, 37)"], [data-brand="cswa"] .fw-main [style*="background: rgb(27, 66, 55)"], [data-brand="cswa"] .fw-main [style*="background: linear-gradient"][style*="rgb(15, 43, 37)"], [data-brand="cswa"] .fw-main [style*="background: linear-gradient"][style*="rgb(18, 53, 45)"] { background: #1F1F9E !important; }
+[data-brand="cswa"] .fw-main [style*="background: rgb(244, 239, 228)"], [data-brand="cswa"] .fw-main [style*="background: rgb(247, 241, 227)"], [data-brand="cswa"] .fw-main [style*="background: rgb(243, 236, 221)"] { background: #EEF1FB !important; }
+[data-brand="cswa"] .fw-main [style*="background: rgb(228, 236, 232)"], [data-brand="cswa"] .fw-main [style*="background: rgb(243, 232, 210)"] { background: #E6EAFA !important; }
+[data-brand="cswa"] .fw-main [style*="color: rgb(154, 107, 34)"] { color: #3A3AC4 !important; }
 [data-brand="cswa"] .fw-main input:focus-visible, [data-brand="cswa"] .fw-main button:focus-visible, [data-brand="cswa"] .fw-main a:focus-visible { outline-color: #1F1F9E; }
 /* Its own arrangement, not FreBook's: a white top bar with icon-beside-label pills, and a flat sidebar with a left marker */
 [data-brand="cswa"] .fw-topicons { margin: 0; border-radius: 0; border-width: 0 0 1px; background: #FFFFFF; padding: 8px 16px; gap: 4px; box-shadow: 0 6px 18px -14px rgba(31,31,158,0.5); }
