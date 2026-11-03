@@ -88,6 +88,29 @@ export const BRAND_CSS: Record<string, string> = {
 [data-brand="cswa"] .fw-main button[style*="background: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main button[style*="background: rgb(15, 43, 37)"] { background: linear-gradient(135deg,#4A5CFF,#2328A8) !important; box-shadow: 0 6px 14px -8px rgba(58,72,230,0.8); }
 [data-brand="cswa"] .fw-main section, [data-brand="cswa"] .fw-main [style*="border-radius: 16px"], [data-brand="cswa"] .fw-main [style*="border-radius: 18px"] { box-shadow: 0 10px 30px -22px rgba(35,40,168,0.45); }
 [data-brand="cswa"] .fw-main [style*="color: rgb(154, 107, 34)"], [data-brand="cswa"] .fw-main [style*="color: rgb(201, 162, 74)"] { color: #4A5CFF !important; }
+/* Sapphire & Platinum: royal sapphire with platinum-silver accents, cool and corporate (last, so it wins) */
+[data-brand="cswa"] .fw-side { background: linear-gradient(180deg,#132C74 0%,#0D1E52 50%,#08122F 100%) !important; border-right: 1px solid rgba(214,220,229,0.14) !important; }
+[data-brand="cswa"] .fw-side [style*="color: rgb(217, 181, 111)"], [data-brand="cswa"] .fw-side [style*="color: rgb(185, 196, 255)"] { color: #C9D2DF !important; }
+[data-brand="cswa"] .fw-nav { color: #DCE2EC !important; }
+[data-brand="cswa"] .fw-nav:hover { background: rgba(214,220,229,0.08) !important; }
+[data-brand="cswa"] .fw-nav.on, [data-brand="cswa"] .fw-nav.on:hover { background: linear-gradient(90deg,rgba(214,220,229,0.20),rgba(214,220,229,0.05)) !important; color: #FFFFFF !important; box-shadow: inset 3px 0 0 #D6DCE5 !important; }
+[data-brand="cswa"], [data-brand="cswa"] .fw-main, [data-brand="cswa"] .fw-main > div:first-child { background: linear-gradient(180deg,#EEF1F6 0%,#F5F7FA 40%,#F5F7FA 100%) !important; }
+[data-brand="cswa"] .fw-topicons { background: #FFFFFF; border-bottom: 1px solid #DDE2EA; box-shadow: 0 6px 18px -14px rgba(13,30,82,0.45); }
+[data-brand="cswa"] .fw-topicons a { color: #3A4660; }
+[data-brand="cswa"] .fw-topicons a .ic { background: #ECEFF4; color: #132C74; border: 1px solid #DDE2EA; }
+[data-brand="cswa"] .fw-topicons a:hover { background: #F1F3F7; color: #0D1E52; }
+[data-brand="cswa"] .fw-topicons a:hover .ic { background: #E1E6EE; }
+[data-brand="cswa"] .fw-topicons a.on { background: linear-gradient(135deg,#1A3A8F,#0D1E52) !important; color: #FFFFFF; box-shadow: 0 8px 18px -10px rgba(13,30,82,0.7) !important; }
+[data-brand="cswa"] .fw-topicons a.on .ic { background: rgba(214,220,229,0.18); color: #E6EAF0; border-color: rgba(214,220,229,0.3); }
+[data-brand="cswa"] .fw-main h1 { color: #0D1E52; }
+[data-brand="cswa"] .fw-main [style*="background: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main [style*="background: rgb(15, 43, 37)"], [data-brand="cswa"] .fw-main [style*="background: linear-gradient"][style*="rgb(15, 43, 37)"], [data-brand="cswa"] .fw-main [style*="background: linear-gradient"][style*="rgb(18, 53, 45)"] { background: linear-gradient(135deg,#1A3A8F 0%,#0F2462 55%,#0A1638 100%) !important; }
+[data-brand="cswa"] .fw-main button[style*="background: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main button[style*="background: rgb(15, 43, 37)"] { background: linear-gradient(135deg,#1A3A8F,#0D1E52) !important; box-shadow: 0 6px 14px -8px rgba(13,30,82,0.7); }
+[data-brand="cswa"] .fw-main [style*="color: rgb(154, 107, 34)"], [data-brand="cswa"] .fw-main [style*="color: rgb(201, 162, 74)"] { color: #1A3A8F !important; }
+[data-brand="cswa"] .fw-main [style*="color: rgb(232, 194, 122)"], [data-brand="cswa"] .fw-main [style*="color: rgb(217, 181, 111)"] { color: #C9D2DF !important; }
+[data-brand="cswa"] .fw-main [style*="background: rgb(201, 162, 74)"], [data-brand="cswa"] .fw-main [style*="background: rgb(217, 181, 111)"] { background: linear-gradient(135deg,#E6EAF0,#B9C3D2) !important; color: #0D1E52 !important; }
+[data-brand="cswa"] .fw-main section, [data-brand="cswa"] .fw-main [style*="border-radius: 16px"], [data-brand="cswa"] .fw-main [style*="border-radius: 18px"] { box-shadow: 0 12px 30px -24px rgba(13,30,82,0.5); }
+[data-brand="cswa"] .fw-main [style*="border: 1px solid rgb(230, 223, 208)"] { border-color: #DDE2EA !important; }
+[data-brand="cswa"] .fw-tip { background: #0D1E52; border-color: rgba(214,220,229,0.35); }
 @media (max-width: 760px) { [data-brand="cswa"] .fw-tabs a.on { color: #1F1F9E; } [data-brand="cswa"] .fw-tabs a.plus { background: #1F1F9E; } }
 `,
 };
