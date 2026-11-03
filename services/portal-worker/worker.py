@@ -436,19 +436,51 @@ async def _fetch_ais_tis(page: Page, fy: str | None, want: set[str]) -> tuple[li
             if await sel.count():
                 if not await _select_matching(ais, sel, fy.replace("-", r"\s*-\s*")):
                     notes.append(f"Couldn't choose FY {fy}; downloaded the default year")
-        for kind, label in [("tis", "Taxpayer Information Summary"), ("ais", "Annual Information Statement")]:
+        await ais.wait_for_timeout(3000)
+        for kind, label in [("tis", r"Taxpayer Information Summary|\bTIS\b"), ("ais", r"Annual Information Statement|\bAIS\b")]:
             if kind not in want:
                 continue
-            tile = ais.get_by_text(label, exact=False).first
-            if not await tile.count():
-                notes.append(f"{kind.upper()} tile not found")
+            # The card's heading: a short visible text (help paragraphs also mention these words, so skip long ones)
+            head = None
+            heads = ais.get_by_text(re.compile(label, re.I))
+            for i in range(min(await heads.count(), 40)):
+                el = heads.nth(i)
+                try:
+                    if await el.is_visible() and len((await el.inner_text()).strip()) <= 60:
+                        head = el
+                        break
+                except Exception:
+                    continue
+            if head is None:
+                notes.append(f"{kind.upper()} card not found")
                 continue
-            container = tile.locator("xpath=ancestor::*[.//*[contains(.,'Download')]][1]")
-            btn = container.get_by_text("Download", exact=False).first
-            if not await btn.count():
+            hb = await head.bounding_box()
+            # The real Download control nearest that heading: a button, link or icon — never plain help text
+            cands = ais.locator("button, a, [role=button], [title*='ownload'], [aria-label*='ownload'], [mattooltip*='ownload']")
+            btn, best = None, 1e9
+            for i in range(min(await cands.count(), 300)):
+                el = cands.nth(i)
+                try:
+                    if not await el.is_visible():
+                        continue
+                    name = " ".join(filter(None, [await el.inner_text(), await el.get_attribute("title"), await el.get_attribute("aria-label"), await el.get_attribute("mattooltip")]))
+                    if not re.search(r"download", name, re.I):
+                        continue
+                    bb = await el.bounding_box()
+                    if not bb or not hb:
+                        continue
+                    d = abs(bb["y"] - hb["y"]) + abs(bb["x"] - hb["x"]) * 0.3
+                    if d < best:
+                        btn, best = el, d
+                except Exception:
+                    continue
+            if btn is None:
                 notes.append(f"{kind.upper()} download button not found")
                 continue
-            await btn.click(timeout=10000)
+            try:
+                await btn.click(timeout=10000)
+            except Exception:
+                await btn.click(timeout=10000, force=True)
             await ais.wait_for_timeout(1500)
             pdf = ais.get_by_text("PDF", exact=False).first
             got = await _download_click(ais, pdf if await pdf.count() else btn, 45000)
