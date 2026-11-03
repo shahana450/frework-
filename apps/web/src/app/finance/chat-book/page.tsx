@@ -740,6 +740,17 @@ export default function FreBookPage() {
                       <button key={t} onClick={() => { setInput(t); inputRef.current?.focus(); }} style={{ height: 34, padding: "0 13px", borderRadius: 999, border: "1px solid #E0D6C1", background: "#FFFFFF", color: "#2E3B36", fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>{t}</button>
                     ))}
                   </div>
+                  {/* Many entries at once: fill a template in Excel, then attach it with the paper clip */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 10, paddingTop: 10, borderTop: "1px solid #E7DDC8" }}>
+                    <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.12em", color: "#8A6420", marginRight: 4 }}>TEMPLATES</span>
+                    {([["Journal entries", downloadTemplate, "One row per ledger — debits and credits"], ["Receipts & payments", downloadCashBankTemplate, "One row per cash / bank entry"]] as const).map(([label, fn, tip]) => (
+                      <button key={label} onClick={() => void fn()} title={`${tip}. Fill it in Excel, then attach it with the paper clip.`}
+                        style={{ height: 34, padding: "0 13px", borderRadius: 999, border: "1px solid #0F2B25", background: "#0F2B25", color: "#FFFFFF", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>{label} (.xlsx)
+                      </button>
+                    ))}
+                    <span style={{ fontSize: "0.74rem", color: "#6B7570" }}>Fill in Excel → attach with 📎 → review → post</span>
+                  </div>
                 </div>
               </div>
             </section>
