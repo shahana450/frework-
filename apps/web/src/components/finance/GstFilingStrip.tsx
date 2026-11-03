@@ -43,22 +43,35 @@ export default function GstFilingStrip({ bizId, gstin }: { bizId: string; gstin?
   const TONE: Record<string, [string, string]> = { ok: ["#E3F3EC", "#0B7A55"], due: ["#FBF1DA", "#9A6B22"], late: ["#FBE3DE", "#B4321F"], na: ["#EEF0EF", "#6B7570"] };
   const fetched = (rows ?? []).map(r => r.fetched_at).filter(Boolean).sort().pop();
 
+  const DOT: Record<string, string> = { ok: "#12A06C", due: "#D9A441", late: "#D2492F", na: "#A9B1AD" };
+  const late = periods.some(ym => (["GSTR-1", "GSTR-3B"] as const).some(f => pill(f, ym).tone === "late"));
+  const updated = fetched ? new Date(fetched).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+
   return (
-    <div role="group" aria-label="GST filing status" style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", minHeight: 36, padding: "4px 6px 4px 12px", background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: 12, fontSize: 12.5, color: "#10241F" }}>
-      <b style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9A6B22" }}>GST</b>
-      {periods.map(ym => (
-        <span key={ym} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <span style={{ color: "#5E6B66" }}>{MON[+ym.slice(5, 7) - 1]}</span>
-          {(["GSTR-1", "GSTR-3B"] as const).map(f => { const p = pill(f, ym); const [bg, fg] = TONE[p.tone]; return (
-            <span key={f} title={`${f} · ${p.title}`} style={{ display: "inline-flex", gap: 4, alignItems: "center", padding: "2px 8px", borderRadius: 999, background: bg, color: fg, fontWeight: 700, whiteSpace: "nowrap" }}>
-              <span style={{ fontWeight: 600, opacity: 0.8 }}>{f === "GSTR-1" ? "R1" : "3B"}</span>{rows ? p.text : "…"}
+    <div role="group" aria-label="GST filing status" style={{ display: "inline-flex", alignItems: "stretch", background: "#FFFDF8", border: `1px solid ${late ? "#EFC3B8" : "#E6DFD0"}`, borderRadius: 14, overflow: "hidden", color: "#10241F", boxShadow: "0 8px 22px -18px rgba(15,43,37,0.55)" }}>
+      {/* Label block */}
+      <div style={{ background: "#12352D", color: "#FFFFFF", padding: "8px 14px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, minWidth: 92 }}>
+        <span style={{ fontSize: 9.5, letterSpacing: "0.16em", textTransform: "uppercase", color: "#C9A24A", fontWeight: 800 }}>GST returns</span>
+        <span style={{ fontSize: 11.5, color: "#C9D3CE" }}>{updated ? `Portal · ${updated}` : "Portal not linked"}</span>
+      </div>
+      {/* One column per month */}
+      {periods.map((ym, i) => (
+        <div key={ym} style={{ padding: "7px 14px", display: "flex", flexDirection: "column", gap: 3, borderLeft: i ? "1px solid #EFE8DA" : "none", justifyContent: "center" }}>
+          <span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontStyle: "italic", fontSize: 13, color: "#5E6B66" }}>{MON[+ym.slice(5, 7) - 1]} {ym.slice(0, 4)}</span>
+          {(["GSTR-1", "GSTR-3B"] as const).map(f => { const p = pill(f, ym); const fg = TONE[p.tone][1]; return (
+            <span key={f} title={`${f} · ${p.title}`} style={{ display: "grid", gridTemplateColumns: "8px 54px auto", alignItems: "center", gap: 7, fontSize: 12.5, whiteSpace: "nowrap" }}>
+              <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: rows ? DOT[p.tone] : "#D9D2C2" }} />
+              <span style={{ fontWeight: 700 }}>{f}</span>
+              <span style={{ color: fg, fontWeight: 700 }}>{rows ? p.text.replace(/(\d+)d /, "$1 days ").replace(/in (\d+)d$/, "in $1 days") : "…"}</span>
             </span>
           ); })}
-        </span>
+        </div>
       ))}
-      <Link href="/finance/portals" title={fetched ? `Status from the GST portal, updated ${new Date(fetched).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "Connect the GST portal to fetch filing status"}
-        style={{ padding: "4px 10px", borderRadius: 8, color: "#12352D", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
-        {fetched ? "Update ↻" : "Connect portal →"}
+      {/* Update from the portal */}
+      <Link href="/finance/portals" title={updated ? `Fetch the latest status from the GST portal (last ${updated})` : "Connect the GST portal to fetch filing status"}
+        style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 16px", borderLeft: "1px solid #EFE8DA", background: "#F7F1E3", color: "#12352D", fontWeight: 800, fontSize: 12.5, textDecoration: "none", whiteSpace: "nowrap" }}>
+        <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: "50%", background: "#C9A24A", color: "#10241F", display: "grid", placeItems: "center", fontSize: 13 }}>{updated ? "↻" : "→"}</span>
+        {updated ? "Update" : "Connect portal"}
       </Link>
     </div>
   );
