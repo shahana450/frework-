@@ -53,7 +53,13 @@ export async function handleWhatsApp(sb: SupabaseClient, m: Incoming): Promise<s
 
   // Choosing among several linked businesses
   const listBiz = () => "Which business?\n" + links.map((l, i) => `${i + 1}. ${l.name}`).join("\n") + "\n\nReply with the number.";
-  if (cmd.type === "switch") { if (links.length < 2) return `You're linked to *${links[0].name}* only.`; await save({ pending: { picking: true } }); return listBiz(); }
+  if (cmd.type === "switch") {
+    if (links.length < 2) return `You're linked to *${links[0].name}* only.`;
+    await save({ pending: { picking: true } });
+    // A drop-down list to tap (WhatsApp allows 10 rows); the numbered list stays as the fallback
+    if (links.length <= 10) await sendList(m.from, "Which business should I work in?", "Choose business", "Your businesses", links.map((l, i) => ({ id: String(i + 1), title: l.name })));
+    return listBiz();
+  }
   if (cmd.type === "pick" && sess.picking) {
     const l = links[cmd.n - 1];
     if (!l) return listBiz();
@@ -70,7 +76,11 @@ export async function handleWhatsApp(sb: SupabaseClient, m: Incoming): Promise<s
   const role = au?.user ? await roleOf({ id: au.user.id, email: au.user.email }, link.business_id) : null;
   if (!role) return `❌ Your FreWork account no longer has access to ${link.name}. Ask the owner, or unlink in the app.`;
 
-  if (cmd.type === "help") return helpText(link.name);
+  if (cmd.type === "help") { await sendMenu(m.from, link.name); return helpText(link.name); }
+  // GST filing status from the portal (Integrations → GST & IT portals): "GSTR status", "filing status", "GST returns filed?"
+  if (!m.media && /(fil(ing|ed)|return)s?\s*status|status\s*of\s*(gst|gstr|return)|gstr?\s*-?\s*(1|3b)?\s*(filing\s*)?status|returns?\s*filed/i.test(m.text)) {
+    return filingStatusText(sb, link.business_id, link.name);
+  }
   // One-tap sign-in: this number was proved by the LINK code, so it may open its own FreWork account
   const signInLink = async () => {
     const token = await loginToken(sb, link.user_id);
@@ -91,7 +101,8 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
   }
   // A greeting (or a typo of one, like "Ho") is not a question about the books: say hello, don't run a report
   if (!m.media && /^(h[ioe]+|hey+|hii+|hello+|helo|hai|namaste|namaskar|goods*(morning|afternoon|evening)|gm)[s!.]*$/i.test(m.text.trim())) {
-    return `👋 Hi! You're in *${link.name}*. Type a transaction (e.g. _paid rent 25000 by bank_), ask about your numbers (_P&L this month_), or send a bill photo or PDF. Reply *HELP* for everything I can do.`;
+    await sendMenu(m.from, link.name);
+    return `👋 Hi! You're in *${link.name}*. Tap *Menu* to choose, type a transaction (e.g. _paid rent 25000 by bank_), ask about your numbers (_P&L this month_), or send a bill photo or PDF. Reply *HELP* for everything I can do.`;
   }
   // A bank statement: too long to book from chat. File it under Bank and point to the statement import
   if (m.media && /pdf|sheet|excel|csv/i.test(m.media.mime + m.media.name) && /stat+e?m+e?nt|stmt|passbook|acc_?st|account.?st/i.test(m.media.name)) {
@@ -312,4 +323,61 @@ async function postPending(sb: SupabaseClient, link: Link, actorId: string, p: {
     if (err.code === "NEEDS_REVIEW") return `🔎 ${err.message.replace(/^Saved as a draft for review, not posted:\s*/i, "Please check: ")}\n\nIf that's right (e.g. bought from a seller without GST), reply *POST ANYWAY*. Otherwise reply *NO* and send it again with the GST.`;
     return `⚠️ Couldn't post: ${err.message}`;
   }
+}
+
+/** A WhatsApp list message: a button that opens a drop-down of rows. A tapped row comes back as its id (see the webhook). */
+async function sendList(to: string, body: string, button: string, section: string, rows: { id: string; title: string; description?: string }[]) {
+  await waPost({ messaging_product: "whatsapp", to, type: "interactive", interactive: {
+    type: "list", body: { text: body.slice(0, 1024) }, action: { button: button.slice(0, 20),
+      sections: [{ title: section.slice(0, 24), rows: rows.slice(0, 10).map(r => ({ id: r.id.slice(0, 200), title: r.title.slice(0, 24), ...(r.description ? { description: r.description.slice(0, 72) } : {}) })) }] },
+  } }).catch(() => null);
+}
+
+/** The main menu as a drop-down: each row's id is the command the bot already understands. */
+function sendMenu(to: string, bizName: string) {
+  return sendList(to, `📒 *FreBook* · ${bizName}\nPick what you need, or just type a transaction.`, "Menu", "FreBook", [
+    { id: "Profit this month", title: "Profit this month", description: "P&L for the current month" },
+    { id: "Cash and bank balance", title: "Cash & bank balance" },
+    { id: "LIST", title: "Who owes me?", description: "Overdue customers with reminders" },
+    { id: "GST filing status", title: "GST filing status", description: "GSTR-1 and GSTR-3B, filed or due" },
+    { id: "GST collected last month", title: "GST last month", description: "Output tax, input credit, net payable" },
+    { id: "GSTR1 JSON last month", title: "GSTR-1 JSON file", description: "Last month's file for the portal" },
+    { id: "INVOICE", title: "Invoice PDF", description: "For the last sale posted here" },
+    { id: "LOGIN", title: "Open dashboard", description: "One-tap sign-in link" },
+    { id: "SWITCH", title: "Switch business" },
+    { id: "HELP", title: "Help", description: "Everything I can do" },
+  ]);
+}
+
+/** GSTR-1 / GSTR-3B status for the last two return periods, from the GST portal link. */
+async function filingStatusText(sb: SupabaseClient, bizId: string, bizName: string): Promise<string> {
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const FILED = ["filed", "e_verified", "processed"];
+  const [{ data: rows }, { data: biz }] = await Promise.all([
+    sb.from("fw_fin_portal_status").select("form,period,status,filed_on,arn").eq("business_id", bizId).eq("portal", "gst").in("form", ["GSTR-1", "GSTR-3B"]).order("period", { ascending: false }).limit(60),
+    sb.from("fw_fin_businesses").select("gstin").eq("id", bizId).maybeSingle(),
+  ]);
+  if (!(biz as { gstin?: string | null } | null)?.gstin) return `*${bizName}* has no GSTIN in FreBook, so there are no GST returns to track. Add it in Settings → Business.`;
+  const list = (rows ?? []) as { form: string; period: string; status: string; filed_on: string | null; arn: string | null }[];
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const dm = (iso: string) => `${+iso.slice(8, 10)} ${MON[+iso.slice(5, 7) - 1]}`;
+  const out = [`🧾 *GST filing status* · ${bizName}`];
+  for (const back of [1, 2]) {
+    const d = new Date(now.getFullYear(), now.getMonth() - back, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    out.push("", `*${MON[d.getMonth()]} ${d.getFullYear()}*`);
+    for (const f of ["GSTR-1", "GSTR-3B"]) {
+      const s = list.find(r => r.form === f && r.period === ym);
+      if (s && FILED.includes(s.status)) { out.push(`✅ ${f} — filed${s.filed_on ? ` ${dm(s.filed_on)}` : ""}${s.arn ? ` · ARN ${s.arn}` : ""}`); continue; }
+      const due = Date.UTC(d.getFullYear(), d.getMonth() + 1, f === "GSTR-1" ? 11 : 20);
+      const days = Math.round((due - today) / 86400000);
+      out.push(days < 0 ? `🔴 ${f} — not filed, ${-days} days late` : `🟡 ${f} — due ${days === 0 ? "today" : `in ${days} days`} (${dm(new Date(due).toISOString())})`);
+    }
+  }
+  const last = (f: string) => list.find(r => r.form === f && FILED.includes(r.status));
+  const l1 = last("GSTR-1"), l3 = last("GSTR-3B");
+  if (l1 || l3) out.push("", `Last filed: ${[l1 && `GSTR-1 ${MON[+l1.period.slice(5, 7) - 1]} ${l1.period.slice(0, 4)}`, l3 && `GSTR-3B ${MON[+l3.period.slice(5, 7) - 1]} ${l3.period.slice(0, 4)}`].filter(Boolean).join(" · ")}`);
+  out.push("", list.length ? "From the GST portal link. To refresh it, open Integrations → GST & IT portals in FreBook." : "ℹ️ The GST portal isn't linked yet, so these are due dates only. Link it in FreBook → Integrations → GST & IT portals to see what's filed.");
+  return out.join("\n");
 }

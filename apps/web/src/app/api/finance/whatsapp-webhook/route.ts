@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       let text = "", media: Incoming["media"], heard: string | null = null;
       if (msg.type === "text") text = msg.text?.body ?? "";
       else if (msg.type === "button") text = msg.button?.text ?? "";
-      else if (msg.type === "interactive") text = msg.interactive?.button_reply?.title ?? msg.interactive?.list_reply?.title ?? "";
+      else if (msg.type === "interactive") text = msg.interactive?.button_reply?.title ?? msg.interactive?.list_reply?.id ?? msg.interactive?.list_reply?.title ?? "";   // a menu row's id is the command it stands for
       else if (msg.type === "image") { text = msg.image?.caption ?? ""; media = await downloadMedia(msg.image ?? {}, `whatsapp-${msg.id.slice(-8)}.jpg`); }
       else if (msg.type === "document") { text = msg.document?.caption ?? ""; media = await downloadMedia(msg.document ?? {}, msg.document?.filename ?? `whatsapp-${msg.id.slice(-8)}.pdf`); }
       else if (msg.type === "audio") {

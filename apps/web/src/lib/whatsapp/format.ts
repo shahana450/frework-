@@ -15,7 +15,7 @@ export function parseCommand(raw: string): Command {
   if (["HELP", "HI", "HELLO", "MENU", "START", "?"].includes(up)) return { type: "help" };
   if (["SWITCH", "BUSINESS", "CHANGE BUSINESS"].includes(up)) return { type: "switch" };
   if (["LOGIN", "LOG IN", "SIGN IN", "DASHBOARD", "OPEN APP", "OPEN DASHBOARD", "APP"].includes(up)) return { type: "login" };
-  if (/^[1-9]$/.test(up)) return { type: "pick", n: Number(up) };
+  if (/^([1-9]|[1-9]\d)$/.test(up)) return { type: "pick", n: Number(up) };
   return { type: "text", text: t };
 }
 
@@ -42,6 +42,7 @@ export function helpText(bizName: string): string {
     "• Who owes me?",
     "• Cash and bank balance",
     "• GST collected last month",
+    "• GST filing status",
     "",
     "Reply *YES* to post a draft, *NO* to drop it. *SWITCH* to change business.",
     "*LOGIN* — a one-tap link to open your FreBook dashboard.",
