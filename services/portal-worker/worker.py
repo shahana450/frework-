@@ -377,17 +377,21 @@ async def _select_matching(page: Page, select, pattern: str) -> bool:
     return False
 
 
-async def _open_external(page: Page, words: str, timeout_s: int = 40):
+async def _open_external(page: Page, words: str, timeout_s: int = 75):
     """After a menu click, the portal either shows a pop-up ('Proceed' / 'Confirm' / 'Continue' / 'OK') before
     opening the AIS or TRACES site in a new tab, or opens the new tab straight away. Handles both: clicks the
-    first visible element whose text matches `words`, and returns the new tab once it appears."""
+    first visible element whose text matches `words`, and returns the new tab once it appears. The button can
+    render late or ignore an early click, so it is clicked again every 10 seconds until a tab opens."""
     ctx = page.context
     before = len(ctx.pages)
-    pat = re.compile(rf"^\s*({words})\s*$", re.I)
+    pat = re.compile(rf"^\s*({words})\b.*$", re.I)   # "Proceed", "Proceed to AIS", "Continue →"
     deadline = time.time() + timeout_s
     clicked = False
+    last_click = 0.0
     start_host = page.url.split("/")[2] if "//" in page.url else ""
     while time.time() < deadline:
+        if clicked and time.time() - last_click > 10:
+            clicked = False
         host = page.url.split("/")[2] if "//" in page.url else ""
         if host and start_host and host != start_host:
             await page.wait_for_load_state("domcontentloaded")
@@ -406,6 +410,7 @@ async def _open_external(page: Page, words: str, timeout_s: int = 40):
                         if await el.is_visible():
                             await el.click(timeout=5000)
                             clicked = True
+                            last_click = time.time()
                             break
                 except Exception:
                     continue
