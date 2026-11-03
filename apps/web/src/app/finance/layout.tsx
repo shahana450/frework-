@@ -175,7 +175,25 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
     setAccountant(a => { const next = !a; try { localStorage.setItem("fw_nav_mode", next ? "accountant" : "simple"); } catch { /* */ } return next; });
   }
 
+  // Start-up (access, subscription, active business, currency) runs once per visit, not on every page change —
+  // repeating it made each tab switch wait on several requests and re-announce the business to every page
+  const booted = useRef(false);
+  // A business switch (on any page) updates the name in the menu and the money format, without the full start-up
+  const lastBiz = useRef<string | null>(null);
   useEffect(() => {
+    if (!active.businessId || !subChecked) return;
+    if (active.businessName) setBizName(active.businessName);
+    if (lastBiz.current && lastBiz.current !== active.businessId) {
+      void supabase.from("fw_fin_businesses").select("name,currency,country").eq("id", active.businessId).maybeSingle().then(({ data: m }) => {
+        if (!m) return;
+        setBizName(m.name); setActiveCurrency(m.currency, m.country); setIndia(!m.country || m.country === "IN");
+      });
+    }
+    lastBiz.current = active.businessId;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active.businessId, active.businessName, subChecked]);
+  useEffect(() => {
+    if (booted.current && !UNGUARDED.some(p => pathname.startsWith(p))) return;
     currentUser().then(async (user) => {
       if (!user) return;
 
@@ -230,6 +248,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       // Money on every page follows this business's currency (set before any page mounts)
       if (pick) { const { data: m } = await supabase.from("fw_fin_businesses").select("currency,country").eq("id", pick.id).maybeSingle(); setActiveCurrency(m?.currency, m?.country); setIndia(!m?.country || m.country === "IN"); }
       setSubChecked(true);
+      if (!UNGUARDED.some(p => pathname.startsWith(p))) booted.current = true;
     });
   }, [pathname]);
 

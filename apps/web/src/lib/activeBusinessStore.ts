@@ -40,7 +40,10 @@ export function setActiveBusiness(userId: string, businessId: string, businessNa
   try { storage()?.setItem(activeBusinessKey(userId), businessId); } catch { /* */ }
   try { tabStorage()?.setItem(activeBusinessKey(userId), businessId); } catch { /* */ }
   const same = current.userId === userId && current.businessId === businessId;
-  current = { userId, businessId, businessName: businessName ?? (same ? current.businessName : ""), ready: true };
+  const name = businessName ?? (same ? current.businessName : "");
+  // Nothing changed (the layout re-confirms on start-up): don't wake every page and widget again
+  if (same && current.ready && current.businessName === name) return;
+  current = { userId, businessId, businessName: name, ready: true };
   listeners.forEach(l => l(current));
   // Tally follows the business: each business pushes only to its own linked Tally company
   if (!same) void import("./tallyConnection").then(m => m.setTallyBusiness(businessId, current.businessName)).catch(() => { /* Tally page will relink */ });
