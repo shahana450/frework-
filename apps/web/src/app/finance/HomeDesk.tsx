@@ -10,11 +10,18 @@ import { useBrand } from "@/lib/brand";
 import { useRouter } from "next/navigation";
 import type { Dashboard } from "@/lib/dashboard";
 
-const C = {
+const LIGHT = {
   ground: "#F4EFE4", tile: "#FFFDF8", line: "#E6DFD0", ink: "#10241F", muted: "#5E6B66",
   green: "#12352D", greenSoft: "#E4ECE8", gold: "#9A6B22", goldSoft: "#F3E8D2", goldLine: "#C99A4E",
   pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB",
 };
+// BooksAI's Home: Sapphire & Platinum on a dark ground
+const SAPPHIRE: typeof LIGHT = {
+  ground: "#0B1640", tile: "#10204F", line: "#24356B", ink: "#EEF1F6", muted: "#A3AEC2",
+  green: "#17307A", greenSoft: "#16285E", gold: "#C9D2DF", goldSoft: "#1A2A5E", goldLine: "#AEB9CB",
+  pos: "#5FD3A3", posSoft: "#123A3A", neg: "#FF8A78", negSoft: "#3A1E2E", warn: "#F2C46B", warnSoft: "#3A3020",
+};
+let C = LIGHT;
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 
@@ -27,7 +34,9 @@ type Props = { dash: (Dashboard & { taxDesk?: TaxDesk }) | null; bizName: string
 
 export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, onRetry }: Props) {
   const india = activeCountry() === "IN";
-  const brand = useBrand().name;
+  const b = useBrand();
+  const brand = b.name;
+  C = b.key === "cswa" ? SAPPHIRE : LIGHT;
   const router = useRouter();
   const tally = useTally();
   const [mode, setMode] = useState<"record" | "ask">("record");

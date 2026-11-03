@@ -269,7 +269,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const sidebarW = collapsed ? 96 : 240;
 
   return (
-    <div data-brand={brand.key} style={{ display: "flex", minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+    <div data-brand={brand.key} data-page={pathname === "/finance" ? "home" : undefined} style={{ display: "flex", minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
       <title>{brand.key === "frebook" ? financeTitle(pathname, search, bizName) : financeTitle(pathname, search, bizName).replace(/FreWork|FreBook/g, `${brand.name} ${brand.tagline}`)}</title>
       {BRAND_CSS[brand.key] && <style>{BRAND_CSS[brand.key]}</style>}
       <meta name="robots" content="noindex, nofollow" />

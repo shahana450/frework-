@@ -111,6 +111,31 @@ export const BRAND_CSS: Record<string, string> = {
 [data-brand="cswa"] .fw-main section, [data-brand="cswa"] .fw-main [style*="border-radius: 16px"], [data-brand="cswa"] .fw-main [style*="border-radius: 18px"] { box-shadow: 0 12px 30px -24px rgba(13,30,82,0.5); }
 [data-brand="cswa"] .fw-main [style*="border: 1px solid rgb(230, 223, 208)"] { border-color: #DDE2EA !important; }
 [data-brand="cswa"] .fw-tip { background: #0D1E52; border-color: rgba(214,220,229,0.35); }
+/* Home in Sapphire & Platinum: a dark sapphire page, light serif heading with a rule, platinum controls */
+[data-brand="cswa"][data-page="home"], [data-brand="cswa"][data-page="home"] .fw-main, [data-brand="cswa"][data-page="home"] .fw-main > div:first-child { background: radial-gradient(900px 420px at 80% -10%, #16306F 0%, rgba(22,48,111,0) 65%), #0A1433 !important; color: #EEF1F6; }
+[data-brand="cswa"][data-page="home"] .fw-topicons { background: rgba(13,26,69,0.92); border-bottom-color: rgba(214,220,229,0.12); }
+[data-brand="cswa"][data-page="home"] .fw-topicons a { color: #C9D2DF; }
+[data-brand="cswa"][data-page="home"] .fw-topicons a .ic { background: rgba(214,220,229,0.08); color: #E6EAF0; border-color: rgba(214,220,229,0.18); }
+[data-brand="cswa"][data-page="home"] .fw-topicons a:hover { background: rgba(214,220,229,0.08); color: #FFFFFF; }
+[data-brand="cswa"][data-page="home"] .fw-topicons a.on { background: linear-gradient(135deg,#E6EAF0,#B9C3D2) !important; color: #0B1433 !important; }
+[data-brand="cswa"][data-page="home"] .fw-topicons a.on .ic { background: rgba(11,20,51,0.08); color: #0B1433; }
+[data-brand="cswa"][data-page="home"] .fw-main h1 { color: #F4F6FA !important; font-weight: 400 !important; letter-spacing: -0.01em; }
+[data-brand="cswa"][data-page="home"] .fw-main h1::after { content: ""; display: block; width: 90px; height: 1px; margin-top: 18px; background: #C9D2DF; opacity: 0.7; }
+[data-brand="cswa"][data-page="home"] .hd-entry { background: #10204F !important; border-color: #24356B !important; box-shadow: 0 24px 50px -30px rgba(0,0,0,0.6) !important; }
+[data-brand="cswa"][data-page="home"] .hd-entry [role="tablist"] { background: #0A1433 !important; border: 1px solid #24356B; border-radius: 999px !important; }
+[data-brand="cswa"][data-page="home"] .hd-entry [role="tab"] { border-radius: 999px !important; color: #C9D2DF !important; }
+[data-brand="cswa"][data-page="home"] .hd-entry [role="tab"][aria-selected="true"] { background: #D6DCE5 !important; color: #0B1433 !important; }
+[data-brand="cswa"][data-page="home"] .hd-entry textarea { background: #0A1433 !important; border: 1px solid #24356B !important; border-radius: 12px; padding: 12px 14px !important; color: #EEF1F6 !important; }
+[data-brand="cswa"][data-page="home"] .hd-entry textarea::placeholder { color: #7D89A3; }
+[data-brand="cswa"][data-page="home"] .hd-entry > div:last-child > button:last-child { background: linear-gradient(135deg,#E6EAF0,#B9C3D2) !important; color: #0B1433 !important; box-shadow: none !important; }
+[data-brand="cswa"][data-page="home"] .fw-main [style*="background: rgb(255, 255, 255)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="background: rgb(255, 253, 248)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="background: rgb(251, 248, 241)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="background: rgb(247, 241, 227)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="background: rgb(238, 241, 251)"] { background: #10204F !important; }
+[data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(16, 36, 31)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(18, 53, 45)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(31, 31, 158)"] { color: #EEF1F6 !important; }
+[data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(94, 107, 102)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(107, 117, 112)"] { color: #A3AEC2 !important; }
+[data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(11, 122, 85)"] { color: #5FD3A3 !important; }
+[data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(180, 50, 31)"] { color: #FF8A78 !important; }
+[data-brand="cswa"][data-page="home"] .fw-main [style*="border: 1px solid rgb(230, 223, 208)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="border-left: 1px solid rgb(239, 232, 218)"] { border-color: #24356B !important; }
+[data-brand="cswa"][data-page="home"] .fw-main select, [data-brand="cswa"][data-page="home"] .fw-main input { background: #10204F !important; color: #EEF1F6 !important; border-color: #24356B !important; }
+[data-brand="cswa"][data-page="home"] .fw-main [role="group"][aria-label="GST filing status"] { border-color: #24356B !important; }
 @media (max-width: 760px) { [data-brand="cswa"] .fw-tabs a.on { color: #1F1F9E; } [data-brand="cswa"] .fw-tabs a.plus { background: #1F1F9E; } }
 `,
 };
