@@ -7,6 +7,7 @@ import { useTallyAutoCatchUp, AUTO_PUSH_EVENT } from "@/lib/tallyAutoCatchUp";
 import WindowDock, { openInWindow } from "@/components/finance/WindowDock";
 import { useTallyAutoSync, AUTOSYNC_EVENT } from "@/lib/tallyAutoSync";
 import InstallApp from "@/components/finance/InstallApp";
+import BizSwitcher from "@/components/finance/BizSwitcher";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PAYMENTS_LIVE } from "@/lib/plans";
@@ -302,14 +303,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             <div style={{ fontSize: "0.6rem", color: "#8FA39B", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Active Business</div>
             {bizName && (
               bizCount > 1 ? (
-                <Link href="/finance/select-business" style={{
-                  display: "flex", alignItems: "center", gap: 6, textDecoration: "none",
-                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(217,181,111,0.3)",
-                  borderRadius: 8, padding: "5px 8px", marginBottom: 6,
-                }}>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#FFFFFF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{bizName}</span>
-                  <span style={{ fontSize: "0.7rem", color: "#D9B56F", flexShrink: 0 }}>⇄</span>
-                </Link>
+                <BizSwitcher bizName={bizName} />
               ) : (
                 <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#FFFFFF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "2px 0", marginBottom: 6 }}>{bizName}</div>
               )
