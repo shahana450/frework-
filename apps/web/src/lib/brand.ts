@@ -53,6 +53,24 @@ export const BRAND_CSS: Record<string, string> = {
 [data-brand="cswa"] .fw-main h1 { color: #1F1F9E; }
 [data-brand="cswa"] .fw-main button[style*="18, 53, 45"], [data-brand="cswa"] .fw-main button[style*="15, 43, 37"], [data-brand="cswa"] .fw-main a[style*="18, 53, 45"] { background: #1F1F9E !important; }
 [data-brand="cswa"] .fw-main input:focus-visible, [data-brand="cswa"] .fw-main button:focus-visible, [data-brand="cswa"] .fw-main a:focus-visible { outline-color: #1F1F9E; }
+/* Its own arrangement, not FreBook's: a white top bar with icon-beside-label pills, and a flat sidebar with a left marker */
+[data-brand="cswa"] .fw-topicons { margin: 0; border-radius: 0; border-width: 0 0 1px; background: #FFFFFF; padding: 8px 16px; gap: 4px; box-shadow: 0 6px 18px -14px rgba(31,31,158,0.5); }
+[data-brand="cswa"] .fw-topicons a { flex-direction: row; gap: 7px; min-width: 0; padding: 7px 14px 7px 8px; border-radius: 999px; font-size: 12.5px; }
+[data-brand="cswa"] .fw-topicons a .ic { width: 26px; height: 26px; border-radius: 50%; }
+[data-brand="cswa"] .fw-topicons a .ic svg { width: 15px; height: 15px; }
+[data-brand="cswa"] .fw-topicons a.on { background: #1F1F9E; box-shadow: none; }
+[data-brand="cswa"] .fw-topicons a.on::after { display: none; }
+[data-brand="cswa"] .fw-topicons a.grp { margin-left: 14px; }
+[data-brand="cswa"] .fw-topicons a .win { top: -4px; right: -4px; border-radius: 50%; }
+[data-brand="cswa"] .fw-nav { border-radius: 0 !important; margin-left: 0 !important; margin-right: 0 !important; border-left: 3px solid transparent; }
+[data-brand="cswa"] .fw-nav.on, [data-brand="cswa"] .fw-nav.on:hover { background: rgba(255,255,255,0.12) !important; color: #FFFFFF !important; border-left-color: #FFFFFF; }
+/* The rest of FreBook's green and gold inside pages, in the brand's blues */
+[data-brand="cswa"] .fw-main [style*="background: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main [style*="background: rgb(15, 43, 37)"], [data-brand="cswa"] .fw-main [style*="#12352D"], [data-brand="cswa"] .fw-main [style*="#0F2B25"] { background: #1F1F9E !important; }
+[data-brand="cswa"] .fw-main [style*="color: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main [style*="color: rgb(15, 43, 37)"] { color: #1F1F9E !important; }
+[data-brand="cswa"] .fw-main [style*="background: rgb(201, 162, 74)"], [data-brand="cswa"] .fw-main [style*="background: rgb(217, 181, 111)"] { background: #6B74E0 !important; color: #FFFFFF !important; }
+[data-brand="cswa"] .fw-main [style*="color: rgb(201, 162, 74)"], [data-brand="cswa"] .fw-main [style*="color: rgb(232, 194, 122)"], [data-brand="cswa"] .fw-main [style*="color: rgb(217, 181, 111)"] { color: #8D96F0 !important; }
+[data-brand="cswa"] .fw-main [style*="background: rgb(255, 253, 248)"], [data-brand="cswa"] .fw-main [style*="background: rgb(251, 248, 241)"], [data-brand="cswa"] .fw-main [style*="background: rgb(248, 243, 232)"], [data-brand="cswa"] .fw-main [style*="background: rgb(246, 241, 231)"] { background: #FFFFFF !important; }
+[data-brand="cswa"] .fw-main [style*="border: 1px solid rgb(230, 223, 208)"] { border-color: #E1E5F3 !important; }
 @media (max-width: 760px) { [data-brand="cswa"] .fw-tabs a.on { color: #1F1F9E; } [data-brand="cswa"] .fw-tabs a.plus { background: #1F1F9E; } }
 `,
 };
