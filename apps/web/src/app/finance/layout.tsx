@@ -270,7 +270,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
   return (
     <div data-brand={brand.key} style={{ display: "flex", minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <title>{brand.key === "frebook" ? financeTitle(pathname, search, bizName) : financeTitle(pathname, search, bizName).replace(/FreWork|FreBook/g, brand.name)}</title>
+      <title>{brand.key === "frebook" ? financeTitle(pathname, search, bizName) : financeTitle(pathname, search, bizName).replace(/FreWork|FreBook/g, `${brand.name} ${brand.tagline}`)}</title>
       {BRAND_CSS[brand.key] && <style>{BRAND_CSS[brand.key]}</style>}
       <meta name="robots" content="noindex, nofollow" />
       <meta name="description" content="FreBook: chat bookkeeping, GST, reports and Tally sync for your business." />
@@ -291,9 +291,13 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         <div style={{ padding: "0 12px", height: 76, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
           {!slim && (
             brand.logo ? (
-              <Link href="/finance" title={brand.name} style={{ textDecoration: "none", display: "flex", alignItems: "center", flex: 1, marginRight: 8 }}>
+              <Link href="/finance" title={`${brand.name} ${brand.tagline}`} style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 9, flex: 1, minWidth: 0, marginRight: 8 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={brand.logo} alt={brand.name} style={{ width: "100%", maxWidth: 176, height: 52, objectFit: "contain", background: "#FFFFFF", borderRadius: 10, padding: "4px 8px" }} />
+                <img src={brand.logo} alt="" style={{ width: 52, height: 40, objectFit: "cover", objectPosition: "8% 50%", background: "#FFFFFF", borderRadius: 8, flexShrink: 0 }} />
+                <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.1, minWidth: 0 }}>
+                  <span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 700, fontSize: "1.2rem", color: "#FFFFFF" }}>{brand.name}</span>
+                  <span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontStyle: "italic", fontSize: "0.78rem", color: "#C9D0FF" }}>{brand.tagline}</span>
+                </span>
               </Link>
             ) :
             <Link href="/finance" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
