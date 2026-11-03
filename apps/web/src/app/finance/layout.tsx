@@ -8,6 +8,7 @@ import WindowDock, { openInWindow } from "@/components/finance/WindowDock";
 import { useTallyAutoSync, AUTOSYNC_EVENT } from "@/lib/tallyAutoSync";
 import InstallApp from "@/components/finance/InstallApp";
 import BizSwitcher from "@/components/finance/BizSwitcher";
+import { useBrand, BRAND_CSS } from "@/lib/brand";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PAYMENTS_LIVE } from "@/lib/plans";
@@ -112,6 +113,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const [bizSwitched, setBizSwitched] = useState<{ from: string; to: string } | null>(null);
   const [india, setIndia] = useState(true);   // GST / TDS / Income-tax menus only for Indian businesses
   const [bizCount, setBizCount] = useState(0);
+  const brand = useBrand();
   const [collapsed, setCollapsed] = useState(false);
   // Collapsed menu opens while the pointer is over it (desktop), and closes when it leaves
   const [peek, setPeek] = useState(false);
@@ -267,8 +269,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const sidebarW = collapsed ? 96 : 240;
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <title>{financeTitle(pathname, search, bizName)}</title>
+    <div data-brand={brand.key} style={{ display: "flex", minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <title>{brand.key === "frebook" ? financeTitle(pathname, search, bizName) : financeTitle(pathname, search, bizName).replace(/FreWork|FreBook/g, brand.name)}</title>
+      {BRAND_CSS[brand.key] && <style>{BRAND_CSS[brand.key]}</style>}
       <meta name="robots" content="noindex, nofollow" />
       <meta name="description" content="FreBook: chat bookkeeping, GST, reports and Tally sync for your business." />
       <style>{FINANCE_CSS}</style>
@@ -287,6 +290,12 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         {/* Logo + collapse */}
         <div style={{ padding: "0 12px", height: 76, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
           {!slim && (
+            brand.logo ? (
+              <Link href="/finance" title={brand.name} style={{ textDecoration: "none", display: "flex", alignItems: "center", flex: 1, marginRight: 8 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={brand.logo} alt={brand.name} style={{ width: "100%", maxWidth: 176, height: 52, objectFit: "contain", background: "#FFFFFF", borderRadius: 10, padding: "4px 8px" }} />
+              </Link>
+            ) :
             <Link href="/finance" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
               <FreBookMark size={30} />
               <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}><span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 700, fontSize: "1.1rem", color: "#FFFFFF" }}>FreBook</span><span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontStyle: "italic", fontSize: "0.7rem", color: "#D9B56F" }}>Chat in. Books out.</span></span>
