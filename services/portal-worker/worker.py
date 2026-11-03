@@ -377,13 +377,15 @@ async def _select_matching(page: Page, select, pattern: str) -> bool:
     return False
 
 
-async def _open_external(page: Page, words: str, timeout_s: int = 75):
+async def _open_external(page: Page, words: str, timeout_s: int = 75, before: int | None = None):
     """After a menu click, the portal either shows a pop-up ('Proceed' / 'Confirm' / 'Continue' / 'OK') before
     opening the AIS or TRACES site in a new tab, or opens the new tab straight away. Handles both: clicks the
     first visible element whose text matches `words`, and returns the new tab once it appears. The button can
     render late or ignore an early click, so it is clicked again every 10 seconds until a tab opens."""
     ctx = page.context
-    before = len(ctx.pages)
+    # Tabs open before the menu click (the menu itself can open the new tab at once, before this runs)
+    if before is None:
+        before = len(ctx.pages)
     pat = re.compile(rf"^\s*({words})\b.*$", re.I)   # "Proceed", "Proceed to AIS", "Continue →"
     deadline = time.time() + timeout_s
     clicked = False
@@ -425,10 +427,11 @@ async def _fetch_ais_tis(page: Page, fy: str | None, want: set[str]) -> tuple[li
     notes: list[str] = []
     files: list[tuple[str, bytes]] = []
     await _go(page, "Dashboard")
+    tabs = len(page.context.pages)
     if not await _go(page, "AIS") and not await _go(page, "Services", "Annual Information Statement"):
         return ["AIS menu not found"], files
     try:
-        ais = await _open_external(page, "Proceed|Continue|OK|Yes|Confirm")
+        ais = await _open_external(page, "Proceed|Continue|OK|Yes|Confirm", before=tabs)
         if ais is None:
             return ["The AIS site didn't open (no Proceed pop-up or new tab seen)"], files
         if fy:
@@ -500,10 +503,11 @@ async def _fetch_26as(page: Page, fy: str | None, shots: list[str]) -> tuple[lis
     notes: list[str] = []
     files: list[tuple[str, bytes]] = []
     await _go(page, "Dashboard")
+    tabs = len(page.context.pages)
     if not await _go(page, "e-File", "Income Tax Returns", "View Form 26AS"):
         return ["26AS menu not found"], files
     try:
-        tr = await _open_external(page, "Confirm|Proceed|Continue|OK|Yes")
+        tr = await _open_external(page, "Confirm|Proceed|Continue|OK|Yes", before=tabs)
         if tr is None:
             return ["The TRACES site didn't open (no Confirm pop-up or new tab seen)"], files
         await tr.wait_for_load_state("domcontentloaded")
