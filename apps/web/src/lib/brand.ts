@@ -74,6 +74,20 @@ export const BRAND_CSS: Record<string, string> = {
 [data-brand="cswa"] .fw-main [style*="color: rgb(201, 162, 74)"], [data-brand="cswa"] .fw-main [style*="color: rgb(232, 194, 122)"], [data-brand="cswa"] .fw-main [style*="color: rgb(217, 181, 111)"] { color: #8D96F0 !important; }
 [data-brand="cswa"] .fw-main [style*="background: rgb(255, 253, 248)"], [data-brand="cswa"] .fw-main [style*="background: rgb(251, 248, 241)"], [data-brand="cswa"] .fw-main [style*="background: rgb(248, 243, 232)"], [data-brand="cswa"] .fw-main [style*="background: rgb(246, 241, 231)"] { background: #FFFFFF !important; }
 [data-brand="cswa"] .fw-main [style*="border: 1px solid rgb(230, 223, 208)"] { border-color: #E1E5F3 !important; }
+/* Richer finish: deep gradient sidebar, glow on the selected item, soft blue shadows on cards */
+[data-brand="cswa"] .fw-side { background: linear-gradient(180deg,#2328A8 0%,#1A1D8C 45%,#10125E 100%) !important; box-shadow: 6px 0 24px -12px rgba(16,18,94,0.55); }
+[data-brand="cswa"] .fw-nav.on, [data-brand="cswa"] .fw-nav.on:hover { background: linear-gradient(90deg,rgba(255,255,255,0.22),rgba(255,255,255,0.06)) !important; box-shadow: inset 3px 0 0 #8FB4FF; border-left-color: transparent; }
+[data-brand="cswa"] .fw-nav:hover { background: rgba(255,255,255,0.09); }
+[data-brand="cswa"], [data-brand="cswa"] .fw-main, [data-brand="cswa"] .fw-main > div:first-child { background: radial-gradient(1200px 500px at 85% -10%, #E7ECFF 0%, rgba(231,236,255,0) 60%), #F6F8FF !important; }
+[data-brand="cswa"] .fw-topicons { background: rgba(255,255,255,0.92); }
+[data-brand="cswa"] .fw-topicons a.on { background: linear-gradient(135deg,#4A5CFF,#2328A8) !important; box-shadow: 0 8px 18px -8px rgba(58,72,230,0.7); }
+[data-brand="cswa"] .fw-topicons a .ic { background: #EEF1FF; color: #2328A8; }
+[data-brand="cswa"] .fw-topicons a:hover .ic { background: #DCE3FF; }
+[data-brand="cswa"] .fw-main h1 { color: #1A1D8C; }
+[data-brand="cswa"] .fw-main [style*="background: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main [style*="background: rgb(15, 43, 37)"], [data-brand="cswa"] .fw-main [style*="background: linear-gradient"][style*="rgb(15, 43, 37)"], [data-brand="cswa"] .fw-main [style*="background: linear-gradient"][style*="rgb(18, 53, 45)"] { background: linear-gradient(135deg,#2A33C4 0%,#1A1D8C 55%,#12146B 100%) !important; }
+[data-brand="cswa"] .fw-main button[style*="background: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main button[style*="background: rgb(15, 43, 37)"] { background: linear-gradient(135deg,#4A5CFF,#2328A8) !important; box-shadow: 0 6px 14px -8px rgba(58,72,230,0.8); }
+[data-brand="cswa"] .fw-main section, [data-brand="cswa"] .fw-main [style*="border-radius: 16px"], [data-brand="cswa"] .fw-main [style*="border-radius: 18px"] { box-shadow: 0 10px 30px -22px rgba(35,40,168,0.45); }
+[data-brand="cswa"] .fw-main [style*="color: rgb(154, 107, 34)"], [data-brand="cswa"] .fw-main [style*="color: rgb(201, 162, 74)"] { color: #4A5CFF !important; }
 @media (max-width: 760px) { [data-brand="cswa"] .fw-tabs a.on { color: #1F1F9E; } [data-brand="cswa"] .fw-tabs a.plus { background: #1F1F9E; } }
 `,
 };
