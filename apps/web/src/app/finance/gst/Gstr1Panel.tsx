@@ -18,7 +18,7 @@ export default function Gstr1Panel({ bizId, month, monthLabel }: { bizId: string
   const [hsn, setHsn] = useState("");
   const [hsnUsed, setHsnUsed] = useState("");
   useEffect(() => { try { const v = localStorage.getItem(hsnKey) ?? ""; setHsn(v); setHsnUsed(v); } catch { /* */ } }, [hsnKey]);
-  const hsnQ = /^d{4,8}$/.test(hsnUsed) ? `&hsn=${hsnUsed}` : "";
+  const hsnQ = /^\d{4,8}$/.test(hsnUsed) ? `&hsn=${hsnUsed}` : "";
   const applyHsn = () => { const v = hsn.trim(); try { localStorage.setItem(hsnKey, v); } catch { /* */ } setHsnUsed(v); };
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function Gstr1Panel({ bizId, month, monthLabel }: { bizId: string
             : "Ready to upload."}
         </span>
         <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#2E3B36", fontWeight: 600 }}>HSN / SAC for sales without one
-          <input value={hsn} onChange={e => setHsn(e.target.value.replace(/D/g, "").slice(0, 8))} onBlur={applyHsn} onKeyDown={e => e.key === "Enter" && applyHsn()} inputMode="numeric" placeholder="e.g. 998311"
+          <input value={hsn} onChange={e => setHsn(e.target.value.replace(/\D/g, "").slice(0, 8))} onBlur={applyHsn} onKeyDown={e => e.key === "Enter" && applyHsn()} inputMode="numeric" placeholder="e.g. 998311"
             style={{ width: 110, height: 36, borderRadius: 8, border: "1px solid #D9CDB2", padding: "0 10px", fontFamily: "inherit", fontSize: 14, background: "#FFFFFF", color: "#10241F" }} />
         </label>
         <button onClick={download} disabled={!data.totals.length} style={{ height: 40, padding: "0 18px", borderRadius: 10, border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, fontSize: 14, cursor: data.totals.length ? "pointer" : "default", opacity: data.totals.length ? 1 : 0.5 }}>Download GSTR-1 JSON</button>

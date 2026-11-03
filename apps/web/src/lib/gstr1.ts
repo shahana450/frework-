@@ -182,5 +182,7 @@ export function buildGstr1(gstin: string, homeState: string | null, period: stri
     }
   };
   even(json);
-  return { json, issues, totals: [...tot.values()] };
+  // The on-screen summary matches the file: CGST and SGST shown as the same equal halves
+  const totals = [...tot.values()].map(t => Math.abs(t.cgst - t.sgst) <= 1 && t.cgst !== t.sgst ? { ...t, cgst: Math.round(((t.cgst + t.sgst) / 2) * 100) / 100, sgst: Math.round(((t.cgst + t.sgst) / 2) * 100) / 100 } : t);
+  return { json, issues, totals };
 }

@@ -150,7 +150,7 @@ export default function Inventory() {
             <h3 style={{ margin: "8px 0 0", fontSize: 16, fontWeight: 700 }}>Add an item</h3>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <input value={ni.name} onChange={e => setNi(x => ({ ...x, name: e.target.value }))} placeholder="Item name" aria-label="New item name" style={{ ...input, flex: "2 1 200px" }} />
-              <input value={ni.hsn} onChange={e => setNi(x => ({ ...x, hsn: e.target.value.replace(/D/g, "").slice(0, 8) }))} placeholder="HSN" aria-label="HSN" style={{ ...input, width: 90 }} />
+              <input value={ni.hsn} onChange={e => setNi(x => ({ ...x, hsn: e.target.value.replace(/\D/g, "").slice(0, 8) }))} placeholder="HSN" aria-label="HSN" style={{ ...input, width: 90 }} />
               <input value={ni.unit} onChange={e => setNi(x => ({ ...x, unit: e.target.value.toUpperCase().slice(0, 8) }))} placeholder="Unit" aria-label="Unit" style={{ ...input, width: 70 }} />
               <input value={ni.qty} onChange={e => setNi(x => ({ ...x, qty: e.target.value }))} inputMode="decimal" placeholder="Opening qty" aria-label="Opening quantity" style={{ ...input, width: 100 }} />
               <input value={ni.cost} onChange={e => setNi(x => ({ ...x, cost: e.target.value }))} inputMode="decimal" placeholder="Cost / unit" aria-label="Cost per unit" style={{ ...input, width: 100 }} />
