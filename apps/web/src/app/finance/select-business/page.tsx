@@ -62,6 +62,8 @@ export default function SelectBusinessPage() {
     setSelecting(biz.id);
     setActiveBusiness(userId, biz.id, biz.name);
     router.replace("/finance");
+    // The finance layout boots once per visit, so a soft navigation can stall here — fall back to a full load
+    setTimeout(() => { if (location.pathname.startsWith("/finance/select-business")) location.assign("/finance"); }, 800);
   }
 
   if (loading) {
