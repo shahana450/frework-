@@ -62,7 +62,7 @@ function serviceRows(s: Services, d: Costs, vercel: keyof typeof VERCEL, supa: "
   const geminiRpd = lite ? 1000 : 250;
   return [
     { key: "vercel", name: "Vercel", use: "Hosts the website and FreBook", plan: VERCEL[vercel].label,
-      limits: vercel === "hobby" ? "100 GB bandwidth/month · functions up to 60 s · non-commercial use only" : "1 TB bandwidth/month · longer functions · team seats billed",
+      limits: vercel === "hobby" ? "100 GB bandwidth/month · functions up to 60 s · non-commercial use only" : "1 TB bandwidth/month · functions up to 5 min (13 min with Fluid compute) · commercial use · team seats billed",
       warn: vercel === "hobby" ? "Hobby is for non-commercial use — move to Pro before charging customers." : undefined, href: "https://vercel.com/fasalk06-8613s-projects/frework-api/usage" },
     { key: "supabase", name: "Supabase", use: "Database, sign-in, file storage", plan: supa === "pro" ? "Pro" : "Free",
       limits: supa === "pro" ? "8 GB database · 100 GB files · 100,000 monthly users · 250 GB egress" : "500 MB database · 1 GB files · 50,000 monthly users · 5 GB egress · pauses after 7 days idle",
@@ -105,7 +105,7 @@ export default function AdminCosts() {
   }, []);
 
   const [plan, setPlan] = useState<keyof typeof PLANS>("pro");
-  const [vercel, setVercel] = useState<keyof typeof VERCEL>("hobby");
+  const [vercel, setVercel] = useState<keyof typeof VERCEL>("pro");   // upgraded to Pro on 3 Nov 2026
   useEffect(() => { try {
     const p = localStorage.getItem("fw_supabase_plan"); if (p === "free" || p === "pro") setPlan(p);
     const v = localStorage.getItem("fw_vercel_plan"); if (v === "hobby" || v === "pro") setVercel(v);
