@@ -89,7 +89,7 @@ export const BRAND_CSS: Record<string, string> = {
 [data-brand="cswa"] .fw-main section, [data-brand="cswa"] .fw-main [style*="border-radius: 16px"], [data-brand="cswa"] .fw-main [style*="border-radius: 18px"] { box-shadow: 0 10px 30px -22px rgba(35,40,168,0.45); }
 [data-brand="cswa"] .fw-main [style*="color: rgb(154, 107, 34)"], [data-brand="cswa"] .fw-main [style*="color: rgb(201, 162, 74)"] { color: #4A5CFF !important; }
 /* Sapphire & Platinum: royal sapphire with platinum-silver accents, cool and corporate (last, so it wins) */
-[data-brand="cswa"] .fw-side { background: linear-gradient(180deg,#132C74 0%,#0D1E52 50%,#08122F 100%) !important; border-right: 1px solid rgba(214,220,229,0.14) !important; }
+[data-brand="cswa"] .fw-side { background: linear-gradient(180deg,#3563E0 0%,#2550C8 45%,#1C3FA8 100%) !important; border-right: 1px solid rgba(255,255,255,0.18) !important; }
 [data-brand="cswa"] .fw-side [style*="color: rgb(217, 181, 111)"], [data-brand="cswa"] .fw-side [style*="color: rgb(185, 196, 255)"] { color: #C9D2DF !important; }
 [data-brand="cswa"] .fw-nav { color: #DCE2EC !important; }
 [data-brand="cswa"] .fw-nav:hover { background: rgba(214,220,229,0.08) !important; }
@@ -100,42 +100,26 @@ export const BRAND_CSS: Record<string, string> = {
 [data-brand="cswa"] .fw-topicons a .ic { background: #ECEFF4; color: #132C74; border: 1px solid #DDE2EA; }
 [data-brand="cswa"] .fw-topicons a:hover { background: #F1F3F7; color: #0D1E52; }
 [data-brand="cswa"] .fw-topicons a:hover .ic { background: #E1E6EE; }
-[data-brand="cswa"] .fw-topicons a.on { background: linear-gradient(135deg,#1A3A8F,#0D1E52) !important; color: #FFFFFF; box-shadow: 0 8px 18px -10px rgba(13,30,82,0.7) !important; }
+[data-brand="cswa"] .fw-topicons a.on { background: linear-gradient(135deg,#3D6BEA,#1F4FD1) !important; color: #FFFFFF; box-shadow: 0 8px 18px -10px rgba(31,79,209,0.7) !important; }
 [data-brand="cswa"] .fw-topicons a.on .ic { background: rgba(214,220,229,0.18); color: #E6EAF0; border-color: rgba(214,220,229,0.3); }
 [data-brand="cswa"] .fw-main h1 { color: #0D1E52; }
-[data-brand="cswa"] .fw-main [style*="background: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main [style*="background: rgb(15, 43, 37)"], [data-brand="cswa"] .fw-main [style*="background: linear-gradient"][style*="rgb(15, 43, 37)"], [data-brand="cswa"] .fw-main [style*="background: linear-gradient"][style*="rgb(18, 53, 45)"] { background: linear-gradient(135deg,#1A3A8F 0%,#0F2462 55%,#0A1638 100%) !important; }
-[data-brand="cswa"] .fw-main button[style*="background: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main button[style*="background: rgb(15, 43, 37)"] { background: linear-gradient(135deg,#1A3A8F,#0D1E52) !important; box-shadow: 0 6px 14px -8px rgba(13,30,82,0.7); }
+[data-brand="cswa"] .fw-main [style*="background: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main [style*="background: rgb(15, 43, 37)"], [data-brand="cswa"] .fw-main [style*="background: linear-gradient"][style*="rgb(15, 43, 37)"], [data-brand="cswa"] .fw-main [style*="background: linear-gradient"][style*="rgb(18, 53, 45)"] { background: linear-gradient(135deg,#3D6BEA 0%,#2550C8 60%,#1F45B8 100%) !important; }
+[data-brand="cswa"] .fw-main button[style*="background: rgb(18, 53, 45)"], [data-brand="cswa"] .fw-main button[style*="background: rgb(15, 43, 37)"] { background: linear-gradient(135deg,#3D6BEA,#1F4FD1) !important; box-shadow: 0 6px 14px -8px rgba(31,79,209,0.7); }
 [data-brand="cswa"] .fw-main [style*="color: rgb(154, 107, 34)"], [data-brand="cswa"] .fw-main [style*="color: rgb(201, 162, 74)"] { color: #1A3A8F !important; }
 [data-brand="cswa"] .fw-main [style*="color: rgb(232, 194, 122)"], [data-brand="cswa"] .fw-main [style*="color: rgb(217, 181, 111)"] { color: #C9D2DF !important; }
 [data-brand="cswa"] .fw-main [style*="background: rgb(201, 162, 74)"], [data-brand="cswa"] .fw-main [style*="background: rgb(217, 181, 111)"] { background: linear-gradient(135deg,#E6EAF0,#B9C3D2) !important; color: #0D1E52 !important; }
 [data-brand="cswa"] .fw-main section, [data-brand="cswa"] .fw-main [style*="border-radius: 16px"], [data-brand="cswa"] .fw-main [style*="border-radius: 18px"] { box-shadow: 0 12px 30px -24px rgba(13,30,82,0.5); }
 [data-brand="cswa"] .fw-main [style*="border: 1px solid rgb(230, 223, 208)"] { border-color: #DDE2EA !important; }
 [data-brand="cswa"] .fw-tip { background: #0D1E52; border-color: rgba(214,220,229,0.35); }
-/* Home in Sapphire & Platinum: a dark sapphire page, light serif heading with a rule, platinum controls */
-[data-brand="cswa"][data-page="home"], [data-brand="cswa"][data-page="home"] .fw-main, [data-brand="cswa"][data-page="home"] .fw-main > div:first-child { background: radial-gradient(900px 420px at 80% -10%, #16306F 0%, rgba(22,48,111,0) 65%), #0A1433 !important; color: #EEF1F6; }
-[data-brand="cswa"][data-page="home"] .fw-topicons { background: rgba(13,26,69,0.92); border-bottom-color: rgba(214,220,229,0.12); }
-[data-brand="cswa"][data-page="home"] .fw-topicons a { color: #C9D2DF; }
-[data-brand="cswa"][data-page="home"] .fw-topicons a .ic { background: rgba(214,220,229,0.08); color: #E6EAF0; border-color: rgba(214,220,229,0.18); }
-[data-brand="cswa"][data-page="home"] .fw-topicons a:hover { background: rgba(214,220,229,0.08); color: #FFFFFF; }
-[data-brand="cswa"][data-page="home"] .fw-topicons a.on { background: linear-gradient(135deg,#E6EAF0,#B9C3D2) !important; color: #0B1433 !important; }
-[data-brand="cswa"][data-page="home"] .fw-topicons a.on .ic { background: rgba(11,20,51,0.08); color: #0B1433; }
-[data-brand="cswa"][data-page="home"] .fw-main h1 { color: #F4F6FA !important; font-weight: 400 !important; letter-spacing: -0.01em; }
-[data-brand="cswa"][data-page="home"] .fw-main h1::after { content: ""; display: block; width: 90px; height: 1px; margin-top: 18px; background: #C9D2DF; opacity: 0.7; }
-[data-brand="cswa"][data-page="home"] .hd-entry { background: #10204F !important; border-color: #24356B !important; box-shadow: 0 24px 50px -30px rgba(0,0,0,0.6) !important; }
-[data-brand="cswa"][data-page="home"] .hd-entry [role="tablist"] { background: #0A1433 !important; border: 1px solid #24356B; border-radius: 999px !important; }
-[data-brand="cswa"][data-page="home"] .hd-entry [role="tab"] { border-radius: 999px !important; color: #C9D2DF !important; }
-[data-brand="cswa"][data-page="home"] .hd-entry [role="tab"][aria-selected="true"] { background: #D6DCE5 !important; color: #0B1433 !important; }
-[data-brand="cswa"][data-page="home"] .hd-entry textarea { background: #0A1433 !important; border: 1px solid #24356B !important; border-radius: 12px; padding: 12px 14px !important; color: #EEF1F6 !important; }
-[data-brand="cswa"][data-page="home"] .hd-entry textarea::placeholder { color: #7D89A3; }
-[data-brand="cswa"][data-page="home"] .hd-entry > div:last-child > button:last-child { background: linear-gradient(135deg,#E6EAF0,#B9C3D2) !important; color: #0B1433 !important; box-shadow: none !important; }
-[data-brand="cswa"][data-page="home"] .fw-main [style*="background: rgb(255, 255, 255)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="background: rgb(255, 253, 248)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="background: rgb(251, 248, 241)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="background: rgb(247, 241, 227)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="background: rgb(238, 241, 251)"] { background: #10204F !important; }
-[data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(16, 36, 31)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(18, 53, 45)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(31, 31, 158)"] { color: #EEF1F6 !important; }
-[data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(94, 107, 102)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(107, 117, 112)"] { color: #A3AEC2 !important; }
-[data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(11, 122, 85)"] { color: #5FD3A3 !important; }
-[data-brand="cswa"][data-page="home"] .fw-main [style*="color: rgb(180, 50, 31)"] { color: #FF8A78 !important; }
-[data-brand="cswa"][data-page="home"] .fw-main [style*="border: 1px solid rgb(230, 223, 208)"], [data-brand="cswa"][data-page="home"] .fw-main [style*="border-left: 1px solid rgb(239, 232, 218)"] { border-color: #24356B !important; }
-[data-brand="cswa"][data-page="home"] .fw-main select, [data-brand="cswa"][data-page="home"] .fw-main input { background: #10204F !important; color: #EEF1F6 !important; border-color: #24356B !important; }
-[data-brand="cswa"][data-page="home"] .fw-main [role="group"][aria-label="GST filing status"] { border-color: #24356B !important; }
+/* Home, light and bright: platinum-white page, white top bar, sapphire heading with a fine rule, blue-tinted entry card */
+[data-brand="cswa"][data-page="home"], [data-brand="cswa"][data-page="home"] .fw-main, [data-brand="cswa"][data-page="home"] .fw-main > div:first-child { background: radial-gradient(1000px 420px at 85% -12%, #E3EBFF 0%, rgba(227,235,255,0) 62%), linear-gradient(180deg,#F7F9FE 0%,#EEF2FA 100%) !important; }
+[data-brand="cswa"][data-page="home"] .fw-main h1 { color: #0D1E52 !important; }
+[data-brand="cswa"][data-page="home"] .fw-main h1::after { content: ""; display: block; width: 72px; height: 3px; margin-top: 16px; border-radius: 3px; background: linear-gradient(90deg,#2F5BD8,#9DB3EA); }
+[data-brand="cswa"][data-page="home"] .hd-entry { border-color: #D3DDF5 !important; box-shadow: 0 22px 44px -32px rgba(31,79,209,0.55) !important; }
+[data-brand="cswa"][data-page="home"] .hd-entry [role="tablist"] { background: #EEF2FA !important; border-radius: 999px !important; }
+[data-brand="cswa"][data-page="home"] .hd-entry [role="tab"] { border-radius: 999px !important; }
+[data-brand="cswa"][data-page="home"] .hd-entry [role="tab"][aria-selected="true"] { background: linear-gradient(135deg,#3D6BEA,#1F4FD1) !important; color: #FFFFFF !important; }
+[data-brand="cswa"][data-page="home"] .hd-entry > div:last-child > button:last-child { background: linear-gradient(135deg,#3D6BEA,#1F4FD1) !important; color: #FFFFFF !important; box-shadow: 0 10px 22px -12px rgba(31,79,209,0.8) !important; }
 @media (max-width: 760px) { [data-brand="cswa"] .fw-tabs a.on { color: #1F1F9E; } [data-brand="cswa"] .fw-tabs a.plus { background: #1F1F9E; } }
 `,
 };

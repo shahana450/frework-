@@ -14,12 +14,18 @@ const LIGHT = {
   ground: "#F4EFE4", tile: "#FFFDF8", line: "#E6DFD0", ink: "#10241F", muted: "#5E6B66",
   green: "#12352D", greenSoft: "#E4ECE8", gold: "#9A6B22", goldSoft: "#F3E8D2", goldLine: "#C99A4E",
   pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB",
+  // Books at a glance: FreBook's deep green panel
+  gBg: "#12352D", gBorder: "none", gShadow: "none", gInk: "#F4EFE4", gStrong: "#FFFFFF", gMuted: "#B9C7C1", gHead: "#D9B56F",
+  gRule: "rgba(255,255,255,0.14)", gRuleSoft: "rgba(255,255,255,0.1)", gNeg: "#F3A58F", gPos: "#A8F0CF", gBtnLine: "rgba(255,255,255,0.25)", gBtnBg: "transparent",
 };
-// BooksAI's Home: Sapphire & Platinum on a dark ground
+// BooksAI's Home: Sapphire & Platinum, light — white cards, sapphire type and accents, a soft blue summary panel
 const SAPPHIRE: typeof LIGHT = {
-  ground: "#0B1640", tile: "#10204F", line: "#24356B", ink: "#EEF1F6", muted: "#A3AEC2",
-  green: "#17307A", greenSoft: "#16285E", gold: "#C9D2DF", goldSoft: "#1A2A5E", goldLine: "#AEB9CB",
-  pos: "#5FD3A3", posSoft: "#123A3A", neg: "#FF8A78", negSoft: "#3A1E2E", warn: "#F2C46B", warnSoft: "#3A3020",
+  ground: "#EEF2FA", tile: "#FFFFFF", line: "#DCE3F0", ink: "#0D1E52", muted: "#5B6785",
+  green: "#1F4FD1", greenSoft: "#E8EEFB", gold: "#2F5BD8", goldSoft: "#EAF0FF", goldLine: "#9DB3EA",
+  pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB",
+  gBg: "linear-gradient(135deg,#F4F7FF 0%,#E7EEFF 100%)", gBorder: "1px solid #D3DDF5", gShadow: "0 18px 40px -30px rgba(31,79,209,0.55)",
+  gInk: "#22305C", gStrong: "#0D1E52", gMuted: "#6A7696", gHead: "#2F5BD8",
+  gRule: "#C9D5F2", gRuleSoft: "#DCE4F7", gNeg: "#C2321F", gPos: "#0B7A55", gBtnLine: "#C3D1F2", gBtnBg: "#FFFFFF",
 };
 let C = LIGHT;
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
@@ -153,10 +159,10 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
 
       {/* Books at a glance · Needs you today */}
       <div className="hd-main">
-        <section aria-labelledby="glance" style={{ ...tile, background: C.green, border: "none", color: "#F4EFE4", padding: 24, gap: 18 }}>
+        <section aria-labelledby="glance" style={{ ...tile, background: C.gBg, border: C.gBorder, color: C.gInk, padding: 24, gap: 18, boxShadow: C.gShadow }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-            <h2 id="glance" style={{ ...h2, color: "#FFFFFF" }}>Books at a glance</h2>
-            <span style={{ fontSize: 11.5, color: "#B9C7C1" }}>{dash?.period.label ?? "This year"} · amounts in {cur().trim() || dash?.currency} · (brackets) = negative</span>
+            <h2 id="glance" style={{ ...h2, color: C.gStrong }}>Books at a glance</h2>
+            <span style={{ fontSize: 11.5, color: C.gMuted }}>{dash?.period.label ?? "This year"} · amounts in {cur().trim() || dash?.currency} · (brackets) = negative</span>
           </div>
           <div className="hd-glance">
             {[
@@ -171,24 +177,24 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
               ] },
             ].map(col => (
               <div key={col.head} style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ ...eyebrow, color: "#D9B56F", paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.14)" }}>{col.head}</span>
+                <span style={{ ...eyebrow, color: C.gHead, paddingBottom: 8, borderBottom: `1px solid ${C.gRule}` }}>{col.head}</span>
                 {col.rows.map(r => (
-                  <Link key={r.k} href={r.href} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, padding: "11px 0", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "#F4EFE4", textDecoration: "none" }}>
+                  <Link key={r.k} href={r.href} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, padding: "11px 0", borderBottom: `1px solid ${C.gRuleSoft}`, color: C.gInk, textDecoration: "none" }}>
                     <span style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 13.5 }}>
                       {r.k}
-                      {"note" in r && r.note && <span style={{ fontSize: 11, color: "#F3A58F" }}>{r.note}</span>}
+                      {"note" in r && r.note && <span style={{ fontSize: 11, color: C.gNeg }}>{r.note}</span>}
                       {"link" in r && r.link && <span className="glink" style={{ fontSize: 11, fontWeight: 700, textDecoration: "underline" }}>{r.link.t}</span>}
                     </span>
-                    <span style={{ fontFamily: MONO, fontSize: 14, fontVariantNumeric: "tabular-nums", color: (r.v ?? 0) < 0 ? "#F3A58F" : "#FFFFFF" }}>{num(r.v)}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 14, fontVariantNumeric: "tabular-nums", color: (r.v ?? 0) < 0 ? C.gNeg : C.gStrong }}>{num(r.v)}</span>
                   </Link>
                 ))}
                 {"total" in col && col.total && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: 14 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-                      <span style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 700, color: "#FFFFFF" }}>{col.total.k}</span>
-                      <span style={{ fontFamily: MONO, fontSize: 24, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: col.total.v < 0 ? "#F3A58F" : "#A8F0CF" }}>{num(col.total.v)}</span>
+                      <span style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 700, color: C.gStrong }}>{col.total.k}</span>
+                      <span style={{ fontFamily: MONO, fontSize: 24, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: col.total.v < 0 ? C.gNeg : C.gPos }}>{num(col.total.v)}</span>
                     </div>
-                    {col.total.note && <span style={{ fontSize: 11.5, color: "#B9C7C1" }}>{col.total.note}</span>}
+                    {col.total.note && <span style={{ fontSize: 11.5, color: C.gMuted }}>{col.total.note}</span>}
                   </div>
                 )}
               </div>
@@ -196,7 +202,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: "auto" }}>
             {[["Profit & Loss", "/finance/reports?tab=profit_loss"], ["Balance Sheet", "/finance/reports?tab=balance_sheet"], ["Trial Balance", "/finance/reports?tab=trial_balance"]].map(([t, h]) => (
-              <Link key={t} href={h} className="lift" style={{ fontSize: 12.5, fontWeight: 700, padding: "8px 12px", borderRadius: 9, border: "1px solid rgba(255,255,255,0.25)", color: "#FFFFFF", textDecoration: "none" }}>{t} →</Link>
+              <Link key={t} href={h} className="lift" style={{ fontSize: 12.5, fontWeight: 700, padding: "8px 12px", borderRadius: 9, border: `1px solid ${C.gBtnLine}`, background: C.gBtnBg, color: C.gStrong, textDecoration: "none" }}>{t} →</Link>
             ))}
           </div>
         </section>
