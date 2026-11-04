@@ -226,7 +226,16 @@ Works once and expires soon. Don't forward this link — it signs in as you. Sha
     `Available Accounts: ${accountListForAI(accounts ?? [])}.`,
     attachment ? `Attached file: ${attachment.name}.${attachment.text ? `\nFile contents:\n${attachment.text}` : " (see attached document)"}` : "",
   ].join(" ");
-  const userTurn = `${header}\n\nUser message: ${message || "Book this transaction from the attached document."}`;
+  // A draft waiting for YES: a short follow-up ("date 01-11-2026", "salary was 15000", "from bank not cash") corrects
+  // that draft — it is not a new transaction
+  const waiting = sess.pending?.parsed;
+  const draftNote = waiting && !m.media ? [
+    "",
+    `A DRAFT IS WAITING for the user's YES (from their message: "${(sess.pending?.original ?? "").slice(0, 300)}"):`,
+    `date ${waiting.transaction_date}; narration "${(waiting.narrative ?? "").slice(0, 200)}"; lines: ${waiting.lines.map(l => `${l.debit ? "Dr" : "Cr"} ${l.account} ${l.debit || l.credit}`).join(", ")}${sess.pending?.queue?.length ? ` (+${sess.pending.queue.length} more entries)` : ""}.`,
+    "If the new message changes or adds to this draft (a different date, amount, ledger, party, payment mode or narration), return the WHOLE corrected transaction as a record intent — every line, with the change applied — not a new partial one. Only treat it as a new transaction if it clearly describes a separate one.",
+  ].join("\n") : "";
+  const userTurn = `${header}${draftNote}\n\nUser message: ${message || "Book this transaction from the attached document."}`;
   const msgs = [...sess.history.slice(-6).map(h => ({ role: h.role, content: h.content })), { role: "user" as const, content: attachment ? [...attachment.blocks, { type: "text" as const, text: userTurn }] : userTurn }];
   // Load the books while the AI reads the message (used for answers and the smart checks)
   const booksToday = loadQueryBooks(sb, link.business_id, today);
