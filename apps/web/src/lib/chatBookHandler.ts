@@ -161,15 +161,20 @@ Never invent facts; leave out what is not shown.`,
       } catch (e) { console.error("chat-book voucher split", e); /* fall back to reading it as one voucher */ }
     }
 
+    // A long list (dozens of expenses) needs room for every line in the reply, or it is cut off and unreadable
+    const lastText = JSON.stringify(claudeMessages[claudeMessages.length - 1]?.content ?? "");
+    const big = lastText.length > 900 || (lastText.match(/\\n/g) ?? []).length > 12;
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6", max_tokens: 1500,
+      model: "claude-sonnet-4-6", max_tokens: big ? 16000 : 1500,
       system: intentSystemFor(biz), messages: claudeMessages,
-    }, { timeout: 45000, maxRetries: 1 }).catch(e => { console.error("chat-book intent", e); return null; });
+    }, { timeout: big ? 110000 : 45000, maxRetries: 1 }).catch(e => { console.error("chat-book intent", e); return null; });
     if (!response) return NextResponse.json({ error: "FreBook’s AI is slow right now — please send that again." }, { status: 503 });
 
     const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return NextResponse.json({ error: "I couldn't understand that. Try describing it as e.g. \"Paid ₹25,000 rent from my bank account\"." }, { status: 422 });
+    if (!jsonMatch || (response.stop_reason === "max_tokens" && !/\}\s*$/.test(raw))) return NextResponse.json({ error: response.stop_reason === "max_tokens"
+      ? "That list is too long to book in one message. Send it in parts of about 40 lines, or use the Journal template (Excel) for long lists."
+      : "I couldn't understand that. Try describing it as e.g. \"Paid ₹25,000 rent from my bank account\"." }, { status: 422 });
 
     let ai: AiIntent;
     try { ai = JSON.parse(jsonMatch[0]); } catch { return NextResponse.json({ error: "I couldn't understand that. Please rephrase." }, { status: 422 }); }
