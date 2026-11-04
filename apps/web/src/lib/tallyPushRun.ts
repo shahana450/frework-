@@ -2,7 +2,7 @@
 // Pushes FreWork journals to the open Tally company — shared by the Books and Journals pages.
 import { tallyFetch } from "@/lib/tallyUtils";
 import { tallyGuidFor } from "@/lib/tallyMatch";
-import { explainTallyError, eduDateOk, parseImportReply } from "@/lib/integrations/tally";
+import { explainTallyError, eduDateOk, parseImportReply, xmlDec } from "@/lib/integrations/tally";
 
 export type PushState = { at: string; guid?: string } | { error: string };
 
@@ -33,8 +33,9 @@ export async function verifyOpenCompany(port: string, company: string): Promise<
   const listXml = `<?xml version="1.0" encoding="utf-8"?><ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>List of Companies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES></DESC></BODY></ENVELOPE>`;
   try {
     const text = await (await tallyFetch(`http://localhost:${port}`, listXml, 8000)).text();
-    const open = [...text.matchAll(/<COMPANY[^>]*NAME="([^"]+)"/gi), ...text.matchAll(/<NAME[^>]*>([^<]+)<\/NAME>/gi)].map(m => m[1].trim());
-    if (company && open.length && !open.some(n => n.toLowerCase() === company.trim().toLowerCase()))
+    const open = [...text.matchAll(/<COMPANY[^>]*NAME="([^"]+)"/gi), ...text.matchAll(/<NAME[^>]*>([^<]+)<\/NAME>/gi)].map(m => xmlDec(m[1]));   // Tally escapes names: SAI&apos;S → SAI'S
+    const same = (a: string) => a.toLowerCase().replace(/[’‘`]/g, "'").replace(/\s+/g, " ").trim();
+    if (company && open.length && !open.some(n => same(n) === same(xmlDec(company))))
       return `Not sent: this business is linked to Tally company "${company}", but Tally has ${open.length === 1 ? `"${open[0]}"` : "other companies"} open. Open "${company}" in Tally (or change the link on the Tally page) and push again.`;
     return null;
   } catch {

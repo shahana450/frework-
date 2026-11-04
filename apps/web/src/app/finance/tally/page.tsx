@@ -2,7 +2,7 @@
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { findTallyPort, tallyFetch, parseTallyVouchers, vouchersInRangeXml, voucherIndexXml, voucherTypesInRange, vouchersOfTypeXml, alterIdIndexXml, alterIdsInRange, vouchersByAlterIdXml } from "@/lib/tallyUtils";
-import { tallyProblem, companiesXml } from "@/lib/integrations/tally";
+import { tallyProblem, companiesXml, xmlDec } from "@/lib/integrations/tally";
 import { connectTally, chooseTallyCompany, disconnectTally, useTally , tallyCompanyNow, setTallyBusy } from "@/lib/tallyConnection";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -104,7 +104,7 @@ function extractCompanyName(xml: string): string {
   ];
   for (const re of patterns) {
     const m = xml.match(re);
-    if (m?.[1] && m[1].trim().length >= 2) return m[1].trim();
+    if (m?.[1] && m[1].trim().length >= 2) return xmlDec(m[1]);   // SAI&apos;S → SAI'S
   }
   return "";
 }

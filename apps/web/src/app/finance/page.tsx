@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import type { Dashboard } from "@/lib/dashboard";
 import { readTallyLedgerGroups, importTallyVouchers, summaryText } from "@/lib/integrations/tallyClient";
 import type { TallyVoucher } from "@/lib/tallyUtils";
+import { xmlDec } from "@/lib/integrations/tally";
 import { formatMoney , cur, activeMoney } from "@/lib/money";
 import Link from "next/link";
 import HomeDesk from "./HomeDesk";
@@ -51,7 +52,7 @@ function parseTallyCompanyName(xml: string): string {
   ];
   for (const re of patterns) {
     const m = xml.match(re);
-    const v = m?.[1]?.trim();
+    const v = m?.[1] ? xmlDec(m[1]) : "";   // SAI&apos;S → SAI'S
     if (v && v.length >= 2) return v;
   }
   return "";
