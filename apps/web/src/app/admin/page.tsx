@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { planLabel } from "@/lib/plans";
+import { BarChart3, Activity, Palette } from "lucide-react";
+import { BRANDS } from "@/lib/brand";
+import { UsageTab, HealthTab, BrandsTab } from "./AdminSystem";
 
 interface FwUser {
   id: string;
@@ -101,7 +104,7 @@ export default function AdminPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [subscriptions, setSubscriptions] = useState<FwSubscription[]>([]);
   const [leads, setLeads] = useState<FwLead[]>([]);
-  const [tab, setTab] = useState<"leads" | "users" | "enquiries" | "approvals" | "subscriptions" | "services">("leads");
+  const [tab, setTab] = useState<"leads" | "users" | "enquiries" | "approvals" | "subscriptions" | "services" | "usage" | "health" | "brands">("leads");
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [srEdits, setSrEdits] = useState<Record<string, { status: string; admin_notes: string; package_granted: string }>>({});
   const [srSaving, setSrSaving] = useState<string | null>(null);
@@ -220,7 +223,26 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="fw-admin min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* FreBook's look: deep green, gold and cream in place of the old violet */}
+      <style>{`
+        .fw-admin { background: #F6F1E7 !important; color: #10241F; font-family: 'Manrope', system-ui, sans-serif; }
+        .fw-admin h1, .fw-admin h2 { font-family: 'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif; }
+        .fw-admin > div:first-of-type { background: #0F2B25 !important; border-color: rgba(217,181,111,0.25) !important; }
+        .fw-admin > div:first-of-type h1 { color: #FFFFFF !important; font-size: 1.35rem; }
+        .fw-admin > div:first-of-type p, .fw-admin > div:first-of-type a { color: #D9B56F !important; }
+        .fw-admin > div:first-of-type svg rect { fill: #C99A4E; }
+        .fw-admin .bg-violet-600, .fw-admin .from-violet-600 { background: #12352D !important; color: #FFFFFF !important; }
+        .fw-admin .hover\\:bg-violet-700:hover { background: #0F2B25 !important; }
+        .fw-admin .bg-violet-50, .fw-admin .bg-violet-100 { background: #F3E8D2 !important; }
+        .fw-admin .text-violet-600, .fw-admin .text-violet-700 { color: #9A6B22 !important; }
+        .fw-admin .hover\\:border-violet-300:hover, .fw-admin .focus\\:border-violet-400:focus { border-color: #C99A4E !important; }
+        .fw-admin .bg-white { background: #FFFDF8 !important; }
+        .fw-admin .border-gray-100, .fw-admin .border-gray-200 { border-color: #E6DFD0 !important; }
+        .fw-admin .bg-gray-50, .fw-admin .bg-gray-100 { background: #F4EFE4 !important; }
+        .fw-admin .rounded-2xl { border-radius: 16px; }
+        .fw-admin .text-3xl { font-family: 'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif; }
+      `}</style>
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -274,15 +296,19 @@ export default function AdminPage() {
             ["approvals", "Approvals", listings.filter(l => l.status === "pending").length, CheckCircle],
             ["subscriptions", "Subscriptions", subscriptions.length, Crown],
             ["services", "Services", serviceRequests.length, Briefcase],
+            ["usage", "Usage & costs", "", BarChart3],
+            ["health", "System health", "", Activity],
+            ["brands", "Brands & domains", Object.keys(BRANDS).length, Palette],
           ] as const).map(([t, label, count, Icon]) => (
             <button key={t} onClick={() => setTab(t)} className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${tab === t ? "bg-violet-600 text-white shadow" : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-violet-300"}`}>
               <Icon className="w-4 h-4" />
-              {label} <span className={`text-xs rounded-full px-2 py-0.5 ${tab === t ? "bg-white/20" : "bg-gray-100 dark:bg-gray-700 text-gray-500"}`}>{count}</span>
+              {label} {count !== "" && <span className={`text-xs rounded-full px-2 py-0.5 ${tab === t ? "bg-white/20" : "bg-gray-100 dark:bg-gray-700 text-gray-500"}`}>{count}</span>}
             </button>
           ))}
         </div>
 
-        {/* Table panel */}
+        {tab === "usage" ? <UsageTab /> : tab === "health" ? <HealthTab /> : tab === "brands" ? <BrandsTab /> : (
+        /* Table panel */
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
           {/* Search + filter bar */}
           <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
@@ -737,6 +763,7 @@ export default function AdminPage() {
             )
           )}
         </div>
+        )}
       </div>
     </div>
   );
