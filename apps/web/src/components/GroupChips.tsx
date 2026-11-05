@@ -25,6 +25,8 @@ export function guessGroup(name: string, side?: "in" | "out" | "party" | null): 
   // Cash in hand — but not cash sales / purchases / discounts
   if (/\b(cash|petty cash|cash[- ]in[- ]hand)\b/.test(n) && !/\b(sales?|purchases?|discount|credit|deposit)\b/.test(n)) return "cash";
   if (/\b(gst|cgst|sgst|igst|tds|tcs|cess)\b/.test(n)) return "duties";
+  // Round off on a bill is a small indirect expense (or income) — never the supplier, even on the credit side
+  if (/\bround(ing)?[\s-]*off\b|\brounding\b/.test(n)) return "indirect_expense";
   // Things owned and used for years — before the expense words, so "Furniture & Fixtures" isn't an expense
   if (/\b(plant|machiner(y|ies)|furniture|fixtures?|fittings|computers?|laptops?|printers?|vehicles?|motor car|car|scooter|building|land|equipments?|air ?conditioners?|\bac\b|generator|inverter|mobile phones?|tools?|moulds?|electrical installations?|office equipment)\b/.test(n) && !/\b(repairs?|maintenance|hire|rent|charges?|expenses?|accessor(y|ies))\b/.test(n)) return "fixed_asset";
   if (/\b(stock|inventory|stock[- ]in[- ]hand|closing stock|opening stock|raw materials?|finished goods|work in progress|wip)\b/.test(n)) return "stock";
