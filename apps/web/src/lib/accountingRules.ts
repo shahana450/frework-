@@ -344,6 +344,9 @@ function buildLocal(intent: Intent, tax: TaxModule, registered = true): RuleResu
       for (const l of intent.manual_lines ?? []) lines.push({ account: l.account, debit: r2(l.debit), credit: r2(l.credit), role: "Adjustment", suggested_type: null });
       if (lines.length < 2) missing.push("adjustment_lines");
       warnings.push("Adjustment lines were proposed by the AI — check each account and amount.");
+      // GST paid on a fee is input tax: a debit to an OUTPUT GST ledger here is almost always the wrong ledger
+      for (const l of lines) if (l.debit > 0 && /\boutput\b/i.test(l.account) && /\b(c|s|i|ut)?gst\b|\bvat\b/i.test(l.account))
+        warnings.push(`"${l.account}" is debited — GST paid on a fee or expense should go to the matching INPUT GST ledger, not output tax.`);
       rule = "Journal adjustment (lines proposed by AI, checked for balance)";
       break;
     }
