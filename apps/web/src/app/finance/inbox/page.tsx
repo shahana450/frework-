@@ -58,7 +58,7 @@ export default function SmartInbox() {
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
   const [drag, setDrag] = useState(false);
-  const [filter, setFilter] = useState<"all" | "ready" | "check" | "posted">("all");
+  const [filter, setFilter] = useState<"all" | "ready" | "check" | "fix" | "posted">("all");
   const fileInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const queue = useRef<{ job: FileJob; file: File }[]>([]);
@@ -325,7 +325,9 @@ export default function SmartInbox() {
   const ready = items.filter(i => i.state === "ready");
   const toTally = items.filter(i => i.state === "posted" && i.tally !== "pushed").length;
   const reading = files.filter(f => f.status === "queued" || f.status === "reading").length;
-  const shown = items.filter(i => filter === "all" ? true : filter === "posted" ? i.state === "posted" : filter === "check" ? i.state === "check" || i.state === "failed" : i.state === "ready");
+  // "To fix": needs a look but can't be marked in bulk (a blank ledger or date, or a possible duplicate)
+  const toFix = (i: Item) => (i.state === "check" || i.state === "failed") && !canApprove(i);
+  const shown = items.filter(i => filter === "all" ? true : filter === "posted" ? i.state === "posted" : filter === "check" ? i.state === "check" || i.state === "failed" : filter === "fix" ? toFix(i) : i.state === "ready");
   const fileName = new Map(files.map(f => [f.id, f.name]));
 
   const pill = (bg: string, fg: string): React.CSSProperties => ({ fontSize: 11.5, fontWeight: 800, padding: "3px 9px", borderRadius: 999, background: bg, color: fg, whiteSpace: "nowrap" });
@@ -403,7 +405,7 @@ export default function SmartInbox() {
         {/* Action bar */}
         {items.length > 0 && (
           <section style={{ position: "sticky", top: 8, zIndex: 5, background: C.forest, color: "#FFFFFF", borderRadius: 18, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", boxShadow: "0 18px 40px -26px rgba(15,43,37,0.8)" }}>
-            {([["all", `All ${items.length}`], ["ready", `Ready ${count("ready")}`], ["check", `Needs a look ${count("check") + count("failed")}`], ["posted", `Posted ${count("posted")}`]] as const).map(([k, l]) => (
+            {([["all", `All ${items.length}`], ["ready", `Ready ${count("ready")}`], ["check", `Needs a look ${count("check") + count("failed")}`], ["fix", `To fix ${items.filter(toFix).length}`], ["posted", `Posted ${count("posted")}`]] as const).map(([k, l]) => (
               <button key={k} onClick={() => setFilter(k)} style={{ height: 34, padding: "0 12px", borderRadius: 999, border: "1px solid rgba(217,181,111,0.4)", background: filter === k ? C.gold : "transparent", color: filter === k ? C.forest : "#FFFFFF", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>{l}</button>
             ))}
             <span style={{ flex: 1 }} />
