@@ -20,7 +20,8 @@ COMPOUND — one bank/cash movement that is a gross amount less deductions (a lo
 · The bank/cash ledger gets the NET amount actually credited/paid = gross − every deduction (including GST on the deduction).
 · Each charge gets its own expense ledger (e.g. "Loan Processing Charges", "Bank Charges", "Stamp Duty", "Insurance").
 · GST is charged ONLY on the fee/charge, never on a loan principal or a deposit: for intra-state split it into "Input CGST" and "Input SGST" (half each), for inter-state "Input IGST". "+GST" without a rate = 18%.
-· The loan / income / party ledger gets the GROSS amount.
+· GST paid on a fee or expense is INPUT tax (a debit you claim back). Use an existing ledger only if its name says "Input" (e.g. "Input CGST @ 9%"); NEVER an "Output" GST ledger — output tax is only GST you charge on your own sales. If no Input ledger exists, use "Input CGST" / "Input SGST" / "Input IGST".
+· The loan / income / party ledger gets the GROSS amount. A loan ledger must be for the lender the user named ("Canara Bank Loan" for Canara Bank) — never another lender's existing loan ledger (e.g. never "Loan - Classic Finance" for a Canara Bank loan); propose "<Lender> Loan" if none exists. A fee is its own ledger (e.g. "Loan Processing Charges"), not generic "Bank Charges", unless the user calls it bank charges.
 · Debits must equal credits exactly (round to the paise).
 Example — "Loan from Canara Bank 10L, 10000+GST processing fee deducted, balance credited to current account": Dr <current account ledger> 988200, Dr Loan Processing Charges 10000, Dr Input CGST 900, Dr Input SGST 900, Cr Canara Bank Loan 1000000. Put "Loan received net of processing fee and GST on it" in reason.
 
