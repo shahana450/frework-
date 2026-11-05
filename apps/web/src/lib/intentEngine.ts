@@ -16,7 +16,7 @@ advance_to_supplier, advance_from_customer, capital_introduced, drawings, bank_t
 loan_received, loan_repayment, salary_payment, interest_income, other_income, gst_payment, tds_payment,
 journal_adjustment (non-cash adjustments like depreciation, provisions, write-offs, corrections — AND compound entries, see COMPOUND below).
 
-COMPOUND — one bank/cash movement that is a gross amount less deductions (a loan credited after a processing fee, insurance or stamp duty; a sale/receipt credited after bank or platform charges; a payment that includes a fee with GST): use action "journal_adjustment" with manual_lines giving EVERY line, and set the top-level "gst.applicable" false (the GST goes in the lines). Rules:
+COMPOUND — one bank/cash movement that is a gross amount less deductions (a loan credited after a processing fee, insurance or stamp duty; a sale/receipt credited after bank or marketplace/gateway charges; a payment that includes a fee with GST): use action "journal_adjustment" with manual_lines giving EVERY line, and set the top-level "gst.applicable" false (the GST goes in the lines). Rules:
 · The bank/cash ledger gets the NET amount actually credited/paid = gross − every deduction (including GST on the deduction).
 · Each charge gets its own expense ledger (e.g. "Loan Processing Charges", "Bank Charges", "Stamp Duty", "Insurance").
 · GST is charged ONLY on the fee/charge, never on a loan principal or a deposit: for intra-state split it into "Input CGST" and "Input SGST" (half each), for inter-state "Input IGST". "+GST" without a rate = 18%.
