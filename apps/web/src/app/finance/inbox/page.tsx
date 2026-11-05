@@ -312,6 +312,13 @@ export default function SmartInbox() {
     if (k >= 0) setLedger(it.id, k, account);
   }
   function markReady(id: string) { setItems(prev => prev.map(x => x.id === id && x.lines.length >= 2 && x.lines.every(l => l.account.trim()) && x.date ? { ...x, state: "ready", reason: undefined } : x)); }
+  // "Looks right" for every entry that is complete; possible duplicates and entries still missing a ledger or date stay
+  const canApprove = (x: Item) => (x.state === "check" || x.state === "failed") && x.lines.length >= 2 && x.lines.every(l => l.account.trim()) && !!x.date && !/Possible duplicate/.test(x.reason ?? "");
+  function markAllReady() {
+    const n = items.filter(canApprove).length, left = count("check") + count("failed") - n;
+    setItems(prev => prev.map(x => canApprove(x) ? { ...x, state: "ready", reason: undefined } : x));
+    setMsg(`✓ ${n} marked as looks right${left ? ` — ${left} still need a look (a missing ledger or date, or a possible duplicate)` : ""}. Press Approve to post them.`);
+  }
   function remove(id: string) { setItems(prev => prev.filter(x => x.id !== id)); }
 
   const count = (s: ItemState) => items.filter(i => i.state === s).length;
@@ -401,6 +408,9 @@ export default function SmartInbox() {
             ))}
             <span style={{ flex: 1 }} />
             <span role="status" style={{ fontSize: 12.5, color: "#C9D3CE" }}>{busy}</span>
+            {(() => { const n = items.filter(canApprove).length; return n > 0 && (
+              <button onClick={markAllReady} disabled={!!busy} title="Mark every complete entry as looks right — then Approve posts them" style={{ ...btn(false, !!busy), border: "1px solid rgba(217,181,111,0.6)" }}>☑ Mark all looks right ({n})</button>
+            ); })()}
             <button onClick={() => post(ready)} disabled={!!busy || !ready.length} style={{ ...btn(false, !!busy || !ready.length), background: C.gold, border: "none", color: C.forest }}>✓ Approve {ready.length} ready</button>
             <button onClick={sendToTally} disabled={!!busy || !toTally || tally.status !== "connected"} title={tally.status !== "connected" ? "Connect Tally on the Tally page first" : ""} style={{ ...btn(false, !!busy || !toTally || tally.status !== "connected") }}>⇪ Send {toTally} to Tally</button>
           </section>
