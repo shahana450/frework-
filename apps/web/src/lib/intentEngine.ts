@@ -14,7 +14,15 @@ expense_payment (rent, electricity, travel, fees, repairs…), purchase (goods f
 sale, receipt_from_customer (money received against an earlier sale/invoice), payment_to_supplier (paying an earlier bill),
 advance_to_supplier, advance_from_customer, capital_introduced, drawings, bank_transfer (between own bank/cash accounts),
 loan_received, loan_repayment, salary_payment, interest_income, other_income, gst_payment, tds_payment,
-journal_adjustment (ONLY for non-cash adjustments like depreciation, provisions, write-offs, corrections).
+journal_adjustment (non-cash adjustments like depreciation, provisions, write-offs, corrections — AND compound entries, see COMPOUND below).
+
+COMPOUND — one bank/cash movement that is a gross amount less deductions (a loan credited after a processing fee, insurance or stamp duty; a sale/receipt credited after bank or platform charges; a payment that includes a fee with GST): use action "journal_adjustment" with manual_lines giving EVERY line, and set the top-level "gst.applicable" false (the GST goes in the lines). Rules:
+· The bank/cash ledger gets the NET amount actually credited/paid = gross − every deduction (including GST on the deduction).
+· Each charge gets its own expense ledger (e.g. "Loan Processing Charges", "Bank Charges", "Stamp Duty", "Insurance").
+· GST is charged ONLY on the fee/charge, never on a loan principal or a deposit: for intra-state split it into "Input CGST" and "Input SGST" (half each), for inter-state "Input IGST". "+GST" without a rate = 18%.
+· The loan / income / party ledger gets the GROSS amount.
+· Debits must equal credits exactly (round to the paise).
+Example — "Loan from Canara Bank 10L, 10000+GST processing fee deducted, balance credited to current account": Dr <current account ledger> 988200, Dr Loan Processing Charges 10000, Dr Input CGST 900, Dr Input SGST 900, Cr Canara Bank Loan 1000000. Put "Loan received net of processing fee and GST on it" in reason.
 
 FIELDS:
 - amount: the amount stated (number, no symbols). If the user says "including GST" or a bill shows a total, give the TOTAL and set gst.inclusive=true. If they say "plus GST", give the pre-tax amount and gst.inclusive=false.
@@ -26,7 +34,7 @@ FIELDS:
 - tds: {applicable, section, rate, amount, amount_is_net} — withholding tax (TDS), only when mentioned. Give "rate" when a % is stated and "amount" when a TDS figure is stated (else 0). amount_is_net=true when the main "amount" is what was actually paid/received AFTER TDS was deducted — e.g. "paid 45000 from bank, TDS deducted 5000" → amount 45000, tds.amount 5000, amount_is_net true (gross 50000). amount_is_net=false when the main amount is the full bill before TDS — e.g. "commission 50000, TDS 10%" or "bill of 50000, paid after 5000 TDS" → amount 50000, amount_is_net false. The same applies to money RECEIVED when the customer, client or bank deducted TDS — e.g. "received 45000 from Acme, they deducted TDS 5000" → amount 45000, tds.amount 5000, amount_is_net true (it becomes TDS Receivable). Use receipt_from_customer when it settles an earlier invoice, sale when it is a new sale.
 - currency: ISO code (e.g. "USD") ONLY when the amount is in a currency other than the business base currency; else null.
 - exchange_rate: base-currency units per 1 unit of "currency", ONLY if the user or document states it. Never look up, estimate or invent a rate; leave null and the app will ask.
-- manual_lines: ONLY for journal_adjustment: [{account, debit, credit}].
+- manual_lines: ONLY for journal_adjustment (adjustments and COMPOUND entries): [{account, debit, credit}].
 - splits: when ONE payment covers SEVERAL different expenses/items listed separately (e.g. "paid in cash: wages 1000, salary 2500, cleaning 3200"), list each as [{account, amount}] with its own specific ledger (existing ledger from the list when it fits, else a standard name like "Wages", "Salary", "Coolie / Loading Charges", "Cleaning Charges", "Painting Charges"); set amount to the total and counter_account to the first item's ledger. Never lump listed items into one "Other Expenses". When an item has its own date, add "date":"YYYY-MM-DD" to it (items on different dates become separate entries). Else null.
 - confidence: 0–1 for the whole reading; account_confidence: 0–1 for counter_account specifically.
 - alternatives: up to 3 other plausible counter_account ledgers when you are not certain, else [].
