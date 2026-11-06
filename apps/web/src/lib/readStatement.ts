@@ -60,6 +60,37 @@ async function readLockedPdf(file: File, opts: { bizId?: string; password?: stri
   return { transactions: out, missingPages: missing };
 }
 
+// A PDF with no text layer: each page drawn in the browser as a picture and read on its own, four at a time
+async function readPdfAsImages(file: File, opts: { bizId?: string; shelf?: boolean; password?: string; onProgress?: (p: ReadProgress) => void }) {
+  const { pdfPageImages } = await import("./pdfUnlock");
+  const images = await pdfPageImages(await file.arrayBuffer(), opts.password, (n, t) => opts.onProgress?.({ done: 0, total: t + 1, label: `Preparing page ${n} of ${t}…` }));
+  const base = file.name.replace(/\.pdf$/i, "");
+  const results: (StatementTx[] | null)[] = new Array(images.length).fill(null);
+  let done = 0, next = 0, stopped: Error | null = null;
+  const label = () => `Reading page pictures · ${done}/${images.length}`;
+  opts.onProgress?.({ done, total: images.length, label: label() });
+  const run = async (i: number) => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try { results[i] = (await post(images[i], `${base}-page${i + 1}.jpg`, opts.bizId, false)).transactions; return; }
+      catch (e) {
+        const status = (e as { status?: number }).status ?? 0;
+        if (status === 422) { results[i] = []; return; }
+        if (status === 402) { stopped = e as Error; return; }
+        await new Promise(r => setTimeout(r, 2500 * (attempt + 1)));
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, images.length) }, async () => {
+    while (next < images.length && !stopped) { const i = next++; await run(i); done++; opts.onProgress?.({ done, total: images.length, label: label() }); }
+  }));
+  const transactions = results.flatMap(r => r ?? []);
+  const stoppedReason = (stopped as Error | null)?.message;
+  if (stoppedReason && !transactions.length) throw new Error(stoppedReason);
+  const missingPages = results.map((r, i) => (r === null ? String(i + 1) : "")).filter(Boolean);
+  if (!transactions.length) throw new Error(missingPages.length ? "Couldn't read this statement — the AI service may be busy. Try again in a few minutes." : "No transactions found in this statement.");
+  return { transactions, missingPages, stoppedReason };
+}
+
 import { fixDirections } from "./bankDirection";
 
 /** Reads a statement; withdrawals and deposits are then checked against the running balance (see bankDirection). */
@@ -81,6 +112,11 @@ async function readRaw(file: File, opts: { bizId?: string; shelf?: boolean; pass
     } catch { src = null; }
   }
   if (encrypted) return readLockedPdf(file, opts);
+  // Words drawn as shapes or scanned (no text layer, e.g. some SBI statements): read each page as a picture
+  if (src) {
+    const { pdfHasNoText } = await import("./pdfUnlock");
+    if (await pdfHasNoText(await file.arrayBuffer())) return readPdfAsImages(file, opts);
+  }
   // Small files, spreadsheets, images, or PDFs we can't open: one request as before
   if (!src || pageCount <= PAGES_PER_BATCH) {
     opts.onProgress?.({ done: 0, total: 1, label: "Reading statement…" });

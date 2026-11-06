@@ -424,6 +424,19 @@ export default function FreBookPage() {
     setMessages(prev => [...prev, userMsg]);
     setInput("");
 
+    // Uploads over ~4.5 MB never reach the server. A big PDF is almost always a statement: the statement reader
+    // splits it into small pieces in the browser. Anything else gets a clear message, not a generic error.
+    if (file && file.size > 4 * 1024 * 1024) {
+      if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
+        setStatementFile(file);
+        setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `🏦 ${file.name} is ${(file.size / 1048576).toFixed(1)} MB — too big to send in one piece, so it's opened as a bank statement and read page by page. If it isn't a statement, send it as a photo or a smaller PDF.`, timestamp: Date.now() }]);
+      } else {
+        setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: "system", text: `⚠ ${file.name} is ${(file.size / 1048576).toFixed(1)} MB — files must be under 4 MB here. Send a smaller photo, or for a spreadsheet use Banking → Import.`, timestamp: Date.now() }]);
+      }
+      setLoading(false);
+      return;
+    }
+
     try {
       let body: FormData | string;
       if (file) {
