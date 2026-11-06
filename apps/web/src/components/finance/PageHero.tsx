@@ -13,8 +13,15 @@ const toneColor = (t?: HeroTile["tone"]) => t === "good" ? HT.mint : t === "bad"
 
 /** A pill button for the hero's action area: gold (primary) or outlined. */
 export function HeroAction({ href, onClick, children, primary, disabled, title }: { href?: string; onClick?: () => void; children: ReactNode; primary?: boolean; disabled?: boolean; title?: string }) {
-  const style: React.CSSProperties = { height: 48, padding: "0 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8, fontFamily: SERIF, fontSize: 15, fontWeight: primary ? 700 : 400, textDecoration: "none", whiteSpace: "nowrap", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1, border: primary ? "none" : "1px solid rgba(255,255,255,0.28)", background: primary ? HT.gold : "transparent", color: primary ? HT.ink : "#FFFFFF" };
-  return href ? <Link href={href} title={title} style={style}>{children}</Link> : <button type="button" onClick={onClick} disabled={disabled} title={title} style={style}>{children}</button>;
+  const style: React.CSSProperties = { height: 48, padding: "0 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 8, fontFamily: SERIF, fontSize: 15, fontWeight: primary ? 700 : 400, textDecoration: "none", whiteSpace: "nowrap", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1, border: primary ? "none" : "1px solid rgba(255,255,255,0.28)", background: primary ? `linear-gradient(160deg, #E3C47E, ${HT.gold})` : "rgba(255,255,255,0.04)", color: primary ? HT.ink : "#FFFFFF", boxShadow: primary ? "0 10px 22px -12px rgba(201,162,74,0.9), inset 0 1px 0 rgba(255,255,255,0.45)" : "none" };
+  const cls = `hero-act${primary ? " hero-act-primary" : ""}`;
+  return (
+    <>
+      {/* Hover lifts, press sinks — instant feedback on every hero button */}
+      <style>{`.hero-act{transition:transform .14s ease, box-shadow .14s ease, background .14s ease, border-color .14s ease}.hero-act:hover:not(:disabled){transform:translateY(-2px);border-color:rgba(255,255,255,0.55)}.hero-act:not(.hero-act-primary):hover:not(:disabled){background:rgba(255,255,255,0.1) !important}.hero-act-primary:hover:not(:disabled){box-shadow:0 14px 28px -12px rgba(201,162,74,1), inset 0 1px 0 rgba(255,255,255,0.5) !important}.hero-act:active:not(:disabled){transform:translateY(0) scale(0.97)}.hero-act:focus-visible{outline:2px solid #E3C47E;outline-offset:2px}@media (prefers-reduced-motion: reduce){.hero-act{transition:none}.hero-act:hover{transform:none}}`}</style>
+      {href ? <Link href={href} title={title} className={cls} style={style}>{children}</Link> : <button type="button" onClick={onClick} disabled={disabled} title={title} className={cls} style={style}>{children}</button>}
+    </>
+  );
 }
 
 /** Financial-year chooser for the dark hero; the choice is shared by every tab (see lib/selectedFy). */

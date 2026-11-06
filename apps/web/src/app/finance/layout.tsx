@@ -1,13 +1,14 @@
 "use client";
 import { setActiveCurrency } from "@/lib/money";
 import { financeTitle } from "@/lib/dueText";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
 import { useTallyAutoCatchUp, AUTO_PUSH_EVENT } from "@/lib/tallyAutoCatchUp";
 import WindowDock, { openInWindow } from "@/components/finance/WindowDock";
 import { useTallyAutoSync, AUTOSYNC_EVENT } from "@/lib/tallyAutoSync";
 import InstallApp from "@/components/finance/InstallApp";
 import BizSwitcher from "@/components/finance/BizSwitcher";
+import NavProgress from "@/components/finance/NavProgress";
 import { useBrand, BRAND_CSS } from "@/lib/brand";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -31,7 +32,10 @@ const FINANCE_CSS = `
   .fw-topicons a { position: relative; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 70px; padding: 7px 10px 8px; border-radius: 13px; text-decoration: none; color: #4A5752; font-size: 11.5px; font-weight: 700; white-space: nowrap; transition: background .18s, color .18s, transform .18s; }
   .fw-topicons a .ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: #F4EEE2; color: #0F2B25; transition: background .18s, color .18s, transform .18s; }
   .fw-topicons a:hover, .fw-topicons a:focus-visible { background: #FBF7EE; color: #0F2B25; outline: none; }
-  .fw-topicons a:hover .ic { background: #EBDDBF; transform: translateY(-1px); }
+  .fw-topicons a:hover .ic { background: linear-gradient(160deg,#F3E4C2,#E5CE9C); transform: translateY(-2px); box-shadow: 0 6px 14px -8px rgba(154,107,34,0.7); }
+  .fw-topicons a:active { transform: scale(0.95); }
+  .fw-topicons a:active .ic { transform: translateY(0) scale(0.96); }
+  .fw-topicons a .ic { box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 2px 6px -4px rgba(15,43,37,0.4); }
   .fw-topicons a:focus-visible { box-shadow: 0 0 0 2px #C99A4E; }
   .fw-topicons a.on { background: linear-gradient(160deg,#1B4237,#0F2B25); color: #FFFFFF; box-shadow: 0 8px 18px -10px rgba(15,43,37,0.7); }
   .fw-topicons a.on .ic { background: rgba(217,181,111,0.18); color: #E8C27A; }
@@ -276,6 +280,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       <meta name="description" content="FreBook: chat bookkeeping, GST, reports and Tally sync for your business." />
       <style>{FINANCE_CSS}</style>
       <UpdatePrompt />
+      <Suspense fallback={null}><NavProgress /></Suspense>
       {slim && tip && <span className="fw-tip" role="tooltip" style={{ left: sidebarW + 8, top: tip.top }}>{tip.label}</span>}
       {/* Sidebar */}
       <aside className="fw-side"
