@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -223,6 +223,15 @@ export default function FreBookPage() {
   const stmtRef = useRef<HTMLInputElement>(null);   // "Bank statement" in Quick start: opens the statement reader directly
   const chatRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // The message box grows with the text (never below its set minimum), up to ~420 px; beyond that it scrolls
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const min = parseFloat(getComputedStyle(el).minHeight) || 0;
+    el.style.height = `${Math.max(min, Math.min(el.scrollHeight + 2, 420))}px`;
+    el.style.overflowY = el.scrollHeight > 420 ? "auto" : "hidden";
+  }, [input]);
   // The box grows as you type; back to its normal size once the message is sent
   useEffect(() => { if (!input && inputRef.current) inputRef.current.style.height = ""; }, [input]);
   const recognitionRef = useRef<unknown>(null);
