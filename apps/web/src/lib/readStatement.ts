@@ -66,7 +66,7 @@ async function readPdfAsImages(file: File, opts: { bizId?: string; shelf?: boole
   const images = await pdfPageImages(await file.arrayBuffer(), opts.password, (n, t) => opts.onProgress?.({ done: 0, total: t + 1, label: `Preparing page ${n} of ${t}…` }));
   const base = file.name.replace(/\.pdf$/i, "");
   const results: (StatementTx[] | null)[] = new Array(images.length).fill(null);
-  let done = 0, next = 0, stopped: Error | null = null;
+  let done = 0, next = 0, stopped: Error | null = null, lastErr: Error | null = null;
   const label = () => `Reading page pictures · ${done}/${images.length}`;
   opts.onProgress?.({ done, total: images.length, label: label() });
   const run = async (i: number) => {
@@ -76,7 +76,8 @@ async function readPdfAsImages(file: File, opts: { bizId?: string; shelf?: boole
         const status = (e as { status?: number }).status ?? 0;
         if (status === 422) { results[i] = []; return; }
         if (status === 402) { stopped = e as Error; return; }
-        await new Promise(r => setTimeout(r, 2500 * (attempt + 1)));
+        lastErr = e as Error;
+        if (attempt < 2) await wait((isBusy(status) ? 8000 : 2500) * (attempt + 1));
       }
     }
   };
@@ -87,7 +88,7 @@ async function readPdfAsImages(file: File, opts: { bizId?: string; shelf?: boole
   const stoppedReason = (stopped as Error | null)?.message;
   if (stoppedReason && !transactions.length) throw new Error(stoppedReason);
   const missingPages = results.map((r, i) => (r === null ? String(i + 1) : "")).filter(Boolean);
-  if (!transactions.length) throw new Error(missingPages.length ? "Couldn't read this statement — the AI service may be busy. Try again in a few minutes." : "No transactions found in this statement.");
+  if (!transactions.length) throw new Error(missingPages.length ? failMessage(lastErr) : "No transactions found in this statement.");
   return { transactions, missingPages, stoppedReason };
 }
 
