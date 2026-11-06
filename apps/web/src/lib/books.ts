@@ -151,9 +151,10 @@ export async function loadBookLines(sb: SupabaseClient, businessId: string, end:
   const lines: BookLine[] = [];
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += 150) chunks.push(ids.slice(i, i + 150));
-  // A few chunks in parallel keeps large books quick without flooding the API
-  for (let c = 0; c < chunks.length; c += 8) {
-    const results = await Promise.all(chunks.slice(c, c + 8).map(async chunk => {
+  // Many chunks in parallel keeps large books quick (≈2 rounds for 6,000 entries) without flooding the API
+  const PARALLEL = 20;
+  for (let c = 0; c < chunks.length; c += PARALLEL) {
+    const results = await Promise.all(chunks.slice(c, c + PARALLEL).map(async chunk => {
       const got: BookLine[] = [];
       for (let from = 0; ; from += 1000) {
         const { data, error } = await sb.from("fw_fin_journal_lines").select("journal_id,account_id,dr_amount,cr_amount").in("journal_id", chunk).order("id").range(from, from + 999);

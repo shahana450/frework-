@@ -19,6 +19,14 @@ export async function GET(req: NextRequest) {
   const fyId = searchParams.get("fy_id");
   const report = searchParams.get("report") ?? "trial_balance";
 
+  // Speed: the books start loading while access and the year are checked. Nothing is returned until the access
+  // check passes; lines after the year end are left out by buildTrialBalance, so loading up to "any date" is safe.
+  const report0 = searchParams.get("report") ?? "trial_balance";
+  const early = bizId && report0 !== "cash_flow"
+    ? Promise.all([loadBookLines(supabase, bizId, "9999-12-31"), supabase.from("fw_fin_chart_of_accounts").select("id,code").eq("business_id", bizId)])
+    : null;
+  early?.catch(() => null);   // a failure is handled where it's awaited
+
   const gate = await requireBusiness(req, bizId);
   if (gate instanceof NextResponse) return gate;
 
@@ -39,10 +47,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ report: "cash_flow", ...computeCashFlow(books.accounts, books.journals, start, end) });
   }
 
-  const [{ lines, accounts, error }, { data: codes }] = await Promise.all([
+  const [{ lines, accounts, error }, { data: codes }] = await (early ?? Promise.all([
     loadBookLines(supabase, bizId!, end),
     supabase.from("fw_fin_chart_of_accounts").select("id,code").eq("business_id", bizId!),
-  ]);
+  ]));
   if (error) { console.error("reports load failed", bizId, error); return NextResponse.json({ error: "We couldn't load your reports right now. Please try again." }, { status: 500 }); }
 
   const tb = buildTrialBalance(accounts, lines, start, end);

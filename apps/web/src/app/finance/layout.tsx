@@ -204,6 +204,22 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
     currentUser().then(async (user) => {
       if (!user) return;
 
+      // Fast start: the business this tab (or this device) last worked in opens at once from a small note kept here,
+      // while the checks below run alongside \u2014 they switch business only if access to this one has gone.
+      const bootKey = `fw_boot_${user.id}`;
+      const wantNow = (getActiveBusiness().userId === user.id && getActiveBusiness().businessId) || rememberedBusiness(user.id);
+      if (!PAYMENTS_LIVE && wantNow && !subChecked) {
+        try {
+          const c = JSON.parse(localStorage.getItem(bootKey) ?? "null") as { id: string; name: string; currency?: string | null; country?: string | null; count?: number } | null;
+          if (c && c.id === wantNow && c.name) {
+            setActiveBusiness(user.id, c.id, c.name); setBizName(c.name); setTallyBusiness(c.id, c.name);
+            setActiveCurrency(c.currency ?? undefined, c.country ?? undefined); setIndia(!c.country || c.country === "IN");
+            if (c.count) setBizCount(c.count);
+            setSubChecked(true);
+          }
+        } catch { /* no note yet: the full start-up below runs first, as before */ }
+      }
+
       // Subscription gate \u2014 skip for unguarded pages
       // Businesses the user owns or was invited to; invited team members work under the owner's plan
       const { data: { session } } = await supabase.auth.getSession();
@@ -253,7 +269,11 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       }
       if (pick) { setActiveBusiness(user.id, pick.id, pick.name); setBizName(pick.name); setTallyBusiness(pick.id, pick.name); }
       // Money on every page follows this business's currency (set before any page mounts)
-      if (pick) { const { data: m } = await supabase.from("fw_fin_businesses").select("currency,country").eq("id", pick.id).maybeSingle(); setActiveCurrency(m?.currency, m?.country); setIndia(!m?.country || m.country === "IN"); }
+      if (pick) {
+        const { data: m } = await supabase.from("fw_fin_businesses").select("currency,country").eq("id", pick.id).maybeSingle();
+        setActiveCurrency(m?.currency, m?.country); setIndia(!m?.country || m.country === "IN");
+        try { localStorage.setItem(bootKey, JSON.stringify({ id: pick.id, name: pick.name, currency: m?.currency ?? null, country: m?.country ?? null, count: owned?.length ?? 0 })); } catch { /* the next start just isn't instant */ }
+      }
       setSubChecked(true);
       if (!UNGUARDED.some(p => pathname.startsWith(p))) booted.current = true;
     });

@@ -21,7 +21,10 @@ test("T6: the finance layout provides the business and remounts pages when it ch
   const layout = readFileSync(join(SRC, "app/finance/layout.tsx"), "utf8");
   assert.match(layout, /<main key=\{active\.businessId \?\? "none"\}/);
   assert.match(layout, /<ActiveBusinessProvider>\{children\}<\/ActiveBusinessProvider>/);
-  assert.ok(layout.indexOf("setActiveBusiness(user.id, pick.id") < layout.indexOf("setSubChecked(true)"), "business is resolved before pages mount");
+  // Both the fast start (from the device's note) and the full start-up set the business before pages may mount
+  assert.ok(layout.indexOf("setActiveBusiness(user.id, pick.id") < layout.lastIndexOf("setSubChecked(true)"), "business is resolved before pages mount");
+  const firstMount = layout.indexOf("setSubChecked(true)");
+  assert.ok(layout.lastIndexOf("setActiveBusiness(user.id,", firstMount) > layout.indexOf("currentUser().then"), "the fast start sets the business before pages mount");
 });
 
 test("T6: pages get the header's business, and a switch reaches every listener", () => {
