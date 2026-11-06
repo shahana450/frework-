@@ -5,7 +5,7 @@ import { logAudit } from "@/lib/audit";
 import { seal, open } from "@/lib/portals/secretBox";
 import { resolveLedgers } from "@/lib/ledgerResolve";
 import { postJournal, PostingError } from "@/lib/posting";
-import { ConnectorError, type ConnectorId, type FeedItem, type ProposedLine } from "@/lib/connectors/types";
+import { ConnectorError, r2, type ConnectorId, type FeedItem, type ProposedLine } from "@/lib/connectors/types";
 import { verifyRazorpay, fetchRazorpay, type RazorpayCreds } from "@/lib/connectors/razorpay";
 import { verifyShopify, fetchShopify, normShop, type ShopifyCreds } from "@/lib/connectors/shopify";
 import { startConsent, fetchBankFeed, bankFeedDemo, type BankFeedCreds } from "@/lib/connectors/bankfeed";
@@ -38,7 +38,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-type Body = { business_id?: string; action?: "connect" | "oauth_start" | "sync" | "disconnect" | "post" | "ignore" | "edit"; lines?: { ledger: string }[]; provider?: ConnectorId; creds?: Record<string, string>; ids?: string[]; days?: number };
+type Body = { business_id?: string; action?: "connect" | "oauth_start" | "sync" | "disconnect" | "post" | "ignore" | "edit" | "file_import"; lines?: { ledger: string }[]; provider?: ConnectorId; creds?: Record<string, string>; ids?: string[]; days?: number;
+  items?: { external_id: string; date: string; description?: string; party?: string | null; lines: { ledger: string; dr: number; cr: number }[] }[];
+  heads?: Record<string, string> };
 
 async function syncOne(bizId: string, provider: ConnectorId, days = 30): Promise<number> {
   const { data: conn } = await supabase.from("fw_fin_connections").select("*").eq("business_id", bizId).eq("provider", provider).maybeSingle();
@@ -80,6 +82,28 @@ export async function POST(req: NextRequest) {
     const gate = await requireBusiness(req, bizId, { write: true, action: action === "post" ? undefined : "integrate" });
     if (gate instanceof NextResponse) return gate;
     if (action !== "post" && action !== "ignore" && action !== "edit" && (!provider || !IDS.includes(provider))) return NextResponse.json({ error: "Unknown connector." }, { status: 400 });
+
+    // QuickBooks (Online or Desktop) entries read from an exported Journal report in the browser: added to the same
+    // review list as the cloud connection. Each must balance; the same file imported again adds nothing new.
+    if (action === "file_import") {
+      if (provider !== "quickbooks") return NextResponse.json({ error: "File import is for QuickBooks." }, { status: 400 });
+      const raw = (body.items ?? []).slice(0, 5000);
+      const iso = /^\d{4}-\d{2}-\d{2}$/;
+      const items = raw.flatMap(i => {
+        const lines = (i.lines ?? []).map(l => ({ ledger: String(l.ledger ?? "").trim().slice(0, 120), head: "", dr: r2(l.dr), cr: r2(l.cr) })).filter(l => l.ledger && (l.dr > 0 || l.cr > 0));
+        const dr = r2(lines.reduce((s, l) => s + l.dr, 0)), cr = r2(lines.reduce((s, l) => s + l.cr, 0));
+        if (!iso.test(i.date ?? "") || lines.length < 2 || Math.abs(dr - cr) > 0.01 || !i.external_id) return [];
+        return [{ business_id: bizId, provider: "quickbooks", external_id: `qbfile:${String(i.external_id).slice(0, 180)}`, kind: "journal", date: i.date, description: String(i.description ?? "").slice(0, 300) || "QuickBooks entry", party: i.party ? String(i.party).slice(0, 120) : null, amount: dr, currency: null, lines }];
+      });
+      if (!items.length) return NextResponse.json({ error: "No balanced entries found in this file. Export the Journal report from QuickBooks (Reports → Journal) as Excel or CSV." }, { status: 400 });
+      const before = await supabase.from("fw_fin_feed_items").select("id", { count: "exact", head: true }).eq("business_id", bizId!).eq("provider", "quickbooks");
+      const { error } = await supabase.from("fw_fin_feed_items").upsert(items, { onConflict: "business_id,provider,external_id", ignoreDuplicates: true });
+      if (error) return missing(error.message) ? NextResponse.json({ error: NEEDS_SQL }, { status: 503 }) : serverError("connectors/file_import", error, "Couldn't add these entries.");
+      const after = await supabase.from("fw_fin_feed_items").select("id", { count: "exact", head: true }).eq("business_id", bizId!).eq("provider", "quickbooks");
+      const added = Math.max(0, (after.count ?? 0) - (before.count ?? 0));
+      await logAudit(supabase, { businessId: bizId!, actor: gate.user.id, action: "connector_file_import", source: "connectors", detail: { provider, read: raw.length, valid: items.length, added } });
+      return NextResponse.json({ ok: true, read: raw.length, valid: items.length, added, skipped: raw.length - items.length });
+    }
 
     if (action === "connect") {
       const c = body.creds ?? {};
@@ -140,7 +164,8 @@ export async function POST(req: NextRequest) {
       const { data: rows } = await supabase.from("fw_fin_feed_items").select("*").eq("business_id", bizId!).in("id", ids).eq("status", "new");
       const list = (rows ?? []) as (FeedItem & { id: string; provider: ConnectorId })[];
       const all = list.flatMap(r => r.lines as ProposedLine[]);
-      const heads = Object.fromEntries(all.filter(l => l.head).map(l => [l.ledger, l.head]));
+      // Groups for new ledgers: from the connector, or chosen by the person in the review list (wins)
+      const heads = { ...Object.fromEntries(all.filter(l => l.head).map(l => [l.ledger, l.head])), ...(body.heads ?? {}) };
       const res = await resolveLedgers(supabase, bizId!, all.map(l => ({ name: l.ledger })), heads, "Connector");
       if (!res.ok) return NextResponse.json({ error: `These ledgers aren't in your Chart of Accounts yet: ${res.needHeads.map(h => h.account).join(", ")}. Create them first (Chart of Accounts), then post again.`, need: res.needHeads }, { status: 409 });
       let posted = 0; const failed: { id: string; error: string }[] = [];

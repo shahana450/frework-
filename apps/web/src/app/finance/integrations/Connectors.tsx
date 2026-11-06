@@ -2,6 +2,7 @@
 // Connect panel for each cloud connector and the review list of fetched items waiting to be posted.
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import GroupChips, { guessGroup } from "@/components/GroupChips";
 
 type Conn = { provider: string; status: string; account_label: string | null; last_sync_at: string | null; last_error: string | null };
 type Line = { ledger: string; head: string; dr: number; cr: number };
@@ -44,6 +45,27 @@ export function ConnectPanel({ provider, data, call, reload }: { provider: strin
     setMsg(r.ok ? { ok: true, t: ok(r.d) } : { ok: false, t: r.d.error ?? "Something went wrong." });
     if (r.ok) { setF({}); reload(); }
   };
+  // QuickBooks Journal report (Excel / CSV) → entries for the review list
+  async function importQbFile(file: File) {
+    setBusy(true); setMsg(null);
+    try {
+      const XLSX = await import("xlsx");
+      const wb = /\.csv$/i.test(file.name) ? XLSX.read(await file.text(), { type: "string", raw: true }) : XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+      const { parseQuickBooksJournal } = await import("@/lib/quickbooksFile");
+      let best = { entries: [] as ReturnType<typeof parseQuickBooksJournal>["entries"], unbalanced: 0, headerFound: false };
+      for (const s of wb.SheetNames.slice(0, 5)) {
+        const r = parseQuickBooksJournal(XLSX.utils.sheet_to_json(wb.Sheets[s], { header: 1, defval: "", raw: true }) as unknown[][]);
+        if (r.entries.length > best.entries.length) best = r;
+      }
+      if (!best.entries.length) { setMsg({ ok: false, t: best.headerFound ? "No balanced entries found in this file." : "This doesn't look like a QuickBooks Journal report — it needs Date, Account, Debit and Credit columns. Export Reports → Journal." }); return; }
+      const r = await call({ action: "file_import", provider: "quickbooks", items: best.entries });
+      if (!r.ok) { setMsg({ ok: false, t: r.d.error ?? "Couldn't import the file." }); return; }
+      setMsg({ ok: true, t: `Read ${best.entries.length} entr${best.entries.length === 1 ? "y" : "ies"} from ${file.name}: ${r.d.added} new in the review list below${r.d.added < r.d.valid ? `, ${r.d.valid - r.d.added} already there` : ""}${best.unbalanced ? ` · ${best.unbalanced} didn't balance and were left out` : ""}.` });
+      reload();
+    } catch (e) { setMsg({ ok: false, t: e instanceof Error ? e.message : "Couldn't read that file." }); }
+    finally { setBusy(false); }
+  }
+
   if (data.setup_needed) return <div style={{ fontSize: 12.5, color: C.warn }}>{data.setup_needed}</div>;
   const oauth = provider === "zoho_books" || provider === "quickbooks";
 
@@ -86,6 +108,20 @@ export function ConnectPanel({ provider, data, call, reload }: { provider: strin
           </div>
         </div>
       )}
+      {provider === "quickbooks" && (
+        // No Intuit sign-in needed: a Journal report exported from QuickBooks Online or Desktop
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4, padding: "10px 12px", borderRadius: 10, background: "#F7F1E3", border: `1px solid ${C.line}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <b style={{ fontSize: 13 }}>Or import from a QuickBooks file</b>
+            <span style={{ flex: 1 }} />
+            <label style={{ ...btn(true, busy), display: "inline-flex", alignItems: "center", cursor: busy ? "wait" : "pointer" }}>
+              {busy ? "Reading…" : "Choose Journal report (.xlsx / .csv)"}
+              <input type="file" accept=".xlsx,.xls,.csv" disabled={busy} style={{ display: "none" }} onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) void importQbFile(file); }} />
+            </label>
+          </div>
+          <span style={{ fontSize: 12, color: C.muted, lineHeight: 1.5 }}>QuickBooks Online: Reports → <b>Journal</b> → choose the dates → Export to Excel. QuickBooks Desktop: Reports → Accountant &amp; Taxes → <b>Journal</b> → Excel. Every entry comes into the review list below; nothing is posted until you approve it, and importing the same file again adds nothing new.</span>
+        </div>
+      )}
       {conn?.last_error && !msg && <div style={{ fontSize: 12.5, color: C.neg }}>{conn.last_error}</div>}
       {msg && <div role="status" style={{ fontSize: 12.5, fontWeight: 600, color: msg.ok ? C.pos : C.neg }}>{msg.t}</div>}
     </div>
@@ -94,6 +130,8 @@ export function ConnectPanel({ provider, data, call, reload }: { provider: strin
 
 export function ReviewList({ data, call, reload }: { data: ConnData; call: (p: Record<string, unknown>) => Promise<{ ok: boolean; d: any }>; reload: () => void }) { // eslint-disable-line @typescript-eslint/no-explicit-any
   const [tab, setTab] = useState<"new" | "posted" | "ignored">("new");
+  const [need, setNeed] = useState<string[]>([]);                       // new ledgers waiting for a group
+  const [heads, setHeads] = useState<Record<string, string>>({});       // ledger → group chosen here
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<string | null>(null);
   const [edit, setEdit] = useState<Record<string, string[]>>({});
@@ -104,9 +142,18 @@ export function ReviewList({ data, call, reload }: { data: ConnData; call: (p: R
   if (!data.items.length) return null;
   const act = async (action: "post" | "ignore") => {
     setBusy(true); setMsg(null);
-    const r = await call({ action, ids: [...sel] });
+    const r = await call({ action, ids: [...sel], ...(action === "post" && Object.keys(heads).length ? { heads } : {}) });
     setBusy(false);
+    // New ledgers (e.g. a QuickBooks file's accounts): ask for each one's group here, then post again
+    if (!r.ok && Array.isArray(r.d.need) && r.d.need.length) {
+      const list = r.d.need as { account: string; suggested?: string }[];
+      setNeed(list.map(n => n.account));
+      setHeads(h => ({ ...Object.fromEntries(list.map(n => [n.account, h[n.account] ?? guessGroup(n.account)])), ...h }));
+      setMsg({ ok: false, t: `${list.length} new ledger${list.length === 1 ? "" : "s"} — check the group for each below, then press Post again.` });
+      return;
+    }
     if (!r.ok) { setMsg({ ok: false, t: r.d.error ?? "Couldn't do that." }); return; }
+    setNeed([]);
     setMsg({ ok: !r.d.failed?.length, t: action === "ignore" ? `${sel.size} ignored.` : `Posted ${r.d.posted} entr${r.d.posted === 1 ? "y" : "ies"}${r.d.created?.length ? ` · created ledgers: ${r.d.created.map((c: { name: string }) => c.name).join(", ")}` : ""}${r.d.failed?.length ? ` · ${r.d.failed.length} failed: ${r.d.failed[0].error}` : ""}` });
     setSel(new Set()); reload();
   };
@@ -130,6 +177,17 @@ export function ReviewList({ data, call, reload }: { data: ConnData; call: (p: R
       </div>
       {tab === "new" && <div style={{ fontSize: 12, color: C.muted }}>Nothing reaches your books until you post it. Each item can be posted only once. Missing ledgers (e.g. Razorpay Clearing, Payment Gateway Charges) are created under the right group.</div>}
       {msg && <div role="status" style={{ fontSize: 13, fontWeight: 600, color: msg.ok ? C.pos : C.neg }}>{msg.t}</div>}
+      {need.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 12, borderRadius: 10, background: "#FFF4DB", border: "1px solid #F2D29B" }}>
+          <b style={{ fontSize: 13 }}>New ledgers — they&apos;re created in your Chart of Accounts when you post</b>
+          {need.map(n => (
+            <div key={n} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>{n}</span>
+              <GroupChips compact value={heads[n] ?? ""} onChange={k => setHeads(h => ({ ...h, [n]: k }))} />
+            </div>
+          ))}
+        </div>
+      )}
       {items.length === 0 ? <div style={{ fontSize: 13, color: C.muted }}>Nothing here.</div> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {items.slice(0, 200).map(i => (
