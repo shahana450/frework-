@@ -29,8 +29,29 @@ async function post(file: Blob, name: string, bizId?: string, shelf = true): Pro
   return data;
 }
 
+/**
+ * A PDF with a real text layer read exactly, in the browser: its columns rebuilt from where the text sits, then the
+ * same reader as Excel statements. Seconds, no AI, no page allowance. Null when the layout isn't clear enough —
+ * then the AI reads it as before. Throws PdfPasswordError for a locked PDF without the right password.
+ */
+async function readPdfLocally(file: File, password?: string): Promise<StatementTx[] | null> {
+  const { pdfStatementGrid } = await import("./pdfUnlock");
+  const grid = await pdfStatementGrid(await file.arrayBuffer(), password);
+  const head = grid.findIndex(r => r.length >= 3);   // the first heading row (lines before it are single cells)
+  if (head < 0) return null;
+  const { parseStatementGrid } = await import("./bankExcel");
+  const r = parseStatementGrid(grid.slice(head));
+  const rows = r.rows.filter(x => x.date && (x.debit > 0 || x.credit > 0));
+  // Trust it only when it clearly found a statement: enough dated rows with amounts
+  if (rows.length < 3 || rows.length < r.rows.length * 0.6) return null;
+  return rows.map(x => ({ date: x.date, description: x.description, debit: x.debit, credit: x.credit, balance: x.balance }));
+}
+
 // A password-protected PDF: unlocked in the browser, its text sent in page batches (the password never leaves here)
 async function readLockedPdf(file: File, opts: { bizId?: string; password?: string; onProgress?: (p: ReadProgress) => void }) {
+  opts.onProgress?.({ done: 0, total: 2, label: "Reading the statement…" });
+  const exact = await readPdfLocally(file, opts.password);   // throws PdfPasswordError until the password is right
+  if (exact) { opts.onProgress?.({ done: 2, total: 2, label: "Done" }); return { transactions: exact, missingPages: [] as string[] }; }
   const { pdfPagesText } = await import("./pdfUnlock");
   const pages = await pdfPagesText(await file.arrayBuffer(), opts.password);   // throws PdfPasswordError until the password is right
   const base = file.name.replace(/\.pdf$/i, "");
@@ -117,6 +138,13 @@ async function readRaw(file: File, opts: { bizId?: string; shelf?: boolean; pass
   if (src) {
     const { pdfHasNoText } = await import("./pdfUnlock");
     if (await pdfHasNoText(await file.arrayBuffer())) return readPdfAsImages(file, opts);
+    // A real text layer: read it exactly in the browser first — instant, and no AI pages used
+    opts.onProgress?.({ done: 0, total: 2, label: "Reading the statement…" });
+    const exact = await readPdfLocally(file).catch(() => null);
+    if (exact) {
+      opts.onProgress?.({ done: 2, total: 2, label: "Done" });
+      return { transactions: exact, missingPages: [] };
+    }
   }
   // Small files, spreadsheets, images, or PDFs we can't open: one request as before
   if (!src || pageCount <= PAGES_PER_BATCH) {
