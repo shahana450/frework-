@@ -40,12 +40,19 @@ export async function GET(req: NextRequest) {
       lines: row.fw_fin_journal_lines.map(l => ({ dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0, account: l.fw_fin_chart_of_accounts?.name ?? "", accountType: l.fw_fin_chart_of_accounts?.type, subType: l.fw_fin_chart_of_accounts?.sub_type ?? null })),
     };
 
-    const saved = await supabase.from("fw_fin_invoice_docs").select("data,updated_at").eq("journal_id", journalId).maybeSingle();
-    const canSave = !saved.error || !missingTable(saved.error.message);
-    if (saved.data?.data && Object.keys(saved.data.data).length) return NextResponse.json({ doc: saved.data.data, saved_at: saved.data.updated_at, can_save: canSave, entry_no: row.entry_no, income: isIncomeEntry(src.lines) });
-
-    const { data: biz } = await supabase.from("fw_fin_businesses").select("*").eq("id", bizId!).single();
+    const [saved, { data: biz }] = await Promise.all([
+      supabase.from("fw_fin_invoice_docs").select("data,updated_at").eq("journal_id", journalId).maybeSingle(),
+      supabase.from("fw_fin_businesses").select("*").eq("id", bizId!).single(),
+    ]);
     const b = (biz ?? {}) as Record<string, string | null>;
+    const canSave = !saved.error || !missingTable(saved.error.message);
+    if (saved.data?.data && Object.keys(saved.data.data).length) {
+      // A saved (edited) invoice keeps its own details, but always signs with the business's current signature,
+      // and picks up the logo if it was saved before one was added
+      const d = saved.data.data as InvoiceDoc;
+      const doc = { ...d, seller: { ...d.seller, logo: d.seller?.logo || b.logo_url || null, signature: b.signature_url ?? null } };
+      return NextResponse.json({ doc, saved_at: saved.data.updated_at, can_save: canSave, entry_no: row.entry_no, income: isIncomeEntry(src.lines) });
+    }
     const contactQ = row.contact_id
       ? supabase.from("fw_fin_contacts").select("name,gstin,phone,email,city,state").eq("id", row.contact_id).maybeSingle()
       : row.party_name ? supabase.from("fw_fin_contacts").select("name,gstin,phone,email,city,state").eq("business_id", bizId!).ilike("name", row.party_name).limit(1).maybeSingle() : null;
@@ -53,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     const seller: InvoiceDoc["seller"] = {
       name: b.legal_name || b.name || "", address: [b.address, b.city, b.pincode].filter(Boolean).join(", "), gstin: b.gstin ?? "", state: b.state ?? "",
-      phone: b.phone ?? "", email: b.email ?? "", logo: b.logo_url ?? null, pan: b.pan ?? "",
+      phone: b.phone ?? "", email: b.email ?? "", logo: b.logo_url ?? null, signature: b.signature_url ?? null, pan: b.pan ?? "",
     };
     const doc = draftInvoice(src, seller, { name: c?.name ?? row.party_name ?? "", address: [c?.city].filter(Boolean).join(", "), gstin: c?.gstin ?? "", state: c?.state ?? "", phone: c?.phone ?? "", email: c?.email ?? "" });
     return NextResponse.json({ doc, saved_at: null, can_save: canSave, entry_no: row.entry_no, income: isIncomeEntry(src.lines) });

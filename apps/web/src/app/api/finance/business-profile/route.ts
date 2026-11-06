@@ -6,7 +6,7 @@ import { logAudit } from "@/lib/audit";
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 // Editable business details. The GST portal password is never stored — only username and trade name.
-const FIELDS = ["name", "legal_name", "business_type", "gstin", "pan", "tan", "gst_registration_type", "gst_username", "gst_trade_name", "address", "city", "state", "pincode", "email", "phone", "logo_url"] as const;
+const FIELDS = ["name", "legal_name", "business_type", "gstin", "pan", "tan", "gst_registration_type", "gst_username", "gst_trade_name", "address", "city", "state", "pincode", "email", "phone", "logo_url", "signature_url"] as const;
 type Profile = Partial<Record<typeof FIELDS[number], string | null>>;
 
 const GSTIN_RE = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
@@ -33,9 +33,12 @@ export async function POST(req: NextRequest) {
     const clean: Profile = {};
     for (const f of FIELDS) if (f in b) clean[f] = typeof b[f] === "string" ? b[f]!.trim() || null : null;
     if (clean.logo_url && (!/^data:image\/(png|jpeg|webp);base64,/.test(clean.logo_url) || clean.logo_url.length > 300_000)) return NextResponse.json({ error: "The logo must be a PNG, JPG or WebP image under about 200 KB." }, { status: 400 });
+    if (clean.signature_url && (!/^data:image\/(png|jpeg|webp);base64,/.test(clean.signature_url) || clean.signature_url.length > 300_000)) return NextResponse.json({ error: "The signature must be a PNG, JPG or WebP image under about 200 KB." }, { status: 400 });
     for (const k of ["gstin", "pan", "tan"] as const) if (clean[k]) clean[k] = clean[k]!.toUpperCase().replace(/\s/g, "");
+    // Just the logo and/or signature (e.g. from the invoice page): no other field is checked or changed
+    const brandingOnly = Object.keys(clean).length > 0 && Object.keys(clean).every(k => k === "logo_url" || k === "signature_url");
 
-    if (!clean.name) return NextResponse.json({ error: "Business name is required." }, { status: 400 });
+    if (!brandingOnly && !clean.name) return NextResponse.json({ error: "Business name is required." }, { status: 400 });
     if (clean.gstin && !GSTIN_RE.test(clean.gstin)) return NextResponse.json({ error: "That GSTIN doesn't look right — it should be 15 characters, like 32ABCDE1234F1Z5." }, { status: 400 });
     if (clean.pan && !PAN_RE.test(clean.pan)) return NextResponse.json({ error: "That PAN doesn't look right — it should be like ABCDE1234F." }, { status: 400 });
     if (clean.gstin && clean.pan && clean.gstin.slice(2, 12) !== clean.pan) return NextResponse.json({ error: "The PAN doesn't match the PAN inside your GSTIN (characters 3–12)." }, { status: 400 });
@@ -44,7 +47,7 @@ export async function POST(req: NextRequest) {
     if (clean.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean.email)) return NextResponse.json({ error: "That email address doesn't look right." }, { status: 400 });
 
     // Another of your businesses with the same GSTIN or name? Ask before saving.
-    if (req.headers.get("x-confirm-duplicate") !== "1") {
+    if (!brandingOnly && req.headers.get("x-confirm-duplicate") !== "1") {
       const { data: owner } = await supabase.from("fw_fin_businesses").select("owner_id").eq("id", b.business_id!).single();
       const { data: others } = await supabase.from("fw_fin_businesses").select("id,name,gstin").eq("owner_id", owner?.owner_id ?? gate.user.id).neq("id", b.business_id!);
       const same = (others ?? []).find(o => (clean.gstin && o.gstin && o.gstin.toUpperCase() === clean.gstin) || o.name?.trim().toLowerCase() === clean.name!.toLowerCase());
@@ -54,6 +57,7 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase.from("fw_fin_businesses").update(clean).eq("id", b.business_id!);
     if (error) {
       if (/logo_url/.test(error.message)) return NextResponse.json({ error: "To save a logo, run 2026-10-08_invoices_logo.sql in Supabase first." }, { status: 409 });
+      if (/signature_url/.test(error.message)) return NextResponse.json({ error: "To save a signature, run 2026-11-06_business_signature.sql in Supabase first." }, { status: 409 });
       return serverError("business-profile", error, "We couldn't save your business details.");
     }
     await logAudit(supabase, { businessId: b.business_id!, actor: gate.user.id, action: "settings_change", source: "business_profile", detail: { fields: Object.keys(clean) } });

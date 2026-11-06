@@ -26,8 +26,19 @@ export async function invoicePdf(doc: InvoiceDoc): Promise<Uint8Array> {
   };
   const hr = (yy: number) => page.drawLine({ start: { x: M, y: yy }, end: { x: W - M, y: yy }, thickness: 0.7, color: line });
 
-  // Header: seller left, title and number right
-  text(doc.seller.name, M, y, { f: bold, size: 15, color: green });
+  // A logo / signature saved as a data URL (PNG or JPEG); null if it can't be drawn
+  const image = async (url?: string | null) => {
+    const m = url?.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
+    if (!m) return null;
+    try { const bytes = Buffer.from(m[2], "base64"); return /png/i.test(m[1]) ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes); } catch { return null; }
+  };
+  const fit = (img: { width: number; height: number }, maxW: number, maxH: number) => { const s = Math.min(maxW / img.width, maxH / img.height, 1); return { width: img.width * s, height: img.height * s }; };
+  const [logo, sign] = await Promise.all([image(doc.seller.logo), image(doc.seller.signature)]);
+
+  // Header: logo, then seller left; title and number right
+  let sx = M;
+  if (logo) { const d = fit(logo, 90, 46); page.drawImage(logo, { x: M, y: y - d.height + 12, ...d }); sx = M + d.width + 10; }
+  text(doc.seller.name, sx, y, { f: bold, size: 15, color: green });
   text(doc.title.toUpperCase(), W - M, y, { f: bold, size: 13, color: green, right: true });
   y -= 15;
   for (const l of wrap(doc.seller.address, 300, reg, 9)) { text(l, M, y, { size: 9, color: muted }); y -= 11; }
@@ -87,8 +98,10 @@ export async function invoicePdf(doc: InvoiceDoc): Promise<Uint8Array> {
     for (const l of v.split("\n").flatMap(p => wrap(p, W - 2 * M - 160, reg, 9))) { text(l, M, y, { size: 9 }); y -= 11; }
     y -= 6;
   }
-  text(`For ${doc.seller.name}`, W - M, 90, { f: bold, size: 9.5, right: true });
-  text("Authorised signatory", W - M, 60, { size: 8.5, color: muted, right: true });
+  // "For <business>", the signature (if any) in the gap below it, then "Authorised signatory"
+  text(`For ${doc.seller.name}`, W - M, 110, { f: bold, size: 9.5, right: true });
+  if (sign) { const d = fit(sign, 160, 38); page.drawImage(sign, { x: W - M - d.width, y: 66 + (40 - d.height) / 2, ...d }); }
+  text("Authorised signatory", W - M, 54, { size: 8.5, color: muted, right: true });
   text("Made with FreBook · frework.online", M, 30, { size: 7.5, color: muted });
   return pdf.save();
 }

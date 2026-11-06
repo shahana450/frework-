@@ -109,7 +109,10 @@ export default function BusinessDetailsPage() {
         {!p ? <div style={{ color: msg ? C.neg : C.muted }}>{msg?.text ?? "Loading…"}</div> : (
           <>
             {section("BUSINESS", <>
-              <div style={{ gridColumn: "1 / -1" }}><LogoPicker value={p.logo_url || null} disabled={!canEdit} onChange={v => set("logo_url", v ?? "")} /></div>
+              <div style={{ gridColumn: "1 / -1", display: "flex", gap: 28, flexWrap: "wrap" }}>
+                <LogoPicker value={p.logo_url || null} disabled={!canEdit} onChange={v => set("logo_url", v ?? "")} />
+                <LogoPicker kind="signature" value={(p as Record<string, string | null>).signature_url || null} disabled={!canEdit} onChange={v => set("signature_url", v ?? "")} />
+              </div>
               {field("name", "Business name", { ph: "As customers know you" })}
               {field("legal_name", "Legal name", { ph: "As on PAN / registration" })}
               {select("business_type", "Business type", TYPES)}

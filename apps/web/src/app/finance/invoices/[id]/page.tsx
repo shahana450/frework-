@@ -294,9 +294,11 @@ export default function InvoicePage() {
               <E value={doc.terms} onChange={v => set({ terms: v })} placeholder="Terms" multiline />
               <E value={doc.notes} onChange={v => set({ notes: v })} placeholder="Note to customer" multiline />
             </div>
-            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: 34 }}>
+            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: doc.seller.signature ? 4 : 34 }}>
               <span>For <b>{doc.seller.name || "your business"}</b></span>
+              {doc.seller.signature && <img src={doc.seller.signature} alt="Authorised signature" style={{ maxHeight: 56, maxWidth: 200, objectFit: "contain", display: "block" }} />}
               <span style={{ color: C.muted }}>Authorised signatory</span>
+              {!doc.seller.signature && <Link href="/finance/settings/business" className="no-print" style={{ fontSize: 11, color: C.muted }}>Add a signature →</Link>}
             </div>
           </footer>
           <div style={{ fontSize: 11, color: C.muted, textAlign: "center" }}>Invoice dated {nice(doc.date)} · {doc.title === "Tax Invoice" ? "This is a computer-generated tax invoice." : "This is a computer-generated invoice."}</div>

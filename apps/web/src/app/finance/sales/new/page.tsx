@@ -10,6 +10,7 @@ import { saveEntry } from "@/lib/postEntry";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import { billTotals, isInterState, stateFromGstin, type BillLine } from "@/lib/billing";
 import BulkImport from "@/components/finance/BulkImport";
+import LogoPicker from "@/components/LogoPicker";
 
 type Contact = { id: string; name: string; gstin: string | null; phone: string | null; state: string | null };
 type Account = { id: string; code: string; name: string; type: string; sub_type: string | null };
@@ -38,7 +39,17 @@ export default function NewSalesInvoicePage() {
   const router = useRouter();
   const [bizId, setBizId] = useState<string | null>(null);
   const [bizState, setBizState] = useState("");
-  const [biz, setBiz] = useState<{ name?: string; gstin?: string; address?: string }>({});
+  const [biz, setBiz] = useState<{ name?: string; gstin?: string; address?: string; logo?: string | null; signature?: string | null }>({});
+  const [brandMsg, setBrandMsg] = useState("");
+  // Logo / signature: saved to the business straight away, so every invoice (and its PDF) uses them
+  async function saveBrand(key: "logo_url" | "signature_url", value: string | null) {
+    if (!bizId) return;
+    setBiz(b => ({ ...b, [key === "logo_url" ? "logo" : "signature"]: value }));
+    setBrandMsg("Saving…");
+    const r = await fetch("/api/finance/business-profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, [key]: value ?? "" }) });
+    const d = await r.json().catch(() => ({}));
+    setBrandMsg(r.ok ? `✓ ${key === "logo_url" ? "Logo" : "Signature"} ${value ? "saved" : "removed"} — used on every invoice` : (d.error ?? "Couldn't save it."));
+  }
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [pastItems, setPastItems] = useState<PastItem[]>([]);
@@ -79,7 +90,7 @@ export default function NewSalesInvoicePage() {
         supabase.from("fw_fin_items").select("name,hsn,rate,gst_rate").eq("business_id", saved).eq("is_active", true).order("name"),
       ]);
       setBizState(bizRes.data?.state ?? "");
-      { const b = (bizRes.data ?? {}) as Record<string, unknown>; setBiz({ name: b.name as string, gstin: (b.gstin ?? b.gst_number) as string, address: [b.address, b.city, b.state].filter(Boolean).join(", ") }); }
+      { const b = (bizRes.data ?? {}) as Record<string, unknown>; setBiz({ name: b.name as string, gstin: (b.gstin ?? b.gst_number) as string, address: [b.address, b.city, b.state].filter(Boolean).join(", "), logo: (b.logo_url as string) || null, signature: (b.signature_url as string) || null }); }
       setContacts((contactsRes.data ?? []) as Contact[]);
       const accs = (accountsRes.data ?? []) as Account[];
       setAccounts(accs);
@@ -365,6 +376,18 @@ export default function NewSalesInvoicePage() {
           )}
         </section>
 
+        {/* Logo & signature (kept on the business — set once) */}
+        <section className="inv-card" style={{ background: "#FFFDF8", border: "1px solid #E6DFD0", borderRadius: 18, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ ...label, margin: 0 }}>Logo &amp; signature</span>
+            <span style={{ fontSize: 12, color: brandMsg.startsWith("✓") || brandMsg === "Saving…" ? C.muted : "#B4321F" }}>{brandMsg || "Set once — shown on every invoice and PDF"}</span>
+          </div>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            <LogoPicker compact value={biz.logo ?? null} onChange={v => void saveBrand("logo_url", v)} />
+            <LogoPicker compact kind="signature" value={biz.signature ?? null} onChange={v => void saveBrand("signature_url", v)} />
+          </div>
+        </section>
+
         </div>
 
         {/* Live preview */}
@@ -372,7 +395,10 @@ export default function NewSalesInvoicePage() {
           <div style={{ display: "flex", justifyContent: "space-between", color: "#DCE4E0", fontSize: 14, marginBottom: 12 }}><span>Live preview · A4</span><span>Updates as you type</span></div>
           <div className="inv-pv" style={{ background: "#FFFFFF", padding: "30px 34px", color: C.ink, fontVariantNumeric: "tabular-nums" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16, paddingBottom: 18, borderBottom: `2px solid ${C.navy}` }}>
-              <div><div style={{ fontSize: 20, fontWeight: 700 }}>{biz.name || "[Your business name]"}</div><div style={{ fontSize: 12, color: C.muted }}>{biz.address || "[Address]"} · GSTIN {biz.gstin || "[your GSTIN]"}</div></div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                {biz.logo && <img src={biz.logo} alt="" style={{ height: 52, maxWidth: 120, objectFit: "contain", flexShrink: 0 }} />}
+                <div><div style={{ fontSize: 20, fontWeight: 700 }}>{biz.name || "[Your business name]"}</div><div style={{ fontSize: 12, color: C.muted }}>{biz.address || "[Address]"} · GSTIN {biz.gstin || "[your GSTIN]"}</div></div>
+              </div>
               <div style={{ textAlign: "right" }}><div style={{ fontSize: 11, letterSpacing: ".3em", color: C.goldInk }}>TAX INVOICE</div><div style={{ fontSize: 17, fontWeight: 700 }}>{invoiceNo}</div><div style={{ fontSize: 12, color: C.muted }}>{new Date(invoiceDate + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</div></div>
             </div>
             <div style={{ padding: "18px 0 14px" }}><div style={{ fontSize: 11, letterSpacing: ".2em", color: C.muted }}>BILL TO</div><div style={{ fontWeight: 700 }}>{customer?.name || customerQuery || "—"}</div>{customer?.gstin && <div style={{ fontSize: 12, color: C.muted }}>GSTIN {customer.gstin}</div>}</div>
@@ -391,6 +417,11 @@ export default function NewSalesInvoicePage() {
               <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${C.muted}`, paddingTop: 6, marginTop: 2 }}><b>Total</b><b style={{ fontSize: 16, borderBottom: `3px solid ${C.gold}` }}>{money(total)}</b></div>
             </div>
             <div style={{ marginTop: 18, fontSize: 12, fontStyle: "italic", color: C.muted }}>Rupees {inWords(total)} Only</div>
+            <div style={{ marginTop: 26, marginLeft: "auto", width: 220, textAlign: "center", fontSize: 12 }}>
+              <div style={{ fontWeight: 700 }}>For {biz.name || "[Your business name]"}</div>
+              <div style={{ height: 58, display: "flex", alignItems: "center", justifyContent: "center" }}>{biz.signature && <img src={biz.signature} alt="Signature" style={{ maxHeight: 54, maxWidth: 200, objectFit: "contain" }} />}</div>
+              <div style={{ borderTop: `1px solid ${C.muted}`, paddingTop: 4, color: C.muted }}>Authorised signatory</div>
+            </div>
           </div>
         </div>
         </div>

@@ -6,7 +6,7 @@ export type InvItem = { desc: string; hsn: string; qty: number; unit: string; ra
 export type InvParty = { name: string; address: string; gstin: string; state: string; phone: string; email: string };
 export type InvoiceDoc = {
   invoiceNo: string; date: string; dueDate: string; placeOfSupply: string;
-  seller: InvParty & { logo: string | null; pan: string };
+  seller: InvParty & { logo: string | null; pan: string; signature?: string | null };   // signature: the business's current one
   buyer: InvParty;
   items: InvItem[];
   notes: string; terms: string; bankDetails: string;
