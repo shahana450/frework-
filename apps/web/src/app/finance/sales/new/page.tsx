@@ -223,7 +223,7 @@ export default function NewSalesInvoicePage() {
         <p style={{ margin: "0 0 20px", color: C.muted }}>{done.entry} · {done.customer} · <b style={{ color: C.ink }}>{money(done.total)}</b></p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
           <button onClick={startNew} style={{ height: 44, padding: "0 20px", borderRadius: 11, border: "none", background: C.navy, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: SERIF }}>+ New invoice</button>
-          <Link href="/finance/invoices" style={{ height: 44, padding: "0 20px", borderRadius: 11, border: `1px solid ${C.line}`, color: C.ink, fontWeight: 700, fontSize: 15, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>All invoices</Link>
+          <Link href="/finance/sales" style={{ height: 44, padding: "0 20px", borderRadius: 11, border: `1px solid ${C.line}`, color: C.ink, fontWeight: 700, fontSize: 15, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>All invoices</Link>
         </div>
       </div>
     </div>
