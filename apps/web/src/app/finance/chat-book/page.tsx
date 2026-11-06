@@ -220,6 +220,7 @@ export default function FreBookPage() {
   const [statementFile, setStatementFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const stmtRef = useRef<HTMLInputElement>(null);   // "Bank statement" in Quick start: opens the statement reader directly
   const chatRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   // The box grows as you type; back to its normal size once the message is sent
@@ -763,16 +764,49 @@ export default function FreBookPage() {
                       <button key={t} onClick={() => { setInput(t); inputRef.current?.focus(); }} style={{ height: 34, padding: "0 13px", borderRadius: 999, border: "1px solid #E0D6C1", background: "#FFFFFF", color: "#2E3B36", fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>{t}</button>
                     ))}
                   </div>
-                  {/* Many entries at once: fill a template in Excel, then attach it with the paper clip */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 10, paddingTop: 10, borderTop: "1px solid #E7DDC8" }}>
-                    <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.12em", color: "#8A6420", marginRight: 4 }}>TEMPLATES</span>
-                    {([["Journal entries", downloadTemplate, "One row per ledger — debits and credits"], ["Receipts & payments", downloadCashBankTemplate, "One row per cash / bank entry"]] as const).map(([label, fn, tip]) => (
-                      <button key={label} onClick={() => void fn()} title={`${tip}. Fill it in Excel, then attach it with the paper clip.`}
-                        style={{ height: 34, padding: "0 13px", borderRadius: 999, border: "1px solid #0F2B25", background: "#0F2B25", color: "#FFFFFF", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>{label} (.xlsx)
-                      </button>
-                    ))}
-                    <span style={{ fontSize: "0.74rem", color: "#6B7570" }}>Fill in Excel → attach with 📎 → review → post</span>
+                  {/* Quick start: many entries at once (Excel templates) and the other ways in */}
+                  <div className="fb-quick" style={{ borderTop: "1px solid #E7DDC8", padding: "14px 14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+                    <input ref={stmtRef} type="file" accept=".pdf,.xlsx,.xls,.csv" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) setStatementFile(f); e.target.value = ""; }} />
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.12em", color: "#8A6420" }}>MANY ENTRIES AT ONCE</span>
+                      <span style={{ fontSize: "0.74rem", color: "#6B7570" }}>Fill in Excel → attach with 📎 → review → post</span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 }}>
+                      {([
+                        ["Journal entries", "Any entry — one row per ledger, debit and credit", "M4 5h16M4 10h16M4 15h10M4 20h7", downloadTemplate],
+                        ["Receipts & payments", "Cash / bank in and out — one row per entry", "M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5", downloadCashBankTemplate],
+                      ] as const).map(([label, sub, icon, fn]) => (
+                        <button key={label} onClick={() => void fn()} className="fb-qtile" title={`Download the ${label} template (Excel)`}
+                          style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", padding: "12px 14px", borderRadius: 14, border: "1px solid #E0D6C1", background: "#FFFFFF", cursor: "pointer", fontFamily: "inherit" }}>
+                          <span aria-hidden="true" style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: "grid", placeItems: "center", background: "#E8F2EC", color: "#0F2B25" }}>
+                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={icon} /></svg>
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <b style={{ display: "block", fontSize: "0.88rem", color: "#10241F" }}>{label}</b>
+                            <span style={{ fontSize: "0.74rem", color: "#6B7570" }}>{sub}</span>
+                          </span>
+                          <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, height: 28, padding: "0 10px", borderRadius: 999, background: "#0F2B25", color: "#FFFFFF", fontSize: "0.72rem", fontWeight: 800 }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>.xlsx
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.12em", color: "#8A6420", marginRight: 2 }}>OR</span>
+                      {([
+                        ["🏦", "Bank statement", "PDF or Excel — every row, ready to book", () => stmtRef.current?.click()],
+                        ["📷", "Snap a bill", "Photo → purchase entry", () => cameraRef.current?.click()],
+                        ["📥", "Smart Inbox", "Drop a whole folder of bills", () => router.push("/finance/inbox")],
+                      ] as const).map(([ic, label, tip, run]) => (
+                        <button key={label} onClick={run} title={tip} className="fb-qchip"
+                          style={{ height: 34, padding: "0 13px", borderRadius: 999, border: "1px solid #E0D6C1", background: "#FFFDF8", color: "#2E3B36", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span aria-hidden="true">{ic}</span>{label}
+                        </button>
+                      ))}
+                      {pendingDrafts.length > 0 && (
+                        <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, height: 30, padding: "0 12px", borderRadius: 999, background: "#FFF4DB", color: "#8A5A00", fontSize: "0.74rem", fontWeight: 800 }}>📝 {pendingDrafts.length} unfinished import{pendingDrafts.length > 1 ? "s" : ""} — see above</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1128,6 +1162,11 @@ export default function FreBookPage() {
         @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
         @keyframes spin { to { transform:rotate(360deg) } }
         .fb-tile { transition: border-color .15s, background .15s; }
+        .fb-qtile { transition: border-color .15s, box-shadow .15s, transform .15s; }
+        .fb-qtile:hover, .fb-qtile:focus-visible { border-color: #C9A24A !important; box-shadow: 0 10px 22px -16px rgba(15,43,37,0.55); transform: translateY(-1px); outline: none; }
+        .fb-qchip { transition: border-color .15s, background .15s; }
+        .fb-qchip:hover, .fb-qchip:focus-visible { border-color: #C9A24A !important; background: #FFFFFF !important; outline: none; }
+        @media (prefers-reduced-motion: reduce) { .fb-qtile, .fb-qchip { transition: none; } .fb-qtile:hover { transform: none; } }
         .fb-tile:hover, .fb-tile:focus-visible { border-color: #C99A4E !important; box-shadow: 0 14px 30px -18px rgba(15,43,37,0.45); outline: none; }
         .fb-tile { transition: border-color .15s, box-shadow .15s, transform .15s; } .fb-tile:hover { transform: translateY(-2px); }
         @media (max-width: 1100px) { .fb-hero { grid-template-columns: minmax(0,1fr) !important; } .fb-tiles6 { grid-template-columns: repeat(3, minmax(0,1fr)) !important; } .fb-ask { grid-template-columns: repeat(2, minmax(0,1fr)) !important; } }
