@@ -142,6 +142,17 @@ export default function InvoicePage() {
     img.src = URL.createObjectURL(file);
   };
 
+  // The bot sends the saved invoice as a PDF to the user's own linked WhatsApp number
+  const [waBusy, setWaBusy] = useState(false);
+  async function sendToWhatsApp() {
+    if (dirty) { setMsg({ ok: false, text: "Save your edits first — the bot sends the saved invoice." }); return; }
+    setWaBusy(true); setMsg(null);
+    const r = await fetch("/api/finance/invoice-whatsapp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, journal_id: id }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setWaBusy(false);
+    setMsg(r?.ok ? { ok: true, text: d.message ?? "✓ Sent to your WhatsApp." } : { ok: false, text: d.error ?? "Couldn't send it to WhatsApp. Try again." });
+  }
+
   async function save() {
     if (!doc) return;
     setSaving(true); setMsg(null);
@@ -185,6 +196,11 @@ export default function InvoicePage() {
         {msg && <span role="status" style={{ fontSize: 13, fontWeight: 600, color: msg.ok ? C.pos : C.warn }}>{msg.text}</span>}
         <button onClick={save} disabled={!dirty || saving} title={dirty ? "" : "Edit the invoice to enable Save"} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: `1px solid ${C.strong}`, background: "#FFFFFF", color: C.ink, fontWeight: 700, cursor: dirty ? "pointer" : "default", opacity: dirty ? 1 : 0.5 }}>{saving ? "Saving…" : "Save"}</button>
         {doc && <GovFiles doc={doc} />}
+        <button onClick={sendToWhatsApp} disabled={waBusy} title={dirty ? "Save your edits first — the bot sends the saved invoice" : "FreBook's WhatsApp bot sends this invoice as a PDF to your linked number, to forward to the customer"}
+          style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "1px solid #1FA855", background: "#FFFFFF", color: "#13803F", fontWeight: 800, cursor: waBusy ? "wait" : "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm0 18.2a8.2 8.2 0 01-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1112 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 01-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 00-.7.3 3 3 0 00-.9 2.2 5.2 5.2 0 001.1 2.8 11.9 11.9 0 004.6 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 001.8-1.3 2.2 2.2 0 00.1-1.3c0-.1-.2-.2-.4-.3z" /></svg>
+          {waBusy ? "Sending…" : "Send to my WhatsApp"}
+        </button>
         <button onClick={() => window.print()} style={{ height: 40, padding: "0 18px", borderRadius: 10, border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Print / PDF</button>
         <a href={`/finance/invoices/${id}/receipt`} target="_blank" rel="noopener" title="Print on a 58 mm or 80 mm thermal printer" style={{ height: 40, padding: "0 16px", borderRadius: 10, border: `1px solid ${C.strong}`, background: "#FFFFFF", color: C.ink, fontWeight: 700, display: "inline-flex", alignItems: "center", textDecoration: "none" }}>🧾 Thermal receipt</a>
       </div>
