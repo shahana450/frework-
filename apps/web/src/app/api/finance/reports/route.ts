@@ -19,25 +19,24 @@ export async function GET(req: NextRequest) {
   const fyId = searchParams.get("fy_id");
   const report = searchParams.get("report") ?? "trial_balance";
 
-  // Speed: the books start loading while access and the year are checked. Nothing is returned until the access
-  // check passes; lines after the year end are left out by buildTrialBalance, so loading up to "any date" is safe.
-  const report0 = searchParams.get("report") ?? "trial_balance";
-  const early = bizId && report0 !== "cash_flow"
-    ? Promise.all([loadBookLines(supabase, bizId, "9999-12-31"), supabase.from("fw_fin_chart_of_accounts").select("id,code").eq("business_id", bizId)])
+  let start = "0000-01-01", end = "9999-12-31";
+  // An explicit date range wins (used when the year isn't set up in Financial Years)
+  const fromQ = searchParams.get("from"), toQ = searchParams.get("to");
+  const isDate = (s: string | null) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s));
+  const explicit = isDate(fromQ) && isDate(toQ) && fromQ! <= toQ!;
+  // Speed: the year and then the books (up to the year end) load while access is checked. Nothing is returned
+  // until the access check below passes.
+  const fyQuery: Promise<{ data: { start_date: string; end_date: string | null } | null }> = explicit ? Promise.resolve({ data: { start_date: fromQ!, end_date: toQ! } }) : fyId
+    ? Promise.resolve(supabase.from("fw_fin_financial_years").select("start_date,end_date").eq("id", fyId).eq("business_id", bizId!).maybeSingle())
+    : Promise.resolve(supabase.from("fw_fin_financial_years").select("start_date,end_date").eq("business_id", bizId).eq("is_current", true).maybeSingle());
+  const early = bizId && report !== "cash_flow"
+    ? Promise.all([fyQuery.then(({ data: f }) => loadBookLines(supabase, bizId, f?.end_date ?? "9999-12-31")), supabase.from("fw_fin_chart_of_accounts").select("id,code").eq("business_id", bizId)])
     : null;
   early?.catch(() => null);   // a failure is handled where it's awaited
 
   const gate = await requireBusiness(req, bizId);
   if (gate instanceof NextResponse) return gate;
 
-  let start = "0000-01-01", end = "9999-12-31";
-  // An explicit date range wins (used when the year isn't set up in Financial Years)
-  const fromQ = searchParams.get("from"), toQ = searchParams.get("to");
-  const isDate = (s: string | null) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s));
-  const explicit = isDate(fromQ) && isDate(toQ) && fromQ! <= toQ!;
-  const fyQuery = explicit ? Promise.resolve({ data: { start_date: fromQ!, end_date: toQ! } }) : fyId
-    ? supabase.from("fw_fin_financial_years").select("start_date,end_date").eq("id", fyId).eq("business_id", bizId!).maybeSingle()
-    : supabase.from("fw_fin_financial_years").select("start_date,end_date").eq("business_id", bizId).eq("is_current", true).maybeSingle();
   const { data: fy } = await fyQuery;
   if (fy) { start = fy.start_date; end = fy.end_date ?? end; }
 
