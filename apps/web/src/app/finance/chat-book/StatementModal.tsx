@@ -25,8 +25,7 @@ const inputStyle: React.CSSProperties = { background: "#FFFFFF", border: `1px so
 export default function StatementModal({ file, bizId, userId, onClose, onPosted }: {
   file: File; bizId: string; userId: string; onClose: () => void; onPosted: (count: number, total: number, journals?: { id: string; date: string; entryNo: string }[]) => void;
 }) {
-  const [phase, setPhase] = useState<"reading" | "suggesting" | "ready" | "error">("reading");
-  const [error, setError] = useState("");
+  const [phase, setPhase] = useState<"reading" | "suggesting" | "ready" | "error">("reading");  const [error, setError] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [bankLedger, setBankLedger] = useState("");
@@ -69,9 +68,10 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
       if (!cancelled) setHistory(learnHistory(learned));
 
       let data: { transactions: { date: string; description: string; debit: number; credit: number }[] };
-      try { data = await readBankStatement(file, { bizId }); }
+      try { data = await readBankStatement(file, { bizId, onProgress: p => { if (!cancelled) setProgress(p.label); } }); }
       catch (e) { if (!cancelled) { setError(e instanceof Error ? e.message : "Could not read this statement."); setPhase("error"); } return; }
       if (cancelled) return;
+      setProgress("");   // the reading progress line; the same line later shows posting progress
       const parsed: Row[] = (data.transactions as { date: string; description: string; debit: number; credit: number }[])
         .filter(t => (Number(t.debit) || 0) > 0 || (Number(t.credit) || 0) > 0)
         .map((t, i) => ({ id: `r${i}`, date: String(t.date ?? "").slice(0, 10), description: String(t.description ?? ""), debit: Number(t.debit) || 0, credit: Number(t.credit) || 0, ledger: "", aiLedger: "", aiType: "", confidence: 0, state: "open" }));
@@ -279,7 +279,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
 
         {phase === "reading" || phase === "error" ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, color: phase === "error" ? RED : MUTED, padding: "2rem", textAlign: "center" }}>
-            {phase === "reading" ? <><span style={{ width: 22, height: 22, border: `2px solid ${GOLD}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />Reading every page of the statement… this can take up to a minute for long statements.</> : <>⚠ {error}<button onClick={onClose} style={{ ...chip(false), marginTop: 8 }}>Close</button></>}
+            {phase === "reading" ? <><span style={{ width: 22, height: 22, border: `2px solid ${GOLD}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /><span style={{ display: "flex", flexDirection: "column", gap: 4 }}><span>{progress || "Reading every page of the statement…"}</span><span style={{ fontSize: 12.5, opacity: 0.75 }}>Long or scanned statements take a few minutes — keep this window open.</span></span></> : <>⚠ {error}<button onClick={onClose} style={{ ...chip(false), marginTop: 8 }}>Close</button></>}
           </div>
         ) : (
           <>
