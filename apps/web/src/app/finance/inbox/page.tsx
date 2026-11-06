@@ -10,6 +10,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import { loadDraft, clearDraft, useAutoDraft, type ImportDraft } from "@/lib/importDraft";
+import ResumeDraftBar from "@/components/finance/ResumeDraftBar";
 import { parseCashBankGrid, parseSimpleGrid, type SimpleLine } from "@/lib/simpleTemplate";
 import GroupChips, { guessGroup } from "@/components/GroupChips";
 import { useTally } from "@/lib/tallyConnection";
@@ -26,6 +28,7 @@ type Item = {
   dupOk?: boolean;                    // the user checked a possible duplicate and chose to post it anyway
 };
 type FileJob = { id: string; name: string; size: number; kind: string; status: "queued" | "reading" | "done" | "error"; note?: string; key: string };
+type InboxDraft = { items: Item[]; heads: Record<string, string>; files: FileJob[]; bankLedger: string; cardLedger: string };
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", amber: "#8A5A00", amberSoft: "#FFF4DB", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA" };
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
@@ -63,6 +66,18 @@ export default function SmartInbox() {
   const folderInput = useRef<HTMLInputElement>(null);
   const queue = useRef<{ job: FileJob; file: File }[]>([]);
   const running = useRef(0);
+  // Unfinished work from earlier on this device: offered to resume; nothing is saved over it until resumed or discarded
+  const [resume, setResume] = useState<ImportDraft | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
+  useEffect(() => {
+    if (!bizId) return;
+    void loadDraft<InboxDraft>("inbox", bizId).then(d => { if (d && d.pending > 0) setResume(d); else setDraftReady(true); });
+  }, [bizId]);
+  useAutoDraft<InboxDraft>("inbox", bizId, draftReady, () => {
+    const pending = items.filter(i => i.state !== "posted").length;
+    if (!items.length) return null;
+    return { title: `${files.length} file${files.length === 1 ? "" : "s"} in Smart Inbox`, pending, posted: items.length - pending, data: { items, heads, files, bankLedger, cardLedger } };
+  }, [items, heads, files, bankLedger, cardLedger]);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -353,6 +368,15 @@ export default function SmartInbox() {
             <datalist id="inbox-cards">{accounts.filter(a => /card/i.test(a.name)).map(a => <option key={a.name} value={a.name} />)}</datalist>
           </div>
         </header>
+
+        {resume && <ResumeDraftBar draft={resume} onResume={() => {
+          const d = resume.data as InboxDraft;
+          // Anything that was mid-post goes back to "Needs a look" — the server's duplicate check guards a re-post
+          setItems(d.items.map(i => (i.state === "posting" ? { ...i, state: "check" as const, reason: "Was being posted when the page closed — check it wasn't posted already" } : i)));
+          setHeads(d.heads ?? {}); setFiles(d.files.map(f => ({ ...f, status: f.status === "error" ? "error" : "done" })));
+          if (d.bankLedger) setBankLedger(d.bankLedger); if (d.cardLedger) setCardLedger(d.cardLedger);
+          setResume(null); setDraftReady(true);
+        }} onDiscard={() => { void clearDraft("inbox", bizId); setResume(null); setDraftReady(true); }} />}
 
         {/* Steps */}
         <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 10 }} className="ib-steps">

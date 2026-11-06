@@ -1,6 +1,7 @@
 "use client";
 import { readBankStatement } from "@/lib/readStatement";
 import { PdfPasswordError } from "@/lib/pdfUnlock";
+import { useAutoDraft } from "@/lib/importDraft";
 import { isCashBankAccount } from "@/lib/journalRules";
 import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useMemo } from "react";
@@ -23,8 +24,11 @@ const MONO = "'IBM Plex Mono', 'Fira Code', monospace";
 const fmt = (n: number) => n ? n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
 const inputStyle: React.CSSProperties = { background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 9px", borderRadius: 7, fontSize: "0.8rem", fontFamily: "inherit", outline: "none" };
 
-export default function StatementModal({ file, bizId, userId, onClose, onPosted }: {
+export type StatementDraft = { fileName: string; rows: Row[]; bankLedger: string; heads: Record<string, string> };
+
+export default function StatementModal({ file, bizId, userId, onClose, onPosted, resume }: {
   file: File; bizId: string; userId: string; onClose: () => void; onPosted: (count: number, total: number, journals?: { id: string; date: string; entryNo: string }[]) => void;
+  resume?: StatementDraft;   // reopening an unfinished statement: its rows come back as they were, nothing is read again
 }) {
   const [phase, setPhase] = useState<"reading" | "suggesting" | "ready" | "error">("reading");
   // Password-protected PDF: the password typed here unlocks it in this browser (nothing is sent or stored)
@@ -72,6 +76,15 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
       }
       if (!cancelled) setHistory(learnHistory(learned));
 
+      // Resumed: the rows as they were left (anything mid-post goes back to open; the server's duplicate check guards it)
+      if (resume) {
+        setRows(resume.rows.map(r => (r.state === "posting" ? { ...r, state: "open" as const } : r)));
+        if (resume.bankLedger) setBankLedger(resume.bankLedger);
+        setHeads(resume.heads ?? {});
+        setPhase("ready");
+        return;
+      }
+
       let data: { transactions: { date: string; description: string; debit: number; credit: number }[] };
       try { data = await readBankStatement(file, { bizId, password: password || undefined, onProgress: p => { if (!cancelled) setProgress(p.label); } }); }
       catch (e) {
@@ -106,6 +119,13 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
     })();
     return () => { cancelled = true; };
   }, [file, bizId, password]);
+
+  // Saved on this device while rows are still to post, so closing the window or the browser doesn't lose the work
+  useAutoDraft<StatementDraft>("statement", bizId, phase === "ready", () => {
+    if (!rows.length) return null;
+    const pending = rows.filter(r => r.state !== "posted").length;
+    return { title: `${file.name} · ${rows.length} statement rows`, pending, posted: rows.length - pending, data: { fileName: file.name, rows, bankLedger, heads } };
+  }, [rows, bankLedger, heads, phase]);
 
   const existing = useMemo(() => new Set(accounts.map(a => a.name.toLowerCase())), [accounts]);
   const isNew = (name: string) => !!name.trim() && !existing.has(name.trim().toLowerCase());

@@ -7,6 +7,7 @@ import { useTally, tallyUrl } from "@/lib/tallyConnection";
 import { readTallyLedgerGroups } from "@/lib/integrations/tallyClient";
 import { headForTallyGroup } from "@/lib/integrations/tally";
 import GroupChips, { guessGroup } from "@/components/GroupChips";
+import { useAutoDraft } from "@/lib/importDraft";
 
 // Closest Tally ledger for a name: exact (ignoring case/spaces/punctuation), else one containing the other
 const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -25,9 +26,15 @@ const C = { ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", soft: "#FBF8F1", 
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 const inr = (n: number) => n ? n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
 
-export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId, onClose, onPosted }: { fileName: string; fileKey: string; entries: SimpleEntry[]; bizId: string; onClose: () => void; onPosted: (count: number, total: number, journals?: { id: string; date: string; entryNo: string }[]) => void }) {
-  const [sel, setSel] = useState<Set<number>>(() => new Set(entries.filter(e => !e.error).map(e => e.row)));
-  const [done, setDone] = useState<Record<number, string>>({});      // row → entry no
+export type SimpleDraft = { fileName: string; fileKey: string; entries: SimpleEntry[]; done: Record<number, string> };
+
+export default function SimpleTemplateModal({ fileName, fileKey, entries, bizId, onClose, onPosted, initialDone }: { fileName: string; fileKey: string; entries: SimpleEntry[]; bizId: string; onClose: () => void; onPosted: (count: number, total: number, journals?: { id: string; date: string; entryNo: string }[]) => void; initialDone?: Record<number, string> }) {
+  const [done, setDone] = useState<Record<number, string>>(initialDone ?? {});      // row → entry no (resuming: rows posted earlier)
+  const [sel, setSel] = useState<Set<number>>(() => new Set(entries.filter(e => !e.error && !(initialDone ?? {})[e.row]).map(e => e.row)));
+  useAutoDraft<SimpleDraft>("simple-template", bizId, true, () => {
+    const open = entries.filter(e => !e.error && !done[e.row]).length;
+    return { title: `${fileName} · ${entries.length} template entries`, pending: open, posted: Object.keys(done).length, data: { fileName, fileKey, entries, done } };
+  }, [done]);
   const [failed, setFailed] = useState<Record<number, string>>({});
   const [heads, setHeads] = useState<Record<string, string>>({});
   const [need, setNeed] = useState<{ account: string; suggested: string }[]>([]);

@@ -1,6 +1,7 @@
 "use client";
 import { readBankStatement } from "@/lib/readStatement";
 import { PdfPasswordError } from "@/lib/pdfUnlock";
+import { loadDraft, saveDraft, clearDraft as clearIdb } from "@/lib/importDraft";
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
@@ -329,15 +330,26 @@ export default function BankingPage() {
   const draftKey = bizId ? `fw_bank_import_${bizId}` : "";
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [restorable, setRestorable] = useState<{ rows: TxRow[]; bank: string; at: number } | null>(null);
+  // Kept in IndexedDB (a long statement is thousands of rows — too big for localStorage); an older localStorage copy is still picked up
   useEffect(() => {
-    if (!draftKey) return;
-    try { const d = JSON.parse(localStorage.getItem(draftKey) ?? "null"); if (d?.rows?.some((r: TxRow) => !r.pushed)) setRestorable(d); } catch { /* */ }
-  }, [draftKey]);
+    if (!draftKey || !bizId) return;
+    void loadDraft<{ rows: TxRow[]; bank: string }>("bank-import", bizId).then(d => {
+      if (d?.data.rows?.some(r => !r.pushed)) { setRestorable({ rows: d.data.rows, bank: d.data.bank, at: d.savedAt }); return; }
+      try { const o = JSON.parse(localStorage.getItem(draftKey) ?? "null"); if (o?.rows?.some((r: TxRow) => !r.pushed)) setRestorable(o); } catch { /* */ }
+    });
+  }, [draftKey, bizId]);
   useEffect(() => {
-    if (!draftKey || !rows.length) return;
-    try { const at = Date.now(); localStorage.setItem(draftKey, JSON.stringify({ rows, bank: bankAccountId, at })); setSavedAt(at); } catch { /* */ }
-  }, [rows, bankAccountId, draftKey]);
-  const clearDraft = () => { try { if (draftKey) localStorage.removeItem(draftKey); } catch { /* */ } setRestorable(null); setSavedAt(null); };
+    if (!draftKey || !bizId || !rows.length) return;
+    const t = setTimeout(() => {
+      const pending = rows.filter(r => !r.pushed).length;
+      if (!pending) { void clearIdb("bank-import", bizId); setSavedAt(null); return; }   // all posted: nothing to resume
+      const at = Date.now();
+      void saveDraft({ kind: "bank-import", bizId, savedAt: at, title: `bank statement, ${rows.length} rows`, pending, posted: rows.length - pending, data: { rows, bank: bankAccountId } });
+      setSavedAt(at);
+    }, 700);
+    return () => clearTimeout(t);
+  }, [rows, bankAccountId, draftKey, bizId]);
+  const clearDraft = () => { try { if (draftKey) localStorage.removeItem(draftKey); } catch { /* */ } if (bizId) void clearIdb("bank-import", bizId); setRestorable(null); setSavedAt(null); };
 
   /* ── Add the bank account itself, right here ── */
   const [newBank, setNewBank] = useState("");

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ParsedTransaction } from "@/lib/intentEngine";
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
 import GroupChips, { guessGroup } from "@/components/GroupChips";
+import { useAutoDraft } from "@/lib/importDraft";
 
 type RowState = "reading" | "ready" | "question" | "error" | "posting" | "posted" | "failed";
 type BRow = {
@@ -18,11 +19,20 @@ const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 const fmt = (n: number) => (n ?? 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const MAX_ROWS = 200;
 
-export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId, userId, onClose, onPosted, onSendToChat }: {
+export type BulkDraft = { fileName: string; fileKey: string; sentences: string[]; rows: BRow[] };
+
+export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId, userId, onClose, onPosted, onSendToChat, initialRows }: {
   fileName: string; fileKey: string; sentences: string[]; bizId: string; userId: string;
   onClose: () => void; onPosted: (count: number, total: number, journals?: { id: string; date: string; entryNo: string }[]) => void; onSendToChat: (sentences: string[]) => void;
+  initialRows?: BRow[];   // resuming: rows as they were left; only rows still unread are read again
 }) {
-  const [rows, setRows] = useState<BRow[]>(() => sentences.slice(0, MAX_ROWS).map((text, i) => ({ i, text, state: "reading" })));
+  const [rows, setRows] = useState<BRow[]>(() => initialRows
+    ? initialRows.map(r => (r.state === "posting" ? { ...r, state: "ready" as const } : r))   // the server's per-row key stops a double post
+    : sentences.slice(0, MAX_ROWS).map((text, i) => ({ i, text, state: "reading" })));
+  useAutoDraft<BulkDraft>("bulk-template", bizId, true, () => {
+    const pending = rows.filter(r => r.state !== "posted").length;
+    return { title: `${fileName} · ${rows.length} template rows`, pending, posted: rows.length - pending, data: { fileName, fileKey, sentences, rows } };
+  }, [rows]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [posting, setPosting] = useState(false);
   // B14 — flagged entries need a second, deliberate click (no browser pop-up)
@@ -38,10 +48,12 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
   useEffect(() => {
     if (started.current) return;
     started.current = true;
+    // Resumed: only the rows that were never read; fresh: every row
+    const todo = initialRows ? initialRows.filter(r => r.state === "reading").map(r => r.i) : sentences.slice(0, MAX_ROWS).map((_, i) => i);
     let cursor = 0;
     const worker = async () => {
-      while (cursor < Math.min(sentences.length, MAX_ROWS)) {
-        const i = cursor++;
+      while (cursor < todo.length) {
+        const i = todo[cursor++];
         try {
           const res = await fetch("/api/finance/chat-book", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: sentences[i], business_id: bizId, user_id: userId, bulk: true, history: [] }) });
           const d = await res.json().catch(() => ({}));

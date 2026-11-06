@@ -8,13 +8,15 @@ import type { ParsedTransaction } from "@/app/api/finance/chat-book/route";
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
 import GroupChips, { guessGroup } from "@/components/GroupChips";
 import LedgerPicker, { type Ledger } from "@/components/LedgerPicker";
-import StatementModal from "./StatementModal";
+import StatementModal, { type StatementDraft } from "./StatementModal";
 import ReviewChecks from "./ReviewChecks";
-import BulkTemplateModal from "./BulkTemplateModal";
+import BulkTemplateModal, { type BulkDraft } from "./BulkTemplateModal";
 import type { Verdict } from "@/lib/frebook/validateDraft";
 import { postWarnings } from "@/lib/frebook/postWarnings";
 import { saveDrafts, loadDrafts, isOpenDraft, pickDrafts, type StoredMsg } from "@/lib/frebook/draftStore";
-import SimpleTemplateModal from "./SimpleTemplateModal";
+import SimpleTemplateModal, { type SimpleDraft } from "./SimpleTemplateModal";
+import { loadDraft, clearDraft, type ImportDraft } from "@/lib/importDraft";
+import ResumeDraftBar from "@/components/finance/ResumeDraftBar";
 import { parseSimpleGrid, parseCashBankGrid, SIMPLE_HEADERS, CASHBANK_HEADERS, type SimpleEntry } from "@/lib/simpleTemplate";
 import InstallApp from "./InstallApp";
 import AnswerCard from "./AnswerCard";
@@ -287,12 +289,20 @@ export default function FreBookPage() {
   const handoffDone = useRef(false);
   const [snapHint, setSnapHint] = useState(false);
   const [violations, setViolations] = useState<Record<string, string[]>>({});
-  const [bulk, setBulk] = useState<{ fileName: string; fileKey: string; sentences: string[] } | null>(null);
+  const [bulk, setBulk] = useState<{ fileName: string; fileKey: string; sentences: string[]; initialRows?: BulkDraft["rows"] } | null>(null);
   // The last bulk review left this session — reopened from the "Back to bulk review" chip (its progress is kept per file)
   const [lastBulk, setLastBulk] = useState<{ fileName: string; fileKey: string; sentences: string[] } | null>(null);
   // B14 — one in-app confirmation listing every warning, instead of stacked browser pop-ups
   const [confirmPost, setConfirmPost] = useState<{ msgId: string; warnings: string[]; run: () => void } | null>(null);
-  const [simpleBulk, setSimpleBulk] = useState<{ fileName: string; fileKey: string; entries: SimpleEntry[] } | null>(null);
+  const [simpleBulk, setSimpleBulk] = useState<{ fileName: string; fileKey: string; entries: SimpleEntry[]; initialDone?: Record<number, string> } | null>(null);
+  // Statement / template imports left unfinished on this device, offered to resume
+  const [pendingDrafts, setPendingDrafts] = useState<ImportDraft[]>([]);
+  const [statementResume, setStatementResume] = useState<StatementDraft | null>(null);
+  useEffect(() => {
+    if (!bizId) return;
+    void Promise.all((["statement", "bulk-template", "simple-template"] as const).map(k => loadDraft(k, bizId)))
+      .then(ds => setPendingDrafts(ds.filter((d): d is ImportDraft => !!d && d.pending > 0)));
+  }, [bizId]);
   const postingRef = useRef(new Set<string>());
   const tally = useTally();
   const tallyRef = useRef(tally); tallyRef.current = tally;
@@ -1079,13 +1089,28 @@ export default function FreBookPage() {
           </div>
         </div>
       )}
+      {/* Unfinished statement / template imports from earlier on this device */}
+      {pendingDrafts.length > 0 && !statementFile && !bulk && !simpleBulk && (
+        <div style={{ position: "fixed", top: 76, left: "50%", transform: "translateX(-50%)", zIndex: 70, width: "min(760px, calc(100% - 32px))", display: "flex", flexDirection: "column", gap: 8 }}>
+          {pendingDrafts.map(d => (
+            <ResumeDraftBar key={d.kind} draft={d}
+              onResume={() => {
+                setPendingDrafts(p => p.filter(x => x.kind !== d.kind));
+                if (d.kind === "statement") { const s = d.data as StatementDraft; setStatementResume(s); setStatementFile(new File([], s.fileName, { type: "application/pdf" })); }
+                if (d.kind === "bulk-template") { const b = d.data as BulkDraft; setBulk({ fileName: b.fileName, fileKey: b.fileKey, sentences: b.sentences, initialRows: b.rows }); }
+                if (d.kind === "simple-template") { const s = d.data as SimpleDraft; setSimpleBulk({ fileName: s.fileName, fileKey: s.fileKey, entries: s.entries, initialDone: s.done }); }
+              }}
+              onDiscard={() => { setPendingDrafts(p => p.filter(x => x.kind !== d.kind)); if (bizId) void clearDraft(d.kind, bizId); }} />
+          ))}
+        </div>
+      )}
       {simpleBulk && bizId && (
-        <SimpleTemplateModal fileName={simpleBulk.fileName} fileKey={simpleBulk.fileKey} entries={simpleBulk.entries} bizId={bizId}
+        <SimpleTemplateModal fileName={simpleBulk.fileName} fileKey={simpleBulk.fileKey} entries={simpleBulk.entries} bizId={bizId} initialDone={simpleBulk.initialDone}
           onClose={() => setSimpleBulk(null)}
           onPosted={(count, total, journals) => { setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} entr${count > 1 ? "ies" : "y"} (${fmt(total)}) from ${simpleBulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }]); void autoPushToTally(journals ?? []); }} />
       )}
       {bulk && bizId && userId && (
-        <BulkTemplateModal fileName={bulk.fileName} fileKey={bulk.fileKey} sentences={bulk.sentences} bizId={bizId} userId={userId}
+        <BulkTemplateModal fileName={bulk.fileName} fileKey={bulk.fileKey} sentences={bulk.sentences} bizId={bizId} userId={userId} initialRows={bulk.initialRows}
           onClose={() => { setLastBulk(bulk); setBulk(null); }}
           onPosted={(count, total, journals) => { setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} template entr${count > 1 ? "ies" : "y"} (${fmt(total)}) from ${bulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }]); void autoPushToTally(journals ?? []); }}
           onSendToChat={list => { setBatchTotal(list.length); setRowQueue(list); setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `📊 ${list.length} rows need more detail — answering them here one by one.`, timestamp: Date.now() }]); }} />
@@ -1093,8 +1118,8 @@ export default function FreBookPage() {
 
       {statementFile && bizId && userId && (
         <StatementModal
-          file={statementFile} bizId={bizId} userId={userId}
-          onClose={() => setStatementFile(null)}
+          file={statementFile} bizId={bizId} userId={userId} resume={statementResume ?? undefined}
+          onClose={() => { setStatementFile(null); setStatementResume(null); }}
           onPosted={(count, total, journals) => { setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} bank transaction${count > 1 ? "s" : ""} (${fmt(total)}) from ${statementFile.name}. See them in 📚 Books.`, timestamp: Date.now() }]); void autoPushToTally(journals ?? []); }}
         />
       )}
