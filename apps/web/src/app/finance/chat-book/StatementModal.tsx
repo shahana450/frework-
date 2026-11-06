@@ -1,5 +1,6 @@
 "use client";
 import { readBankStatement } from "@/lib/readStatement";
+import { PdfPasswordError } from "@/lib/pdfUnlock";
 import { isCashBankAccount } from "@/lib/journalRules";
 import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useMemo } from "react";
@@ -25,7 +26,11 @@ const inputStyle: React.CSSProperties = { background: "#FFFFFF", border: `1px so
 export default function StatementModal({ file, bizId, userId, onClose, onPosted }: {
   file: File; bizId: string; userId: string; onClose: () => void; onPosted: (count: number, total: number, journals?: { id: string; date: string; entryNo: string }[]) => void;
 }) {
-  const [phase, setPhase] = useState<"reading" | "suggesting" | "ready" | "error">("reading");  const [error, setError] = useState("");
+  const [phase, setPhase] = useState<"reading" | "suggesting" | "ready" | "error">("reading");
+  // Password-protected PDF: the password typed here unlocks it in this browser (nothing is sent or stored)
+  const [password, setPassword] = useState("");
+  const [pwInput, setPwInput] = useState("");
+  const [locked, setLocked] = useState<{ wrong: boolean } | null>(null);  const [error, setError] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [bankLedger, setBankLedger] = useState("");
@@ -68,8 +73,14 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
       if (!cancelled) setHistory(learnHistory(learned));
 
       let data: { transactions: { date: string; description: string; debit: number; credit: number }[] };
-      try { data = await readBankStatement(file, { bizId, onProgress: p => { if (!cancelled) setProgress(p.label); } }); }
-      catch (e) { if (!cancelled) { setError(e instanceof Error ? e.message : "Could not read this statement."); setPhase("error"); } return; }
+      try { data = await readBankStatement(file, { bizId, password: password || undefined, onProgress: p => { if (!cancelled) setProgress(p.label); } }); }
+      catch (e) {
+        if (cancelled) return;
+        // A locked PDF: ask for its password here (it is used in this browser only, never sent)
+        if (e instanceof PdfPasswordError) { setLocked({ wrong: e.wrong }); setPhase("error"); return; }
+        setError(e instanceof Error ? e.message : "Could not read this statement."); setPhase("error"); return;
+      }
+      setLocked(null);
       if (cancelled) return;
       setProgress("");   // the reading progress line; the same line later shows posting progress
       const parsed: Row[] = (data.transactions as { date: string; description: string; debit: number; credit: number }[])
@@ -94,7 +105,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
       if (!cancelled) setPhase("ready");
     })();
     return () => { cancelled = true; };
-  }, [file, bizId]);
+  }, [file, bizId, password]);
 
   const existing = useMemo(() => new Set(accounts.map(a => a.name.toLowerCase())), [accounts]);
   const isNew = (name: string) => !!name.trim() && !existing.has(name.trim().toLowerCase());
@@ -279,7 +290,20 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted 
 
         {phase === "reading" || phase === "error" ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, color: phase === "error" ? RED : MUTED, padding: "2rem", textAlign: "center" }}>
-            {phase === "reading" ? <><span style={{ width: 22, height: 22, border: `2px solid ${GOLD}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /><span style={{ display: "flex", flexDirection: "column", gap: 4 }}><span>{progress || "Reading every page of the statement…"}</span><span style={{ fontSize: 12.5, opacity: 0.75 }}>Long or scanned statements take a few minutes — keep this window open.</span></span></> : <>⚠ {error}<button onClick={onClose} style={{ ...chip(false), marginTop: 8 }}>Close</button></>}
+            {phase === "reading" ? <><span style={{ width: 22, height: 22, border: `2px solid ${GOLD}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /><span style={{ display: "flex", flexDirection: "column", gap: 4 }}><span>{progress || "Reading every page of the statement…"}</span><span style={{ fontSize: 12.5, opacity: 0.75 }}>Long or scanned statements take a few minutes — keep this window open.</span></span></> : locked ? (
+              <form onSubmit={e => { e.preventDefault(); if (!pwInput) return; if (pwInput === password) { setLocked({ wrong: true }); return; } setError(""); setPhase("reading"); setProgress("Unlocking the statement…"); setPassword(pwInput); }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, maxWidth: 420, textAlign: "center" }}>
+                <span style={{ fontSize: 26 }} aria-hidden="true">🔒</span>
+                <b style={{ fontSize: 16 }}>This statement is password-protected</b>
+                <span style={{ fontSize: 13.5, opacity: 0.8 }}>Enter the password the bank gave you — often your date of birth (DDMMYYYY) or customer ID. It is used in this browser only, never sent or saved.</span>
+                {locked.wrong && <span role="alert" style={{ color: "#B4321F", fontWeight: 700, fontSize: 13.5 }}>That password didn&apos;t open it. Try again.</span>}
+                <input type="password" autoFocus aria-label="Statement password" value={pwInput} onChange={e => setPwInput(e.target.value)} autoComplete="off"
+                  style={{ width: "100%", height: 44, borderRadius: 10, border: "1px solid #D9CDB2", padding: "0 14px", fontSize: 15, fontFamily: "inherit" }} />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="submit" disabled={!pwInput} style={{ ...chip(true), opacity: pwInput ? 1 : 0.5 }}>Unlock & read</button>
+                  <button type="button" onClick={onClose} style={chip(false)}>Close</button>
+                </div>
+              </form>
+            ) : <>⚠ {error}<button onClick={onClose} style={{ ...chip(false), marginTop: 8 }}>Close</button></>}
           </div>
         ) : (
           <>
