@@ -170,22 +170,35 @@ export default function BankingPage() {
   const [locked, setLocked] = useState<{ file: File; wrong: boolean } | null>(null);
   const [pdfPassword, setPdfPassword] = useState("");
 
-  // Opened from WhatsApp (?shelf=<id>): load that statement from the Shelf and read it straight away
+  // A statement kept on the Shelf (sent on WhatsApp, or uploaded there): load it and read it straight away
   const fromShelf = useRef(false);
+  async function loadFromShelf(id: string, fileName?: string | null) {
+    if (!bizId) return;
+    fromShelf.current = true;
+    try {
+      const { url } = await fetch(`/api/finance/shelf?business_id=${bizId}&download=${encodeURIComponent(id)}&inline=1`).then(r => r.json());
+      if (!url) throw new Error("not found");
+      const blob = await fetch(url).then(r => r.blob());
+      const name = fileName || decodeURIComponent(new URL(url).pathname.split("/").pop() ?? "statement.pdf").replace(/^\d+[-_]/, "");
+      await handleFile(new File([blob], /\.(pdf|xlsx?|csv)$/i.test(name) ? name : "statement.pdf", { type: blob.type || "application/pdf" }));
+    } catch { setParseError("Couldn't load that statement from the Shelf. Upload it below instead."); }
+  }
+  // Opened from WhatsApp (?shelf=<id>)
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("shelf");
     if (!bizId || !id || fromShelf.current) return;
-    fromShelf.current = true;
-    (async () => {
-      try {
-        const { url } = await fetch(`/api/finance/shelf?business_id=${bizId}&download=${encodeURIComponent(id)}&inline=1`).then(r => r.json());
-        if (!url) throw new Error("not found");
-        const blob = await fetch(url).then(r => r.blob());
-        const name = decodeURIComponent(new URL(url).pathname.split("/").pop() ?? "statement.pdf").replace(/^\d+[-_]/, "");
-        await handleFile(new File([blob], /\.(pdf|xlsx?|csv)$/i.test(name) ? name : "statement.pdf", { type: blob.type || "application/pdf" }));
-      } catch { setParseError("Couldn't load the statement sent on WhatsApp. Upload it below instead."); }
-    })();
+    void loadFromShelf(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bizId]);
+  // Statements waiting on the Shelf (most recent first) — shown while nothing is loaded, each one a click to book
+  const [shelfStatements, setShelfStatements] = useState<{ id: string; title: string; file_name: string | null; source: string | null; created_at: string; doc_type: string | null }[]>([]);
+  useEffect(() => {
+    if (!bizId) return;
+    fetch(`/api/finance/shelf?business_id=${bizId}`).then(r => r.ok ? r.json() : null).then(d => {
+      const list = ((d?.items ?? []) as { id: string; rack: string; title: string; file_name: string | null; source: string | null; created_at: string; doc_type: string | null }[])
+        .filter(i => /\.(pdf|xlsx?|csv)$/i.test(i.file_name ?? "") && (i.rack === "bank" || /statement|passbook|stmt/i.test(`${i.doc_type ?? ""} ${i.title}`)));
+      setShelfStatements(list.slice(0, 6));
+    }).catch(() => null);
   }, [bizId]);
 
   /* ── File drop / select ── */
@@ -512,6 +525,26 @@ export default function BankingPage() {
             <button onClick={() => { setRows(restorable.rows); if (restorable.bank) setBankAccountId(restorable.bank); setRestorable(null); }} style={{ height: 34, padding: "0 14px", borderRadius: 9, border: "none", background: "#12352D", color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Continue where I left off</button>
             <button onClick={clearDraft} style={{ height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid #F2D29B", background: "#FFFDF8", color: "#9A6B22", fontWeight: 700, cursor: "pointer" }}>Discard</button>
           </div>
+        )}
+        {rows.length === 0 && !parsing && shelfStatements.length > 0 && (
+          <section aria-label="Statements on your Shelf" style={{ margin: "0 0 1rem", padding: "14px 16px", borderRadius: 14, background: "#FFFDF8", border: "1px solid #E6DFD0" }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+              <b style={{ fontSize: "0.98rem" }}>📥 Statements on your Shelf</b>
+              <Link href="/finance/shelf" style={{ fontSize: "0.8rem", color: "#9A6B22" }}>See all on the Shelf →</Link>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {shelfStatements.map(s => (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: 10, border: "1px solid #EFE8DA", background: "#FFFFFF" }}>
+                  <span aria-hidden="true" style={{ fontSize: 18 }}>{/\.pdf$/i.test(s.file_name ?? "") ? "📄" : "📊"}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontWeight: 700, fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.file_name || s.title}</span>
+                    <span style={{ fontSize: "0.76rem", color: "#6B7570" }}>Added {new Date(s.created_at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                  </span>
+                  <button onClick={() => void loadFromShelf(s.id, s.file_name)} style={{ height: 32, padding: "0 14px", borderRadius: 999, border: "none", background: "#12352D", color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Book</button>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
         {rows.length === 0 && (
           <div>

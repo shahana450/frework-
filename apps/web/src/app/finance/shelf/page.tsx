@@ -4,6 +4,7 @@ import ItPortalFetch from "@/components/finance/ItPortalFetch";
 import { cur, activeMoney, activeCountry } from "@/lib/money";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { RACKS, type RackKey } from "@/lib/shelf";
 import { readActiveBusiness } from "@/lib/activeBusiness";
@@ -99,6 +100,8 @@ export default function ShelfPage() {
   const fys = useMemo(() => [...new Set((items ?? []).map(i => i.fy).filter(Boolean) as string[])].sort().reverse(), [items]);
   const counts = useMemo(() => Object.fromEntries(RACKS.map(r => [r.key, (items ?? []).filter(i => i.rack === r.key && (fy === "all" || i.fy === fy)).length])), [items, fy]);
   const openNotices = (items ?? []).filter(i => i.rack === "notices" && i.status === "open");
+  // A bank / card statement on the Shelf (PDF or spreadsheet in the Bank rack, or named as one) can be booked from here
+  const isStatement = (i: Item) => /\.(pdf|xlsx?|csv)$/i.test(i.file_name ?? "") && (i.rack === "bank" || /statement|passbook|stmt/i.test(`${i.doc_type ?? ""} ${i.title}`));
   const typeOf = (i: Item) => { const n = (i.file_name ?? i.mime ?? "").toLowerCase(); return /pdf/.test(n) ? "PDF" : /xls|csv|sheet/.test(n) ? "XLS" : /png|jpe?g|webp|heic|image/.test(n) ? "IMG" : "OTHER"; };
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -355,6 +358,10 @@ export default function ShelfPage() {
                         <select value={it.rack} onChange={e => patch(it.id, { rack: e.target.value as RackKey })} aria-label="Move to rack" title="Move to another rack" style={sel}>
                           {RACKS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
                         </select>
+                        {isStatement(it) && (
+                          <Link href={`/finance/banking/import?shelf=${it.id}`} title="Open Banking → Import with this statement loaded, to turn its rows into entries"
+                            style={{ ...btn, height: 32, padding: "0 14px", borderRadius: 999, background: "#C9A24A", color: "#10241F", border: "none", fontFamily: SERIF, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Book this statement →</Link>
+                        )}
                         <button onClick={() => open(it)} style={{ ...btn, height: 32, padding: "0 16px", borderRadius: 999, background: "#12352D", color: "#FFFFFF", border: "none", fontFamily: SERIF }}>Open</button>
                         <button onClick={() => open(it, true)} style={{ ...btn, height: 30 }} aria-label="Download" title="Download">⬇</button>
                         <button onClick={() => setEditing(it.id)} aria-label="Rename" title="Rename" style={{ ...btn, height: 30 }}>✎</button>
