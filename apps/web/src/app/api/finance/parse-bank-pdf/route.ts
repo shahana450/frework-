@@ -124,6 +124,11 @@ Rules:
     if (msg.includes("Could not process document") || msg.includes("unsupported")) {
       return NextResponse.json({ error: "This PDF format is not supported. Download the statement as Excel (.xlsx) from your bank portal and upload that." }, { status: 422 });
     }
+    console.error("parse-bank-pdf failed:", msg);
+    // Provider busy / rate-limited / timed out: 503 so the browser waits longer before retrying
+    if (/\b(429|503)\b|high demand|timed out|overloaded|UNAVAILABLE|RESOURCE_EXHAUSTED|quota/i.test(msg)) {
+      return NextResponse.json({ error: msg.slice(0, 300) }, { status: 503 });
+    }
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

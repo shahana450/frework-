@@ -6,7 +6,17 @@ export type StatementTx = { date: string; description: string; debit: number; cr
 export type ReadProgress = { done: number; total: number; label: string };
 
 const PAGES_PER_BATCH = 8;
-const PARALLEL = 4;
+// Two at a time: more trips the AI provider's per-minute limit and every batch fails together
+const PARALLEL = 2;
+// Rate-limited / busy replies wait longer before the next try than other failures
+const isBusy = (status: number) => status === 429 || status === 503 || status === 504;
+const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+// The reason shown when nothing could be read: the server's own message, not a guess
+const failMessage = (last: Error | null) => {
+  const status = (last as { status?: number } | null)?.status ?? 0;
+  if (isBusy(status)) return `Couldn't read this statement — the AI service is busy or over its limit right now (${last!.message}). Try again in a few minutes, or upload the Excel statement.`;
+  return `Couldn't read this statement${last?.message ? `: ${last.message}` : "."}`;
+};
 
 async function post(file: Blob, name: string, bizId?: string, shelf = true): Promise<{ transactions: StatementTx[] }> {
   const fd = new FormData();
@@ -15,7 +25,7 @@ async function post(file: Blob, name: string, bizId?: string, shelf = true): Pro
   if (!shelf) fd.append("shelf", "0");
   const res = await fetch("/api/finance/parse-bank-pdf", { method: "POST", body: fd });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || !Array.isArray(data.transactions)) throw Object.assign(new Error(data.error ?? "Couldn't read this statement."), { status: res.status });
+  if (!res.ok || !Array.isArray(data.transactions)) throw Object.assign(new Error(data.error ?? (res.status === 504 ? "the server timed out reading these pages" : `server error ${res.status}`)), { status: res.status });
   return data;
 }
 
@@ -26,19 +36,26 @@ async function readLockedPdf(file: File, opts: { bizId?: string; password?: stri
   const base = file.name.replace(/\.pdf$/i, "");
   const out: StatementTx[] = [];
   const missing: string[] = [];
+  let lastErr: Error | null = null;
   const total = Math.ceil(pages.length / PAGES_PER_BATCH);
   for (let p = 0; p < pages.length; p += PAGES_PER_BATCH) {
     const to = Math.min(p + PAGES_PER_BATCH, pages.length);
     opts.onProgress?.({ done: p / PAGES_PER_BATCH, total: Math.max(total, 2), label: `Reading pages ${p + 1}–${to} of ${pages.length}` });
     // Pages are separated by a form feed, so the server counts them for the monthly allowance
     const text = new Blob([pages.slice(p, to).join("\f")], { type: "text/plain" });
-    try { out.push(...(await post(text, `${base}-p${p + 1}-${to}.txt`, opts.bizId, false)).transactions); }
-    catch (e) {
-      const status = (e as { status?: number }).status ?? 0;
-      if (status === 402) { if (!out.length) throw e; return { transactions: out, missingPages: missing, stoppedReason: (e as Error).message }; }
-      if (status !== 422) missing.push(`${p + 1}–${to}`);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try { out.push(...(await post(text, `${base}-p${p + 1}-${to}.txt`, opts.bizId, false)).transactions); break; }
+      catch (e) {
+        const status = (e as { status?: number }).status ?? 0;
+        if (status === 402) { if (!out.length) throw e; return { transactions: out, missingPages: missing, stoppedReason: (e as Error).message }; }
+        if (status === 422) break;
+        lastErr = e as Error;
+        if (attempt === 2) { missing.push(`${p + 1}–${to}`); break; }
+        await wait((isBusy(status) ? 8000 : 2500) * (attempt + 1));
+      }
     }
   }
+  if (!out.length && missing.length) throw new Error(failMessage(lastErr));
   if (!out.length) throw new Error(pages.join("").trim() ? "No transactions found in this statement." : "This PDF has no readable text (it may be a scanned image). Download the statement as Excel from your bank instead.");
   return { transactions: out, missingPages: missing };
 }
@@ -78,6 +95,7 @@ async function readRaw(file: File, opts: { bizId?: string; shelf?: boolean; pass
   const results: (StatementTx[] | null)[] = new Array(batches.length).fill(null);
   let done = 0, next = 0;
   let stopped: Error | null = null;   // the month's page allowance ran out: send no more batches
+  let lastErr: Error | null = null;   // the most recent real failure, shown if nothing could be read
   const label = () => `Reading pages · ${done}/${batches.length} batches (${pageCount} pages)`;
   opts.onProgress?.({ done, total: batches.length, label: label() });
 
@@ -97,7 +115,8 @@ async function readRaw(file: File, opts: { bizId?: string; shelf?: boolean; pass
         const status = (e as { status?: number }).status ?? 0;
         if (status === 422) { results[i] = []; return; }        // pages with no transactions (summary/cover pages)
         if (status === 402) { stopped = e as Error; return; }   // allowance used up
-        await new Promise(r => setTimeout(r, 2500 * (attempt + 1)));
+        lastErr = e as Error;
+        if (attempt < 2) await wait((isBusy(status) ? 8000 : 2500) * (attempt + 1));
       }
     }
   };
@@ -114,6 +133,6 @@ async function readRaw(file: File, opts: { bizId?: string; shelf?: boolean; pass
   const stoppedReason = (stopped as Error | null)?.message;
   if (stoppedReason && !transactions.length) throw new Error(stoppedReason);
   const missingPages = batches.filter((_, i) => results[i] === null).map(b => `${b.from + 1}–${b.to + 1}`);
-  if (!transactions.length) throw new Error(missingPages.length ? "Couldn't read this statement — the AI service may be busy. Try again in a few minutes." : "No transactions found in this statement.");
+  if (!transactions.length) throw new Error(missingPages.length ? failMessage(lastErr) : "No transactions found in this statement.");
   return { transactions, missingPages, stoppedReason };
 }

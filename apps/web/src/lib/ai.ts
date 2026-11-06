@@ -36,14 +36,15 @@ async function geminiCreate(params: CreateParams) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any = {};
   for (let i = 0; i < attempts.length; i++) {
-    // The free tier sometimes hangs rather than failing: give each try 12 s (40 s with a document), then treat it as busy
+    // The free tier sometimes hangs rather than failing: give each try 12 s (75 s with a document — reading
+    // 8 statement pages into JSON regularly takes longer than 40 s), then treat it as busy
     const hasFile = params.messages.some(m => typeof m.content !== "string" && m.content.some(b => b.type !== "text"));
     try {
       res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${attempts[i]}:generateContent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(hasFile ? 40000 : 12000),
+        signal: AbortSignal.timeout(hasFile ? 75000 : 12000),
       });
       data = await res.json();
     } catch (e) {
@@ -66,7 +67,8 @@ async function geminiCreate(params: CreateParams) {
       i--; continue;
     }
     if (res.ok || ![429, 500, 503].includes(res.status)) break;
-    await new Promise(r => setTimeout(r, 400));
+    // A rate limit needs a real pause; 400 ms just hits it again
+    await new Promise(r => setTimeout(r, res!.status === 429 ? 3000 : 800));
   }
   if (!res!.ok) throw new Error(`Gemini ${res!.status}: ${data?.error?.message ?? JSON.stringify(data).slice(0, 300)}`);
   const text: string = (data.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? "").join("");
