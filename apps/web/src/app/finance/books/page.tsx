@@ -60,6 +60,9 @@ export default function BooksPage() {
   const [loadErr, setLoadErr] = useState("");
   const [filter, setFilter] = useState<"all" | "chat" | "pending" | "pushed">("all");
   const [search, setSearch] = useState("");
+  const [month, setMonth] = useState("");          // "YYYY-MM", or "" for every month in the year
+  const [shown, setShown] = useState(50);          // entries drawn; "Load more" adds 50
+  useEffect(() => { setShown(50); }, [filter, search, month]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pushed, setPushed] = useState<Record<string, PushState>>({});
@@ -177,6 +180,7 @@ export default function BooksPage() {
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return journals.filter(j => {
+      if (month && String(j.date).slice(0, 7) !== month) return false;
       if (filter === "chat" && sourceOf(j) !== "chat") return false;
       if (filter === "pending" && (isPushed(j.id) || sourceOf(j) === "tally" || j.status !== "posted")) return false;
       if (filter === "pushed" && !isPushed(j.id)) return false;
@@ -184,7 +188,7 @@ export default function BooksPage() {
       return [j.entry_no, j.narration, j.reference_no, ...(j.fw_fin_journal_lines ?? []).map(l => l.fw_fin_chart_of_accounts?.name)]
         .some(v => (v ?? "").toLowerCase().includes(q));
     });
-  }, [journals, filter, search, pushed, inTally]);
+  }, [journals, filter, search, pushed, inTally, month]);
 
   const counts = useMemo(() => ({
     all: journals.length,
@@ -272,64 +276,104 @@ export default function BooksPage() {
     cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1, fontFamily: "inherit", whiteSpace: "nowrap",
   });
 
-  const T = { ink: "#10241F", green: "#12352D", tile: "#1C3D35", gold: "#C9A24A", goldInk: "#9A6B22", cream: "#F4EFE4", paper: "#FFFDF8", line: "#E6DFD0", pos: "#0B7A55", neg: "#B4321F", muted: "#6B7570", mint: "#7FE0B4" };
+  const T = { ink: "#10241F", green: "#12352D", tile: "#1C3D35", gold: "#C9A24A", goldInk: "#9A6B22", cream: "#F4EFE4", paper: "#FFFDF8", band: "#F3ECDD", line: "#E6DFD0", pos: "#0B7A55", neg: "#B4321F", muted: "#6B7570", mint: "#7FE0B4" };
   const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
+  const SANS = "'Manrope',system-ui,sans-serif";
   const on = conn === "connected";
-  const ghost = (dis = false): React.CSSProperties => ({ height: 40, padding: "0 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.3)", background: "transparent", color: "#FFFFFF", fontFamily: SERIF, fontSize: "0.92rem", textDecoration: "none", display: "inline-flex", alignItems: "center", cursor: dis ? "not-allowed" : "pointer", opacity: dis ? 0.5 : 1 });
-  const fchip = (active: boolean): React.CSSProperties => ({ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${active ? T.green : T.line}`, background: active ? T.green : T.paper, color: active ? "#FFFFFF" : T.ink, fontFamily: SERIF, fontSize: "0.9rem", cursor: "pointer", whiteSpace: "nowrap" });
-  const tiles = [
-    { l: "Entries in books", v: counts.all, sub: counts.chat === counts.all ? "all from chat" : `${counts.chat} from chat`, c: "#FFFFFF" },
-    { l: "Pushed to Tally", v: counts.pushed, bar: counts.all ? counts.pushed / counts.all : 0, c: T.mint, lc: T.mint },
-    { l: "Waiting to push", v: counts.pending, bar: counts.all ? counts.pending / counts.all : 0, c: "#F2D58A", lc: "#F2D58A" },
+  const ghost = (dis = false): React.CSSProperties => ({ height: 42, padding: "0 18px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.28)", background: "transparent", color: "#FFFFFF", fontFamily: SANS, fontSize: "0.92rem", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, cursor: dis ? "not-allowed" : "pointer", opacity: dis ? 0.5 : 1 });
+  const goldBtn: React.CSSProperties = { ...ghost(), background: T.gold, color: T.ink, border: "none" };
+  const fchip = (active: boolean): React.CSSProperties => ({ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${active ? T.green : T.line}`, background: active ? T.green : T.paper, color: active ? "#FFFFFF" : T.ink, fontFamily: SANS, fontSize: "0.86rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" });
+  // Voucher type → pill colours
+  const TYPE_TONE: Record<string, [string, string]> = { sales: ["#E3F3EC", "#0B7A55"], receipt: ["#E6EEFB", "#2753A6"], payment: ["#FBE9DA", "#A3541C"], purchase: ["#EFE9FA", "#5B4BC4"], contra: ["#E2F1F1", "#1D6F6F"], expense: ["#FBE9DA", "#A3541C"], credit_note: ["#FBE3DE", "#B4321F"], debit_note: ["#FBE3DE", "#B4321F"], journal: ["#EEF0EF", "#4A5651"] };
+  const months = [...new Set(journals.map(j => String(j.date).slice(0, 7)))].sort().reverse();
+  const monthLabel = (ym: string) => new Date(`${ym}-01T00:00:00`).toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+  // Day groups of the entries drawn so far (newest first), each with its day total
+  const days: { date: string; items: Journal[]; total: number }[] = [];
+  for (const j of visible.slice(0, shown)) {
+    const d = String(j.date).slice(0, 10);
+    const g = days[days.length - 1];
+    if (g && g.date === d) { g.items.push(j); g.total += amountOf(j); } else days.push({ date: d, items: [j], total: amountOf(j) });
+  }
+  const newCount = journals.filter(j => sourceOf(j) !== "tally" && j.status === "posted").length;
+
+  function exportCsv() {
+    const q = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [["Date", "Voucher no.", "Type", "Narration", "Debit", "Credit", "Amount", "Source", "Tally"]];
+    for (const j of visible) {
+      const ls = j.fw_fin_journal_lines ?? [];
+      rows.push([String(j.date).slice(0, 10), j.entry_no, TYPE_LABEL[j.type] ?? j.type, j.narration ?? "",
+        ls.filter(l => l.dr_amount > 0).map(l => l.fw_fin_chart_of_accounts?.name ?? "").join("; "),
+        ls.filter(l => l.cr_amount > 0).map(l => l.fw_fin_chart_of_accounts?.name ?? "").join("; "),
+        String(amountOf(j)), sourceOf(j) === "tally" ? "From Tally" : sourceOf(j) === "chat" ? "From chat" : "Manual", isPushed(j.id) ? "Pushed" : ""]);
+    }
+    const blob = new Blob(["﻿" + rows.map(r => r.map(q).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = `Day-book-${(bizName || "books").replace(/[^A-Za-z0-9]+/g, "-")}${month ? `-${month}` : ""}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  }
+
+  const tiles: { l: string; v: number; sub: React.ReactNode; c: string; lc?: string; bar?: number }[] = [
+    { l: "Total entries", v: counts.all, sub: <><span aria-hidden="true" style={{ color: T.gold }}>●</span> {counts.chat.toLocaleString("en-IN")} captured from chat</>, c: "#FFFFFF" },
+    { l: "Pushed to Tally", v: counts.pushed, bar: newCount ? counts.pushed / newCount : 0, sub: <>{counts.pushed} of {newCount} new entries synced</>, c: T.mint, lc: T.mint },
+    { l: "Waiting to push", v: counts.pending, bar: newCount ? counts.pending / newCount : 0, sub: <>Not yet in Tally</>, c: "#F2D58A", lc: "#F2D58A" },
   ];
+  const tallyPill: [string, string] = conn === "connecting" ? ["Connecting…", "#F2D58A"] : on ? ["Connected", T.mint] : conn === "error" ? ["Not reachable", "#F3A58F"] : company ? ["Not checked", "#F2D58A"] : ["Not set up", "#F3A58F"];
+  const GRID = "28px 150px minmax(0,1fr) 170px 150px";
 
   return (
-    <div style={{ minHeight: "100vh", background: T.cream, color: T.ink, fontFamily: SERIF }}>
-      <style>{`.bk-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.85fr);gap:14px}@media(max-width:1000px){.bk-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}.bk-tiles>:last-child{grid-column:1/-1}}@media(max-width:620px){.bk-tiles{grid-template-columns:1fr}}.bk-row:hover{background:#FBF6EC}`}</style>
+    <div style={{ minHeight: "100vh", background: T.cream, color: T.ink, fontFamily: SANS }}>
+      <style>{`.bk-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.6fr);gap:16px}@media(max-width:1100px){.bk-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}.bk-tiles>:last-child{grid-column:1/-1}}@media(max-width:640px){.bk-tiles{grid-template-columns:1fr}.bk-grid{grid-template-columns:28px minmax(0,1fr) auto !important}.bk-src,.bk-vh{display:none !important}}.bk-row:hover{background:#FBF6EC}.bk-row:focus-visible{outline:2px solid #C9A24A;outline-offset:-2px}`}</style>
       {/* Dark header: summary and Tally status */}
       <header style={{ background: T.green, color: "#FFFFFF" }}>
-        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "30px 28px 30px", display: "flex", flexDirection: "column", gap: 22 }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "30px 28px 34px", display: "flex", flexDirection: "column", gap: 24 }}>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 260 }}>
-              <div style={{ fontSize: "0.74rem", letterSpacing: "0.3em", color: T.gold }}>BOOKS{bizName ? ` · ${bizName.toUpperCase()}` : ""}</div>
-              <h1 style={{ margin: "4px 0 0", fontSize: "2.5rem", fontWeight: 400, fontStyle: "italic" }}>Every entry, ready for Tally</h1>
+            <div style={{ flex: 1, minWidth: 280 }}>
+              <div style={{ fontSize: "0.74rem", letterSpacing: "0.22em", color: T.gold, fontWeight: 800 }}>BOOKS · DAY BOOK{bizName ? ` · ${bizName.toUpperCase()}` : ""}</div>
+              <h1 style={{ margin: "6px 0 4px", fontFamily: SERIF, fontSize: "clamp(1.9rem,3.6vw,2.7rem)", fontWeight: 700, lineHeight: 1.1, textWrap: "balance" }}>Every voucher, one ledger of truth</h1>
+              <div style={{ fontSize: "0.98rem", color: "#C9D3CE" }}>Entries from chat and Tally, side by side — review, select and push in one place.</div>
             </div>
-            <Link href="/finance/chat-book" style={ghost()}>✦ Chat entry</Link>
-            <select value={allYears ? "all" : fy?.id ?? ""} onChange={e => { if (e.target.value === "all") setAllYears(true); else { setAllYears(false); setFy(fys.find(f => f.id === e.target.value) ?? null); } }} style={{ ...ghost(), background: T.green }}>
-              <option value="all">All years</option>
-              {fys.map(f => <option key={f.id} value={f.id}>FY {f.label.replace(/^FY\s*/i, "")}</option>)}
-            </select>
+            <button onClick={exportCsv} disabled={!visible.length} style={ghost(!visible.length)} title="Download the entries shown as a CSV (opens in Excel)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>Export
+            </button>
+            <Link href="/finance/chat-book" style={goldBtn}><span aria-hidden="true" style={{ fontSize: "1.1rem" }}>+</span> New entry</Link>
           </div>
           <div className="bk-tiles">
             {tiles.map(t => (
-              <div key={t.l} style={{ background: T.tile, borderRadius: 14, padding: "18px 18px" }}>
+              <div key={t.l} style={{ background: T.tile, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 6 }}>
                 <div style={{ fontSize: "0.88rem", color: t.lc ?? "#DCE4E0" }}>{t.l}</div>
-                <div style={{ fontSize: "2.4rem", color: t.c, lineHeight: 1.2 }}>{loading ? "—" : t.v}</div>
-                {"bar" in t ? <div style={{ height: 5, borderRadius: 999, background: "rgba(255,255,255,0.12)", marginTop: 10, overflow: "hidden" }}><div style={{ width: `${Math.round((t.bar ?? 0) * 100)}%`, minWidth: t.v ? 8 : 0, height: "100%", background: t.c }} /></div>
-                  : <div style={{ fontSize: "0.82rem", color: "#C9D3CE" }}>{t.sub}</div>}
+                <div style={{ fontFamily: SERIF, fontSize: "2.6rem", color: t.c, lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>{loading ? "—" : t.v.toLocaleString("en-IN")}</div>
+                {t.bar !== undefined && <div style={{ height: 5, borderRadius: 999, background: "rgba(255,255,255,0.12)", overflow: "hidden" }}><div style={{ width: `${Math.min(100, Math.round(t.bar * 100))}%`, minWidth: t.v ? 8 : 0, height: "100%", background: t.c }} /></div>}
+                <div style={{ fontSize: "0.84rem", color: "#C9D3CE" }}>{t.sub}</div>
               </div>
             ))}
-            <div style={{ border: "1px solid rgba(255,255,255,0.18)", borderRadius: 14, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "1.1rem" }}>
-                <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: 999, background: on ? T.mint : conn === "connecting" ? T.gold : "#E8705A" }} />
-                {conn === "connecting" ? "Connecting to Tally…" : on ? <>Connected to {company || "Tally"}</> : conn === "error" ? "Tally not reachable" : company ? `Tally not checked — ${company}` : "Tally not set up yet"}
-                {on && eduMode && <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 999, background: "rgba(242,213,138,0.18)", color: "#F2D58A" }}>Educational mode</span>}
+            <div style={{ border: "1px solid rgba(255,255,255,0.16)", borderRadius: 16, padding: "18px 22px", display: "flex", flexDirection: "column", gap: 12, background: "rgba(0,0,0,0.12)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontFamily: SERIF, fontSize: "1.25rem", flex: 1 }}>Tally sync{on && company ? <span style={{ fontFamily: SANS, fontSize: "0.85rem", color: "#C9D3CE" }}> · {company}</span> : null}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(255,255,255,0.08)", border: `1px solid ${tallyPill[1]}55`, color: tallyPill[1], fontSize: "0.76rem", fontWeight: 800 }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 99, background: tallyPill[1] }} />{tallyPill[0]}</span>
+                {on && eduMode && <span style={{ fontSize: "0.72rem", padding: "3px 8px", borderRadius: 999, background: "rgba(242,213,138,0.18)", color: "#F2D58A" }}>Educational mode</span>}
               </div>
-              {!on && <ol style={{ margin: 0, paddingLeft: 20, fontSize: "0.88rem", color: "#DCE4E0", lineHeight: 1.6 }}>
-                <li>Open Tally with your company loaded</li><li>Keep the FreWork Tally Bridge running</li><li>Press {company ? "Reconnect" : "Set up Tally"}</li>
-              </ol>}
+              {!on ? (
+                <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                  {["Open Tally with your company loaded", "Keep the FreWork Tally Bridge running", `Press ${company ? "Reconnect" : "Set up Tally"}`].map((s, i) => (
+                    <li key={s} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.92rem", color: "#E7ECE9" }}>
+                      <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: "50%", border: `1px solid ${T.gold}`, color: T.gold, display: "grid", placeItems: "center", fontSize: "0.78rem", fontWeight: 800, flexShrink: 0 }}>{i + 1}</span>{s}
+                    </li>
+                  ))}
+                </ol>
+              ) : <div style={{ fontSize: "0.9rem", color: "#C9D3CE" }}>{counts.pending ? `${counts.pending} entr${counts.pending === 1 ? "y is" : "ies are"} waiting to go to Tally.` : "Everything from chat is in Tally."}</div>}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: "auto" }}>
-                {company && <button onClick={() => connectTally({ preferName: bizName })} disabled={conn === "connecting"} style={{ ...ghost(conn === "connecting"), ...(on ? {} : { background: T.gold, color: T.ink, border: "none", fontWeight: 700 }) }}>{on ? "Recheck" : "Reconnect"}</button>}
-                <Link href="/finance/tally?redirect=/finance/books" style={company ? ghost() : { ...ghost(), background: T.gold, color: T.ink, border: "none", fontWeight: 700 }}>{company ? "Manage Tally" : "Set up Tally →"}</Link>
-                <a href="/finance/tally?redirect=/finance/books" title="Bring Tally's vouchers into FreWork. Entries FreWork pushed to Tally are skipped." style={ghost()}>↓ Import</a>
-                <button onClick={() => push(pendingIds)} disabled={!on || pushing || !pendingIds.length} style={ghost(!on || pushing || !pendingIds.length)}>{pushing ? "Pushing…" : `↑ Push ${pendingIds.length}`}</button>
+                {company
+                  ? <button onClick={() => connectTally({ preferName: bizName })} disabled={conn === "connecting"} style={on ? ghost() : { ...goldBtn, opacity: conn === "connecting" ? 0.5 : 1 }}>{on ? "Recheck" : "Reconnect"}</button>
+                  : <Link href="/finance/tally?redirect=/finance/books" style={goldBtn}>Set up Tally</Link>}
+                {company && <Link href="/finance/tally?redirect=/finance/books" style={ghost()}>Manage</Link>}
+                <a href="/finance/tally?redirect=/finance/books" title="Bring Tally's vouchers into FreWork. Entries FreWork pushed to Tally are skipped." style={ghost()}>Import</a>
+                <button onClick={() => push(pendingIds)} disabled={!on || pushing || !pendingIds.length} title={on ? "" : "Connect to Tally first"} style={ghost(!on || pushing || !pendingIds.length)}>{pushing ? "Pushing…" : `Push ${pendingIds.length}`}</button>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "22px 28px 3rem", display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 28px 3rem", display: "flex", flexDirection: "column", gap: 14 }}>
         {on && eduMode && (
           <div style={{ fontSize: "0.88rem", color: T.goldInk, background: "#FFF4DB", border: "1px solid #EBD9A8", borderRadius: 12, padding: "0.7rem 1rem", lineHeight: 1.55 }}>
             <strong>Tally is running in Educational mode.</strong> It only accepts vouchers dated the 1st, 2nd or 31st of a month. Activate your TallyPrime licence (or open a licensed Tally) to push these entries — FreWork won&apos;t change your entry dates to get around this.
@@ -338,14 +382,28 @@ export default function BooksPage() {
         {on && (checkMsg || checking) && <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.88rem", color: T.muted, background: T.paper, border: `1px solid ${T.line}`, borderRadius: 12, padding: "0.55rem 1rem" }}><span>{checking ? "⟳ " : "✓ "}{checkMsg}</span><div style={{ flex: 1 }} />{!checking && <button onClick={checkTally} style={fchip(false)}>Check Tally again</button>}</div>}
         {pushMsg && <div style={{ fontSize: "0.9rem", color: pushMsg.startsWith("✓") ? T.pos : T.goldInk, background: T.paper, border: `1px solid ${T.line}`, borderRadius: 12, padding: "0.6rem 1rem" }}>{pushMsg}</div>}
 
-        {/* Filters */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <button style={fchip(filter === "all")} onClick={() => setFilter("all")}>All {counts.all}</button>
-          <button style={fchip(filter === "chat")} onClick={() => setFilter("chat")}>From chat {counts.chat}</button>
-          <button style={fchip(filter === "pending")} onClick={() => setFilter("pending")}>Not in Tally {counts.pending}</button>
-          <button style={fchip(filter === "pushed")} onClick={() => setFilter("pushed")}>Pushed {counts.pushed}</button>
+        {/* Filters · search · period */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <div role="tablist" aria-label="Show entries" style={{ display: "inline-flex", gap: 2, padding: 4, borderRadius: 14, background: T.band, border: `1px solid ${T.line}`, flexWrap: "wrap" }}>
+            {([["all", "All", counts.all], ["chat", "From chat", counts.chat], ["pending", "Not in Tally", counts.pending], ["pushed", "Pushed", counts.pushed]] as const).map(([k, l, n]) => (
+              <button key={k} role="tab" aria-selected={filter === k} onClick={() => setFilter(k)} style={{ height: 36, padding: "0 14px", borderRadius: 10, border: "none", background: filter === k ? T.green : "transparent", color: filter === k ? "#FFFFFF" : T.ink, fontFamily: SANS, fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+                {l}<span style={{ minWidth: 22, height: 20, padding: "0 7px", borderRadius: 999, background: filter === k ? T.gold : "#FFFFFF", color: T.ink, fontSize: "0.72rem", fontWeight: 800, display: "inline-grid", placeItems: "center", fontVariantNumeric: "tabular-nums" }}>{n.toLocaleString("en-IN")}</span>
+              </button>
+            ))}
+          </div>
           <div style={{ flex: 1 }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search entry no., narration, account…" style={{ width: 330, maxWidth: "100%", height: 38, background: T.paper, border: `1px solid ${T.line}`, color: T.ink, padding: "0 16px", borderRadius: 999, fontSize: "0.9rem", fontFamily: SERIF, outline: "none" }} />
+          <label style={{ position: "relative", flex: "1 1 300px", maxWidth: 440 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.muted} strokeWidth="2" strokeLinecap="round" aria-hidden="true" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search entry no., narration, account…" aria-label="Search entries" style={{ width: "100%", height: 44, background: T.paper, border: `1px solid ${T.line}`, color: T.ink, padding: "0 16px 0 40px", borderRadius: 12, fontSize: "0.92rem", fontFamily: SANS, outline: "none", boxSizing: "border-box" }} />
+          </label>
+          <select aria-label="Month" value={month} onChange={e => setMonth(e.target.value)} style={{ height: 44, borderRadius: 12, border: `1px solid ${T.line}`, background: T.paper, color: T.ink, padding: "0 12px", fontFamily: SANS, fontSize: "0.92rem", fontWeight: 700 }}>
+            <option value="">All months</option>
+            {months.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          </select>
+          <select aria-label="Financial year" value={allYears ? "all" : fy?.id ?? ""} onChange={e => { setMonth(""); if (e.target.value === "all") setAllYears(true); else { setAllYears(false); setFy(fys.find(f => f.id === e.target.value) ?? null); } }} style={{ height: 44, borderRadius: 12, border: `1px solid ${T.line}`, background: T.paper, color: T.ink, padding: "0 12px", fontFamily: SANS, fontSize: "0.92rem", fontWeight: 700 }}>
+            <option value="all">All years</option>
+            {fys.map(f => <option key={f.id} value={f.id}>FY {f.label.replace(/^FY\s*/i, "")}</option>)}
+          </select>
         </div>
 
         {selected.size > 0 && (
@@ -354,82 +412,113 @@ export default function BooksPage() {
             {selectedTallyOrigin > 0 && <span style={{ color: "#F2D58A", fontSize: "0.88rem" }}>{selectedTallyOrigin} came from Tally — pushing them back will duplicate them.</span>}
             <div style={{ flex: 1 }} />
             <button onClick={() => setSelected(new Set())} style={ghost()}>Clear</button>
-            <button onClick={() => push([...selected])} disabled={!on || pushing} title={on ? "" : "Connect to Tally first"} style={{ ...ghost(!on || pushing), background: T.gold, color: T.ink, border: "none", fontWeight: 700 }}>{pushing ? "Pushing…" : `Push ${selected.size} to Tally`}</button>
+            <button onClick={() => push([...selected])} disabled={!on || pushing} title={on ? "" : "Connect to Tally first"} style={{ ...goldBtn, opacity: !on || pushing ? 0.5 : 1 }}>{pushing ? "Pushing…" : `Push ${selected.size} to Tally`}</button>
           </div>
         )}
 
-        {/* Entries */}
-        <div style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden" }}>
+        {/* Day book */}
+        <div style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 14px 34px -30px rgba(15,43,37,0.6)" }}>
           {loading ? (
             <div style={{ padding: "3rem", textAlign: "center", color: T.muted, fontStyle: "italic" }}>Loading entries…</div>
           ) : loadErr ? (
             <div style={{ padding: "3rem", textAlign: "center", color: T.muted, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}><span>{loadErr}</span><button onClick={load} style={fchip(true)}>Try again</button></div>
           ) : visible.length === 0 ? (
             <div style={{ padding: "3rem", textAlign: "center", color: T.muted, lineHeight: 1.8 }}>
-              No entries {filter !== "all" ? "match this filter" : allYears ? "yet" : `in ${fy?.label ?? "this year"}`}.<br />
-              <Link href="/finance/chat-book" style={{ color: T.goldInk }}>Book a transaction by chat →</Link>
+              No entries {filter !== "all" || month ? "match this filter" : allYears ? "yet" : `in ${fy?.label ?? "this year"}`}.<br />
+              <Link href="/finance/chat-book" style={{ color: T.goldInk, fontWeight: 700 }}>Book a transaction by chat →</Link>
             </div>
           ) : (<>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 24px", borderBottom: `1px solid ${T.line}`, fontSize: "0.82rem", color: T.muted }}>
-              <input type="checkbox" aria-label="Select all" checked={allChecked} onChange={() => setSelected(allChecked ? new Set() : new Set(selectable.map(j => j.id)))} style={{ width: 17, height: 17, accentColor: T.green }} /> Select all posted
+            <div className="bk-grid" style={{ display: "grid", gridTemplateColumns: GRID, gap: 16, alignItems: "center", padding: "12px 20px", borderBottom: `1px solid ${T.line}`, fontSize: "0.74rem", letterSpacing: "0.12em", fontWeight: 800, color: T.muted }}>
+              <input type="checkbox" aria-label="Select all posted" checked={allChecked} onChange={() => setSelected(allChecked ? new Set() : new Set(selectable.map(j => j.id)))} style={{ width: 17, height: 17, accentColor: T.green }} />
+              <span className="bk-vh">VOUCHER</span><span>PARTICULARS</span><span style={{ textAlign: "right" }}>AMOUNT</span><span className="bk-src" style={{ textAlign: "right" }}>SOURCE</span>
             </div>
-            {visible.map((j, idx) => {
-              const src = sourceOf(j);
-              const p = pushed[j.id];
-              const pv = pushView(p, company);
-              const lines = j.fw_fin_journal_lines ?? [];
-              const drNames = lines.filter(l => l.dr_amount > 0).map(l => l.fw_fin_chart_of_accounts?.name ?? "?");
-              const crNames = lines.filter(l => l.cr_amount > 0).map(l => l.fw_fin_chart_of_accounts?.name ?? "?");
-              const open = expanded === j.id;
-              const failed = p && "error" in p;
-              const done = src === "tally" || !!inTally[j.id] || pv.kind === "pushed";
-              const status = src === "tally" ? "From Tally" : inTally[j.id] ? `✓ In Tally${inTally[j.id].vno ? ` · ${inTally[j.id].vno}` : ""}` : pv.kind === "pushed" ? `✓ Pushed ${new Date(pv.at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}` : null;
+            {days.map(day => {
+              const dt = new Date(`${day.date}T00:00:00`);
               return (
-                <Fragment key={j.id}>
-                  <div className="bk-row" onClick={() => setExpanded(open ? null : j.id)} style={{ display: "flex", alignItems: "center", gap: 18, padding: "13px 24px", borderTop: idx ? `1px solid ${T.line}` : undefined, cursor: "pointer", background: failed ? "#FCF3F0" : open ? "#FBF6EC" : undefined }}>
-                    <span onClick={e => e.stopPropagation()} style={{ display: "flex" }}>
-                      <input type="checkbox" aria-label={`Select ${j.entry_no}`} disabled={j.status !== "posted"} checked={selected.has(j.id)} onChange={() => setSelected(s => { const n = new Set(s); if (n.has(j.id)) n.delete(j.id); else n.add(j.id); return n; })} style={{ width: 17, height: 17, accentColor: T.green }} />
-                    </span>
-                    <span style={{ width: 78, flexShrink: 0, color: "#4A5651" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</span>
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: "block", fontSize: "1rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={j.narration}>{j.narration || j.entry_no}</span>
-                      <span style={{ display: "block", fontSize: "0.82rem", color: T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={`Dr ${drNames.join(", ")} / Cr ${crNames.join(", ")}`}>
-                        {j.entry_no} · {TYPE_LABEL[j.type] ?? j.type}{j.status !== "posted" ? ` · ${j.status}` : ""} · Dr {drNames.join(", ")} / Cr {crNames.join(", ")}
-                      </span>
-                      {failed && <span style={{ display: "block", fontSize: "0.78rem", color: T.neg }}>✗ {explainTallyError((p as { error: string }).error, eduMode)}</span>}
-                      {pv.kind === "elsewhere" && <span style={{ display: "block", fontSize: "0.78rem", color: T.goldInk }}>Pushed to {pv.company}, not the company open now</span>}
-                    </span>
-                    <span style={{ fontSize: "1.05rem", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{fmt(amountOf(j))}</span>
-                    <span onClick={e => e.stopPropagation()} style={{ width: 96, display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
-                      {status ? <span style={{ fontSize: "0.82rem", color: src === "tally" ? T.muted : T.pos, whiteSpace: "nowrap" }}>{status}</span>
-                        : j.status === "posted" && !done ? <button onClick={() => push([j.id])} disabled={!on || pushing} title={on ? "Push this entry to Tally" : "Connect to Tally first"} style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${T.line}`, background: T.paper, color: failed ? T.neg : T.goldInk, fontFamily: SERIF, cursor: on && !pushing ? "pointer" : "not-allowed" }}>{failed ? "Retry" : "Push"}</button>
-                        : <span style={{ fontSize: "0.82rem", color: T.muted }}>{j.status}</span>}
-                    </span>
+                <Fragment key={day.date}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, padding: "12px 20px", background: T.band, borderBottom: `1px solid ${T.line}`, flexWrap: "wrap" }}>
+                    <b style={{ fontFamily: SERIF, fontSize: "1.08rem" }}>{dt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</b>
+                    <span style={{ fontSize: "0.84rem", color: T.muted }}>{dt.toLocaleDateString("en-IN", { weekday: "long" })} · {day.items.length} entr{day.items.length === 1 ? "y" : "ies"}</span>
+                    <span style={{ flex: 1 }} />
+                    <span style={{ fontSize: "0.84rem", color: T.muted }}>Day total</span>
+                    <b style={{ fontFamily: SERIF, fontSize: "1.02rem", fontVariantNumeric: "tabular-nums" }}>{fmt(day.total)}</b>
                   </div>
-                  {open && (
-                    <div style={{ padding: "4px 24px 16px 140px", background: "#FBF6EC" }}>
-                      {failed && <div style={{ color: T.neg, fontSize: "0.84rem", marginBottom: 8 }}>Tally said: {(p as { error: string }).error}</div>}
-                      <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 420 }}>
-                        <thead><tr>{["Account", "Debit", "Credit"].map((h, i) => <th key={h} style={{ textAlign: i ? "right" : "left", padding: "4px 18px 4px 0", color: T.muted, fontWeight: 400, fontSize: "0.7rem", letterSpacing: "0.16em", textTransform: "uppercase" }}>{h}</th>)}</tr></thead>
-                        <tbody>
-                          {lines.map((l, i) => (
-                            <tr key={i}>
-                              <td style={{ padding: "4px 18px 4px 0" }}>{l.fw_fin_chart_of_accounts?.name ?? "?"}</td>
-                              <td style={{ padding: "4px 18px 4px 0", textAlign: "right", color: l.dr_amount ? T.neg : T.muted }}>{l.dr_amount ? fmt(l.dr_amount) : "—"}</td>
-                              <td style={{ padding: "4px 0", textAlign: "right", color: l.cr_amount ? T.pos : T.muted }}>{l.cr_amount ? fmt(l.cr_amount) : "—"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      <div style={{ display: "flex", gap: "1rem", marginTop: 10, fontSize: "0.84rem" }}>
-                        <Link href={`/finance/journals?id=${j.id}`} style={{ color: T.goldInk }}>Open in Journals →</Link>
-                        {j.reference_no && <span style={{ color: T.muted }}>Ref: {j.reference_no}</span>}
-                      </div>
-                    </div>
-                  )}
+                  {day.items.map(j => {
+                    const src = sourceOf(j);
+                    const p = pushed[j.id];
+                    const pv = pushView(p, company);
+                    const lines = j.fw_fin_journal_lines ?? [];
+                    const drNames = lines.filter(l => l.dr_amount > 0).map(l => l.fw_fin_chart_of_accounts?.name ?? "?");
+                    const crNames = lines.filter(l => l.cr_amount > 0).map(l => l.fw_fin_chart_of_accounts?.name ?? "?");
+                    const open = expanded === j.id;
+                    const failed = p && "error" in p;
+                    const done = src === "tally" || !!inTally[j.id] || pv.kind === "pushed";
+                    const tone = TYPE_TONE[j.type] ?? TYPE_TONE.journal;
+                    const srcPill = src === "tally" ? "From Tally" : inTally[j.id] ? `In Tally${inTally[j.id].vno ? ` · ${inTally[j.id].vno}` : ""}` : pv.kind === "pushed" ? `Pushed ${new Date(pv.at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}` : src === "chat" ? "From chat" : "Manual";
+                    const nameChip = (side: "Dr" | "Cr", names: string[]) => (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                        <span style={{ flexShrink: 0, fontSize: "0.68rem", fontWeight: 800, padding: "1px 6px", borderRadius: 5, background: side === "Dr" ? "#EEF0EF" : "#FBEBD2", color: side === "Dr" ? "#4A5651" : "#9A6B22" }}>{side}</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{names.join(", ")}</span>
+                      </span>
+                    );
+                    return (
+                      <Fragment key={j.id}>
+                        <div className="bk-row bk-grid" tabIndex={0} onClick={() => setExpanded(open ? null : j.id)} onKeyDown={e => { if (e.key === "Enter") setExpanded(open ? null : j.id); }}
+                          style={{ display: "grid", gridTemplateColumns: GRID, gap: 16, alignItems: "center", padding: "14px 20px", borderBottom: `1px solid ${T.line}`, cursor: "pointer", background: failed ? "#FCF3F0" : open ? "#FBF6EC" : undefined }}>
+                          <span onClick={e => e.stopPropagation()} style={{ display: "flex" }}>
+                            <input type="checkbox" aria-label={`Select ${j.entry_no}`} disabled={j.status !== "posted"} checked={selected.has(j.id)} onChange={() => setSelected(s => { const n = new Set(s); if (n.has(j.id)) n.delete(j.id); else n.add(j.id); return n; })} style={{ width: 17, height: 17, accentColor: T.green }} />
+                          </span>
+                          <span className="bk-vh" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 5, minWidth: 0 }}>
+                            <span style={{ fontSize: "0.74rem", fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: tone[0], color: tone[1] }}>{TYPE_LABEL[j.type] ?? j.type}</span>
+                            <span style={{ fontSize: "0.8rem", color: T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{j.entry_no}{j.status !== "posted" ? ` · ${j.status}` : ""}</span>
+                          </span>
+                          <span style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+                            <span style={{ fontFamily: SERIF, fontSize: "1.06rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={j.narration}>{j.narration || j.entry_no}</span>
+                            <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.84rem", color: "#4A5651", minWidth: 0 }} title={`Dr ${drNames.join(", ")} / Cr ${crNames.join(", ")}`}>
+                              {nameChip("Dr", drNames)}<span aria-hidden="true" style={{ color: T.muted, flexShrink: 0 }}>→</span>{nameChip("Cr", crNames)}
+                            </span>
+                            {failed && <span style={{ fontSize: "0.78rem", color: T.neg }}>✗ {explainTallyError((p as { error: string }).error, eduMode)}</span>}
+                            {pv.kind === "elsewhere" && <span style={{ fontSize: "0.78rem", color: T.goldInk }}>Pushed to {pv.company}, not the company open now</span>}
+                          </span>
+                          <span style={{ fontFamily: SERIF, fontSize: "1.12rem", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", textAlign: "right" }}>{fmt(amountOf(j))}</span>
+                          <span className="bk-src" onClick={e => e.stopPropagation()} style={{ display: "flex", justifyContent: "flex-end" }}>
+                            {j.status === "posted" && !done
+                              ? <button onClick={() => push([j.id])} disabled={!on || pushing} title={on ? "Push this entry to Tally" : "Connect to Tally first"} style={{ height: 30, padding: "0 12px", borderRadius: 999, border: `1px solid ${failed ? T.neg : T.gold}`, background: "#FFFFFF", color: failed ? T.neg : T.goldInk, fontFamily: SANS, fontSize: "0.78rem", fontWeight: 800, cursor: on && !pushing ? "pointer" : "not-allowed", whiteSpace: "nowrap" }}>{failed ? "Retry push" : `${srcPill} · Push`}</button>
+                              : <span style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 28, padding: "0 11px", borderRadius: 999, border: `1px solid ${T.line}`, background: "#FFFFFF", fontSize: "0.76rem", fontWeight: 700, color: src === "tally" ? "#4A5651" : T.pos, whiteSpace: "nowrap" }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 99, background: src === "tally" ? "#4A5651" : T.pos }} />{srcPill}</span>}
+                          </span>
+                        </div>
+                        {open && (
+                          <div style={{ padding: "6px 20px 16px 214px", background: "#FBF6EC", borderBottom: `1px solid ${T.line}`, overflowX: "auto" }}>
+                            {failed && <div style={{ color: T.neg, fontSize: "0.84rem", marginBottom: 8 }}>Tally said: {(p as { error: string }).error}</div>}
+                            <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 420 }}>
+                              <thead><tr>{["Account", "Debit", "Credit"].map((h, i) => <th key={h} style={{ textAlign: i ? "right" : "left", padding: "4px 18px 4px 0", color: T.muted, fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.14em", textTransform: "uppercase" }}>{h}</th>)}</tr></thead>
+                              <tbody>
+                                {lines.map((l, i) => (
+                                  <tr key={i}>
+                                    <td style={{ padding: "4px 18px 4px 0" }}>{l.fw_fin_chart_of_accounts?.name ?? "?"}</td>
+                                    <td style={{ padding: "4px 18px 4px 0", textAlign: "right", fontVariantNumeric: "tabular-nums", color: l.dr_amount ? T.ink : T.muted }}>{l.dr_amount ? fmt(l.dr_amount) : "—"}</td>
+                                    <td style={{ padding: "4px 0", textAlign: "right", fontVariantNumeric: "tabular-nums", color: l.cr_amount ? T.ink : T.muted }}>{l.cr_amount ? fmt(l.cr_amount) : "—"}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            <div style={{ display: "flex", gap: "1rem", marginTop: 10, fontSize: "0.84rem" }}>
+                              <Link href={`/finance/journals?id=${j.id}`} style={{ color: T.goldInk, fontWeight: 700 }}>Open in Journals →</Link>
+                              {j.reference_no && <span style={{ color: T.muted }}>Ref: {j.reference_no}</span>}
+                            </div>
+                          </div>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </Fragment>
               );
             })}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px" }}>
+              <span style={{ fontSize: "0.86rem", color: T.muted }}>Showing {Math.min(shown, visible.length).toLocaleString("en-IN")} of {visible.length.toLocaleString("en-IN")} entries</span>
+              <span style={{ flex: 1 }} />
+              {shown < visible.length && <button onClick={() => setShown(s => s + 50)} style={{ height: 38, padding: "0 16px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#FFFFFF", color: T.ink, fontFamily: SANS, fontWeight: 800, cursor: "pointer" }}>Load more</button>}
+            </div>
           </>)}
         </div>
         <div style={{ fontSize: "0.8rem", fontStyle: "italic", color: "#6B7570" }}>
