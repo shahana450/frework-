@@ -7,6 +7,7 @@ import { getAI } from "@/lib/ai";
 import { requireBusiness, serverError } from "@/lib/apiAuth";
 import { intentSystemFor, loadBusinessContext, interpret as interpretWith, loadQueryBooks as loadBooksWith, accountListForAI, type AiIntent } from "@/lib/intentEngine";
 import { TOOLS, runTool, resolvePeriod, monthPeriod, type Tool, type Period } from "@/lib/bookQueries";
+import { mergeSameLedgerLines } from "@/lib/frebook/mergeLines";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -217,6 +218,7 @@ Never invent facts; leave out what is not shown.`,
       business: { gstin: biz.gstin, country: biz.country }, draftsInMessage: 1,
     });
     parsed.lines = parsed.lines.map((l, i) => ({ ...l, account: verdict.lines[i]?.account ?? l.account, is_new_account: verdict.lines[i]?.is_new_account ?? l.is_new_account }));
+    parsed.lines = mergeSameLedgerLines(parsed.lines);
     parsed.narrative = verdict.narration;
     for (const b of verdict.blocked) parsed.warnings.unshift(`⛔ ${b}`);
 

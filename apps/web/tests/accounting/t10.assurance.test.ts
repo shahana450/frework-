@@ -125,3 +125,13 @@ test("correction moves the amount with a balanced new journal and never edits th
   assert.match(validateCorrection([{ accountId: "a", account: "a", dr: 10, cr: 0 }, { accountId: "b", account: "b", dr: 0, cr: 9 }])!, /don't agree/);
   assert.ok(ids(detect({ ...base, journals: [j] })).includes("D.CLASSIFICATION"));
 });
+
+import { mergeSameLedgerLines } from "../../src/lib/frebook/mergeLines";
+test("item lines on one ledger become one debit; stock items stay separate", () => {
+  const m = mergeSameLedgerLines([
+    { account: "FOOD EXPENSE", debit: 260, credit: 0 }, { account: "food expense ", debit: 400, credit: 0 },
+    { account: "Stock", debit: 100, credit: 0, item: "Rice" }, { account: "Stock", debit: 50, credit: 0, item: "Dal" },
+    { account: "Cash", debit: 0, credit: 810 },
+  ]);
+  assert.deepEqual(m.map(l => [l.account, l.debit, l.credit]), [["FOOD EXPENSE", 660, 0], ["Stock", 100, 0], ["Stock", 50, 0], ["Cash", 0, 810]]);
+});

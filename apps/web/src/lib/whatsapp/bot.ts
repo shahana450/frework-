@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAI } from "../ai";
 import { roleOf } from "../apiAuth";
 import { can } from "../permissions";
+import { mergeSameLedgerLines } from "../frebook/mergeLines";
 import { intentSystemFor, loadBusinessContext, interpret, loadQueryBooks, accountListForAI, type AiIntent, type ParsedTransaction } from "../intentEngine";
 import { TOOLS, runTool, resolvePeriod, monthPeriod, type Tool, type Period } from "../bookQueries";
 import { reviewChecks } from "../reviewChecks";
@@ -302,6 +303,7 @@ Works once and expires soon. Don't forward this link — it signs in as you. Sha
   if (!can(role, "post")) return "Your role can view but not post. Ask a question instead, e.g. *Profit this month*.";
   if (m.media) console.log("wa bill read", JSON.stringify({ action: ai.action, items: (ai.items ?? []).map(i => [i.kind, i.account, i.taxable, i.rate]) }).slice(0, 600));   // no party or amounts beyond the lines
   const parsed = await interpret(sb, ai, accounts ?? [], link.business_id, today, biz);
+  parsed.lines = mergeSameLedgerLines(parsed.lines);
   if (fy?.is_locked) parsed.warnings.push("This accounting period is locked.");
   if (parsed.status === "needs_clarification" && parsed.needs_clarification.length) {
     await save({ pending: null, history: hist(parsed.needs_clarification[0]) });
