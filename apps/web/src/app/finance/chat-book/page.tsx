@@ -947,7 +947,8 @@ export default function FreBookPage() {
           {/* Messages */}
           <div ref={chatRef} className="fb-thread" style={{ flex: 1, overflowY: "auto", background: "#F6F1E7" }}>
             <div style={{ maxWidth: 880, margin: "0 auto", padding: "1.5rem clamp(12px, 3vw, 28px) 2rem", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-            {messages.map(msg => (
+            {/* The intro card is left out of the thread: the chat box on the left already shows the examples */}
+            {messages.filter(m => m.id !== "welcome").map(msg => (
               <div key={msg.id} className="fb-msg">
                 {/* Welcome — a compact intro with tappable examples */}
                 {msg.role === "system" && msg.id === "welcome" && (
