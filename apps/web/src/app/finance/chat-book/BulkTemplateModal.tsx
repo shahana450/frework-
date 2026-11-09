@@ -85,9 +85,23 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
     error: rows.filter(r => r.state === "error" || r.state === "failed").length,
     posted: rows.filter(r => r.state === "posted").length,
   }), [rows]);
-  const chosen = rows.filter(r => selected.has(r.i) && r.state === "ready" && r.tx);
+  const balanced = (tx?: ParsedTransaction) => !!tx && tx.lines.length >= 2 && tx.lines.every(l => l.account.trim() && (l.debit || 0) + (l.credit || 0) > 0)
+    && tx.lines.some(l => l.debit > 0) && tx.lines.some(l => l.credit > 0) && Math.abs(tx.lines.reduce((s, l) => s + (l.debit || 0) - (l.credit || 0), 0)) < 0.01;
+  const chosen = rows.filter(r => selected.has(r.i) && r.state === "ready" && r.tx && balanced(r.tx));
   const chosenTotal = chosen.reduce((s, r) => s + (r.tx!.lines.reduce((t, l) => t + (l.debit || 0), 0)), 0);
-  const balanced = (tx?: ParsedTransaction) => !!tx && Math.abs(tx.lines.reduce((s, l) => s + (l.debit || 0) - (l.credit || 0), 0)) < 0.01;
+
+  // Edit a draft's lines: change Dr/Cr or amount, add a line, remove one (an entry keeps at least two)
+  const editLines = (i: number, f: (ls: ParsedTransaction["lines"]) => ParsedTransaction["lines"]) =>
+    setRows(prev => prev.map(r => r.i === i && r.tx ? { ...r, tx: { ...r.tx, lines: f(r.tx.lines) } } : r));
+  const setAmount = (i: number, li: number, v: number) => editLines(i, ls => ls.map((l, k) => k !== li ? l : l.debit > 0 || !(l.credit > 0) ? { ...l, debit: v, credit: 0 } : { ...l, debit: 0, credit: v }));
+  const flipSide = (i: number, li: number) => editLines(i, ls => ls.map((l, k) => k !== li ? l : { ...l, debit: l.credit || 0, credit: l.debit || 0 }));
+  const addLine = (i: number) => editLines(i, ls => {
+    const dr = ls.reduce((s, l) => s + (l.debit || 0), 0), cr = ls.reduce((s, l) => s + (l.credit || 0), 0);
+    const gap = Math.round((dr - cr) * 100) / 100;
+    // A new line takes whatever keeps the entry out of balance, on the side that balances it
+    return [...ls, { account: "", debit: gap < 0 ? -gap : 0, credit: gap > 0 ? gap : 0, is_new_account: false } as ParsedTransaction["lines"][number]];
+  });
+  const delLine = (i: number, li: number) => editLines(i, ls => ls.length > 2 ? ls.filter((_, k) => k !== li) : ls);
 
   function setAccount(i: number, li: number, account: string) {
     setRows(prev => prev.map(r => r.i === i && r.tx ? { ...r, tx: { ...r.tx, lines: r.tx.lines.map((l, k) => k === li ? { ...l, account } : l) } } : r));
@@ -200,7 +214,7 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
               r.duplicate && r.state === "ready" && { t: `⚠ Possible duplicate of ${r.duplicate}`, c: C.warn, bg: C.warnSoft },
               !!r.issues?.length && r.state === "ready" && { t: `⚠ ${r.issues.join(" · ")}`, c: C.neg, bg: C.negSoft },
               r.locked && { t: "🔒 This date is in a locked year", c: C.neg, bg: C.negSoft },
-              r.tx && r.state === "ready" && !balanced(r.tx) && { t: "Debits and credits don't match", c: C.neg, bg: C.negSoft },
+              r.tx && r.state === "ready" && !balanced(r.tx) && { t: r.tx.lines.some(l => !l.account.trim()) ? "Choose a ledger for every line" : r.tx.lines.some(l => !((l.debit || 0) + (l.credit || 0))) ? "Every line needs an amount" : `Debits and credits don't match (difference ${fmt(Math.abs(r.tx.lines.reduce((s, l) => s + (l.debit || 0) - (l.credit || 0), 0)))})`, c: C.neg, bg: C.negSoft },
             ].filter(Boolean) as { t: string; c: string; bg: string }[];
             return (
               <div key={r.i} className="br-row br-grid" style={{ display: "grid", gridTemplateColumns: "28px 40px 96px minmax(0,1fr) 130px 110px", gap: 12, alignItems: "start", padding: "14px 16px", borderRadius: 16, background: r.state === "posted" ? "#EEF7F1" : on ? "#FFFFFF" : "#FFFDF8", border: `1px solid ${on ? "#C9A24A" : C.line}` }}>
@@ -212,16 +226,23 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
                   {r.tx && r.state !== "question" && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                       {r.tx.lines.map((l, li) => (
-                        <div key={li} style={{ display: "grid", gridTemplateColumns: "34px minmax(0,320px) auto", gap: 8, alignItems: "center", paddingLeft: l.debit ? 0 : 18 }}>
-                          <span style={{ display: "inline-grid", placeItems: "center", height: 20, borderRadius: 6, fontSize: 10.5, fontWeight: 900, letterSpacing: "0.04em", background: l.debit ? "#12352D" : "#F3E8D2", color: l.debit ? "#D9B56F" : "#8A6420" }}>{l.debit ? "DR" : "CR"}</span>
+                        <div key={li} style={{ display: "grid", gridTemplateColumns: "38px minmax(0,320px) 110px 30px", gap: 8, alignItems: "center", paddingLeft: l.debit ? 0 : 18 }}>
+                          <button type="button" className="br-btn" disabled={r.state !== "ready"} onClick={() => flipSide(r.i, li)} title={r.state === "ready" ? "Switch between debit and credit" : undefined} aria-label={`Line ${li + 1} is a ${l.debit ? "debit" : "credit"} — switch`} style={{ display: "inline-grid", placeItems: "center", height: 22, border: "none", borderRadius: 6, fontSize: 10.5, fontWeight: 900, letterSpacing: "0.04em", background: l.debit ? "#12352D" : "#F3E8D2", color: l.debit ? "#D9B56F" : "#8A6420", cursor: r.state === "ready" ? "pointer" : "default", fontFamily: "inherit" }}>{l.debit ? "DR" : "CR"}</button>
                           <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                             <input className="br-led" list="bulk-ledgers" value={l.account} disabled={r.state !== "ready"} onChange={e => setAccount(r.i, li, e.target.value)} aria-label={`Ledger for entry ${r.i + 1} line ${li + 1}`}
                               style={{ flex: 1, minWidth: 0, height: 32, border: `1px solid ${C.line}`, borderRadius: 9, padding: "0 10px", fontSize: 13, background: r.state === "ready" ? "#FFFFFF" : "transparent", color: C.ink, fontFamily: "inherit" }} />
                             {l.is_new_account && <span style={{ fontSize: 10.5, fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: "#EEE8FB", color: C.purple }}>new</span>}
                           </span>
-                          <span style={{ fontSize: 13, fontVariantNumeric: "tabular-nums", color: C.muted }}>{fmt(l.debit || l.credit)}</span>
+                          {r.state === "ready"
+                            ? <input key={`${li}-${l.debit || l.credit}`} className="br-led" inputMode="decimal" defaultValue={(l.debit || l.credit) ? String(l.debit || l.credit) : ""} placeholder="0.00" onBlur={e => setAmount(r.i, li, Math.round((parseFloat(e.target.value.replace(/[^\d.]/g, "")) || 0) * 100) / 100)} onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} aria-label={`Amount for entry ${r.i + 1} line ${li + 1}`}
+                                style={{ height: 32, border: `1px solid ${C.line}`, borderRadius: 9, padding: "0 10px", fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums", background: "#FFFFFF", color: C.ink, fontFamily: "inherit", width: "100%", boxSizing: "border-box" }} />
+                            : <span style={{ fontSize: 13, fontVariantNumeric: "tabular-nums", color: C.muted, textAlign: "right" }}>{fmt(l.debit || l.credit)}</span>}
+                          {r.state === "ready" && r.tx!.lines.length > 2
+                            ? <button type="button" className="br-btn" onClick={() => delLine(r.i, li)} title="Remove this line" aria-label={`Remove line ${li + 1} of entry ${r.i + 1}`} style={{ width: 30, height: 30, borderRadius: "50%", border: "1px solid rgba(194,50,31,0.3)", background: "transparent", color: C.neg, cursor: "pointer", fontSize: 14 }}>×</button>
+                            : <span />}
                         </div>
                       ))}
+                      {r.state === "ready" && <button type="button" className="br-btn" onClick={() => addLine(r.i)} style={{ alignSelf: "flex-start", marginTop: 2, height: 28, padding: "0 12px", borderRadius: 999, border: "1px dashed #C9A24A", background: "transparent", color: "#8A6420", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Add line</button>}
                     </div>
                   )}
                   {flags.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{flags.map(f => <span key={f.t} style={{ fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 999, background: f.bg, color: f.c }}>{f.t}</span>)}</div>}
