@@ -693,6 +693,11 @@ export default function FreBookPage() {
             <div style={{ padding: "0.5rem 0.75rem", borderTop: `1px solid ${BORDER}`, fontSize: "0.65rem", color: MUTED }}>
               AI-generated entries require confirmation before posting.
             </div>
+            <div style={{ padding: "0.5rem 0.75rem 0.75rem", display: "flex", flexDirection: "column", gap: 6 }}>
+              <Link href="/finance/select-business" style={{ fontSize: "0.78rem", fontWeight: 700, color: TEXT, textDecoration: "none" }}>⇄ Switch business</Link>
+              <button onClick={async () => { if (!window.confirm("Sign out of FreBook on this device?")) return; await supabase.auth.signOut(); window.location.href = "/login"; }}
+                style={{ textAlign: "left", background: "none", border: "none", padding: 0, fontSize: "0.78rem", fontWeight: 700, color: "#B4321F", cursor: "pointer", fontFamily: "inherit" }}>↪ Sign out</button>
+            </div>
           </aside>
         )}
 

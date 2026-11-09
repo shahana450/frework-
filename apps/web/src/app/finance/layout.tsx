@@ -491,6 +491,11 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                 </Link>
               );
             })}
+            {/* Sign out — the side menu is hidden on phones, so it lives here too */}
+            <a href="/login" className="grp" title="Sign out" onClick={async e => { e.preventDefault(); if (!window.confirm("Sign out of FreBook on this device?")) return; await supabase.auth.signOut(); window.location.href = "/login"; }}>
+              <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 17l5-5-5-5M15 12H4" /></svg></span>
+              <span>Sign out</span>
+            </a>
           </nav>
         )}
         {bizSwitched && (
