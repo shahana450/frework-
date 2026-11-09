@@ -1398,7 +1398,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
   onCancel: () => void;
 }) {
   const tx = msg.transaction!;
-  const BORDER = "#E1E4EE";
+  const BORDER = "#E8DFCC";
   const lines = editing ? editLines : tx.lines;
   const totalDr = lines.reduce((s, l) => s + (l.debit ?? 0), 0);
   const totalCr = lines.reduce((s, l) => s + (l.credit ?? 0), 0);
@@ -1407,29 +1407,29 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
   const label = TXN_LABELS[tx.transaction_type] ?? tx.transaction_type;
   const isPosted = msg.status === "posted";
   const isCancelled = msg.status === "cancelled";
-  const TEXT = "#141A3A", MUTED = "rgba(20,26,58,0.70)", GOLD = "#232A63", GREEN = "#0B7A55", RED = "#C2321F", AMBER = "#8A5A00", PURPLE = "#5B4BC4", BLUE = "#1F5EFF";
+  const TEXT = "#10241F", MUTED = "#5E6B66", GOLD = "#12352D", GREEN = "#0B7A55", RED = "#C2321F", AMBER = "#8A5A00", PURPLE = "#5B4BC4", BLUE = "#1F5EFF";
   const inputS: React.CSSProperties = { background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "5px 8px", borderRadius: 6, fontSize: "0.78rem", fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" };
 
   return (
-    <div style={{ background: "#FFFFFF", border: `1px solid ${isPosted ? "rgba(11,122,85,0.3)" : isCancelled ? "#FFFFFF" : "rgba(35,42,99,0.2)"}`, borderRadius: 14, overflow: "visible", opacity: isCancelled ? 0.5 : 1 }}>
+    <div className="fb-card" style={{ background: "#FFFDF8", border: `1px solid ${isPosted ? "rgba(11,122,85,0.35)" : isCancelled ? "#E8DFCC" : "#E3D3AE"}`, borderRadius: 20, overflow: "visible", opacity: isCancelled ? 0.5 : 1, boxShadow: "0 22px 44px -30px rgba(15,43,37,0.55)" }}>
 
       {/* Header */}
-      <div style={{ padding: "0.9rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", background: "linear-gradient(180deg,#FBFCFF,#FFFFFF)", borderRadius: "14px 14px 0 0" }}>
-        <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 12, display: "grid", placeItems: "center", fontSize: "1.15rem", background: "rgba(35,42,99,0.07)" }}>{icon}</span>
+      <div style={{ padding: "1rem 1.2rem", display: "flex", alignItems: "center", gap: "0.85rem", flexWrap: "wrap", background: isPosted ? "linear-gradient(120deg,#0E4A37,#12352D)" : "linear-gradient(120deg,#12352D,#0B1F1A)", borderRadius: "20px 20px 0 0", color: "#F6F1E7" }}>
+        <span aria-hidden="true" style={{ width: 44, height: 44, borderRadius: "50%", display: "grid", placeItems: "center", fontSize: "1.2rem", background: "rgba(217,181,111,0.16)", border: "1px solid rgba(217,181,111,0.45)" }}>{icon}</span>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: TEXT }}>{label}</div>
-          <div style={{ fontSize: "0.74rem", color: MUTED }}>{new Date(tx.transaction_date + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}{tx.party_name ? ` · ${tx.party_name}` : ""}{tx.invoice_number ? ` · #${tx.invoice_number}` : ""}</div>
+          <div style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 700, fontSize: "1.15rem", color: "#FFFFFF", letterSpacing: "0.01em" }}>{label}</div>
+          <div style={{ fontSize: "0.76rem", color: "#B9C7C1" }}>{new Date(tx.transaction_date + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}{tx.party_name ? ` · ${tx.party_name}` : ""}{tx.invoice_number ? ` · #${tx.invoice_number}` : ""}</div>
         </div>
         <div style={{ flex: 1 }} />
-        <div style={{ fontFamily: MONO, fontWeight: 800, fontSize: "1.1rem", color: TEXT }}>{fmt(totalDr)}</div>
+        <div style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 400, fontSize: "1.65rem", color: "#D9B56F", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{fmt(totalDr)}</div>
         {/* Status comes from FreBook's checks — "Ready" only when nothing was assumed */}
         {msg.verdict && !isPosted && !isCancelled && (() => {
           const st = msg.verdict.status;
-          const [bg, fg, label] = st === "ready" ? ["rgba(11,122,85,0.1)", GREEN, "✓ Ready"] : st === "blocked" ? ["rgba(194,50,31,0.1)", RED, "⛔ Can't post"] : ["rgba(184,120,0,0.12)", AMBER, "Needs review"];
-          return <span style={{ fontSize: "0.7rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: bg, color: fg }}>{label}</span>;
+          const [bg, fg, label] = st === "ready" ? ["#A8F0CF", "#0B4A34", "✓ Ready"] : st === "blocked" ? ["#F6B8AA", "#6E1A0E", "⛔ Can't post"] : ["#F3D99C", "#5A3B00", "Needs review"];
+          return <span style={{ fontSize: "0.72rem", fontWeight: 800, padding: "4px 12px", borderRadius: 999, background: bg, color: fg }}>{label}</span>;
         })()}
-        {isPosted && <span style={{ fontSize: "0.72rem", color: GREEN, fontWeight: 700 }}>✓ Posted</span>}
-        {isCancelled && <span style={{ fontSize: "0.72rem", color: MUTED }}>Cancelled</span>}
+        {isPosted && <span style={{ fontSize: "0.72rem", fontWeight: 800, padding: "4px 12px", borderRadius: 999, background: "#A8F0CF", color: "#0B4A34" }}>✓ Posted</span>}
+        {isCancelled && <span style={{ fontSize: "0.72rem", color: "#B9C7C1" }}>Cancelled</span>}
       </div>
 
       {msg.verdict && !isPosted && (msg.verdict.blocked.length > 0 || msg.verdict.questions.length > 0 || msg.verdict.assumptions.length > 0) && (
@@ -1459,7 +1459,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
       )}
 
       {/* Meta row */}
-      <div style={{ padding: editing ? "0.6rem 1rem" : "0.45rem 1rem", borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, display: "flex", gap: "0.5rem", flexWrap: "wrap", fontSize: "0.74rem" }}>
+      <div style={{ padding: editing ? "0.7rem 1.2rem" : "0.7rem 1.2rem 0.2rem", display: "flex", gap: "0.5rem", flexWrap: "wrap", fontSize: "0.74rem" }}>
         {editing ? (
           <div style={{ display: "flex", gap: "0.75rem", flex: 1, flexWrap: "wrap" }}>
             <div style={{ minWidth: 120 }}>
@@ -1474,7 +1474,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
         ) : (
           <>
             {[tx.payment_mode && (tx.payment_mode === "credit" ? "On credit" : `Paid by ${tx.payment_mode}`), tx.gst.applicable && `GST ${tx.gst.rate}% · ${tx.gst.transaction_type === "inter" ? "IGST" : "CGST + SGST"}`, tx.tds.applicable && `TDS ${tx.tds.rate}%`].filter(Boolean).map(t => (
-              <span key={String(t)} style={{ padding: "3px 10px", borderRadius: 999, background: "#F3F4F9", color: TEXT, fontWeight: 700, textTransform: "capitalize" }}>{t}</span>
+              <span key={String(t)} style={{ padding: "4px 12px", borderRadius: 999, background: "#F3E8D2", color: "#8A6420", fontWeight: 800, textTransform: "capitalize", letterSpacing: "0.02em" }}>{t}</span>
             ))}
           </>
         )}
@@ -1503,20 +1503,20 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
       )}
 
       {/* Journal entry table */}
-      <div style={{ padding: "0 0 0.25rem" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+      <div style={{ padding: "0.4rem 1.2rem 0.6rem" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
           <thead>
-            <tr style={{ background: "#FFFFFF", borderBottom: `1px solid ${BORDER}` }}>
-              <th style={{ padding: "0.45rem 1rem", textAlign: "left", color: MUTED, fontWeight: 700, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>Account</th>
-              <th style={{ padding: "0.45rem 1rem", textAlign: "right", color: MUTED, fontWeight: 700, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>{editing ? "Debit" : "Amount"}</th>
-              {editing && <th style={{ padding: "0.45rem 1rem", textAlign: "right", color: MUTED, fontWeight: 700, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>Credit</th>}
+            <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+              <th style={{ padding: "0.55rem 0", textAlign: "left", color: "#9A7A2E", fontWeight: 800, fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.16em" }}>Account</th>
+              <th style={{ padding: "0.55rem 0", textAlign: "right", color: "#9A7A2E", fontWeight: 800, fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.16em" }}>{editing ? "Debit" : "Amount"}</th>
+              {editing && <th style={{ padding: "0.55rem 0", textAlign: "right", color: "#9A7A2E", fontWeight: 800, fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.16em" }}>Credit</th>}
             </tr>
           </thead>
           <tbody>
             {lines.map((line, i) => (
-              <tr key={i} style={{ borderBottom: `1px solid #EEF0F6`, background: !editing && line.credit > 0 ? "rgba(11,122,85,0.025)" : undefined }}>
-                <td style={{ padding: "0.45rem 1rem", paddingLeft: !editing && line.credit > 0 ? "2rem" : "1rem" }}>
-                  {!editing && <span style={{ display: "inline-block", width: 24, fontSize: "0.66rem", fontWeight: 900, color: line.debit > 0 ? RED : GREEN }}>{line.debit > 0 ? "Dr" : "Cr"}</span>}
+              <tr key={i} style={{ borderBottom: "1px dashed #EADFC8" }}>
+                <td style={{ padding: "0.6rem 0", paddingLeft: !editing && line.credit > 0 ? "1.6rem" : 0 }}>
+                  {!editing && <span style={{ display: "inline-grid", placeItems: "center", width: 28, height: 20, marginRight: 8, borderRadius: 6, fontSize: "0.62rem", fontWeight: 900, letterSpacing: "0.04em", background: line.debit > 0 ? "#12352D" : "#F3E8D2", color: line.debit > 0 ? "#D9B56F" : "#8A6420", verticalAlign: "middle" }}>{line.debit > 0 ? "DR" : "CR"}</span>}
                   {editing ? (
                     <LedgerPicker value={line.account} ledgers={ledgers} isNew={line.is_new_account} head={heads[line.account]}
                       onPick={(name, o) => { const l = [...editLines]; l[i] = { ...l[i], account: name, is_new_account: o.isNew }; onEditLines(l); }} />
@@ -1527,7 +1527,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
                       recent={[...new Set(lines.map(x => x.account))]} onPick={(name, o) => onPickLine(i, name, o)} />
                   )}
                 </td>
-                <td style={{ padding: "0.45rem 1rem", textAlign: "right", fontFamily: MONO, color: editing ? TEXT : line.debit > 0 ? TEXT : GREEN, fontWeight: 600 }}>
+                <td style={{ padding: "0.6rem 0", textAlign: "right", fontFamily: editing ? MONO : "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: editing ? undefined : "1rem", color: TEXT, fontVariantNumeric: "tabular-nums" }}>
                   {editing ? (
                     <input type="number" value={line.debit || ""} onChange={e => { const l = [...editLines]; l[i] = { ...l[i], debit: parseFloat(e.target.value) || 0 }; onEditLines(l); }} style={{ ...inputS, textAlign: "right", width: 100 }} />
                   ) : fmt(line.debit || line.credit)}
@@ -1546,9 +1546,9 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
                 <td style={{ padding: "0.5rem 1rem", textAlign: "right", fontFamily: MONO, fontWeight: 800, color: GREEN, fontSize: "0.88rem" }}>{fmt(totalCr)}</td>
               </tr>
             ) : (
-              <tr style={{ background: "#F7F8FC" }}>
-                <td style={{ padding: "0.5rem 1rem", fontSize: "0.76rem", fontWeight: 700, color: balanced ? GREEN : RED }}>{balanced ? "✓ Debits equal credits" : "Not balanced"}</td>
-                <td style={{ padding: "0.5rem 1rem", textAlign: "right", fontFamily: MONO, fontWeight: 800, fontSize: "0.88rem" }}>{fmt(totalDr)}</td>
+              <tr>
+                <td style={{ padding: "0.7rem 0 0.2rem", fontSize: "0.76rem", fontWeight: 800, color: balanced ? GREEN : RED }}><span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 10px", borderRadius: 999, background: balanced ? "rgba(11,122,85,0.09)" : "rgba(194,50,31,0.09)" }}>{balanced ? "✓ Balanced — debits equal credits" : "Not balanced"}</span></td>
+                <td style={{ padding: "0.7rem 0 0.2rem", textAlign: "right", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 700, fontSize: "1.1rem", fontVariantNumeric: "tabular-nums", borderTop: "2px solid #12352D" }}>{fmt(totalDr)}</td>
               </tr>
             )}
             {!balanced && <tr><td colSpan={editing ? 3 : 2} style={{ padding: "0.4rem 1rem", fontSize: "0.75rem", color: RED, background: "rgba(194,50,31,0.07)" }}>⚠ Entry not balanced — Dr ≠ Cr. Edit the amounts before posting.</td></tr>}
@@ -1558,15 +1558,15 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
 
       {/* Narrative */}
       {tx.narrative && !editing && (
-        <div style={{ padding: "0.5rem 1rem", borderTop: `1px solid ${BORDER}`, fontSize: "0.76rem", color: MUTED, fontStyle: "italic" }}>
+        <div style={{ margin: "0 1.2rem 0.6rem", padding: "0.6rem 0.9rem", borderLeft: "3px solid #D9B56F", background: "#F8F3E9", borderRadius: "0 10px 10px 0", fontSize: "0.86rem", color: "#3D4A45", fontStyle: "italic", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
           {tx.narrative}
         </div>
       )}
 
       {/* Why — rule applied, AI reason, evidence from earlier entries, account choice */}
       {!editing && (tx.rule || tx.reason || tx.history_evidence) && (
-        <details style={{ padding: "0.5rem 1rem", borderTop: `1px solid ${BORDER}`, background: "rgba(91,75,196,0.03)", fontSize: "0.76rem" }}>
-          <summary style={{ cursor: "pointer", fontSize: "0.7rem", color: PURPLE, fontWeight: 800, letterSpacing: "0.06em" }}>Why this entry</summary>
+        <details style={{ padding: "0.55rem 1.2rem", borderTop: `1px solid ${BORDER}`, fontSize: "0.78rem" }}>
+          <summary style={{ cursor: "pointer", fontSize: "0.68rem", color: "#9A7A2E", fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase" }}>Why this entry</summary>
           <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 6 }}>
           {tx.rule && <div><span style={{ color: MUTED }}>Accounting rule: </span><span style={{ color: TEXT }}>{tx.rule}</span></div>}
           {tx.reason && <div><span style={{ color: MUTED }}>Reading: </span><span style={{ color: TEXT }}>{tx.reason}</span></div>}
@@ -1628,19 +1628,19 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
 
       {/* Action buttons */}
       {!isPosted && !isCancelled && !msg.needsHeads?.length && (
-        <div style={{ padding: "0.65rem 1rem", borderTop: `1px solid ${BORDER}`, display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <div style={{ padding: "0.85rem 1.2rem", borderTop: `1px solid ${BORDER}`, display: "flex", gap: "0.55rem", alignItems: "center", flexWrap: "wrap", background: "#F8F3E9", borderRadius: "0 0 20px 20px" }}>
           {editing ? (
             <>
-              <button onClick={onApplyEdit} style={{ background: GOLD, color: "#F5F6FA", border: "none", padding: "7px 18px", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>Apply Changes</button>
-              <button onClick={onCancelEdit} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, color: MUTED, padding: "7px 14px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>Cancel</button>
+              <button onClick={onApplyEdit} style={{ background: "#12352D", color: "#FFFFFF", border: "none", padding: "0 20px", height: 42, borderRadius: 999, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>Apply Changes</button>
+              <button onClick={onCancelEdit} style={{ background: "#FFFFFF", border: "1px solid #D9CBAA", color: MUTED, padding: "0 16px", height: 42, borderRadius: 999, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>Cancel</button>
             </>
           ) : (
             <>
-              <button onClick={onConfirm} disabled={!balanced || !!msg.fyLocked || msg.status === "confirmed"} aria-busy={msg.status === "confirmed"} style={{ background: balanced && !msg.fyLocked ? GREEN : "rgba(11,122,85,0.15)", color: balanced && !msg.fyLocked ? "#F5F6FA" : "rgba(11,122,85,0.4)", border: "none", padding: "7px 20px", borderRadius: 8, fontWeight: 800, cursor: msg.status === "confirmed" ? "wait" : balanced && !msg.fyLocked ? "pointer" : "not-allowed", opacity: msg.status === "confirmed" ? 0.7 : 1, fontFamily: "inherit", fontSize: "0.84rem" }}>
-                {msg.fyLocked ? "🔒 Period Locked" : msg.status === "confirmed" ? <><span className="fb-spin" aria-hidden="true" /> Posting…</> : "✓ Confirm & Post"}
+              <button onClick={onConfirm} disabled={!balanced || !!msg.fyLocked || msg.status === "confirmed"} aria-busy={msg.status === "confirmed"} className="fb-post" style={{ background: balanced && !msg.fyLocked ? "#12352D" : "rgba(18,53,45,0.15)", color: balanced && !msg.fyLocked ? "#FFFFFF" : "rgba(18,53,45,0.45)", border: "none", padding: "0 6px 0 20px", height: 44, display: "inline-flex", alignItems: "center", gap: 10, borderRadius: 999, fontWeight: 800, cursor: msg.status === "confirmed" ? "wait" : balanced && !msg.fyLocked ? "pointer" : "not-allowed", opacity: msg.status === "confirmed" ? 0.7 : 1, fontFamily: "inherit", fontSize: "0.84rem" }}>
+                {msg.fyLocked ? "🔒 Period Locked" : msg.status === "confirmed" ? <><span className="fb-spin" aria-hidden="true" /> Posting…</> : <>Confirm &amp; post <span aria-hidden="true" style={{ width: 32, height: 32, borderRadius: "50%", background: "#D9B56F", color: "#12352D", display: "grid", placeItems: "center", fontSize: 15 }}>✓</span></>}
               </button>
-              <button onClick={onStartEdit} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "7px 14px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>✏ Edit</button>
-              <button onClick={onCancel} style={{ background: "rgba(194,50,31,0.07)", border: `1px solid rgba(194,50,31,0.2)`, color: RED, padding: "7px 14px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>✕</button>
+              <button onClick={onStartEdit} style={{ background: "#FFFFFF", border: "1px solid #D9CBAA", color: TEXT, padding: "0 18px", height: 44, borderRadius: 999, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>✏ Edit</button>
+              <button onClick={onCancel} title="Cancel this draft" aria-label="Cancel this draft" style={{ background: "transparent", border: "1px solid rgba(194,50,31,0.3)", color: RED, width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>✕</button>
               {msg.status === "edited" && <span style={{ fontSize: "0.7rem", color: AMBER, marginLeft: 4 }}>● Edited</span>}
             </>
           )}
