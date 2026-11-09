@@ -296,12 +296,18 @@ export default function FreBookPage() {
 
   // ── New chat ───────────────────────────────────────────────────────────────
   function newChat() {
+    setResumed(false);
+    // Drafts carried into a new chat count like restored ones: the start screen shows, with the resume bar
+    messages.forEach(m => restoredIds.current.add(m.id));
     setCurrentSession(null);
     // Unposted drafts carry over to the new chat — they leave only when posted or cancelled (B17)
     setMessages(prev => [{ id: "welcome", role: "system", text: ex(`Hello! I'm FreBook, your chat bookkeeper for **${bizName}**. Tell me any transaction in plain language and I'll convert it into a proper journal entry.\n\n**Examples:**\n• "Paid office rent ₹25,000 from the bank"\n• "Sold goods to ABC Ltd for ₹1,18,000 including 18% GST on credit"\n• "Received ₹50,000 from customer Rahul against INV-101"\n• "Paid salary ₹75,000 through bank"\n\n**Or ask your books:**\n• "How much am I owed?" · "Show expenses above ₹10,000 this month" · "Why did profit fall?" · "GST collected last month"`), timestamp: Date.now() }, ...(pickDrafts(prev as unknown as StoredMsg[]) as unknown as ChatMessage[])]);
   }
 
   const restoredRef = useRef(false);
+  // Drafts brought back from the last visit don't hide the start screen; a bar offers to resume them
+  const restoredIds = useRef<Set<string>>(new Set());
+  const [resumed, setResumed] = useState(false);
   useEffect(() => {
     if (!bizName) return;
     newChat();
@@ -309,6 +315,7 @@ export default function FreBookPage() {
     if (!restoredRef.current && bizIdRef.current) {
       restoredRef.current = true;
       const back = loadDrafts(localStorage, bizIdRef.current) as unknown as ChatMessage[];
+      back.forEach(m => restoredIds.current.add(m.id));
       if (back.length) setMessages(prev => [...prev, ...back, { id: `s-restored-${Date.now()}`, role: "system", text: `↩ Restored ${back.filter(m => m.role === "ai").length} unposted draft(s) from your last visit.`, timestamp: Date.now() }]);
     }
   }, [bizName]);
@@ -750,8 +757,14 @@ export default function FreBookPage() {
         )}
 
         {/* Command Desk — clean start screen until the first message */}
-        {!messages.some(m => m.role !== "system") && !loading && rowQueue.length === 0 ? (
+        {!resumed && !messages.some(m => m.role !== "system" && !restoredIds.current.has(m.id)) && !loading && rowQueue.length === 0 ? (
           <div className="fb-desk" style={{ flex: 1, overflowY: "auto", background: "#F6F1E7" }}>
+            {openDrafts > 0 && (
+              <div role="status" style={{ background: "#FFF4DB", color: "#8A5A00", padding: "10px clamp(16px, 4vw, 48px)", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: "0.88rem", fontWeight: 600 }}>
+                <span>📝 {openDrafts} unposted draft{openDrafts === 1 ? "" : "s"} from your last visit — post or cancel {openDrafts === 1 ? "it" : "them"}.</span>
+                <button onClick={() => setResumed(true)} style={{ marginLeft: "auto", height: 32, padding: "0 16px", borderRadius: 999, border: "none", background: "#0B1F1A", color: "#FFFFFF", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Open draft{openDrafts === 1 ? "" : "s"} →</button>
+              </div>
+            )}
             {/* Night desk: centred greeting, the composer, books at a glance and what needs you */}
             <section className="fb-night" style={{ background: "#0B1F1A", color: "#F6F1E7", padding: "clamp(28px, 5vw, 60px) clamp(16px, 4vw, 48px) clamp(32px, 5vw, 64px)" }}>
               <div style={{ maxWidth: 1180, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 14, textAlign: "center" }}>
