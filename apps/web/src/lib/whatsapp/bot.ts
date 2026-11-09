@@ -136,7 +136,9 @@ ${token ? loginUrl(token, path, link.business_id) : `frework.online${path}`}`;
     sess.pending = null;
   }
   // A bill or document (PDF or photo) without an instruction: file it, then ask — post the entries, or keep it for the accountant
-  if (m.media && /pdf|image/i.test(m.media.mime + m.media.name) && /^\s*((book|post|enter)( this| it| these)?|bills?|invoices?|this)?\s*[.!]?\s*$/i.test(m.text)) {
+  // (a forwarded file often carries its own file name as the caption — that is not an instruction either)
+  const stem = (s: string) => s.trim().toLowerCase().replace(/\.(pdf|jpe?g|png|webp|heic)$/i, "");
+  if (m.media && /pdf|image/i.test(m.media.mime + m.media.name) && (/^\s*((book|post|enter)( this| it| these)?|bills?|invoices?|this)?\s*[.!]?\s*$/i.test(m.text) || stem(m.text) === stem(m.media.name))) {
     const media = m.media;
     const kept = await fileToShelf(sb, { businessId: link.business_id, actorId: link.user_id, rack: "bills", title: media.name, fileName: media.name, mime: media.mime, bytes: new Uint8Array(media.bytes), source: "upload", fy: fyOfDate(new Date().toLocaleDateString("en-CA")) }).catch(() => null);
     if (kept) {
