@@ -198,6 +198,16 @@ async function parseTemplate(file: File): Promise<string[] | null> {
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
+/** A bank statement says so in its name or on its first pages; a file of bills doesn't. */
+async function looksLikeStatement(file: File): Promise<boolean> {
+  if (/statement|stmt|passbook|e-?statement|account\s*history/i.test(file.name)) return true;
+  try {
+    const { pdfPagesText } = await import("@/lib/pdfUnlock");
+    const txt = (await pdfPagesText(await file.arrayBuffer())).slice(0, 2).join("\n");
+    return /(opening|closing|available)\s+balance|account\s+statement|statement\s+of\s+account|withdrawals?\b[\s\S]{0,200}deposits?\b/i.test(txt);
+  } catch { return true; }   // password-protected and the like: the statement reader handles those
+}
+
 export default function FreBookPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
@@ -447,7 +457,34 @@ export default function FreBookPage() {
     // Uploads over ~4.5 MB never reach the server. A big PDF is almost always a statement: the statement reader
     // splits it into small pieces in the browser. Anything else gets a clear message, not a generic error.
     if (file && file.size > 4 * 1024 * 1024) {
-      if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
+      if ((/\.pdf$/i.test(file.name) || file.type === "application/pdf") && !(await looksLikeStatement(file))) {
+        // A big file of bills (usually scanned): read each page as a picture, then review all vouchers together
+        const note = (id: string, t: string) => setMessages(prev => [...prev.filter(x => x.id !== id), { id, role: "system", text: t, timestamp: Date.now() }]);
+        const nid = `s-${Date.now()}`;
+        try {
+          const { pdfPageImages } = await import("@/lib/pdfUnlock");
+          note(nid, `📄 ${file.name} is ${(file.size / 1048576).toFixed(1)} MB — reading it page by page…`);
+          const pages = (await pdfPageImages(await file.arrayBuffer())).slice(0, 40);
+          const found: string[][] = new Array(pages.length).fill([]);
+          let done = 0;
+          const readPage = async (i: number) => {
+            const fd = new FormData();
+            fd.append("message", text || "Book this transaction"); fd.append("business_id", bid); fd.append("user_id", uid);
+            fd.append("split_only", "1"); fd.append("bulk", "1");
+            fd.append("file", new File([pages[i]], `${file.name.replace(/\.pdf$/i, "")} p${i + 1}.jpg`, { type: "image/jpeg" }));
+            const r = await fetch("/api/finance/chat-book", { method: "POST", body: fd }).then(x => x.json()).catch(() => null) as { multi?: { sentences?: string[] } } | null;
+            found[i] = r?.multi?.sentences ?? [];
+            note(nid, `📄 ${file.name}: read ${++done} of ${pages.length} pages…`);
+          };
+          for (let i = 0; i < pages.length; i += 3) await Promise.all([i, i + 1, i + 2].filter(j => j < pages.length).map(readPage));
+          const sentences = found.flat().map((v, i) => `Voucher ${i + 1} from ${file.name}: ${v}`);
+          if (!sentences.length) throw new Error("no vouchers");
+          note(nid, `📄 ${file.name}: found ${sentences.length} voucher${sentences.length > 1 ? "s" : ""} on ${pages.length} pages — opening bulk review so each one is posted separately.`);
+          setBulk({ fileName: file.name, fileKey: `${file.name}-${file.size}-${file.lastModified}`, sentences });
+        } catch {
+          note(nid, `⚠ Couldn't read the bills in ${file.name}. Try a smaller PDF, or a photo of each bill.`);
+        }
+      } else if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
         setStatementFile(file);
         setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `🏦 ${file.name} is ${(file.size / 1048576).toFixed(1)} MB — too big to send in one piece, so it's opened as a bank statement and read page by page. If it isn't a statement, send it as a photo or a smaller PDF.`, timestamp: Date.now() }]);
       } else {

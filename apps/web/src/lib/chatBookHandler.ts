@@ -24,6 +24,7 @@ export async function handleChatBook(req: NextRequest, deps: { readAttachment?: 
   try {
     let message = "", business_id = "", user_id = "", session_id: string | null = null;
     let bulk = false; // template bulk review: read the row only, don't save a chat session
+    let splitOnly = false; // one page of a big bill PDF: just list its vouchers (even one) for the page's bulk review
     let attachment: Attachment | null = null;
     let uploaded: File | null = null;
     let clientHistory: unknown = null;
@@ -36,6 +37,7 @@ export async function handleChatBook(req: NextRequest, deps: { readAttachment?: 
       user_id = (form.get("user_id") as string) ?? "";
       session_id = (form.get("session_id") as string) || null;
       try { clientHistory = JSON.parse((form.get("history") as string) || "null"); } catch { /* ignore */ }
+      splitOnly = form.get("split_only") === "1";
       bulk = form.get("bulk") === "1";   // Smart Inbox: many bills in one go — no chat session, not counted as chat messages
       const file = form.get("file") as File | null;
       if (file?.size) {
@@ -155,6 +157,7 @@ Never invent facts; leave out what is not shown.`,
         const sraw = split.content[0].type === "text" ? split.content[0].text : "";
         const sj = JSON.parse(sraw.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as { kind?: string; vouchers?: unknown[] };
         const list = (sj.vouchers ?? []).filter((v): v is string => typeof v === "string" && v.trim().length > 8).map(v => v.trim().slice(0, 600));
+        if (splitOnly) return NextResponse.json({ multi: { file: attachment.name, sentences: sj.kind === "vouchers" ? list : [] } });
         if (sj.kind === "vouchers" && list.length > 1) {
           const note = message && !/^book this transaction/i.test(message) ? ` (user note: ${message.slice(0, 200)})` : "";
           return NextResponse.json({ multi: { file: attachment.name, sentences: list.slice(0, 200).map((v, i) => `Voucher ${i + 1} from ${attachment!.name}: ${v}${note}`) } });
@@ -171,7 +174,17 @@ Never invent facts; leave out what is not shown.`,
     }, { timeout: big ? 110000 : 45000, maxRetries: 1 }).catch(e => { console.error("chat-book intent", e); return null; });
     if (!response) return NextResponse.json({ error: "FreBook’s AI is slow right now — please send that again." }, { status: 503 });
 
-    const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "";
+    let raw = response.content[0].type === "text" ? response.content[0].text.trim() : "";
+    // Sometimes the model answers in words (e.g. a bill line with no payment mode). Ask once more for the JSON,
+    // putting whatever is unknown into "missing" so the draft asks the user instead of failing.
+    if (!/\{[\s\S]*\}/.test(raw) && response.stop_reason !== "max_tokens") {
+      const again = await anthropic.messages.create({
+        model: "claude-sonnet-4-6", max_tokens: 1500, system: intentSystemFor(biz),
+        messages: [...claudeMessages, { role: "assistant", content: raw || "…" }, { role: "user", content: "Reply with the JSON object only, in the required format. Book it as a transaction; list anything unknown (such as how it was paid) in \"missing\" instead of asking in words." }],
+      }, { timeout: 45000, maxRetries: 1 }).catch(() => null);
+      const t = again?.content[0]?.type === "text" ? again.content[0].text.trim() : "";
+      if (/\{[\s\S]*\}/.test(t)) raw = t;
+    }
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch || (response.stop_reason === "max_tokens" && !/\}\s*$/.test(raw))) return NextResponse.json({ error: response.stop_reason === "max_tokens"
       ? "That list is too long to book in one message. Send it in parts of about 40 lines, or use the Journal template (Excel) for long lists."
