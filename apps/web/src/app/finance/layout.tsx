@@ -123,12 +123,16 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const brand = useBrand();
   const [collapsed, setCollapsed] = useState(false);
   // Top icon bar wider than the screen: the mouse wheel scrolls it sideways, and ‹ › show when there's more
+  // The bar element itself (set when it mounts), so the listeners attach once per bar — never on every render
+  const [topEl, setTopEl] = useState<HTMLElement | null>(null);
   const topRef = useRef<HTMLElement | null>(null);
+  topRef.current = topEl;
   const [topMore, setTopMore] = useState<{ l: boolean; r: boolean }>({ l: false, r: false });
   useEffect(() => {
-    const el = topRef.current;
+    const el = topEl;
     if (!el) return;
-    const update = () => setTopMore({ l: el.scrollLeft > 4, r: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+    // Only when an arrow actually appears or goes — a new object every time re-rendered the layout without end
+    const update = () => { const l = el.scrollLeft > 4, r = el.scrollLeft + el.clientWidth < el.scrollWidth - 4; setTopMore(p => (p.l === l && p.r === r ? p : { l, r })); };
     const onWheel = (e: WheelEvent) => {
       if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;   // trackpads already scroll sideways
       e.preventDefault();
@@ -139,7 +143,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
     el.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("resize", update);
     return () => { el.removeEventListener("scroll", update); el.removeEventListener("wheel", onWheel); window.removeEventListener("resize", update); };
-  });
+  }, [topEl]);
   const nudgeTop = (dir: 1 | -1) => topRef.current?.scrollBy({ left: dir * Math.max(240, (topRef.current?.clientWidth ?? 600) * 0.6), behavior: "smooth" });
   // Collapsed menu opens while the pointer is over it (desktop), and closes when it leaves
   const [peek, setPeek] = useState(false);
@@ -504,7 +508,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
           <div style={{ position: "relative" }}>
           {topMore.l && <button type="button" className="fw-topnudge" aria-label="Scroll the menu left" onClick={() => nudgeTop(-1)} style={{ left: 22 }}>‹</button>}
           {topMore.r && <button type="button" className="fw-topnudge" aria-label="Scroll the menu right" onClick={() => nudgeTop(1)} style={{ right: 22 }}>›</button>}
-          <nav ref={topRef} className="fw-topicons" aria-label="Main sections">
+          <nav ref={setTopEl} className="fw-topicons" aria-label="Main sections">
             {(viewOnly ? [{ href: "/finance/client", label: "Home" }, ...TOP_ICONS.filter(t => VIEW_ONLY_ICONS.includes(t.href))] : TOP_ICONS).filter(t => india || !t.href.startsWith("/finance/gst")).map(t => {
               const on = t.href.includes("?") ? pathname + search === t.href : t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
               return (
