@@ -26,6 +26,9 @@ import { ActiveBusinessProvider, useActiveBusinessStore, setActiveBusiness, read
 const FINANCE_CSS = `
   .fw-topicons { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 2px; overflow-x: auto; margin: 10px 16px 0; padding: 6px; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid #E6DFD0; border-radius: 18px; box-shadow: 0 10px 28px -20px rgba(15,43,37,0.55); scrollbar-width: none; }
   .fw-topicons::-webkit-scrollbar { display: none; }
+  .fw-topnudge { position: absolute; top: 50%; transform: translateY(-50%); z-index: 31; width: 30px; height: 30px; border-radius: 50%; border: 1px solid #E6DFD0; background: #FFFFFF; color: #0F2B25; font-size: 20px; line-height: 1; font-weight: 700; cursor: pointer; box-shadow: 0 6px 16px -8px rgba(15,43,37,0.55); display: grid; place-items: center; padding: 0 0 2px; }
+  .fw-topnudge:hover { background: #F4EEE2; }
+  @media (hover: none) { .fw-topnudge { display: none; } }
   .fw-topicons a .win { position: absolute; top: 2px; right: 4px; width: 18px; height: 18px; border-radius: 6px; display: none; align-items: center; justify-content: center; font-size: 12px; background: #12352D; color: #FFFFFF; cursor: pointer; }
   .fw-topicons a:hover .win { display: flex; }
   @media (hover: none) { .fw-topicons a .win { display: none !important; } }
@@ -119,6 +122,25 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const [bizCount, setBizCount] = useState(0);
   const brand = useBrand();
   const [collapsed, setCollapsed] = useState(false);
+  // Top icon bar wider than the screen: the mouse wheel scrolls it sideways, and ‹ › show when there's more
+  const topRef = useRef<HTMLElement | null>(null);
+  const [topMore, setTopMore] = useState<{ l: boolean; r: boolean }>({ l: false, r: false });
+  useEffect(() => {
+    const el = topRef.current;
+    if (!el) return;
+    const update = () => setTopMore({ l: el.scrollLeft > 4, r: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 });
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;   // trackpads already scroll sideways
+      e.preventDefault();
+      el.scrollBy({ left: e.deltaY, behavior: "auto" });
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    el.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("resize", update);
+    return () => { el.removeEventListener("scroll", update); el.removeEventListener("wheel", onWheel); window.removeEventListener("resize", update); };
+  });
+  const nudgeTop = (dir: 1 | -1) => topRef.current?.scrollBy({ left: dir * Math.max(240, (topRef.current?.clientWidth ?? 600) * 0.6), behavior: "smooth" });
   // Collapsed menu opens while the pointer is over it (desktop), and closes when it leaves
   const [peek, setPeek] = useState(false);
   const peekTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -479,7 +501,10 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       <main key={active.businessId ?? "none"} className="fw-main" style={{ flex: 1, marginLeft: sidebarW, minWidth: 0, transition: "margin-left 0.2s" }}>
         {/* Main icons along the top (FreBook has its own top bar) */}
         {!pathname.startsWith("/finance/chat-book") && (
-          <nav className="fw-topicons" aria-label="Main sections">
+          <div style={{ position: "relative" }}>
+          {topMore.l && <button type="button" className="fw-topnudge" aria-label="Scroll the menu left" onClick={() => nudgeTop(-1)} style={{ left: 22 }}>‹</button>}
+          {topMore.r && <button type="button" className="fw-topnudge" aria-label="Scroll the menu right" onClick={() => nudgeTop(1)} style={{ right: 22 }}>›</button>}
+          <nav ref={topRef} className="fw-topicons" aria-label="Main sections">
             {(viewOnly ? [{ href: "/finance/client", label: "Home" }, ...TOP_ICONS.filter(t => VIEW_ONLY_ICONS.includes(t.href))] : TOP_ICONS).filter(t => india || !t.href.startsWith("/finance/gst")).map(t => {
               const on = t.href.includes("?") ? pathname + search === t.href : t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
               return (
@@ -497,6 +522,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
               <span>Sign out</span>
             </a>
           </nav>
+          </div>
         )}
         {bizSwitched && (
           <div role="alert" style={{ margin: "10px 16px 0", padding: "10px 14px", borderRadius: 12, background: "#FFF4DB", border: "1px solid #F2D29B", color: "#5A3A00", fontSize: 13.5, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
