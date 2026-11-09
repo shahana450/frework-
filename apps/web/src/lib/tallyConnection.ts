@@ -191,6 +191,21 @@ export function setTallyBusiness(id: string, name?: string) {
   state = { ...state, port: read("fw_tally_port", "7001"), company, companies: [], status: "idle", message: "", educational: false, checkedAt: 0, ...(company ? restore() : {}) };
   listeners.forEach(l => l(state));
   if (company && !tallyManuallyOff()) connectTally({ quiet: true });
+  // Not linked on this browser: use the company saved for this business on the server (chosen on another device or
+  // browser, or before this browser's data was cleared), and remember it here
+  if (!company) void linkFromServer(id);
+}
+
+async function linkFromServer(id: string) {
+  try {
+    const { supabase } = await import("./supabase");
+    const { data } = await supabase.from("fw_fin_businesses").select("tally_company").eq("id", id).maybeSingle();
+    const saved = String((data as { tally_company?: string | null } | null)?.tally_company ?? "").trim();
+    if (!saved || biz !== id || state.company) return;   // nothing saved, or the business changed meanwhile
+    write(key(COMPANY), saved); claim(saved);
+    set({ company: saved }, false);
+    if (!tallyManuallyOff()) connectTally({ quiet: true });
+  } catch { /* the Tally page still lets the user choose */ }
 }
 export const tallyBusiness = () => biz;
 /** Short Tally status with the company name, e.g. "Tally · ABC Traders". */
