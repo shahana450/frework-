@@ -22,7 +22,8 @@ import { invoicePdf } from "../invoicePdf";
 import { waPost } from "./transport";
 
 type Link = { business_id: string; user_id: string; name: string };
-type Session = { phone: string; business_id: string | null; pending: { parsed?: ParsedTransaction; key?: string; original?: string; picking?: boolean; heads?: Record<string, string>; asking?: string[]; queue?: ParsedTransaction[] } | null; history: { role: "user" | "assistant"; content: string }[]; picking?: boolean };
+type DocAsk = { shelfId: string; name: string; mime: string; pages: number };   // a bill sent without instructions, waiting for "post or save?"
+type Session = { phone: string; business_id: string | null; pending: { parsed?: ParsedTransaction; key?: string; original?: string; picking?: boolean; heads?: Record<string, string>; asking?: string[]; queue?: ParsedTransaction[]; docAsk?: DocAsk } | null; history: { role: "user" | "assistant"; content: string }[]; picking?: boolean };
 export type Incoming = { from: string; id: string; text: string; media?: { bytes: Buffer; mime: string; name: string } };
 
 // Offered only when no draft is waiting, so YES can never post something by accident
@@ -116,6 +117,37 @@ Works once and expires soon. Don't forward it — it signs in as you.`;
 
 Tap to turn it into entries — the statement opens already loaded, FreBook reads every line and suggests the ledgers:
 ${token ? loginUrl(token, path, link.business_id) : `frework.online${path}`}`;
+  }
+
+  // The answer to "post or save?" for a bill sent earlier (checked before YES, because "POST" also means YES)
+  const ask = sess.pending?.docAsk;
+  if (ask && !m.media) {
+    const t = m.text.trim().toLowerCase();
+    if (/^(save|upload|save for accountant|accountant|shelf|later)\b/.test(t)) {
+      await sb.from("fw_fin_shelf_items").update({ notes: "To post — sent on WhatsApp, saved for the accountant" }).eq("id", ask.shelfId).eq("business_id", link.business_id).then(() => null, () => null);
+      await save({ pending: null });
+      return `📁 Saved *${ask.name}* on the Shelf under Bills, marked *to post* — your accountant can book it from FreBook (Shelf → Bills, or Smart Inbox). Nothing was posted.`;
+    }
+    if (/^(post|post entries|book|book it|entries)\b/.test(t)) {
+      if (!can(role, "post")) return "Your role can view but not post. I've kept the file on the Shelf for the owner or accountant.";
+      return draftDocumentPages(sb, link, ask, sess, save);
+    }
+    // Anything else: forget the question and treat it as a normal message
+    sess.pending = null;
+  }
+  // A bill or document (PDF or photo) without an instruction: file it, then ask — post the entries, or keep it for the accountant
+  if (m.media && /pdf|image/i.test(m.media.mime + m.media.name) && /^\s*((book|post|enter)( this| it| these)?|bills?|invoices?|this)?\s*[.!]?\s*$/i.test(m.text)) {
+    const media = m.media;
+    const kept = await fileToShelf(sb, { businessId: link.business_id, actorId: link.user_id, rack: "bills", title: media.name, fileName: media.name, mime: media.mime, bytes: new Uint8Array(media.bytes), source: "upload", fy: fyOfDate(new Date().toLocaleDateString("en-CA")) }).catch(() => null);
+    if (kept) {
+      let pages = 1;
+      if (/pdf/i.test(media.mime + media.name)) { try { const { PDFDocument } = await import("pdf-lib"); pages = (await PDFDocument.load(media.bytes, { ignoreEncryption: true })).getPageCount(); } catch { /* one */ } }
+      await save({ pending: { docAsk: { shelfId: kept.id, name: media.name, mime: media.mime, pages } } });
+      await waPost({ messaging_product: "whatsapp", to: m.from, type: "interactive", interactive: { type: "button",
+        body: { text: `📄 Got *${media.name}*${pages > 1 ? ` (${pages} pages)` : ""} and saved it on the Shelf.\n\nPost the entries now${pages > 1 ? ` — one entry per page` : ""}, or keep it for your accountant to post?` },
+        action: { buttons: [{ type: "reply", reply: { id: "doc_post", title: "Post entries" } }, { type: "reply", reply: { id: "doc_save", title: "Save for accountant" } }] } } }).catch(() => null);
+      return `Reply *POST* to draft the entries${pages > 1 ? ` (${pages} bills, one per page)` : ""} for your YES, or *SAVE* to keep it on the Shelf for your accountant.`;
+    }
   }
   // GSTR-1 JSON for the portal: "GSTR1 JSON August 2026", "gstr-1 file last month". WhatsApp can't carry .json files,
   // so it's filed on the Shelf and sent as a download link that works for 7 days.
@@ -294,6 +326,68 @@ const GROUP_WORDS: Record<string, string> = {
 };
 function headsText(names: string[], heads: Record<string, string>) {
   return `📂 New ledger${names.length > 1 ? "s" : ""} — I'll file ${names.length > 1 ? "them" : "it"} like this:\n${names.map((n, i) => `${i + 1}. *${n}* → ${headByKey(heads[n] ?? "indirect_expense")?.label ?? "Indirect Expenses"}`).join("\n")}\n\nReply *YES* to post. To change one, reply e.g. *${names.length > 1 ? 2 : 1} direct* (expense · direct · purchase · asset · income · liability).`;
+}
+
+/**
+ * "Post entries" for a bill file kept on the Shelf: every page of a PDF is read as its own bill (a scanned book of cash
+ * memos is one bill per page), three at a time, and all the drafts wait for one YES. Pages that can't be drafted are
+ * named so they can be booked from the app.
+ */
+async function draftDocumentPages(sb: SupabaseClient, link: Link, ask: DocAsk, sess: Session, save: (x: { pending?: unknown; history?: Session["history"] }) => unknown): Promise<string> {
+  const { data: it } = await sb.from("fw_fin_shelf_items").select("file_path,file_name,mime").eq("id", ask.shelfId).eq("business_id", link.business_id).maybeSingle();
+  const file = it?.file_path ? await sb.storage.from("shelf").download(it.file_path) : null;
+  if (!file?.data) { await save({ pending: null }); return "❌ Couldn't open the file from the Shelf. Send it again, or book it from FreBook → Smart Inbox."; }
+  const bytes = Buffer.from(await file.data.arrayBuffer());
+  const isPdf = /pdf/i.test(`${ask.mime} ${ask.name}`);
+  // One piece per page (at most 20 here — longer files go to Smart Inbox), or the photo itself
+  let pieces: Buffer[] = [bytes];
+  if (isPdf && ask.pages > 1) {
+    const { PDFDocument } = await import("pdf-lib");
+    const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    pieces = [];
+    for (let i = 0; i < Math.min(src.getPageCount(), 20); i++) {
+      const one = await PDFDocument.create();
+      const [pg] = await one.copyPages(src, [i]); one.addPage(pg);
+      pieces.push(Buffer.from(await one.save()));
+    }
+  }
+  const today = new Date().toLocaleDateString("en-CA");
+  const [{ data: accounts }, biz] = await Promise.all([
+    sb.from("fw_fin_chart_of_accounts").select("name,type,sub_type").eq("business_id", link.business_id).eq("is_group", false).limit(200),
+    loadBusinessContext(sb, link.business_id),
+  ]);
+  const header = [`Today: ${today}.`, `Business: ${biz.name}, Country: ${biz.country}, State: ${biz.state ?? "not set"}, Tax ID: ${biz.gstin ?? "not set"}, Base currency: ${biz.baseCurrency}.`, `Available Accounts: ${accountListForAI(accounts ?? [])}.`].join(" ");
+  const readOne = async (buf: Buffer, n: number): Promise<ParsedTransaction | null> => {
+    try {
+      const att = readAttachmentBuffer(buf, isPdf ? `${ask.name.replace(/\.pdf$/i, "")}-page${n}.pdf` : ask.name, isPdf ? "application/pdf" : ask.mime);
+      const res = await getAI().messages.create({ model: "claude-sonnet-4-6", max_tokens: 4000, system: intentSystemFor(biz),
+        messages: [{ role: "user", content: [...att.blocks, { type: "text", text: `${header}\n\nUser message: Book this one bill (page ${n} of ${pieces.length}). If no payment mode is written, it is a cash memo: paid in cash.` }] }] as never }, { timeout: 60000 });
+      const raw = res.content[0]?.type === "text" ? res.content[0].text : "";
+      const ai = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "") as AiIntent;
+      if (ai.kind === "query") return null;
+      const p = await interpret(sb, ai, accounts ?? [], link.business_id, today, biz);
+      return p.status === "complete" && p.lines.length >= 2 ? { ...p, more: undefined } : null;
+    } catch { return null; }
+  };
+  const results: (ParsedTransaction | null)[] = new Array(pieces.length).fill(null);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(3, pieces.length) }, async () => { while (next < pieces.length) { const i = next++; results[i] = await readOne(pieces[i], i + 1); } }));
+  const drafts = results.flatMap((r, i) => (r ? [{ r, page: i + 1 }] : []));
+  const missed = results.flatMap((r, i) => (r ? [] : [i + 1]));
+  if (!drafts.length) { await save({ pending: null }); return `❓ I couldn't read a bill from *${ask.name}*. It's on the Shelf — book it from FreBook → Smart Inbox, or send a clearer photo.`; }
+  const [first, ...queue] = drafts.map(d => ({ ...d.r, narrative: `${d.r.narrative || "Bill"} (page ${d.page})`.slice(0, 200) }));
+  await save({ pending: { parsed: first, queue, key: `wa:doc:${ask.shelfId}`, original: `${ask.name} — ${drafts.length} bills` }, history: [...sess.history, { role: "user", content: `[${ask.name}: post entries]` }, { role: "assistant", content: `${drafts.length} drafts from ${ask.name}` }] });
+  const total = drafts.reduce((s, d) => s + d.r.lines.reduce((t, l) => t + (l.debit || 0), 0), 0);
+  const lines = drafts.map((d, i) => {
+    const dr = d.r.lines.filter(l => l.debit).map(l => l.account).join(", "), cr = d.r.lines.filter(l => l.credit).map(l => l.account).join(", ");
+    return `*${i + 1}.* ${d.r.transaction_date} · ${d.r.party_name || d.r.narrative.slice(0, 40) || "Bill"} · ${money(d.r.lines.reduce((t, l) => t + (l.debit || 0), 0), biz.baseCurrency)}\n    Dr ${dr} · Cr ${cr}`;
+  });
+  return [
+    `📝 *${drafts.length} entr${drafts.length === 1 ? "y" : "ies"}* from ${ask.name} · total ${money(total, biz.baseCurrency)}`, "", ...lines,
+    missed.length ? `\n⚠️ Page${missed.length > 1 ? "s" : ""} ${missed.join(", ")} couldn't be read — book ${missed.length > 1 ? "them" : "it"} from FreBook → Smart Inbox (the file is on the Shelf).` : "",
+    ask.pages > 20 ? `\nℹ️ Only the first 20 pages were read here — use Smart Inbox for the rest.` : "",
+    `\nReply *YES* to post all ${drafts.length} · *NO* to cancel`,
+  ].filter(Boolean).join("\n");
 }
 
 async function postPending(sb: SupabaseClient, link: Link, actorId: string, p: { parsed: ParsedTransaction; key: string; original: string; heads?: Record<string, string> }, dupOk: boolean, save: (x: { pending?: unknown }) => unknown): Promise<string> {
