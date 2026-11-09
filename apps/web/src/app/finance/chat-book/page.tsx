@@ -9,6 +9,8 @@ import { LEDGER_HEADS } from "@/lib/ledgerHeads";
 import GroupChips, { guessGroup } from "@/components/GroupChips";
 import LedgerPicker, { type Ledger } from "@/components/LedgerPicker";
 import StatementModal, { type StatementDraft } from "./StatementModal";
+import type { Dashboard } from "@/lib/dashboard";
+const SERIF_F = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 import ReviewChecks from "./ReviewChecks";
 import BulkTemplateModal, { type BulkDraft } from "./BulkTemplateModal";
 import type { Verdict } from "@/lib/frebook/validateDraft";
@@ -213,6 +215,15 @@ export default function FreBookPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [bizId, setBizId] = useState<string | null>(null);
   const [bizName, setBizName] = useState("");
+  // Start screen figures (Books at a glance, Needs you today)
+  const [deskDash, setDeskDash] = useState<Dashboard | null>(null);
+  const [allNeeds, setAllNeeds] = useState(false);
+  useEffect(() => {
+    if (!bizId) return;
+    let off = false;
+    fetch(`/api/finance/dashboard?business_id=${bizId}`).then(r => r.ok ? r.json() : null).then(d => { if (!off && d && !d.error) setDeskDash(d as Dashboard); }).catch(() => null);
+    return () => { off = true; };
+  }, [bizId]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [currentSession, setCurrentSession] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -741,43 +752,31 @@ export default function FreBookPage() {
         {/* Command Desk — clean start screen until the first message */}
         {!messages.some(m => m.role !== "system") && !loading && rowQueue.length === 0 ? (
           <div className="fb-desk" style={{ flex: 1, overflowY: "auto", background: "#F6F1E7" }}>
-            {/* Forest hero: headline left, composer right */}
-            <section className="fb-herowrap" style={{ background: "#0F2B25", color: "#F6F1E7", padding: "clamp(28px, 5vw, 56px) clamp(16px, 4vw, 48px)" }}>
-              <div className="fb-hero" style={{ maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.05fr)", gap: "clamp(24px, 4vw, 56px)", alignItems: "center" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 12, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "#D9B56F" }}>
-                    <span aria-hidden="true" style={{ width: 28, height: 1, background: "#D9B56F" }} />AI bookkeeping · {bizName}
-                  </div>
-                  <h1 className="fb-h1" style={{ margin: 0, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: "clamp(2.2rem, 5vw, 3.9rem)", lineHeight: 1.04, fontWeight: 700, color: "#FFFFFF", textWrap: "balance" }}>
-                    What happened in the <span style={{ fontStyle: "italic", fontWeight: 400, color: "#D9B56F" }}>business</span> today?
-                  </h1>
-                  <p className="fb-more" style={{ margin: 0, fontSize: "1.02rem", lineHeight: 1.6, color: "#C9D3CE", maxWidth: 470 }}>Say it the way you&apos;d tell your accountant. FreBook prepares the entry — debit, credit, GST — and waits for your nod.</p>
-                  <ul className="fb-more" style={{ listStyle: "none", margin: "6px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-                    {[["M12 3l7 3v5c0 4.4-3 8-7 10-4-2-7-5.6-7-10V6z M9 12l2 2 4-4", "Nothing posts until you confirm"], ["M12 4v16M6 20h12M5 8h14M5 8l-2.5 6a2.5 2.5 0 005 0zM19 8l-2.5 6a2.5 2.5 0 005 0", "Every draft balanced, double-entry"], ["M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2", "Full audit trail on every change"]].map(([d, t]) => (
-                      <li key={t} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.92rem", color: "#E7ECE9" }}>
-                        <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: "50%", border: "1px solid rgba(217,181,111,0.35)", background: "rgba(217,181,111,0.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "#D9B56F", flexShrink: 0 }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
-                        </span>{t}
-                      </li>
-                    ))}
-                  </ul>
+            {/* Night desk: centred greeting, the composer, books at a glance and what needs you */}
+            <section className="fb-night" style={{ background: "#0B1F1A", color: "#F6F1E7", padding: "clamp(28px, 5vw, 60px) clamp(16px, 4vw, 48px) clamp(32px, 5vw, 64px)" }}>
+              <div style={{ maxWidth: 1180, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 14, textAlign: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: "#D9B56F" }}>
+                  <span aria-hidden="true" style={{ width: 40, height: 1, background: "#D9B56F" }} />{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).replace(",", " ·")}<span aria-hidden="true" style={{ width: 40, height: 1, background: "#D9B56F" }} />
                 </div>
+                <h1 className="fb-h1" style={{ margin: 0, fontFamily: SERIF_F, fontWeight: 400, lineHeight: 1.05, color: "#F6F1E7", fontSize: "clamp(2.4rem, 5.6vw, 4.4rem)", textWrap: "balance" }}>
+                  {(() => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; })()}.<br />
+                  <span style={{ fontStyle: "italic", color: "#D9B56F" }}>What happened today?</span>
+                </h1>
+                <div style={{ fontSize: "0.95rem", color: "#B9C7C1" }}>{bizName}{tally.status === "connected" ? " · synced from Tally" : ""}</div>
 
                 {/* Composer card */}
-                <div style={{ background: "#F6F1E7", borderRadius: 24, border: "1px solid #D9B56F", boxShadow: "0 30px 60px -30px rgba(0,0,0,0.6)", color: "#10241F", overflow: "hidden" }}>
-                  <div style={{ background: "#FFFFFF", borderRadius: "22px 22px 0 0", padding: "14px 14px 0" }}>
+                <div style={{ width: "min(940px, 100%)", marginTop: 22, background: "#F6F1E7", borderRadius: 26, padding: 8, boxShadow: "0 30px 70px -30px rgba(0,0,0,0.8)", color: "#10241F", textAlign: "left" }}>
+                  <div style={{ border: "1px solid #E4D9C2", borderRadius: 20, padding: "16px 18px 18px", background: "#F8F3E9" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div role="tablist" style={{ display: "flex", gap: 4, background: "#EFE8D9", borderRadius: 999, padding: 4 }}>
+                      <div role="tablist" style={{ display: "flex", gap: 2, background: "#EADFC8", borderRadius: 999, padding: 4 }}>
                         {(["Record", "Ask"] as const).map(m => {
                           const on = (m === "Ask") === /^(how|what|who|which|show|list|why|when)\b|\?$/i.test(input.trim());
                           return (
-                            <button key={m} role="tab" aria-selected={on} onClick={() => { if (m === "Ask" && !input) setInput("What's my cash today?"); inputRef.current?.focus(); }} style={{ height: 34, padding: "0 16px", borderRadius: 999, border: "none", cursor: "pointer", fontWeight: 800, fontSize: "0.82rem", display: "flex", alignItems: "center", gap: 6, background: on ? "#0F2B25" : "transparent", color: on ? "#FFFFFF" : "#4D5B56", fontFamily: "inherit" }}>
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={m === "Record" ? "M4 20h4L19 9l-4-4L4 16zM14 6l4 4" : "M12 3a9 9 0 100 18 9 9 0 000-18zM9.5 9a2.5 2.5 0 015 .5c0 1.5-2.5 2-2.5 3.5M12 17h.01"} /></svg>{m}
-                            </button>
+                            <button key={m} role="tab" aria-selected={on} onClick={() => { if (m === "Ask" && !input) setInput("What's my cash today?"); if (m === "Record" && on === false && /\?$/.test(input.trim())) setInput(""); inputRef.current?.focus(); }} style={{ height: 34, padding: "0 18px", borderRadius: 999, border: "none", cursor: "pointer", fontWeight: 800, fontSize: "0.84rem", background: on ? "#0B1F1A" : "transparent", color: on ? "#FFFFFF" : "#4D5B56", fontFamily: "inherit" }}>{m}</button>
                           );
                         })}
                       </div>
-                      <span style={{ marginLeft: "auto", fontSize: "0.74rem", fontWeight: 700, color: "#8A6420" }}>✦ FreBook AI</span>
+                      <span className="fb-more" style={{ marginLeft: "auto", fontSize: "0.78rem", color: "#6B7570" }}>Nothing posts until you confirm</span>
                     </div>
                     <textarea
                       ref={inputRef}
@@ -786,35 +785,38 @@ export default function FreBookPage() {
                       onKeyDown={handleKey}
                       autoFocus
                       aria-label="Describe a transaction or ask a question"
-                      placeholder={ex("e.g. Paid office rent ₹25,000 from the bank — or ask: how much do customers owe me?")}
-                      rows={4}
-                      style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: "none", borderBottom: "1px solid #EAE3D3", padding: "18px 6px 14px", color: "#10241F", fontSize: "1.05rem", fontFamily: "inherit", outline: "none", resize: "none", lineHeight: 1.55 }}
+                      placeholder={ex("Paid office rent ₹25,000 from the bank — or ask: how much do customers owe me?")}
+                      rows={3}
+                      style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: "none", padding: "16px 2px 10px", color: "#10241F", fontSize: "1.3rem", fontFamily: SERIF_F, outline: "none", resize: "none", lineHeight: 1.5 }}
                     />
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "10px 0 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <input ref={fileRef} type="file" accept="image/*,.pdf,.doc,.docx,.xlsx,.xls,.csv,.txt" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
                       {[
                         { t: "Attach bill, invoice, statement, Excel or photo", d: "M21 11.5l-8.6 8.6a5 5 0 01-7.1-7.1l8.6-8.6a3.5 3.5 0 015 5l-8.6 8.6a2 2 0 01-2.8-2.8l7.9-7.9", run: () => fileRef.current?.click() },
                         { t: "Snap a bill with your camera", d: "M4 8h3l2-3h6l2 3h3v11H4zM12 10a3.5 3.5 0 100 7 3.5 3.5 0 000-7", run: () => cameraRef.current?.click() },
                         { t: listening ? "Stop voice input" : "Voice input", d: listening ? "M7 7h10v10H7z" : "M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3zM5 11a7 7 0 0014 0M12 18v3", run: toggleVoice },
-                        { t: "Book a bank statement", d: "M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18", run: () => fileRef.current?.click() },
                       ].map(b => (
-                        <button key={b.t} onClick={b.run} title={b.t} aria-label={b.t} style={{ width: 40, height: 40, borderRadius: 10, border: "none", background: listening && b.t.startsWith("Stop") ? "#FDECEA" : "transparent", color: listening && b.t.startsWith("Stop") ? "#C2321F" : "#4D5B56", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={b.d} /></svg>
+                        <button key={b.t} onClick={b.run} title={b.t} aria-label={b.t} className="fb-round" style={{ width: 44, height: 44, borderRadius: "50%", border: "1px solid #E0D6C1", background: listening && b.t.startsWith("Stop") ? "#FDECEA" : "#FFFFFF", color: listening && b.t.startsWith("Stop") ? "#C2321F" : "#2E3B36", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={b.d} /></svg>
                         </button>
                       ))}
-                      <span style={{ flex: 1, textAlign: "right", fontSize: "0.74rem", color: "#6B7570", paddingRight: 10 }}>Enter ↵ to send</span>
-                      <button onClick={() => sendMessage(input)} disabled={!input.trim()} style={{ display: "flex", alignItems: "center", gap: 10, background: "#0F2B25", border: "none", color: "#FFFFFF", padding: "0 8px 0 22px", height: 48, borderRadius: 999, cursor: input.trim() ? "pointer" : "default", fontWeight: 800, fontSize: "0.95rem", fontFamily: "inherit", opacity: input.trim() ? 1 : 0.6 }}>
-                        Send <span aria-hidden="true" style={{ width: 32, height: 32, borderRadius: "50%", background: "#D9B56F", color: "#0F2B25", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6" /></svg></span>
+                      <button onClick={() => sendMessage(input)} disabled={!input.trim()} style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12, background: "#0B1F1A", border: "none", color: "#FFFFFF", padding: "0 8px 0 24px", height: 50, borderRadius: 999, cursor: input.trim() ? "pointer" : "default", fontWeight: 800, fontSize: "0.98rem", fontFamily: "inherit", opacity: input.trim() ? 1 : 0.7 }}>
+                        {/^(how|what|who|which|show|list|why|when)\b|\?$/i.test(input.trim()) ? "Ask" : "Draft entry"} <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: "50%", background: "#D9B56F", color: "#0B1F1A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>→</span>
                       </button>
                     </div>
+                    {voiceBar && <div style={{ paddingTop: 10 }}>{voiceBar}</div>}
                   </div>
-                  {voiceBar && <div style={{ padding: "10px 14px 0" }}>{voiceBar}</div>}
-                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, padding: "12px 14px 14px" }}>
-                    <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.12em", color: "#8A6420", marginRight: 4 }}>TRY</span>
-                    {["Paid salary ₹42,000 to Anu", "Sold goods ₹85,000 + GST to Kumar Traders", "What's my cash today?"].map(ex).map(t => (
-                      <button key={t} onClick={() => { setInput(t); inputRef.current?.focus(); }} style={{ height: 34, padding: "0 13px", borderRadius: 999, border: "1px solid #E0D6C1", background: "#FFFFFF", color: "#2E3B36", fontSize: "0.78rem", cursor: "pointer", fontFamily: "inherit" }}>{t}</button>
-                    ))}
-                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 10, marginTop: 6 }}>
+                  {["Received ₹1.2L from a customer", "Paid salaries for last month", "Bought stationery ₹1,800 in cash"].map(ex).map(t => (
+                    <button key={t} className="fb-nchip" onClick={() => { setInput(t); inputRef.current?.focus(); }} style={{ height: 36, padding: "0 16px", borderRadius: 999, border: "1px solid #2C4A41", background: "#10302A", color: "#E7ECE9", fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{t}</button>
+                  ))}
+                </div>
+
+                <details className="fb-many" style={{ width: "min(940px, 100%)", textAlign: "left", marginTop: 4 }}>
+                  <summary style={{ cursor: "pointer", color: "#D9B56F", fontSize: "0.82rem", fontWeight: 700, listStyle: "none", textAlign: "center" }}>＋ Many entries at once — Excel templates, bank statement, Smart Inbox{pendingDrafts.length ? ` · ${pendingDrafts.length} unfinished import${pendingDrafts.length > 1 ? "s" : ""}` : ""}</summary>
+                  <div style={{ marginTop: 12, background: "#F6F1E7", borderRadius: 18, color: "#10241F" }}>
                   {/* Quick start: many entries at once (Excel templates) and the other ways in */}
                   <div className="fb-quick" style={{ borderTop: "1px solid #E7DDC8", padding: "14px 14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
                     <input ref={stmtRef} type="file" accept=".pdf,.xlsx,.xls,.csv" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) setStatementFile(f); e.target.value = ""; }} />
@@ -859,7 +861,71 @@ export default function FreBookPage() {
                       )}
                     </div>
                   </div>
+                  </div>
+                </details>
+              </div>
+
+              {/* Books at a glance */}
+              <div style={{ maxWidth: 1180, margin: "clamp(40px, 6vw, 72px) auto 0", display: "flex", flexDirection: "column", gap: 22 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+                  <span aria-hidden="true" style={{ flex: 1, height: 1, background: "#24403A" }} />
+                  <h2 style={{ margin: 0, fontFamily: SERIF_F, fontWeight: 400, fontSize: "clamp(1.4rem, 2.6vw, 1.9rem)", color: "#F6F1E7", display: "flex", alignItems: "center", gap: 14 }}><span aria-hidden="true" style={{ color: "#D9B56F", fontSize: 12 }}>◆</span>Books at a glance<span aria-hidden="true" style={{ color: "#D9B56F", fontSize: 12 }}>◆</span></h2>
+                  <span aria-hidden="true" style={{ flex: 1, height: 1, background: "#24403A" }} />
                 </div>
+                {(() => {
+                  const n = (v: number | undefined) => v == null ? "—" : (() => { const s = Math.round(Math.abs(v)).toLocaleString("en-IN"); return v < 0 ? `(${s})` : s; })();
+                  const d = deskDash;
+                  const neg = "#F3A58F";
+                  const darkCard: React.CSSProperties = { background: "#10241F", border: "1px solid #24403A", borderRadius: 24, padding: "26px 26px 24px", display: "flex", flexDirection: "column", gap: 14, minWidth: 0, textDecoration: "none", color: "#F6F1E7" };
+                  const label: React.CSSProperties = { fontSize: 11.5, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase" };
+                  const big: React.CSSProperties = { fontFamily: SERIF_F, fontSize: "clamp(2rem, 3.6vw, 3rem)", lineHeight: 1.05, fontVariantNumeric: "tabular-nums" };
+                  return (
+                    <>
+                      <div className="fb-glance" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 18 }}>
+                        <Link href="/finance/reports?tab=profit_loss" style={{ ...darkCard, background: "#D9B96F", border: "none", color: "#10241F" }}>
+                          <span style={label}>{(d?.profit ?? 0) < 0 ? "Net loss" : "Net profit"} · {d?.period.label ?? "This year"}</span>
+                          <span style={{ ...big, fontSize: "clamp(2.6rem, 4.6vw, 3.8rem)" }}>{d ? `${(d.profit ?? 0) < 0 ? "(" : ""}₹${Math.round(Math.abs(d.profit ?? 0)).toLocaleString("en-IN")}${(d.profit ?? 0) < 0 ? ")" : ""}` : "—"}</span>
+                          <span style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(16,36,31,0.18)", paddingTop: 12, fontSize: "0.88rem" }}><span>Income {n(d?.revenue)}</span><span>Expenses {n(d?.expenses)}</span></span>
+                        </Link>
+                        <Link href="/finance/banking" style={darkCard}>
+                          <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><span style={{ ...label, color: "#B9C7C1" }}>Cash &amp; bank</span>{(d?.cash ?? 0) < 0 && <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 999, background: neg, color: "#3A120A" }}>Overdrawn</span>}</span>
+                          <span style={{ ...big, color: (d?.cash ?? 0) < 0 ? neg : "#F6F1E7", margin: "auto 0" }}>{n(d?.cash)}</span>
+                          <span style={{ fontSize: "0.88rem", color: "#D9B56F", fontWeight: 600 }}>Check bank balances →</span>
+                        </Link>
+                        <div style={{ ...darkCard, gap: 0 }}>
+                          <Link href="/finance/receivables" style={{ display: "flex", flexDirection: "column", gap: 8, color: "inherit", textDecoration: "none", paddingBottom: 16, borderBottom: "1px solid #24403A" }}>
+                            <span style={{ ...label, color: "#B9C7C1" }}>Receivables</span>
+                            <span style={{ ...big, fontSize: "clamp(1.5rem, 2.6vw, 2.1rem)", color: (d?.receivables ?? 0) < 0 ? neg : "#F6F1E7" }}>{n(d?.receivables)}</span>
+                          </Link>
+                          <Link href="/finance/payables" style={{ display: "flex", flexDirection: "column", gap: 8, color: "inherit", textDecoration: "none", paddingTop: 16 }}>
+                            <span style={{ ...label, color: "#B9C7C1" }}>Payables</span>
+                            <span style={{ ...big, fontSize: "clamp(1.5rem, 2.6vw, 2.1rem)", color: (d?.payables ?? 0) < 0 ? neg : "#F6F1E7" }}>{n(d?.payables)}</span>
+                          </Link>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", fontSize: "0.8rem", color: "#8FA39B", marginTop: -8 }}>Amounts in ₹ · (brackets) = negative</div>
+
+                      {(d?.alerts?.length ?? 0) > 0 && (
+                        <section aria-labelledby="fb-needs" style={{ background: "#F6F1E7", color: "#10241F", borderRadius: 26, padding: "clamp(20px, 3vw, 32px)", marginTop: 18 }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingBottom: 14, borderBottom: "1px solid #E4D9C2" }}>
+                            <h2 id="fb-needs" style={{ margin: 0, fontFamily: SERIF_F, fontWeight: 400, fontSize: "clamp(1.4rem, 2.4vw, 1.8rem)" }}>Needs you today</h2>
+                            {d!.alerts.length > 2 && <button onClick={() => setAllNeeds(v => !v)} style={{ height: 36, padding: "0 16px", borderRadius: 999, border: "1px solid #10241F", background: "transparent", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", fontFamily: "inherit", color: "#10241F" }}>{allNeeds ? "Show fewer" : `View all ${d!.alerts.length}`}</button>}
+                          </div>
+                          {(allNeeds ? d!.alerts : d!.alerts.slice(0, 2)).map((a, i) => (
+                            <div key={i} style={{ display: "grid", gridTemplateColumns: "56px minmax(0,1fr) auto", gap: 12, alignItems: "center", padding: "18px 0", borderBottom: i < (allNeeds ? d!.alerts.length : Math.min(2, d!.alerts.length)) - 1 ? "1px solid #E4D9C2" : "none" }}>
+                              <span aria-hidden="true" style={{ fontFamily: SERIF_F, fontSize: "1.9rem", color: "#9A6B22" }}>{["I", "II", "III", "IV", "V", "VI", "VII", "VIII"][i] ?? i + 1}</span>
+                              <span style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+                                <span style={{ fontWeight: 700, fontSize: "0.98rem", lineHeight: 1.45 }}>{a.text.split(/(?<=[.—])\s+/)[0].replace(/[.—]$/, "")}</span>
+                                <span style={{ fontSize: "0.86rem", color: "#5E6B66" }}>{a.text.split(/(?<=[.—])\s+/).slice(1).join(" ")}</span>
+                              </span>
+                              <Link href={a.href} style={{ height: 42, padding: "0 20px", borderRadius: 999, background: "#0B1F1A", color: "#FFFFFF", fontWeight: 800, fontSize: "0.88rem", textDecoration: "none", display: "inline-flex", alignItems: "center", whiteSpace: "nowrap" }}>{a.action}</Link>
+                            </div>
+                          ))}
+                        </section>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </section>
 
@@ -1260,7 +1326,8 @@ export default function FreBookPage() {
           .fb-desk h2 { font-size: 1.3rem !important; }
         }
         @media (prefers-reduced-motion: reduce) { .fb-tile, .fb-tile:hover { transition: none; transform: none; } }
-        @media (max-width: 640px) { .fb-desk-groups { grid-template-columns: 1fr !important; } .fb-desk { justify-content: flex-start !important; } }
+        @media (max-width: 900px) { .fb-glance { grid-template-columns: 1fr 1fr !important; } .fb-glance > :first-child { grid-column: 1 / -1; } } .fb-nchip:hover { border-color: #D9B56F !important; } .fb-many summary::-webkit-details-marker { display: none; }
+        @media (max-width: 640px) { .fb-glance { grid-template-columns: 1fr !important; } .fb-desk-groups { grid-template-columns: 1fr !important; } .fb-desk { justify-content: flex-start !important; } }
         ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:#FFFFFF;border-radius:2px}
       `}</style>
     </div>
