@@ -622,12 +622,11 @@ export default function TallyPage() {
           const re2 = /<NAME[^>]*>([^<]{2,})<\/NAME>/gi;
           while ((m = re2.exec(listText)) !== null) { const n = m[1].trim(); if (n && !names.includes(n)) names.push(n); }
           setAllCompanies(names);
-          // Auto-select the detected one; if not detected, keep whatever is stored
-          const pick = (found && found.length >= 2) ? found : (names.length === 1 ? names[0] : (tallyCompanyNow() ?? ""));
-          setCompanyName(pick);
-          if (pick) localStorage.setItem("fw_tally_company", pick);
+          // Show only the company actually LINKED to this business. The company that happens to be open in Tally used
+          // to be shown here as if chosen, without being linked — so every other page kept saying "choose company".
+          setCompanyName(tallyCompanyNow() ?? "");
         } catch {
-          if (found) { setCompanyName(found); localStorage.setItem("fw_tally_company", found); }
+          setCompanyName(tallyCompanyNow() ?? "");
         }
 
         // Parse Tally's current period dates (format: YYYYMMDD or DD-Mon-YYYY)
@@ -978,12 +977,17 @@ export default function TallyPage() {
               {connStatus === "connected" && (
                 <button onClick={disconnect} className="tb-btn tb-btn-red" style={{ padding: "0 16px" }}>Disconnect</button>
               )}
-              {connStatus === "connected" && allCompanies.length > 1 && (
+              {connStatus === "connected" && (allCompanies.length > 1 || (allCompanies.length === 1 && !companyName)) && (
                 <label style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 220 }}>
                   <span className="tb-label">Company</span>
-                  <select value={companyName} onChange={e => { setCompanyName(e.target.value); chooseTallyCompany(e.target.value); }} className="tb-input">
+                  {/* No company linked yet: a real "choose" first option. Without it the browser shows the first company as
+                      if it were chosen, and picking that one changes nothing, so it was never saved. */}
+                  <select value={companyName || ""} onChange={e => { if (!e.target.value) return; setCompanyName(e.target.value); chooseTallyCompany(e.target.value); }} className="tb-input"
+                    style={!companyName ? { borderColor: "#C9A24A", boxShadow: "0 0 0 2px rgba(201,162,74,0.25)" } : undefined}>
+                    {!companyName && <option value="">Choose this business&apos;s Tally company…</option>}
                     {allCompanies.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
+                  {!companyName && <span style={{ fontSize: 12, color: "#9A6B22", marginTop: 4 }}>Not linked yet — pick the company that belongs to this business. Entries go only there.</span>}
                 </label>
               )}
               <span role="status" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, fontSize: "0.86rem", fontWeight: 700, color: statusColors[connStatus], padding: "8px 12px", borderRadius: 999, background: connStatus === "connected" ? "#E3F6EE" : connStatus === "error" ? "#FDECEA" : "#EFE8D9" }}>
