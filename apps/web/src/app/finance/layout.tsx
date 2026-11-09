@@ -138,11 +138,24 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       e.preventDefault();
       el.scrollBy({ left: e.deltaY, behavior: "auto" });
     };
+    // Hover-scroll: the pointer near either end glides the bar that way (faster nearer the edge); away from the ends it stops
+    const EDGE = 90;
+    let speed = 0, raf = 0;
+    const tick = () => { if (!speed) { raf = 0; return; } el.scrollLeft += speed; raf = requestAnimationFrame(tick); };
+    const onMove = (e: MouseEvent) => {
+      if (el.scrollWidth <= el.clientWidth) return;
+      const r = el.getBoundingClientRect(), x = e.clientX - r.left;
+      speed = x < EDGE ? -Math.ceil(((EDGE - x) / EDGE) * 14) : x > r.width - EDGE ? Math.ceil(((x - (r.width - EDGE)) / EDGE) * 14) : 0;
+      if (speed && !raf) raf = requestAnimationFrame(tick);
+    };
+    const onLeave = () => { speed = 0; };
     update();
     el.addEventListener("scroll", update, { passive: true });
     el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("mousemove", onMove, { passive: true });
+    el.addEventListener("mouseleave", onLeave, { passive: true });
     window.addEventListener("resize", update);
-    return () => { el.removeEventListener("scroll", update); el.removeEventListener("wheel", onWheel); window.removeEventListener("resize", update); };
+    return () => { speed = 0; cancelAnimationFrame(raf); el.removeEventListener("scroll", update); el.removeEventListener("wheel", onWheel); el.removeEventListener("mousemove", onMove); el.removeEventListener("mouseleave", onLeave); window.removeEventListener("resize", update); };
   }, [topEl]);
   const nudgeTop = (dir: 1 | -1) => topRef.current?.scrollBy({ left: dir * Math.max(240, (topRef.current?.clientWidth ?? 600) * 0.6), behavior: "smooth" });
   // Collapsed menu opens while the pointer is over it (desktop), and closes when it leaves
