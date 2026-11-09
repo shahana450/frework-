@@ -12,7 +12,9 @@ export function mergeSameLedgerLines<T extends L>(lines: T[]): T[] {
     const dr = Number(l.debit) || 0, cr = Number(l.credit) || 0;
     const side = dr > 0 && !(cr > 0) ? "dr" : cr > 0 && !(dr > 0) ? "cr" : null;
     // Stock item lines and foreign-currency lines keep their own detail
-    const keep = !!l.item || l.fc_debit != null || l.fc_credit != null;
+    // (items on an expense head — food, stationery — are just the bill's detail and are added up)
+    const stock = /stock|inventor|raw material|finished goods|^purchases?|goods/i.test(String(l.account ?? ""));
+    const keep = (!!l.item && stock) || l.fc_debit != null || l.fc_credit != null;
     const key = side && !keep ? `${side}|${String(l.account ?? "").trim().toLowerCase()}` : null;
     const i = key ? at.get(key) : undefined;
     if (key && i !== undefined) {

@@ -7,6 +7,7 @@ import type { ParsedTransaction } from "@/lib/intentEngine";
 import { LEDGER_HEADS } from "@/lib/ledgerHeads";
 import GroupChips, { guessGroup } from "@/components/GroupChips";
 import { useAutoDraft } from "@/lib/importDraft";
+import { mergeSameLedgerLines } from "@/lib/frebook/mergeLines";
 
 type RowState = "reading" | "ready" | "question" | "error" | "posting" | "posted" | "failed";
 type BRow = {
@@ -14,8 +15,8 @@ type BRow = {
   entryNo?: string; duplicate?: string | null; issues?: string[]; locked?: boolean;
 };
 
-const C = { bg: "#F5F6FA", line: "#E1E4EE", strong: "#C9CEDF", ink: "#141A3A", muted: "#5A6080", primary: "#232A63", soft: "#E6E8F4", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB", purple: "#5B4BC4" };
-const MONO = "'IBM Plex Mono',ui-monospace,monospace";
+const C = { bg: "#F4EFE4", line: "#E6DCC6", strong: "#D9CBAA", ink: "#10241F", muted: "#5E6B66", primary: "#12352D", soft: "#E4ECE8", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA", warn: "#8A5A00", warnSoft: "#FFF4DB", purple: "#5B4BC4" };
+const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const fmt = (n: number) => (n ?? 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const MAX_ROWS = 200;
 
@@ -27,7 +28,7 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
   initialRows?: BRow[];   // resuming: rows as they were left; only rows still unread are read again
 }) {
   const [rows, setRows] = useState<BRow[]>(() => initialRows
-    ? initialRows.map(r => (r.state === "posting" ? { ...r, state: "ready" as const } : r))   // the server's per-row key stops a double post
+    ? initialRows.map(r => ({ ...(r.state === "posting" ? { ...r, state: "ready" as const } : r), ...(r.tx && r.state !== "posted" ? { tx: { ...r.tx, lines: mergeSameLedgerLines(r.tx.lines) } } : {}) }))   // the server's per-row key stops a double post
     : sentences.slice(0, MAX_ROWS).map((text, i) => ({ i, text, state: "reading" })));
   useAutoDraft<BulkDraft>("bulk-template", bizId, true, () => {
     const pending = rows.filter(r => r.state !== "posted").length;
@@ -59,7 +60,8 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
           const d = await res.json().catch(() => ({}));
           if (!res.ok) { patch(i, { state: "error", error: d.error ?? "Couldn't read this row." }); continue; }
           if (d.answer) { patch(i, { state: "error", error: "This row reads like a question, not a transaction." }); continue; }
-          const tx = d.parsed as ParsedTransaction;
+          const raw = d.parsed as ParsedTransaction;
+          const tx = { ...raw, lines: mergeSameLedgerLines(raw.lines) };
           if (tx.status !== "complete") { patch(i, { state: "question", tx, question: tx.needs_clarification?.[0] ?? "More detail needed." }); continue; }
           const dup = d.duplicate ? `${d.duplicate.entry_no} · ${d.duplicate.date}` : null;
           let issues: string[] = [];
@@ -143,80 +145,96 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
       error: ["Error", C.negSoft, C.neg], posting: ["Posting…", C.soft, C.primary], posted: [`✓ ${r.entryNo ?? "Posted"}`, C.posSoft, C.pos], failed: ["Failed", C.negSoft, C.neg],
     };
     const [t, bg, fg] = s[r.state];
-    return <span style={{ fontSize: 11.5, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: bg, color: fg, whiteSpace: "nowrap" }}>{t}</span>;
+    return <span style={{ fontSize: 11.5, fontWeight: 800, padding: "4px 11px", borderRadius: 999, background: bg, color: fg, whiteSpace: "nowrap" }}>{t}</span>;
   };
 
+  const total = (tx?: ParsedTransaction) => tx ? tx.lines.reduce((s, l) => s + (l.debit || 0), 0) : 0;
+  // "Voucher 16 from KIZZA BILL.PDF: Purchase bill …" → "Purchase bill …"
+  const title = (r: BRow) => (r.tx?.narrative || r.text).replace(/^Template row \d+:\s*/, "").replace(/^Voucher \d+ from [^:]+:\s*/i, "");
+  const readyRows = rows.filter(r => r.state === "ready" && balanced(r.tx) && !r.locked);
+  const allTicked = readyRows.length > 0 && readyRows.every(r => selected.has(r.i));
+  const done = rows.length - counts.reading;
+
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(20,26,58,0.35)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 12 }}>
-      <div role="dialog" aria-label="Bulk post template entries" style={{ background: C.bg, borderRadius: 16, width: "100%", maxWidth: 1180, height: "92vh", display: "flex", flexDirection: "column", color: C.ink, boxShadow: "0 30px 90px rgba(20,26,58,0.3)", overflow: "hidden" }}>
-        <header style={{ padding: "14px 18px", borderBottom: `1px solid ${C.line}`, background: "#FFFFFF", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>📊 Bulk post · {fileName}</div>
-            <div style={{ fontSize: 12.5, color: C.muted }}>
-              {rows.length} rows{sentences.length > MAX_ROWS ? ` (first ${MAX_ROWS} of ${sentences.length})` : ""} · {counts.ready} ready · {counts.question} need detail · {counts.error} errors · {counts.posted} posted{counts.reading ? ` · reading ${counts.reading}…` : ""}
-            </div>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(11,31,26,0.55)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 12, fontFamily: "inherit" }}>
+      <style>{`.br-row{transition:background .12s,box-shadow .12s}.br-row:hover{box-shadow:0 10px 26px -20px rgba(15,43,37,.6)}.br-led:focus{outline:none;border-color:#C9A24A !important;box-shadow:0 0 0 3px rgba(201,162,74,.18)}.br-btn:focus-visible,.br-row input[type=checkbox]:focus-visible{outline:2px solid #C9A24A;outline-offset:2px}
+        @media (max-width:760px){.br-grid{grid-template-columns:28px minmax(0,1fr) !important}.br-amt{grid-column:2;text-align:left !important}.br-date{display:none}}`}</style>
+      <div role="dialog" aria-label="Review and post entries" style={{ background: C.bg, borderRadius: 22, width: "100%", maxWidth: 1180, height: "92vh", display: "flex", flexDirection: "column", color: C.ink, boxShadow: "0 40px 100px rgba(0,0,0,0.45)", overflow: "hidden" }}>
+        <header style={{ padding: "18px 22px", background: "linear-gradient(120deg,#12352D,#0B1F1A)", color: "#F6F1E7", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: "50%", display: "grid", placeItems: "center", background: "rgba(217,181,111,0.16)", border: "1px solid rgba(217,181,111,0.45)", color: "#D9B56F", fontFamily: SERIF, fontWeight: 700, fontSize: 18 }}>Fb</span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D9B56F" }}>Review &amp; post</div>
+            <div style={{ fontFamily: SERIF, fontSize: 21, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "60vw" }}>{fileName}</div>
           </div>
           <div style={{ flex: 1 }} />
-          <button onClick={onClose} disabled={posting} aria-label="Close" style={{ border: "none", background: "transparent", fontSize: 20, color: C.muted, cursor: "pointer", width: 36, height: 36 }}>×</button>
+          {[[counts.ready, "Ready", "#A8F0CF"], [counts.question, "Need detail", "#F3D99C"], [counts.error, "Errors", "#F6B8AA"], [counts.posted, "Posted", "#D9B56F"]].map(([n, l, c]) => (
+            <div key={l as string} style={{ textAlign: "center", minWidth: 64 }}>
+              <div style={{ fontFamily: SERIF, fontSize: 22, color: c as string, lineHeight: 1 }}>{n as number}</div>
+              <div style={{ fontSize: 11, color: "#B9C7C1", marginTop: 3 }}>{l as string}</div>
+            </div>
+          ))}
+          <button className="br-btn" onClick={onClose} disabled={posting} aria-label="Close" style={{ width: 40, height: 40, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.25)", background: "transparent", color: "#FFFFFF", fontSize: 18, cursor: "pointer" }}>×</button>
+          {counts.reading > 0 && (
+            <div style={{ flexBasis: "100%", display: "flex", alignItems: "center", gap: 10, fontSize: 12.5, color: "#B9C7C1" }}>
+              <span>Reading {done} of {rows.length}…</span>
+              <span aria-hidden="true" style={{ flex: 1, height: 4, borderRadius: 999, background: "rgba(255,255,255,0.12)", overflow: "hidden" }}><span style={{ display: "block", height: "100%", width: `${(done / Math.max(1, rows.length)) * 100}%`, background: "#D9B56F" }} /></span>
+            </div>
+          )}
         </header>
 
-        <div style={{ flex: 1, overflow: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 920 }}>
-            <thead>
-              <tr style={{ position: "sticky", top: 0, background: "#FFFFFF", zIndex: 1, color: C.muted, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                <th style={{ padding: "9px 10px", width: 30 }}>
-                  <input type="checkbox" aria-label="Select all ready rows" checked={counts.ready > 0 && rows.filter(r => r.state === "ready").every(r => selected.has(r.i))}
-                    onChange={e => setSelected(e.target.checked ? new Set(rows.filter(r => r.state === "ready").map(r => r.i)) : new Set())} />
-                </th>
-                <th style={{ padding: "9px 6px", textAlign: "left", width: 34 }}>#</th>
-                <th style={{ padding: "9px 6px", textAlign: "left", width: 92 }}>Date</th>
-                <th style={{ padding: "9px 6px", textAlign: "left" }}>Entry</th>
-                <th style={{ padding: "9px 6px", textAlign: "right", width: 110 }}>Debit</th>
-                <th style={{ padding: "9px 6px", textAlign: "right", width: 110 }}>Credit</th>
-                <th style={{ padding: "9px 10px", textAlign: "left", width: 120 }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(r => {
-                const canTick = r.state === "ready" && balanced(r.tx) && !r.locked;
-                return (
-                  <tr key={r.i} style={{ borderTop: `1px solid ${C.line}`, background: r.state === "posted" ? "rgba(11,122,85,0.04)" : selected.has(r.i) ? "rgba(35,42,99,0.04)" : "#FFFFFF", verticalAlign: "top" }}>
-                    <td style={{ padding: "10px" }}><input type="checkbox" aria-label={`Select row ${r.i + 1}`} disabled={!canTick} checked={selected.has(r.i)} onChange={() => setSelected(s => { const n = new Set(s); if (n.has(r.i)) n.delete(r.i); else n.add(r.i); return n; })} /></td>
-                    <td style={{ padding: "10px 6px", color: C.muted }}>{r.i + 1}</td>
-                    <td style={{ padding: "10px 6px", fontFamily: MONO, fontSize: 12 }}>{r.tx?.transaction_date ?? ""}</td>
-                    <td style={{ padding: "8px 6px" }}>
-                      <div style={{ fontWeight: 600 }}>{r.tx?.narrative || r.text.replace(/^Template row \d+:\s*/, "")}</div>
-                      {r.tx && r.state !== "question" && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 5 }}>
-                          {r.tx.lines.map((l, li) => (
-                            <div key={li} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5 }}>
-                              <span style={{ width: 22, color: l.debit ? C.neg : C.pos, fontFamily: MONO }}>{l.debit ? "Dr" : "Cr"}</span>
-                              <input list="bulk-ledgers" value={l.account} disabled={r.state !== "ready"} onChange={e => setAccount(r.i, li, e.target.value)} aria-label={`Ledger for row ${r.i + 1} line ${li + 1}`}
-                                style={{ flex: 1, minWidth: 0, maxWidth: 300, border: `1px solid ${C.line}`, borderRadius: 7, padding: "3px 7px", fontSize: 12.5, background: r.state === "ready" ? "#FFFFFF" : "transparent", color: C.ink }} />
-                              {l.is_new_account && <span style={{ fontSize: 10.5, color: C.purple }}>new</span>}
-                            </div>
-                          ))}
+        <div style={{ padding: "10px 22px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${C.line}`, background: "#FBF7EE", fontSize: 13 }}>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700, cursor: "pointer" }}>
+            <input type="checkbox" checked={allTicked} disabled={!readyRows.length} onChange={e => setSelected(e.target.checked ? new Set(readyRows.map(r => r.i)) : new Set())} style={{ width: 17, height: 17, accentColor: "#12352D" }} />
+            Select all ready ({readyRows.length})
+          </label>
+          <span style={{ color: C.muted }}>Rows with a warning aren&apos;t ticked automatically — check them first.</span>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 18px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {rows.map(r => {
+            const canTick = r.state === "ready" && balanced(r.tx) && !r.locked;
+            const on = selected.has(r.i);
+            const flags = [
+              r.question && { t: `🤔 ${r.question}`, c: C.warn, bg: C.warnSoft },
+              r.error && { t: r.error, c: C.neg, bg: C.negSoft },
+              r.duplicate && r.state === "ready" && { t: `⚠ Possible duplicate of ${r.duplicate}`, c: C.warn, bg: C.warnSoft },
+              !!r.issues?.length && r.state === "ready" && { t: `⚠ ${r.issues.join(" · ")}`, c: C.neg, bg: C.negSoft },
+              r.locked && { t: "🔒 This date is in a locked year", c: C.neg, bg: C.negSoft },
+              r.tx && r.state === "ready" && !balanced(r.tx) && { t: "Debits and credits don't match", c: C.neg, bg: C.negSoft },
+            ].filter(Boolean) as { t: string; c: string; bg: string }[];
+            return (
+              <div key={r.i} className="br-row br-grid" style={{ display: "grid", gridTemplateColumns: "28px 40px 96px minmax(0,1fr) 130px 110px", gap: 12, alignItems: "start", padding: "14px 16px", borderRadius: 16, background: r.state === "posted" ? "#EEF7F1" : on ? "#FFFFFF" : "#FFFDF8", border: `1px solid ${on ? "#C9A24A" : C.line}` }}>
+                <input type="checkbox" aria-label={`Select entry ${r.i + 1}`} disabled={!canTick} checked={on} onChange={() => setSelected(s => { const n = new Set(s); if (n.has(r.i)) n.delete(r.i); else n.add(r.i); return n; })} style={{ width: 17, height: 17, marginTop: 4, accentColor: "#12352D" }} />
+                <span className="br-date" style={{ fontFamily: SERIF, fontSize: 18, color: "#9A7A2E", lineHeight: 1.2 }}>{r.i + 1}</span>
+                <span className="br-date" style={{ fontSize: 12.5, color: C.muted, paddingTop: 4, fontVariantNumeric: "tabular-nums" }}>{r.tx?.transaction_date ? new Date(r.tx.transaction_date + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : ""}</span>
+                <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ fontFamily: SERIF, fontSize: 15.5, lineHeight: 1.4 }}>{title(r)}</div>
+                  {r.tx && r.state !== "question" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                      {r.tx.lines.map((l, li) => (
+                        <div key={li} style={{ display: "grid", gridTemplateColumns: "34px minmax(0,320px) auto", gap: 8, alignItems: "center", paddingLeft: l.debit ? 0 : 18 }}>
+                          <span style={{ display: "inline-grid", placeItems: "center", height: 20, borderRadius: 6, fontSize: 10.5, fontWeight: 900, letterSpacing: "0.04em", background: l.debit ? "#12352D" : "#F3E8D2", color: l.debit ? "#D9B56F" : "#8A6420" }}>{l.debit ? "DR" : "CR"}</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                            <input className="br-led" list="bulk-ledgers" value={l.account} disabled={r.state !== "ready"} onChange={e => setAccount(r.i, li, e.target.value)} aria-label={`Ledger for entry ${r.i + 1} line ${li + 1}`}
+                              style={{ flex: 1, minWidth: 0, height: 32, border: `1px solid ${C.line}`, borderRadius: 9, padding: "0 10px", fontSize: 13, background: r.state === "ready" ? "#FFFFFF" : "transparent", color: C.ink, fontFamily: "inherit" }} />
+                            {l.is_new_account && <span style={{ fontSize: 10.5, fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: "#EEE8FB", color: C.purple }}>new</span>}
+                          </span>
+                          <span style={{ fontSize: 13, fontVariantNumeric: "tabular-nums", color: C.muted }}>{fmt(l.debit || l.credit)}</span>
                         </div>
-                      )}
-                      {r.question && <div style={{ marginTop: 5, fontSize: 12.5, color: C.warn }}>🤔 {r.question}</div>}
-                      {r.error && <div style={{ marginTop: 5, fontSize: 12.5, color: C.neg }}>{r.error}</div>}
-                      {r.duplicate && r.state === "ready" && <div style={{ marginTop: 5, fontSize: 12.5, color: C.warn }}>⚠ Possible duplicate of {r.duplicate}</div>}
-                      {!!r.issues?.length && r.state === "ready" && <div style={{ marginTop: 5, fontSize: 12.5, color: C.neg }}>⚠ {r.issues.join(" · ")}</div>}
-                      {r.locked && <div style={{ marginTop: 5, fontSize: 12.5, color: C.neg }}>🔒 This date is in a locked year.</div>}
-                      {r.tx && r.state === "ready" && !balanced(r.tx) && <div style={{ marginTop: 5, fontSize: 12.5, color: C.neg }}>Debits and credits don&apos;t match.</div>}
-                    </td>
-                    <td style={{ padding: "10px 6px", textAlign: "right", fontFamily: MONO, color: C.neg }}>{r.tx ? fmt(r.tx.lines.reduce((s, l) => s + (l.debit || 0), 0)) : ""}</td>
-                    <td style={{ padding: "10px 6px", textAlign: "right", fontFamily: MONO, color: C.pos }}>{r.tx ? fmt(r.tx.lines.reduce((s, l) => s + (l.credit || 0), 0)) : ""}</td>
-                    <td style={{ padding: "10px" }}>{statusChip(r)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      ))}
+                    </div>
+                  )}
+                  {flags.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{flags.map(f => <span key={f.t} style={{ fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 999, background: f.bg, color: f.c }}>{f.t}</span>)}</div>}
+                </div>
+                <span className="br-amt" style={{ textAlign: "right", fontFamily: SERIF, fontSize: 19, fontVariantNumeric: "tabular-nums", color: C.ink }}>{r.tx ? `${cur()}${fmt(total(r.tx))}` : ""}</span>
+                <span className="br-amt" style={{ textAlign: "right" }}>{statusChip(r)}</span>
+              </div>
+            );
+          })}
           <datalist id="bulk-ledgers">{[...new Set(rows.flatMap(r => r.tx?.lines.map(l => l.account) ?? []))].map(a => <option key={a} value={a} />)}</datalist>
         </div>
 
-        <footer style={{ borderTop: `1px solid ${C.line}`, background: "#FFFFFF", padding: "12px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <footer style={{ borderTop: `1px solid ${C.line}`, background: "#FBF7EE", padding: "14px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
           {needHeads.length > 0 && (
             <div style={{ display: "flex", gap: "8px 16px", flexWrap: "wrap", alignItems: "center", fontSize: 13 }}>
               <b style={{ color: C.warn, width: "100%" }}>New ledgers — likely group is ticked ✓; change if wrong, then post again:</b>
@@ -233,12 +251,13 @@ export default function BulkTemplateModal({ fileName, fileKey, sentences, bizId,
             {msg && !confirmFlagged && <span role="status" style={{ fontSize: 13.5, fontWeight: 700, color: msg.ok ? C.pos : C.warn }}>{msg.text}</span>}
             <div style={{ flex: 1 }} />
             {pending.length > 0 && !posting && (
-              <button onClick={() => { onSendToChat(pending.map(r => r.text)); onClose(); }} style={{ height: 42, padding: "0 14px", borderRadius: 10, border: `1px solid ${C.strong}`, background: "#FFFFFF", color: C.ink, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
+              <button className="br-btn" onClick={() => { onSendToChat(pending.map(r => r.text)); onClose(); }} style={{ height: 46, padding: "0 18px", borderRadius: 999, border: "1px solid #D9CBAA", background: "#FFFFFF", color: C.ink, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
                 Answer {pending.length} in chat
               </button>
             )}
-            <button onClick={postSelected} disabled={!chosen.length || posting || counts.reading > 0 && !chosen.length} style={{ height: 42, padding: "0 20px", borderRadius: 10, border: "none", background: C.pos, color: "#FFFFFF", fontWeight: 800, fontSize: 14.5, cursor: chosen.length && !posting ? "pointer" : "default", opacity: chosen.length && !posting ? 1 : 0.5 }}>
-              {posting ? "Posting…" : confirmFlagged ? `Post anyway (${chosen.length})` : `✓ Post ${chosen.length} entr${chosen.length === 1 ? "y" : "ies"} · ${cur()}${fmt(chosenTotal)}`}
+            <button className="br-btn" onClick={postSelected} disabled={!chosen.length || posting} style={{ height: 50, padding: "0 8px 0 22px", borderRadius: 999, border: "none", background: confirmFlagged ? C.neg : "#12352D", color: "#FFFFFF", fontWeight: 800, fontSize: 14.5, cursor: chosen.length && !posting ? "pointer" : "default", opacity: chosen.length && !posting ? 1 : 0.5, display: "inline-flex", alignItems: "center", gap: 12 }}>
+              {posting ? "Posting…" : confirmFlagged ? `Post anyway (${chosen.length})` : `Post ${chosen.length} entr${chosen.length === 1 ? "y" : "ies"} · ${cur()}${fmt(chosenTotal)}`}
+              <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: "50%", background: "#D9B56F", color: "#12352D", display: "grid", placeItems: "center" }}>✓</span>
             </button>
           </div>
         </footer>

@@ -129,7 +129,7 @@ test("correction moves the amount with a balanced new journal and never edits th
 import { mergeSameLedgerLines } from "../../src/lib/frebook/mergeLines";
 test("item lines on one ledger become one debit; stock items stay separate", () => {
   const m = mergeSameLedgerLines([
-    { account: "FOOD EXPENSE", debit: 260, credit: 0 }, { account: "food expense ", debit: 400, credit: 0 },
+    { account: "FOOD EXPENSE", debit: 260, credit: 0, item: "chatti" }, { account: "food expense ", debit: 400, credit: 0, item: "elan" },
     { account: "Stock", debit: 100, credit: 0, item: "Rice" }, { account: "Stock", debit: 50, credit: 0, item: "Dal" },
     { account: "Cash", debit: 0, credit: 810 },
   ]);
