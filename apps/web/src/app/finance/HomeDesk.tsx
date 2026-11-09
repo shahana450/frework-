@@ -51,6 +51,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
   useEffect(() => { try { if (sessionStorage.getItem("fw_from_wa") === "1") { setFromWa(true); setMode("ask"); } } catch { /* */ } }, []);
   const [text, setText] = useState("");
   const [allDues, setAllDues] = useState(false);
+  const [allNeeds, setAllNeeds] = useState(false);
   const go = (t: string) => { const v = t.trim(); if (v) router.push(`/finance/chat-book?q=${encodeURIComponent(v)}`); };
 
   // Figures as accountants write them: grouped, no symbol (the card says the unit), negatives in brackets
@@ -84,16 +85,16 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
   return (
     <div className="hd" style={{ display: "flex", flexDirection: "column", gap: 22, color: C.ink }}>
       <style>{`
-        .hd-main { display: grid; gap: 18px; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); }
+        .hd-main { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1.2fr); }
         .hd-glance { display: grid; gap: 28px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .hd-dues { display: grid; gap: 12px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
         .hd-bottom { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .hd-lower { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-        @media (max-width: 1100px) { .hd-main, .hd-lower { grid-template-columns: minmax(0, 1fr); } .hd-dues { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hd-bottom { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 1100px) { .hd-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .hd-main > :last-child { grid-column: 1 / -1; } .hd-lower { grid-template-columns: minmax(0, 1fr); } .hd-dues { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hd-bottom { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 640px) {
           .hd-glance, .hd-bottom { grid-template-columns: minmax(0, 1fr); }
           .hd-dues { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 72%; overflow-x: auto; scrollbar-width: none; }
-          .hd-entry textarea { min-height: 80px !important; } .hd-entry span { display: none; }
+          .hd-main { grid-template-columns: minmax(0, 1fr) !important; } .hd-main > :last-child { grid-column: auto; } .hd-entry textarea { min-height: 70px !important; font-size: 17px !important; } .hd-tip, .hd-sugg { display: none; }
           .hd-h1 { font-size: 26px !important; }
         }
         .hd a.lift, .hd button.lift { transition: transform .15s, box-shadow .15s, border-color .15s; }
@@ -104,126 +105,122 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         @media (prefers-reduced-motion: reduce) { .hd .lift { transition: none !important } }
       `}</style>
 
-      {/* Greeting */}
-      <header style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <span style={eyebrow}>{today.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
-        <h1 className="hd-h1" style={{ margin: 0, fontFamily: SERIF, fontWeight: 700, fontSize: "clamp(28px, 3vw, 40px)", lineHeight: 1.12, textWrap: "balance" }}>
-          {greeting}. What happened in the <span style={{ fontStyle: "italic", fontWeight: 400, color: C.gold }}>business</span> today?
-        </h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <Link href="/finance/select-business" title="Switch business" className="lift" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 36, padding: "0 12px 0 4px", borderRadius: 10, background: "#FFFFFF", border: `1px solid ${C.line}`, textDecoration: "none", color: C.ink }}>
-            <span aria-hidden="true" style={{ width: 28, height: 28, borderRadius: 7, display: "grid", placeItems: "center", background: C.green, color: "#E8C27A", fontFamily: SERIF, fontWeight: 700, fontSize: 14 }}>{(bizName || "?").trim()[0]?.toUpperCase()}</span>
-            <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.02em" }}>{bizName}</span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: tally.status === "connected" ? C.posSoft : C.goldSoft, color: tally.status === "connected" ? C.pos : C.muted }}>
-              <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor" }} />{tallyLabel(tally)}
+      {/* Hero: greeting and the Record / Ask box on a deep panel */}
+      <section aria-label="Record or ask" className="hd-hero" style={{ position: "relative", overflow: "hidden", background: C.green, borderRadius: 26, padding: "clamp(20px,3vw,34px)", color: "#F4EFE4", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}>
+        <span aria-hidden="true" style={{ position: "absolute", right: -10, top: -40, fontFamily: SERIF, fontSize: 300, lineHeight: 1, color: "rgba(255,255,255,0.05)", pointerEvents: "none" }}>{cur().trim() || "₹"}</span>
+        <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 10 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11.5, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D9B56F" }}>
+            <span aria-hidden="true" style={{ width: 28, height: 1.5, background: "#D9B56F" }} />{today.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </span>
+          <h1 className="hd-h1" style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(30px, 4vw, 54px)", lineHeight: 1.08, textWrap: "balance", color: "#FFFDF8" }}>
+            {greeting}.<br />What happened in the business <span style={{ fontStyle: "italic", color: "#D9B56F" }}>today</span>?
+          </h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 14, color: "#C9D3CE" }}>
+            <Link href="/finance/select-business" title="Switch business" style={{ color: "#F4EFE4", textDecoration: "none", fontWeight: 600 }}>{bizName}</Link>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700 }}>
+              <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: tally.status === "connected" ? "#5BD39B" : "#A9B1AD" }} />{tallyLabel(tally)}
             </span>
-          </Link>
-          <div className="hd-controls" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{controls}</div>
-        </div>
-      </header>
-
-      {dashErr && <div style={{ ...tile, flexDirection: "row", alignItems: "center", color: C.warn, background: C.warnSoft, borderColor: "#FFE2A8" }}>{dashErr}{onRetry && <button onClick={onRetry} style={{ marginLeft: "auto", border: `1px solid ${C.warn}`, background: "transparent", color: C.warn, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontWeight: 700 }}>Try again</button>}</div>}
-
-      {/* Record / Ask */}
-      <section aria-label="Record or ask" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div className="hd-entry" style={{ display: "flex", flexDirection: "column", gap: 6, background: "#FFFFFF", border: `1.5px solid ${text.trim() ? C.goldLine : C.line}`, borderRadius: 20, padding: 12, boxShadow: "0 18px 36px -26px rgba(18,53,45,0.55)", transition: "border-color .15s" }}>
-          <div role="tablist" style={{ display: "flex", gap: 2, padding: 3, borderRadius: 11, background: C.ground, alignSelf: "flex-start" }}>
-            {(fromWa ? ["ask"] as const : ["record", "ask"] as const).map(m => (
-              <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} style={{ height: 32, padding: "0 16px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13, background: mode === m ? C.green : "transparent", color: mode === m ? "#FFFFFF" : C.muted }}>
-                {m === "record" ? "Record" : "Ask"}
-              </button>
-            ))}
+            <div className="hd-controls" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginLeft: "auto" }}>{controls}</div>
           </div>
-          <textarea id="hd-chat" aria-label="Describe a transaction or ask a question" rows={3} value={text} onChange={e => setText(e.target.value)}
+        </div>
+
+        <div className="hd-entry" style={{ position: "relative", marginTop: 20, background: "#FBF7EE", borderRadius: 20, padding: "14px 18px 16px", color: C.ink, boxShadow: "0 24px 50px -30px rgba(0,0,0,0.6)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div role="tablist" style={{ display: "flex", gap: 2, padding: 3, borderRadius: 999, background: "#EFE6D3" }}>
+              {(fromWa ? ["ask"] as const : ["record", "ask"] as const).map(m => (
+                <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} style={{ height: 34, padding: "0 18px", borderRadius: 999, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13.5, background: mode === m ? C.green : "transparent", color: mode === m ? "#FFFFFF" : C.muted }}>
+                  {m === "record" ? "Record" : "Ask"}
+                </button>
+              ))}
+            </div>
+            <span className="hd-tip" style={{ fontSize: 12.5, color: C.muted }}>{mode === "record" ? `Write it the way you'd say it — ${brand} drafts the voucher.` : "Ask anything about your books."}</span>
+          </div>
+          <textarea id="hd-chat" aria-label="Describe a transaction or ask a question" rows={2} value={text} onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); go(text); } }}
-            placeholder={mode === "record" ? (india ? `Tell ${brand} what happened — e.g. Paid office rent ₹25,000 from the bank for October` : `Tell ${brand} what happened — e.g. Paid office rent ${cur()}2,500 from the bank for October`) : "Ask about your books — e.g. Who owes me for more than 60 days?"}
-            style={{ width: "100%", minHeight: 96, resize: "vertical", boxSizing: "border-box", border: "none", outline: "none", background: "transparent", padding: "8px 6px", fontSize: 16, lineHeight: 1.55, color: C.ink, fontFamily: "inherit" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {!fromWa && <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill or attach a PDF" style={{ height: 40, padding: "0 12px", flexShrink: 0, borderRadius: 10, border: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 6, color: C.muted, textDecoration: "none", fontSize: 13, fontWeight: 700 }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+            placeholder={mode === "record" ? (india ? "e.g. Paid office rent ₹25,000 from the bank for October" : `e.g. Paid office rent ${cur()}2,500 from the bank for October`) : "e.g. Who owes me for more than 60 days?"}
+            style={{ width: "100%", minHeight: 70, resize: "vertical", boxSizing: "border-box", border: "none", outline: "none", background: "transparent", padding: "12px 2px", fontSize: 20, lineHeight: 1.5, color: C.ink, fontFamily: SERIF }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", borderTop: `1px solid ${C.line}`, paddingTop: 12 }}>
+            {!fromWa && <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill or attach a PDF" className="chip" style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#FFFFFF", display: "inline-flex", alignItems: "center", gap: 7, color: C.ink, textDecoration: "none", fontSize: 13, fontWeight: 600 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
               Bill photo / PDF
             </Link>}
-            <span style={{ fontSize: 12, color: C.muted }}>Enter to {mode === "record" ? "draft" : "ask"} · Shift+Enter for a new line</span>
-            <button onClick={() => go(text)} disabled={!text.trim()} style={{ marginLeft: "auto", height: 42, flexShrink: 0, padding: "0 20px", borderRadius: 12, border: "none", background: C.green, color: "#FFFFFF", fontWeight: 800, fontSize: 14.5, cursor: text.trim() ? "pointer" : "default", opacity: text.trim() ? 1 : 0.6 }}>
-              {mode === "record" ? "Draft entry →" : "Ask →"}
+            {(mode === "record" ? (india ? ["Received ₹1.2L from a customer", "Paid salaries for last month", "Bought stationery ₹1,800 in cash"] : [`Received ${cur()}12,000 from a customer`, "Paid salaries for last month", `Bought stationery ${cur()}180 in cash`]) : ["Who owes me for more than 60 days?", "Profit this month vs last month", "GST collected last month"]).map(c => (
+              <button key={c} className="chip hd-sugg" onClick={() => mode === "ask" ? go(c) : setText(c)} style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px dashed ${C.goldLine}`, background: "transparent", color: C.muted, fontSize: 12.5, cursor: "pointer" }}>{c}</button>
+            ))}
+            <button onClick={() => go(text)} disabled={!text.trim()} style={{ marginLeft: "auto", height: 48, flexShrink: 0, padding: "0 8px 0 22px", borderRadius: 999, border: "none", background: C.green, color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: text.trim() ? "pointer" : "default", opacity: text.trim() ? 1 : 0.75, display: "inline-flex", alignItems: "center", gap: 12 }}>
+              {mode === "record" ? "Draft entry" : "Ask"}
+              <span aria-hidden="true" style={{ width: 32, height: 32, borderRadius: 999, background: "#D9B56F", color: C.green, display: "grid", placeItems: "center", fontSize: 16 }}>→</span>
             </button>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12, color: C.muted }}>Try:</span>
-          {(mode === "record" ? (india ? ["Received ₹1.2L from a customer", "Paid salaries for last month", "Bought stationery ₹1,800 in cash"] : [`Received ${cur()}12,000 from a customer`, "Paid salaries for last month", `Bought stationery ${cur()}180 in cash`]) : ["Who owes me for more than 60 days?", "Profit this month vs last month", "GST collected last month"]).map(c => (
-            <button key={c} className="chip" onClick={() => mode === "ask" ? go(c) : setText(c)} style={{ height: 30, padding: "0 12px", borderRadius: 999, border: `1px solid ${C.line}`, background: C.tile, color: C.muted, fontSize: 12, cursor: "pointer" }}>{c}</button>
-          ))}
-        </div>
       </section>
 
-      {/* Books at a glance · Needs you today */}
+      {dashErr && <div style={{ ...tile, flexDirection: "row", alignItems: "center", color: C.warn, background: C.warnSoft, borderColor: "#FFE2A8" }}>{dashErr}{onRetry && <button onClick={onRetry} style={{ marginLeft: "auto", border: `1px solid ${C.warn}`, background: "transparent", color: C.warn, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontWeight: 700 }}>Try again</button>}</div>}
+
+      {/* Profit & Loss · Position today · Needs you today */}
       <div className="hd-main">
-        <section aria-labelledby="glance" style={{ ...tile, background: C.gBg, border: C.gBorder, color: C.gInk, padding: 24, gap: 18, boxShadow: C.gShadow }}>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-            <h2 id="glance" style={{ ...h2, color: C.gStrong }}>Books at a glance</h2>
-            <span style={{ fontSize: 11.5, color: C.gMuted }}>{dash?.period.label ?? "This year"} · amounts in {cur().trim() || dash?.currency} · (brackets) = negative</span>
+        <section aria-labelledby="pl" style={{ ...tile, padding: 24, gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+            <h2 id="pl" style={{ ...h2, fontWeight: 400, fontSize: 23 }}>Profit &amp; Loss</h2>
+            <span style={{ ...eyebrow, fontSize: 10.5 }}>{dash?.period.label ?? "This year"}</span>
           </div>
-          <div className="hd-glance">
-            {[
-              { head: "Profit & loss", rows: [
-                { k: "Income", v: income, href: "/finance/reports?tab=profit_loss" },
-                { k: "Expenses", v: spent, href: "/finance/reports?tab=profit_loss" },
-              ], total: { k: profit < 0 ? "Net loss" : "Net profit", v: profit, note: ratioNote } },
-              { head: "Position today", rows: [
-                { k: "Cash & bank", v: dash?.cash, href: "/finance/banking", note: (dash?.cash ?? 0) < 0 ? "Overdrawn — check the bank balances" : "" },
-                { k: "Receivables", v: dash?.receivables, href: "/finance/collect", link: (dash?.receivables ?? 0) > 0 ? { t: "Set up reminders →", href: "/finance/collect" } : undefined },
-                { k: "Payables", v: dash?.payables, href: "/finance/payables", note: (dash?.payables ?? 0) < 0 ? "Suppliers in debit" : "" },
-              ] },
-            ].map(col => (
-              <div key={col.head} style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ ...eyebrow, color: C.gHead, paddingBottom: 8, borderBottom: `1px solid ${C.gRule}` }}>{col.head}</span>
-                {col.rows.map(r => (
-                  <Link key={r.k} href={r.href} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, padding: "11px 0", borderBottom: `1px solid ${C.gRuleSoft}`, color: C.gInk, textDecoration: "none" }}>
-                    <span style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 13.5 }}>
-                      {r.k}
-                      {"note" in r && r.note && <span style={{ fontSize: 11, color: C.gNeg }}>{r.note}</span>}
-                      {"link" in r && r.link && <span className="glink" style={{ fontSize: 11, fontWeight: 700, textDecoration: "underline" }}>{r.link.t}</span>}
-                    </span>
-                    <span style={{ fontFamily: MONO, fontSize: 14, fontVariantNumeric: "tabular-nums", color: (r.v ?? 0) < 0 ? C.gNeg : C.gStrong }}>{num(r.v)}</span>
-                  </Link>
-                ))}
-                {"total" in col && col.total && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: 14 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-                      <span style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 700, color: C.gStrong }}>{col.total.k}</span>
-                      <span style={{ fontFamily: MONO, fontSize: 24, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: col.total.v < 0 ? C.gNeg : C.gPos }}>{num(col.total.v)}</span>
-                    </div>
-                    {col.total.note && <span style={{ fontSize: 11.5, color: C.gMuted }}>{col.total.note}</span>}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: "auto" }}>
-            {[["Profit & Loss", "/finance/reports?tab=profit_loss"], ["Balance Sheet", "/finance/reports?tab=balance_sheet"], ["Trial Balance", "/finance/reports?tab=trial_balance"]].map(([t, h]) => (
-              <Link key={t} href={h} className="lift" style={{ fontSize: 12.5, fontWeight: 700, padding: "8px 12px", borderRadius: 9, border: `1px solid ${C.gBtnLine}`, background: C.gBtnBg, color: C.gStrong, textDecoration: "none" }}>{t} →</Link>
-            ))}
-          </div>
+          <Link href="/finance/reports?tab=profit_loss" style={{ background: C.goldSoft, borderRadius: 16, padding: "18px 14px", textAlign: "center", textDecoration: "none", color: C.ink, display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", color: C.muted }}>{profit < 0 ? "NET LOSS" : "NET PROFIT"}</span>
+            <span style={{ fontFamily: SERIF, fontSize: "clamp(34px,3.4vw,48px)", lineHeight: 1.1, color: profit < 0 ? C.neg : C.ink, fontVariantNumeric: "tabular-nums" }}>{profit < 0 ? `(${cur()}${Math.round(Math.abs(profit)).toLocaleString(locale)})` : `${cur()}${Math.round(profit).toLocaleString(locale)}`}</span>
+            <span style={{ fontSize: 12.5, color: C.muted }}>{income === 0 && spent === 0 ? "No income or expenses posted yet" : ratioNote}</span>
+          </Link>
+          {([["Income", income], ["Expenses", spent]] as [string, number][]).map(([k, v]) => (
+            <Link key={k} href="/finance/reports?tab=profit_loss" style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: `1px solid ${C.line}`, color: C.ink, textDecoration: "none", fontSize: 14.5 }}>
+              <span>{k}</span><span style={{ fontFamily: SERIF, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{num(v)}</span>
+            </Link>
+          ))}
         </section>
 
-        <section aria-labelledby="needs" style={tile}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <h2 id="needs" style={h2}>Needs you today</h2>
-            {needs.length > 0 && <span style={{ minWidth: 24, height: 22, padding: "0 7px", borderRadius: 999, background: C.green, color: "#FFFFFF", fontSize: 12, fontWeight: 800, display: "grid", placeItems: "center" }}>{needs.length}</span>}
+        <section aria-labelledby="pos" style={{ ...tile, padding: 24, gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap", paddingBottom: 12, borderBottom: `1px solid ${C.line}` }}>
+            <h2 id="pos" style={{ ...h2, fontWeight: 400, fontSize: 23 }}>Position today</h2>
+            <span style={{ fontSize: 11.5, color: C.muted }}>{cur().trim() || dash?.currency} · (brackets) = negative</span>
           </div>
-          {!dash ? <span style={{ fontSize: 13, color: C.muted }}>Checking your books…</span>
-            : needs.length === 0 ? <span style={{ fontSize: 13.5, color: C.pos, fontWeight: 700 }}>✓ Nothing needs you right now.</span>
-            : needs.map((n, i) => (
-              <div key={i} style={{ display: "flex", gap: 10, paddingTop: i ? 12 : 0, borderTop: i ? `1px solid ${C.line}` : "none" }}>
-                <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, marginTop: 6, flexShrink: 0, background: n.tone === "bad" ? C.neg : n.tone === "warn" ? "#D49A3A" : C.pos }} />
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 700 }}>{n.title}</span>
-                  {n.sub && <span style={{ fontSize: 12, color: C.muted }}>{n.sub}</span>}
-                  <Link href={n.href} className="lift" style={n.primary ? { ...ghostBtn, background: C.green, color: "#FFFFFF", border: "none", marginTop: 4 } : { ...ghostBtn, marginTop: 4 }}>{n.action}</Link>
+          {(() => {
+            const rows = [
+              { k: "Cash & bank", v: dash?.cash, href: "/finance/banking", tag: (dash?.cash ?? 0) < 0 ? "Overdrawn" : "" },
+              { k: "Receivables", v: dash?.receivables, href: "/finance/receivables", tag: (dash?.receivables ?? 0) < 0 ? "Customers in credit" : "" },
+              { k: "Payables", v: dash?.payables, href: "/finance/payables", tag: (dash?.payables ?? 0) < 0 ? "Suppliers in debit" : "" },
+            ];
+            const max = Math.max(1, ...rows.map(r => Math.abs(r.v ?? 0)));
+            return rows.map((r, i) => (
+              <Link key={r.k} href={r.href} style={{ display: "flex", flexDirection: "column", gap: 10, padding: "16px 0", borderTop: i ? `1px solid ${C.line}` : "none", color: C.ink, textDecoration: "none" }}>
+                <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ fontSize: 14.5 }}>{r.k}</span>
+                  {r.tag && <span style={{ fontSize: 10.5, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: C.negSoft, color: C.neg }}>{r.tag}</span>}
+                  <span style={{ marginLeft: "auto", fontFamily: SERIF, fontSize: 24, fontVariantNumeric: "tabular-nums", color: (r.v ?? 0) < 0 ? C.neg : C.ink }}>{num(r.v)}</span>
+                </span>
+                <span aria-hidden="true" style={{ height: 6, borderRadius: 999, background: C.goldSoft, overflow: "hidden" }}>
+                  <span style={{ display: "block", height: "100%", width: `${Math.max(4, (Math.abs(r.v ?? 0) / max) * 100)}%`, background: (r.v ?? 0) < 0 ? C.neg : C.green, borderRadius: 999 }} />
+                </span>
+              </Link>
+            ));
+          })()}
+        </section>
+
+        <section aria-labelledby="needs" style={{ ...tile, background: C.green, border: "none", color: "#F4EFE4", padding: 24, gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <h2 id="needs" style={{ ...h2, color: "#FFFDF8", fontWeight: 400, fontSize: 23 }}>Needs you today</h2>
+            {needs.length > 0 && <span style={{ width: 32, height: 32, borderRadius: 999, border: "1px solid #D9B56F", color: "#D9B56F", fontFamily: SERIF, fontSize: 15, display: "grid", placeItems: "center" }}>{needs.length}</span>}
+          </div>
+          {!dash ? <span style={{ fontSize: 13, color: "#B9C7C1" }}>Checking your books…</span>
+            : needs.length === 0 ? <span style={{ fontSize: 14, color: "#A8F0CF", fontWeight: 700 }}>✓ Nothing needs you right now.</span>
+            : (allNeeds ? needs : needs.slice(0, 2)).map((n, i) => (
+              <div key={i} style={{ display: "flex", gap: 12, padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <span aria-hidden="true" style={{ fontFamily: SERIF, color: "#D9B56F", fontSize: 16, minWidth: 18 }}>{["I", "II", "III", "IV", "V", "VI"][i] ?? i + 1}</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#FFFDF8", lineHeight: 1.4 }}>{n.title}</span>
+                  {n.sub && <span style={{ fontSize: 12.5, color: "#B9C7C1" }}>{n.sub}</span>}
+                  <Link href={n.href} style={{ fontSize: 13, fontWeight: 800, color: "#D9B56F", textDecoration: "none" }}>{n.action} →</Link>
                 </div>
               </div>
             ))}
+          {needs.length > 2 && <button onClick={() => setAllNeeds(v => !v)} style={{ marginTop: "auto", height: 40, borderRadius: 999, border: "1px solid rgba(255,255,255,0.25)", background: "transparent", color: "#FFFDF8", fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>{allNeeds ? "Show fewer" : `View all ${needs.length} items`}</button>}
         </section>
       </div>
 
