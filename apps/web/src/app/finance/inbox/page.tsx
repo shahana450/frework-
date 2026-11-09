@@ -164,7 +164,8 @@ export default function SmartInbox() {
   async function readDocument(job: FileJob, file: File) {
     const { data: { user } } = await supabase.auth.getUser();
     const fd = new FormData();
-    fd.append("message", "Book this document"); fd.append("business_id", bizId); fd.append("user_id", user?.id ?? ""); fd.append("history", "[]"); fd.append("file", file);
+    // bulk: read only — no chat session per bill, so a folder of bills doesn't hit the hourly chat limit
+    fd.append("message", "Book this document"); fd.append("business_id", bizId); fd.append("user_id", user?.id ?? ""); fd.append("history", "[]"); fd.append("bulk", "1"); fd.append("file", file);
     const res = await fetch("/api/finance/chat-book", { method: "POST", body: fd });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error ?? "Couldn't read this file.");
@@ -177,7 +178,7 @@ export default function SmartInbox() {
         setJob(job.id, { note: `Splitting: invoice ${Math.min(i + 4, sentences.length)} of ${sentences.length}…` });
         const parts = await Promise.all(sentences.slice(i, i + 4).map(async s => {
           try {
-            const r = await fetch("/api/finance/chat-book/fast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: s, business_id: bizId, user_id: user?.id ?? "", history: [] }) });
+            const r = await fetch("/api/finance/chat-book/fast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: s, business_id: bizId, user_id: user?.id ?? "", history: [], bulk: true }) });
             const d = await r.json();
             const p = d.parsed as { status: string; transaction_date: string; narrative: string; amount: number; confidence?: number; account_confidence?: number; lines: Line[]; needs_clarification?: string[] } | undefined;
             if (!r.ok || !p) throw new Error();
@@ -221,8 +222,17 @@ export default function SmartInbox() {
       else note = await readDocument(job, file);
       setJob(job.id, { status: "done", note });
     } catch (e) {
+      failedFiles.current.set(job.id, file);   // kept so "Retry failed" can read it again
       setJob(job.id, { status: "error", note: e instanceof Error ? e.message : "Couldn't read this file" });
     }
+  }
+  const failedFiles = useRef<Map<string, File>>(new Map());
+  function retryFailed() {
+    const again = files.filter(f => f.status === "error" && failedFiles.current.has(f.id));
+    if (!again.length) return;
+    for (const f of again) { queue.current.push({ job: f, file: failedFiles.current.get(f.id)! }); failedFiles.current.delete(f.id); }
+    setFiles(prev => prev.map(f => again.some(a => a.id === f.id) ? { ...f, status: "queued", note: undefined } : f));
+    pump();
   }
 
   const pump = useCallback(() => {
@@ -410,6 +420,9 @@ export default function SmartInbox() {
           <section style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 18, padding: "12px 16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <b style={{ fontSize: 14 }}>{files.length} file{files.length === 1 ? "" : "s"}{reading ? ` · reading ${reading}…` : " · all read"}</b>
+              {(() => { const n = files.filter(f => f.status === "error" && failedFiles.current.has(f.id)).length; return n > 0 && !reading && (
+                <button onClick={retryFailed} style={{ marginLeft: 12, height: 30, padding: "0 14px", borderRadius: 999, border: "none", background: "#0F2B25", color: "#FFFFFF", fontWeight: 800, fontSize: 12.5, cursor: "pointer" }}>↻ Retry {n} failed</button>
+              ); })()}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflowY: "auto" }}>
               {files.map(f => (

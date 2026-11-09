@@ -36,6 +36,7 @@ export async function handleChatBook(req: NextRequest, deps: { readAttachment?: 
       user_id = (form.get("user_id") as string) ?? "";
       session_id = (form.get("session_id") as string) || null;
       try { clientHistory = JSON.parse((form.get("history") as string) || "null"); } catch { /* ignore */ }
+      bulk = form.get("bulk") === "1";   // Smart Inbox: many bills in one go — no chat session, not counted as chat messages
       const file = form.get("file") as File | null;
       if (file?.size) {
         if (file.size > 15 * 1024 * 1024) return NextResponse.json({ error: "File too large (max 15 MB)." }, { status: 413 });
