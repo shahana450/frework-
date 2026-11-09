@@ -900,10 +900,10 @@ export default function FreBookPage() {
             </div>
           </div>
         ) : (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div className="fb-conv" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
           {openDrafts > 0 && (
-            <div role="status" style={{ margin: "0.6rem 1.25rem 0", padding: "8px 12px", borderRadius: 10, background: "#FFF4DB", color: "#8A5A00", fontSize: "0.8rem", fontWeight: 600 }}>
+            <div role="status" className="fb-banner" style={{ margin: "0.6rem 1.25rem 0", padding: "8px 12px", borderRadius: 10, background: "#FFF4DB", color: "#8A5A00", fontSize: "0.8rem", fontWeight: 600 }}>
               {openDrafts} unposted draft{openDrafts === 1 ? "" : "s"} — post or cancel {openDrafts === 1 ? "it" : "them"}. They're kept on this device if you leave.
             </div>
           )}
@@ -1078,6 +1078,19 @@ export default function FreBookPage() {
               ))}
             </div>
 
+            {/* Wide screens: the chat box docks on the left, drafts and answers get the rest of the width */}
+            <style>{`@media (min-width: 1100px) {
+              .fb-conv { display: grid !important; grid-template-columns: minmax(360px, 430px) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "compose banner" "compose thread"; }
+              .fb-conv > .fb-composer { grid-area: compose; background: linear-gradient(180deg, #EFE6D3 0%, #F4EDE0 100%) !important; border-right: 1px solid #E2D6BD; overflow-y: auto; padding: 22px 20px 24px !important; display: flex; flex-direction: column; }
+              .fb-conv > .fb-composer > div { max-width: none !important; margin: 0 !important; gap: 14px !important; display: flex; flex-direction: column-reverse !important; }
+              .fb-conv > .fb-banner { grid-area: banner; }
+              .fb-conv > .fb-thread { grid-area: thread; }
+              .fb-conv > .fb-thread > div { max-width: 1040px !important; }
+              .fb-conv .fb-chips { flex-wrap: wrap; overflow: visible !important; gap: 8px !important; }
+              .fb-conv .fb-chips::before { content: "Templates & quick starts"; flex-basis: 100%; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #9A7A2E; margin-bottom: 2px; }
+              .fb-conv .fb-composer .fb-input { min-height: 200px !important; max-height: 46vh !important; }
+              .fb-conv .fb-hint { text-align: left !important; flex-basis: 100%; order: 9; padding: 6px 0 0 !important; }
+            }`}</style>
             <style>{`.fb-box{transition:border-color .15s,box-shadow .15s}.fb-box:focus-within{border-color:#C9A24A !important;box-shadow:0 0 0 4px rgba(201,162,74,.16),0 26px 60px -34px rgba(15,43,37,.6) !important}.fb-input:focus,.fb-input:focus-visible{outline:none !important;box-shadow:none !important}.fb-input::placeholder{color:#9AA39F}.fb-ico:hover{background:#F4EFE4 !important;color:#12352D !important}`}</style>
             <div className="fb-box" style={{ position: "relative", background: "linear-gradient(180deg,#FFFFFF 0%,#FFFDF8 100%)", border: "1px solid #D9CDB2", borderRadius: 24, boxShadow: "0 22px 50px -32px rgba(15,43,37,0.55)", padding: "14px 10px 10px 20px", overflow: "hidden" }}>
               <div aria-hidden="true" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 3, background: "linear-gradient(90deg,#12352D,#C9A24A,#12352D)" }} />
