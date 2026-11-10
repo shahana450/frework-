@@ -115,3 +115,10 @@ test("TDS deducted by the customer becomes TDS Receivable", () => {
   assert.deepEqual(rows(buildEntry({ action: "payment_to_supplier", amount: 100000, payment_mode: "bank", payment_account: "HDFC Bank", counter_account: null, party_name: "BuildCo", tds: t(2000, false) })),
     [["BuildCo", 100000, 0], ["TDS Payable", 0, 2000], ["HDFC Bank", 0, 98000]]);
 });
+
+test("TDS worked out on the stated amount means the stated amount is the fee (never grossed up)", () => {
+  const base = { action: "expense_payment" as const, payment_mode: "bank" as const, payment_account: "Bank", counter_account: "Professional Fees", party_name: "Director" };
+  // "professional fee paid to director 15000 from bank" — the AI added TDS 10% = 1,500 and wrongly flagged the 15,000 as net
+  const r = buildEntry({ ...base, amount: 15000, tds: { applicable: true, section: "194J", rate: 10, amount: 1500, amount_is_net: true } });
+  assert.deepEqual(r.lines.map(l => [l.account, l.debit, l.credit]), [["Professional Fees", 15000, 0], ["TDS Payable", 0, 1500], ["Bank", 0, 13500]]);
+});

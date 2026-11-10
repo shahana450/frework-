@@ -122,7 +122,10 @@ function buildLocal(intent: Intent, tax: TaxModule, registered = true): RuleResu
   const fixedTds = wh && Number(wh.amount) > 0 ? r2(Number(wh.amount)) : 0;
   let tdsRate = wh ? Number(wh.rate) || 0 : 0;
   let amount = stated;
-  if (wh?.amount_is_net) {
+  // A TDS figure that is exactly the rate on the stated amount was worked out ON that amount — so the stated
+  // amount is the bill, not the net paid ("fee 15,000, TDS 10% = 1,500" → expense 15,000, bank 13,500, never 16,500).
+  const tdsOnStated = !!fixedTds && tdsRate > 0 && Math.abs(fixedTds - stated * tdsRate / 100) < 1;
+  if (wh?.amount_is_net && !tdsOnStated) {
     if (fixedTds) amount = r2(stated + fixedTds);
     else if (tdsRate > 0 && tdsRate < 100 && !g) amount = r2(stated / (1 - tdsRate / 100));
   }
