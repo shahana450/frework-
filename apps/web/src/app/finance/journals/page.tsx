@@ -1,4 +1,5 @@
 "use client";
+import { useFinancialYear } from "@/lib/selectedFy";
 import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -27,7 +28,7 @@ type Journal = {
   created_at: string;
   party_name?: string | null;
 };
-type Period = "all" | "month" | "last_month" | "fy" | "custom";
+type Period = "all" | "month" | "last_month" | "fy" | "custom" | `fy:${string}`;
 const ymd = (d: Date) => d.toLocaleDateString("en-CA");
 function periodRange(p: Period, from: string, to: string): [string, string] | null {
   const now = new Date();
@@ -91,6 +92,7 @@ export default function JournalsPage() {
   const [view, setView] = useState<"timeline" | "table">("timeline");
   const [linesById, setLinesById] = useState<Record<string, TLine[]>>({});             // one entry type, or "" for all
   const [period, setPeriod] = useState<Period>("all");
+  const { years: fyYears } = useFinancialYear(bizId);
   const [range, setRange] = useState({ from: "", to: "" });
   const [tallyFilter, setTallyFilter] = useState<"" | "not_pushed" | "failed">("");
   const [sort, setSort] = useState<SortKey>("posted");
@@ -172,7 +174,9 @@ export default function JournalsPage() {
   }
 
   const typeFilter = typeParam ? typeParam.split(",").map(t => t.trim()).filter(Boolean) : [];
-  const pr = periodRange(period, range.from, range.to);
+  // A chosen financial year ("fy:<id>") uses that year's own dates
+  const pickedFy = period.startsWith("fy:") ? fyYears.find(f => f.id === period.slice(3)) : undefined;
+  const pr = pickedFy ? [pickedFy.start_date, pickedFy.end_date] as [string, string] : periodRange(period, range.from, range.to);
   const inPeriod = pr ? journals.filter(j => j.date.slice(0, 10) >= pr[0] && j.date.slice(0, 10) <= pr[1]) : journals;
   const byTypeParam = typeFilter.length > 0 ? inPeriod.filter(j => typeFilter.includes(j.type)) : inPeriod;
   const typeCounts = byTypeParam.reduce<Record<string, number>>((m, j) => { m[j.type] = (m[j.type] ?? 0) + 1; return m; }, {});
@@ -367,7 +371,7 @@ export default function JournalsPage() {
             ))}
             <span style={{ flex: 1 }} />
             <select value={period} onChange={e => { setPeriod(e.target.value as Period); setShown(100); }} aria-label="Period" className="jr-select">
-              <option value="all">All dates</option><option value="month">This month</option><option value="last_month">Last month</option><option value="fy">This financial year</option><option value="custom">Custom…</option>
+              <option value="all">All dates</option><option value="month">This month</option><option value="last_month">Last month</option><option value="fy">This financial year</option>{fyYears.length > 0 && <optgroup label="Financial year">{fyYears.map(f => <option key={f.id} value={`fy:${f.id}`}>FY {f.label.replace(/^FY\s*/i, "")}</option>)}</optgroup>}<option value="custom">Custom…</option>
             </select>
             {period === "custom" && <>
               <input type="date" aria-label="From" value={range.from} onChange={e => setRange(x => ({ ...x, from: e.target.value }))} className="jr-select" />
