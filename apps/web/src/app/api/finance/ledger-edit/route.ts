@@ -35,12 +35,18 @@ export async function POST(req: NextRequest) {
     }
 
     const patch: Record<string, unknown> = { name, code: code || acc.code };
-    if (head) { patch.type = head.type; patch.sub_type = head.sub_type; }
-    const { error } = await sb.from("fw_fin_chart_of_accounts").update(patch).eq("id", acc.id).eq("business_id", bizId);
+    if (head) { patch.type = head.type; patch.sub_type = head.sub_type; patch.group_key = head.key; }
+    let { error } = await sb.from("fw_fin_chart_of_accounts").update(patch).eq("id", acc.id).eq("business_id", bizId);
+    let note: string | null = null;
+    if (error && /group_key/.test(error.message)) {
+      delete patch.group_key;
+      ({ error } = await sb.from("fw_fin_chart_of_accounts").update(patch).eq("id", acc.id).eq("business_id", bizId));
+      note = "Saved. To keep groups that share a type apart (e.g. Duties & Taxes vs Current Liabilities), run 2026-11-10_ledger_group.sql in Supabase.";
+    }
     if (error) return serverError("ledger-edit", error, "Couldn't save the ledger.");
     // A customer / supplier linked to this ledger keeps the same name
     if (name !== acc.name) await sb.from("fw_fin_contacts").update({ name }).eq("business_id", bizId).eq("ledger_account_id", acc.id).then(() => null, () => null);
     await logAudit(sb, { businessId: bizId, actor: gate.user.id, action: "ledger_edited", detail: { account: acc.id, from: { name: acc.name, code: acc.code, type: acc.type, sub_type: acc.sub_type }, to: patch } });
-    return NextResponse.json({ ok: true, account: { id: acc.id, ...patch } });
+    return NextResponse.json({ ok: true, note, account: { id: acc.id, ...patch } });
   } catch (e) { return serverError("ledger-edit", e, "Couldn't save the ledger."); }
 }

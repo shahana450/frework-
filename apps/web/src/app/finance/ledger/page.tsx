@@ -56,7 +56,8 @@ function LedgerContent() {
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       supabase.from("fw_fin_businesses").select("name").eq("id", saved).maybeSingle().then(({ data }) => setBizName(data?.name ?? ""));
-      const { data } = await supabase.from("fw_fin_chart_of_accounts").select("id,code,name,type,sub_type").eq("business_id", saved).eq("is_group", false).order("code");
+      let { data, error } = await supabase.from("fw_fin_chart_of_accounts").select("id,code,name,type,sub_type,group_key").eq("business_id", saved).eq("is_group", false).order("code");
+      if (error) ({ data } = await supabase.from("fw_fin_chart_of_accounts").select("id,code,name,type,sub_type").eq("business_id", saved).eq("is_group", false).order("code") as unknown as { data: typeof data; error: null });
       setAccounts(data ?? []);
     });
   }, []);
@@ -372,7 +373,7 @@ function LedgerContent() {
                   <h1 style={{ margin: "4px 0", fontSize: "2.6rem", fontWeight: 400, fontStyle: "italic", letterSpacing: "-0.01em" }}>{selectedAcc.name}</h1>
                   <div style={{ color: T.muted, fontSize: "0.92rem" }}>Code {selectedAcc.code} · Type {selectedAcc.type} · Normal balance {normalSide}</div>
                 </div>
-                <button onClick={() => { const a = selectedAcc as Account & { sub_type?: string | null }; const h = LEDGER_HEADS.find(x => x.type === a.type && x.sub_type === a.sub_type) ?? inferHead(a.name) ?? LEDGER_HEADS.find(x => x.type === a.type); setEdit({ name: a.name, head: h?.key ?? "", code: a.code ?? "", busy: false, err: "" }); }} style={{ ...lightBtn, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>✎ Edit ledger</button>
+                <button onClick={() => { const a = selectedAcc as Account & { sub_type?: string | null; group_key?: string | null }; const h = LEDGER_HEADS.find(x => x.key === a.group_key) ?? LEDGER_HEADS.find(x => x.type === a.type && x.sub_type === a.sub_type) ?? inferHead(a.name) ?? LEDGER_HEADS.find(x => x.type === a.type); setEdit({ name: a.name, head: h?.key ?? "", code: a.code ?? "", busy: false, err: "" }); }} style={{ ...lightBtn, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>✎ Edit ledger</button>
                 <button onClick={() => goAcc(-1)} disabled={idx <= 0} style={{ ...lightBtn, opacity: idx <= 0 ? 0.5 : 1 }}>← Previous account</button>
                 <button onClick={() => goAcc(1)} disabled={idx < 0 || idx >= order.length - 1} style={{ ...lightBtn, opacity: idx >= order.length - 1 ? 0.5 : 1 }}>Next account →</button>
               </div>
@@ -403,6 +404,7 @@ function LedgerContent() {
                         if (!r.ok) { setEdit({ ...edit, busy: false, err: d.error ?? "Couldn't save." }); return; }
                         setAccounts(list => list.map(a => a.id === selectedAcc.id ? { ...a, ...d.account } : a));
                         setEdit(null);
+                        if (d.note) window.alert(d.note);
                       }} style={{ ...lightBtn, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>{edit.busy ? "Saving…" : "Save"}</button>
                     </div>
                   </div>

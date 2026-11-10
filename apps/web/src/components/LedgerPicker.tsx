@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import GroupChips, { guessGroup } from "@/components/GroupChips";
 
-export type Ledger = { name: string; type: string; sub_type: string | null };
+export type Ledger = { name: string; type: string; sub_type: string | null; group_key?: string | null };
 
 const GROUPS: { key: string; label: string; tint: string; ink: string; match: (l: Ledger) => boolean }[] = [
   { key: "cash", label: "Bank & cash", tint: "#EAF2FF", ink: "#1F5EFF", match: l => l.sub_type === "bank" || l.sub_type === "cash" },
@@ -17,6 +17,12 @@ const GROUPS: { key: string; label: string; tint: string; ink: string; match: (l
 ];
 export const groupOf = (l: Ledger) => GROUPS.find(g => g.match(l))!;
 
+// The exact group, when the ledger has one (set in Edit ledger)
+const EXACT: Record<string, string> = {
+  bank: "Bank", cash: "Cash", debtors: "Customer", creditors: "Supplier", current_asset: "Current asset", advances: "Loans & advances",
+  fixed_asset: "Fixed asset", stock: "Stock", capital: "Capital", duties: "Duties & taxes", current_liability: "Current liability", loan: "Loan",
+  sales: "Sales", indirect_income: "Indirect income", purchase: "Purchase", direct_expense: "Direct expense", indirect_expense: "Indirect expense",
+};
 const HEAD_LABEL: Record<string, string> = {
   debtors: "Customer", creditors: "Supplier", indirect_expense: "Expense", indirect_income: "Income", sales: "Sales",
   purchase: "Purchase", bank: "Bank", cash: "Cash", duties: "Tax (GST/TDS)", capital: "Capital", loan: "Loan",
@@ -64,7 +70,7 @@ export default function LedgerPicker({ value, ledgers, isNew, head, recent = [],
         <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value || "Choose ledger"}</span>
         {isNew
           ? <span style={{ fontSize: 10.5, fontWeight: 800, color: "#8A5A00", background: "rgba(184,120,0,0.12)", padding: "1px 7px", borderRadius: 999, whiteSpace: "nowrap" }}>New · {HEAD_LABEL[head ?? guessGroup(value)] ?? "Ledger"}</span>
-          : g && <span style={{ fontSize: 10.5, fontWeight: 800, color: g.ink, background: g.tint, padding: "1px 7px", borderRadius: 999, whiteSpace: "nowrap" }}>{g.label}</span>}
+          : g && <span style={{ fontSize: 10.5, fontWeight: 800, color: g.ink, background: g.tint, padding: "1px 7px", borderRadius: 999, whiteSpace: "nowrap" }}>{(current?.group_key && EXACT[current.group_key]) || g.label}</span>}
         <span aria-hidden="true" style={{ color: "#8A90AE", fontSize: 11 }}>▾</span>
       </button>
 

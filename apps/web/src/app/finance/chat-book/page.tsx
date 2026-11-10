@@ -279,7 +279,15 @@ export default function FreBookPage() {
       const saved = (readActiveBusiness(user.id) ?? "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved); bizIdRef.current = saved;
-      supabase.from("fw_fin_chart_of_accounts").select("name,type,sub_type").eq("business_id", saved).eq("is_group", false).order("name").then(({ data }) => setLedgers((data ?? []) as Ledger[]));
+      const loadLedgers = async () => {
+        let r = await supabase.from("fw_fin_chart_of_accounts").select("name,type,sub_type,group_key").eq("business_id", saved).eq("is_group", false).order("name");
+        if (r.error) r = await supabase.from("fw_fin_chart_of_accounts").select("name,type,sub_type").eq("business_id", saved).eq("is_group", false).order("name") as typeof r;
+        setLedgers((r.data ?? []) as Ledger[]);
+      };
+      loadLedgers();
+      // Ledgers renamed or regrouped on another page show here when you come back
+      const onVis = () => { if (document.visibilityState === "visible") loadLedgers(); };
+      document.addEventListener("visibilitychange", onVis);
       const { data: biz } = await supabase.from("fw_fin_businesses").select("name,currency,country").eq("id", saved).single();
       if (biz) {
         const code = String(biz.currency ?? "INR").toUpperCase();
