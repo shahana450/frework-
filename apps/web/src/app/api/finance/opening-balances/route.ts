@@ -7,12 +7,17 @@ import { logAudit } from "@/lib/audit";
 import { readAttachment } from "@/lib/attachments";
 import { LEDGER_HEADS, inferHead } from "@/lib/ledgerHeads";
 import { resolveLedgers, makeFinder } from "@/lib/ledgerResolve";
-import { postJournal, postingErrorMessage } from "@/lib/posting";
+import { postJournal, reverseJournal, postingErrorMessage } from "@/lib/posting";
 import { planOpening, cleanHead, type TbRow } from "@/lib/openingTb";
 
 export const maxDuration = 120;
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const keyFor = (fyId: string) => `opening:${fyId}`;
+// The opening entry in force for a year: its key starts with opening:<fy> (edits add a suffix) and it isn't reversed
+async function currentOpening(bizId: string, fyId: string) {
+  const { data } = await supabase.from("fw_fin_journals").select("id,entry_no,date,total_debit,metadata,reversed_by,reversal_of,status").eq("business_id", bizId).like("metadata->>client_key", `${keyFor(fyId)}%`).eq("status", "posted").is("reversed_by", null).is("reversal_of", null).order("created_at", { ascending: false }).limit(1);
+  return (data ?? [])[0] as { id: string; entry_no: string; date: string; total_debit: number } | undefined;
+}
 
 const PROMPT = `This is a TRIAL BALANCE (or balance sheet + P&L) of a business at the end of its financial year.
 List EVERY ledger with its closing balance. Do not total, skip or merge ledgers; skip only group subtotal / grand total rows.
@@ -30,10 +35,28 @@ export async function GET(req: NextRequest) {
     const gate = await requireBusiness(req, bizId);
     if (gate instanceof NextResponse) return gate;
     const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label,start_date,end_date,is_current,is_locked").eq("business_id", bizId!).order("start_date", { ascending: false });
-    const keys = (fys ?? []).map(f => keyFor(f.id));
-    const { data: posted } = keys.length ? await supabase.from("fw_fin_journals").select("id,entry_no,date,total_debit,metadata").eq("business_id", bizId!).in("metadata->>client_key", keys).neq("status", "voided") : { data: [] };
+    const sp = new URL(req.url).searchParams;
+    // Every ledger with its opening balance for one year (from the opening entry in force)
+    if (sp.get("view") === "ledgers") {
+      const fyId = sp.get("fy_id") ?? "";
+      const accounts: { id: string; name: string; type: string; sub_type: string | null }[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type,sub_type").eq("business_id", bizId!).eq("is_group", false).order("name").range(from, from + 999);
+        if (error) return serverError("opening-balances ledgers", error, "Couldn't load the ledgers.");
+        accounts.push(...(data ?? []));
+        if (!data || data.length < 1000) break;
+      }
+      const cur = fyId ? await currentOpening(bizId!, fyId) : undefined;
+      const bal = new Map<string, { dr: number; cr: number }>();
+      if (cur) {
+        const { data: ls } = await supabase.from("fw_fin_journal_lines").select("account_id,dr_amount,cr_amount").eq("journal_id", cur.id);
+        for (const l of ls ?? []) { const b = bal.get(l.account_id) ?? { dr: 0, cr: 0 }; b.dr += Number(l.dr_amount) || 0; b.cr += Number(l.cr_amount) || 0; bal.set(l.account_id, b); }
+      }
+      return NextResponse.json({ entry: cur ? { id: cur.id, entry_no: cur.entry_no } : null, ledgers: accounts.map(a => { const b = bal.get(a.id) ?? { dr: 0, cr: 0 }; const net = Math.round((b.dr - b.cr) * 100) / 100; return { ...a, head: headOfAccount(a), dr: net > 0 ? net : 0, cr: net < 0 ? -net : 0 }; }) });
+    }
+    const posted = (await Promise.all((fys ?? []).map(async f => { const c = await currentOpening(bizId!, f.id); return c ? { ...c, fy: f.id } : null; }))).filter(Boolean) as { id: string; entry_no: string; date: string; total_debit: number; fy: string }[];
     const { data: biz } = await supabase.from("fw_fin_businesses").select("entity_type,business_type").eq("id", bizId!).maybeSingle();
-    return NextResponse.json({ fys: fys ?? [], posted: (posted ?? []).map(p => ({ id: p.id, entry_no: p.entry_no, date: p.date, total: p.total_debit, fy_id: String((p.metadata as { client_key?: string })?.client_key ?? "").slice(8) })), entity: (biz as { entity_type?: string; business_type?: string } | null)?.entity_type ?? (biz as { business_type?: string } | null)?.business_type ?? null });
+    return NextResponse.json({ fys: fys ?? [], posted: posted.map(p => ({ id: p.id, entry_no: p.entry_no, date: p.date, total: p.total_debit, fy_id: p.fy })), entity: (biz as { entity_type?: string; business_type?: string } | null)?.entity_type ?? (biz as { business_type?: string } | null)?.business_type ?? null });
   } catch (e) {
     return serverError("opening-balances", e, "Couldn't load opening balances.");
   }
@@ -65,10 +88,36 @@ export async function POST(req: NextRequest) {
     }
 
     // 2) Post the reviewed rows as one opening entry
-    const body = await req.json().catch(() => ({})) as { business_id?: string; fy_id?: string; rows?: TbRow[]; retained?: string; retained_head?: string; closing_stock?: number; stock_ledger?: string; small_difference_to?: string; difference_to?: string | null; preview?: boolean };
+    const body = await req.json().catch(() => ({})) as { mode?: string; lines?: { account_id: string; dr: number; cr: number }[]; business_id?: string; fy_id?: string; rows?: TbRow[]; retained?: string; retained_head?: string; closing_stock?: number; stock_ledger?: string; small_difference_to?: string; difference_to?: string | null; preview?: boolean };
     const bizId = body.business_id;
     const gate = await requireBusiness(req, bizId, { write: true });
     if (gate instanceof NextResponse) return gate;
+    // 2a) Edit: every ledger's opening balance typed on the page. The entry in force is reversed and a new one posted —
+    //     history is never rewritten.
+    if (body.mode === "edit") {
+      if (!can(gate.role, "post")) return NextResponse.json({ error: "Your role can't change opening balances." }, { status: 403 });
+      const { data: fy } = await supabase.from("fw_fin_financial_years").select("id,label,start_date,is_locked").eq("business_id", bizId!).eq("id", body.fy_id ?? "").maybeSingle();
+      if (!fy) return NextResponse.json({ error: "Choose the financial year." }, { status: 400 });
+      if (fy.is_locked && !can(gate.role, "lock")) return NextResponse.json({ error: `FY ${fy.label.replace(/^FY\s*/i, "")} is locked. Only the owner or an admin can change it.` }, { status: 403 });
+      const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+      const lines = (body.lines ?? []).map(l => ({ accountId: String(l.account_id), dr: r2(l.dr), cr: r2(l.cr) })).filter(l => l.dr > 0 || l.cr > 0);
+      if (lines.some(l => l.dr < 0 || l.cr < 0 || (l.dr > 0 && l.cr > 0))) return NextResponse.json({ error: "Each ledger opens either in debit or in credit." }, { status: 400 });
+      const ids = [...new Set(lines.map(l => l.accountId))];
+      if (ids.length) { const { data: own } = await supabase.from("fw_fin_chart_of_accounts").select("id").eq("business_id", bizId!).in("id", ids); if ((own ?? []).length !== ids.length) return NextResponse.json({ error: "Some ledgers weren't found." }, { status: 400 }); }
+      const dr = r2(lines.reduce((s, l) => s + l.dr, 0)), cr = r2(lines.reduce((s, l) => s + l.cr, 0));
+      if (Math.abs(dr - cr) >= 0.01) return NextResponse.json({ error: `Debits ₹${dr.toLocaleString("en-IN")} and credits ₹${cr.toLocaleString("en-IN")} differ by ₹${Math.abs(dr - cr).toLocaleString("en-IN")}.` }, { status: 422 });
+      const prior = await currentOpening(bizId!, fy.id);
+      if (!lines.length && !prior) return NextResponse.json({ error: "Nothing to save." }, { status: 400 });
+      if (prior) await reverseJournal(supabase, bizId!, gate.user.id, prior.id, "Opening balances edited", fy.start_date);
+      let entryNo: string | null = null, total = 0;
+      if (lines.length >= 2) {
+        const posted = await postJournal(supabase, { businessId: bizId!, actorId: gate.user.id, date: fy.start_date, type: "journal", narration: `Opening balances as on ${fy.start_date}${prior ? ` (revised; replaces ${prior.entry_no})` : ""}`,
+          source: "opening_balances", force: fy.is_locked, reviewed: true, lines, metadata: { client_key: `${keyFor(fy.id)}:e${Date.now()}`, opening: true, replaces: prior?.id ?? null } });
+        entryNo = posted.entryNo; total = posted.total;
+      }
+      await logAudit(supabase, { businessId: bizId!, actor: gate.user.id, action: "opening_balances_edited", source: "opening_balances", detail: { fy: fy.label, replaced: prior?.entry_no ?? null, entry_no: entryNo, lines: lines.length, total } });
+      return NextResponse.json({ ok: true, entry_no: entryNo, replaced: prior?.entry_no ?? null, total });
+    }
     const rows = (body.rows ?? []).slice(0, 1000);
     const missingHead = rows.filter(r => r.ledger?.trim() && !cleanHead(r.head)).map(r => r.ledger);
     const plan = planOpening(rows.map(r => ({ ...r, head: cleanHead(r.head) })), { retained: (body.retained || "Capital Account").trim(), retainedHead: cleanHead(body.retained_head) || "capital", closingStock: body.closing_stock, stockLedger: (body.stock_ledger || "").trim() || undefined, differenceTo: body.difference_to || null });
@@ -86,7 +135,7 @@ export async function POST(req: NextRequest) {
     if (!fy) return NextResponse.json({ error: "Choose the financial year these balances open." }, { status: 400 });
     if (fy.is_locked && !can(gate.role, "lock")) return NextResponse.json({ error: `FY ${fy.label.replace(/^FY\s*/i, "")} is locked. Only the owner or an admin can post into it.` }, { status: 403 });
     const key = keyFor(fy.id);
-    const { data: prior } = await supabase.from("fw_fin_journals").select("entry_no").eq("business_id", bizId!).eq("metadata->>client_key", key).neq("status", "voided").limit(1).maybeSingle();
+    const prior = await currentOpening(bizId!, fy.id);
     if (prior) return NextResponse.json({ error: `Opening balances for FY ${fy.label.replace(/^FY\s*/i, "")} are already posted as ${prior.entry_no}. Reverse that entry first to post them again.` }, { status: 409 });
 
     const heads = Object.fromEntries(plan.lines.map(l => [l.ledger, l.head]));
@@ -96,7 +145,7 @@ export async function POST(req: NextRequest) {
       businessId: bizId!, actorId: gate.user.id, date: fy.start_date, type: "journal", narration: `Opening balances as on ${fy.start_date} (brought forward from last year's trial balance)`,
       source: "opening_balances", force: fy.is_locked,
       lines: plan.lines.map(l => ({ accountId: resolved.ids.get(l.ledger.trim())!.id, dr: l.dr, cr: l.cr })),
-      metadata: { client_key: key, opening: true, profit_carried: plan.profit, closing_stock: plan.closingStock, difference: plan.difference, difference_to: body.difference_to ?? null },
+      metadata: { client_key: `${key}:t${Date.now()}`, opening: true, profit_carried: plan.profit, closing_stock: plan.closingStock, difference: plan.difference, difference_to: body.difference_to ?? null },
     }).catch(e => { throw e; });
     await logAudit(supabase, { businessId: bizId!, actor: gate.user.id, action: "opening_balances", source: "opening_balances", detail: { fy: fy.label, entry_no: posted.entryNo, lines: plan.lines.length, total: posted.total } });
     return NextResponse.json({ ok: true, entry_no: posted.entryNo, journal_id: posted.id, created: resolved.created, total: posted.total });
