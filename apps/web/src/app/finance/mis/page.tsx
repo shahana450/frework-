@@ -106,6 +106,7 @@ export default function MisPack() {
                 {row("Cash & bank", dash.cash)}
                 {row("Customers owe you", recv)}
                 {adv > 0 && row("Less: advances received from customers", -adv, "neg")}
+                {dash.payables < 0 && row("Advances paid to suppliers", -dash.payables)}
                 {row("Less: you owe suppliers", -Math.max(0, dash.payables))}
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "15px 22px", background: HT.green, color: "#FFFFFF", fontSize: 16 }}>
                   <b>Working capital</b><span style={{ fontVariantNumeric: "tabular-nums" }}>{inr(dash.cash + dash.receivables - dash.payables)}</span>
