@@ -1408,6 +1408,17 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
   const isPosted = msg.status === "posted";
   const isCancelled = msg.status === "cancelled";
   const TEXT = "#10241F", MUTED = "#5E6B66", GOLD = "#12352D", GREEN = "#0B7A55", RED = "#C2321F", AMBER = "#8A5A00", PURPLE = "#5B4BC4", BLUE = "#1F5EFF";
+  // Add a line (pre-filled with whatever keeps the entry out of balance) or remove one — an entry keeps at least two
+  const addLine = () => {
+    const gap = Math.round((editLines.reduce((s, l) => s + (l.debit || 0), 0) - editLines.reduce((s, l) => s + (l.credit || 0), 0)) * 100) / 100;
+    onEditLines([...editLines, { account: "", debit: gap < 0 ? -gap : 0, credit: gap > 0 ? gap : 0, is_new_account: false } as ParsedTransaction["lines"][number]]);
+  };
+  useEffect(() => {
+    const h = (e: Event) => { if ((e as CustomEvent).detail === msg.id && editing) addLine(); };
+    document.addEventListener("fb-add-line", h);
+    return () => document.removeEventListener("fb-add-line", h);
+  });
+  const delLine = (i: number) => { if (editLines.length > 2) onEditLines(editLines.filter((_, k) => k !== i)); };
   const inputS: React.CSSProperties = { background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "5px 8px", borderRadius: 6, fontSize: "0.78rem", fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" };
 
   return (
@@ -1510,6 +1521,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
               <th style={{ padding: "0.55rem 0", textAlign: "left", color: "#9A7A2E", fontWeight: 800, fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.16em" }}>Account</th>
               <th style={{ padding: "0.55rem 0", textAlign: "right", color: "#9A7A2E", fontWeight: 800, fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.16em" }}>{editing ? "Debit" : "Amount"}</th>
               {editing && <th style={{ padding: "0.55rem 0", textAlign: "right", color: "#9A7A2E", fontWeight: 800, fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.16em" }}>Credit</th>}
+              {editing && <th style={{ width: 40 }} />}
             </tr>
           </thead>
           <tbody>
@@ -1535,10 +1547,18 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
                 {editing && <td style={{ padding: "0.45rem 1rem", textAlign: "right", fontFamily: MONO }}>
                   <input type="number" value={line.credit || ""} onChange={e => { const l = [...editLines]; l[i] = { ...l[i], credit: parseFloat(e.target.value) || 0 }; onEditLines(l); }} style={{ ...inputS, textAlign: "right", width: 100 }} />
                 </td>}
+                {editing && <td style={{ padding: "0.45rem 0 0.45rem 0.5rem", textAlign: "right" }}>
+                  {editLines.length > 2 && <button type="button" onClick={() => delLine(i)} title="Remove this line" aria-label={`Remove line ${i + 1}`} style={{ width: 30, height: 30, borderRadius: "50%", border: "1px solid rgba(194,50,31,0.3)", background: "transparent", color: RED, cursor: "pointer", fontSize: 14 }}>×</button>}
+                </td>}
               </tr>
             ))}
           </tbody>
           <tfoot>
+            {editing && (
+              <tr><td colSpan={4} style={{ padding: "0.5rem 0" }}>
+                <button type="button" onClick={addLine} style={{ height: 30, padding: "0 14px", borderRadius: 999, border: "1px dashed #C9A24A", background: "transparent", color: "#8A6420", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Add line</button>
+              </td></tr>
+            )}
             {editing ? (
               <tr style={{ borderTop: `2px solid #C9CEDF`, background: "#F7F8FC" }}>
                 <td style={{ padding: "0.5rem 1rem", fontWeight: 700, fontSize: "0.8rem", color: MUTED }}>Total</td>
@@ -1551,7 +1571,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
                 <td style={{ padding: "0.7rem 0 0.2rem", textAlign: "right", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 700, fontSize: "1.1rem", fontVariantNumeric: "tabular-nums", borderTop: "2px solid #12352D" }}>{fmt(totalDr)}</td>
               </tr>
             )}
-            {!balanced && <tr><td colSpan={editing ? 3 : 2} style={{ padding: "0.4rem 1rem", fontSize: "0.75rem", color: RED, background: "rgba(194,50,31,0.07)" }}>⚠ Entry not balanced — Dr ≠ Cr. Edit the amounts before posting.</td></tr>}
+            {!balanced && <tr><td colSpan={editing ? 4 : 2} style={{ padding: "0.4rem 1rem", fontSize: "0.75rem", color: RED, background: "rgba(194,50,31,0.07)" }}>⚠ Entry not balanced — Dr ≠ Cr. Edit the amounts before posting.</td></tr>}
           </tfoot>
         </table>
       </div>
@@ -1639,6 +1659,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
               <button onClick={onConfirm} disabled={!balanced || !!msg.fyLocked || msg.status === "confirmed"} aria-busy={msg.status === "confirmed"} className="fb-post" style={{ background: balanced && !msg.fyLocked ? "#12352D" : "rgba(18,53,45,0.15)", color: balanced && !msg.fyLocked ? "#FFFFFF" : "rgba(18,53,45,0.45)", border: "none", padding: "0 6px 0 20px", height: 44, display: "inline-flex", alignItems: "center", gap: 10, borderRadius: 999, fontWeight: 800, cursor: msg.status === "confirmed" ? "wait" : balanced && !msg.fyLocked ? "pointer" : "not-allowed", opacity: msg.status === "confirmed" ? 0.7 : 1, fontFamily: "inherit", fontSize: "0.84rem" }}>
                 {msg.fyLocked ? "🔒 Period Locked" : msg.status === "confirmed" ? <><span className="fb-spin" aria-hidden="true" /> Posting…</> : <>Confirm &amp; post <span aria-hidden="true" style={{ width: 32, height: 32, borderRadius: "50%", background: "#D9B56F", color: "#12352D", display: "grid", placeItems: "center", fontSize: 15 }}>✓</span></>}
               </button>
+              <button onClick={() => { onStartEdit(); setTimeout(() => document.dispatchEvent(new CustomEvent("fb-add-line", { detail: msg.id })), 0); }} title="Add a line to this entry" style={{ background: "transparent", border: "1px dashed #C9A24A", color: "#8A6420", padding: "0 16px", height: 44, borderRadius: 999, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>+ Add line</button>
               <button onClick={onStartEdit} style={{ background: "#FFFFFF", border: "1px solid #D9CBAA", color: TEXT, padding: "0 18px", height: 44, borderRadius: 999, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>✏ Edit</button>
               <button onClick={onCancel} title="Cancel this draft" aria-label="Cancel this draft" style={{ background: "transparent", border: "1px solid rgba(194,50,31,0.3)", color: RED, width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>✕</button>
               {msg.status === "edited" && <span style={{ fontSize: "0.7rem", color: AMBER, marginLeft: 4 }}>● Edited</span>}
