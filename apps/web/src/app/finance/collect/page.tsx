@@ -22,7 +22,7 @@ export default function CollectPage() {
   const [upi, setUpi] = useState("");
   const [bizId, setBizId] = useState("");
   const [phoneEdit, setPhoneEdit] = useState<Record<string, string>>({});
-  const [alert, setAlert] = useState<{ linked: boolean; phone?: string | null; freq: "off" | "daily" | "weekly"; days: number; setup_needed?: string } | null>(null);
+  const [alert, setAlert] = useState<{ linked: boolean; phone?: string | null; freq: string; days: number; setup_needed?: string } | null>(null);
   const [alertMsg, setAlertMsg] = useState("");
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function CollectPage() {
   const overdue = data?.debtors.filter(x => x.oldestDays > 30) ?? [];
 
   const saveUpi = (v: string) => { setUpi(v); try { localStorage.setItem(`fw_upi_${bizId}`, v); } catch { /* ignore */ } };
-  const saveAlert = async (freq: "off" | "daily" | "weekly", days: number) => {
+  const saveAlert = async (freq: string, days: number) => {
     setAlert(a => a && { ...a, freq, days }); setAlertMsg("");
     const r = await fetch("/api/finance/collect-alerts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, freq, days }) });
     const j = await r.json().catch(() => ({}));
@@ -114,10 +114,10 @@ export default function CollectPage() {
                 {alert.setup_needed ? <div style={{ fontSize: 13, color: C.warn }}>{alert.setup_needed}</div>
                   : !alert.linked ? <div style={{ fontSize: 13, color: C.muted }}>Link your WhatsApp in <Link href="/finance/settings" style={{ color: C.primary, fontWeight: 700 }}>Settings → WhatsApp</Link> to get overdue alerts.</div>
                   : <>
-                    <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>FreBook WhatsApps you ({alert.phone}) at 9 AM with who&apos;s overdue. Reply <b>LIST</b> to get each reminder ready to send.</div>
+                    <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>FreBook WhatsApps you ({alert.phone}) with who&apos;s overdue and a ready-to-send reminder for each — at the hour set on the <a href="/finance/reminders">Reminders</a> page.</div>
                     <div role="radiogroup" aria-label="How often" style={{ display: "flex", gap: 6 }}>
-                      {(["off", "daily", "weekly"] as const).map(f => (
-                        <button key={f} role="radio" aria-checked={alert.freq === f} onClick={() => saveAlert(f, alert.days)} style={{ flex: 1, height: 38, borderRadius: 10, border: `1px solid ${alert.freq === f ? C.primary : C.line}`, background: alert.freq === f ? C.soft : "transparent", color: alert.freq === f ? C.primary : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{f === "off" ? "Off" : f === "daily" ? "Daily" : "Mondays"}</button>
+                      {(["off", "daily", "every3", "weekly", "fortnightly"] as const).map(f => (
+                        <button key={f} role="radio" aria-checked={alert.freq === f} onClick={() => saveAlert(f, alert.days)} style={{ flex: 1, height: 38, borderRadius: 10, border: `1px solid ${alert.freq === f ? C.primary : C.line}`, background: alert.freq === f ? C.soft : "transparent", color: alert.freq === f ? C.primary : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{({ off: "Off", daily: "Daily", every3: "3 days", weekly: "Weekly", fortnightly: "15 days" } as Record<string, string>)[f]}</button>
                       ))}
                     </div>
                     {alert.freq !== "off" && (

@@ -18,6 +18,8 @@ import { buildMonthGstr1, fileGstr1, monthLabel } from "../gstr1Export";
 import { monthFromText } from "../monthFromText";
 import { loginToken, loginUrl } from "./loginLink";
 import { loadOverdue, listMessage } from "../collectAlert";
+import { loadReminderData, buildDigest, type LinkPrefs } from "../reminderData";
+import { digestText } from "../reminders";
 import { loadInvoiceDoc } from "../invoiceLoad";
 import { invoicePdf } from "../invoicePdf";
 import { waPost } from "./transport";
@@ -94,6 +96,16 @@ ${loginUrl(token)}
 Works once and expires soon. Don't forward it — it signs in as you.`;
   };
   if (cmd.type === "login") return signInLink();
+  // SUMMARY: today's figures, payments to make, compliance due and customer reminders — the same as the scheduled update
+  if (/^(summary|today|update|daily update|balances?)\s*$/i.test(m.text.trim())) {
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const d = await loadReminderData(sb, link.business_id, today).catch(() => null);
+    if (!d) return "❌ Couldn't read the books right now. Try again in a minute.";
+    const { data: pl } = await sb.from("fw_fin_wa_links").select("compliance_before,collect_alert,collect_alert_days,collect_alert_last,summary_last,compliance_last").eq("phone", m.from).eq("business_id", link.business_id).maybeSingle();
+    const pr = (pl ?? {}) as Partial<LinkPrefs>;
+    const out = await buildDigest(sb, link.business_id, today, d, { daily_summary: true, compliance_alert: true, compliance_before: pr.compliance_before ?? 7, collect_alert: "off", collect_alert_days: pr.collect_alert_days ?? 30, collect_alert_last: null, summary_last: null, compliance_last: null }, true);
+    return digestText(d.business, out.digest);
+  }
   // LIST: overdue customers with one-tap reminder links (the owner sends them from their own WhatsApp)
   if (/^(list|dues|overdue|reminders?)\s*$/i.test(m.text.trim())) {
     const { data: al } = await sb.from("fw_fin_wa_links").select("collect_alert_days").eq("phone", m.from).eq("business_id", link.business_id).maybeSingle();
@@ -450,6 +462,7 @@ async function sendList(to: string, body: string, button: string, section: strin
 function sendMenu(to: string, bizName: string) {
   return sendList(to, `📒 *FreBook* · ${bizName}\nPick what you need, or just type a transaction.`, "Menu", "FreBook", [
     { id: "Profit this month", title: "Profit this month", description: "P&L for the current month" },
+    { id: "SUMMARY", title: "Today's summary", description: "Sales, cash, bank, loans, dues" },
     { id: "Cash and bank balance", title: "Cash & bank balance" },
     { id: "LIST", title: "Who owes me?", description: "Overdue customers with reminders" },
     { id: "GST filing status", title: "GST filing status", description: "GSTR-1 and GSTR-3B, filed or due" },

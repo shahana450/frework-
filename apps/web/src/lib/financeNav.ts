@@ -14,6 +14,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "📄", label: "Invoices", href: "/finance/sales" },
     { icon: "📥", label: "Receivables", href: "/finance/receivables" },
     { icon: "📲", label: "Collect Payments", href: "/finance/collect" },
+    { icon: "⏰", label: "Reminders", href: "/finance/reminders" },
     { icon: "🔴", label: "Credit Note", href: "/finance/credit-note", accountant: true },
   ] },
   { label: "Purchases", items: [

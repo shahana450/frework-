@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const gate = await requireBusiness(req, body.business_id);
     if (gate instanceof NextResponse) return gate;
-    const freq = ["off", "daily", "weekly"].includes(body.freq) ? body.freq : "off";
-    const days = [7, 15, 30, 45, 60].includes(Number(body.days)) ? Number(body.days) : 30;
+    const freq = ["off", "daily", "every3", "weekly", "fortnightly", "monthly"].includes(body.freq) ? body.freq : "off";
+    const days = [7, 15, 30, 45, 60, 90].includes(Number(body.days)) ? Number(body.days) : 30;
     const { data, error } = await supabase.from("fw_fin_wa_links").update({ collect_alert: freq, collect_alert_days: days }).eq("business_id", body.business_id).eq("user_id", gate.user.id).eq("verified", true).select("id");
     if (error) return missing(error.message) ? NextResponse.json({ error: NEEDS_SQL }, { status: 400 }) : serverError("collect-alerts", error);
     if (!data?.length) return NextResponse.json({ error: "Link your WhatsApp number first (Settings → WhatsApp)." }, { status: 400 });
