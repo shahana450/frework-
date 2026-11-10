@@ -3,6 +3,7 @@
 // with its group pre-guessed. Used on FreBook draft lines.
 import { useEffect, useMemo, useRef, useState } from "react";
 import GroupChips, { guessGroup } from "@/components/GroupChips";
+import { LEDGER_HEADS, inferHead } from "@/lib/ledgerHeads";
 
 export type Ledger = { name: string; type: string; sub_type: string | null; group_key?: string | null };
 
@@ -23,6 +24,15 @@ const EXACT: Record<string, string> = {
   fixed_asset: "Fixed asset", stock: "Stock", capital: "Capital", duties: "Duties & taxes", current_liability: "Current liability", loan: "Loan",
   sales: "Sales", indirect_income: "Indirect income", purchase: "Purchase", direct_expense: "Direct expense", indirect_expense: "Indirect expense",
 };
+/** The ledger's own group, as in Tally: the one saved in Edit ledger, else read from its name and type. */
+export function groupLabel(l: Ledger): string {
+  if (l.group_key && EXACT[l.group_key]) return EXACT[l.group_key];
+  const byName = inferHead(l.name);
+  if (byName && byName.type === l.type) return EXACT[byName.key] ?? byName.label;
+  const byType = LEDGER_HEADS.find(h => h.type === l.type && h.sub_type === l.sub_type);
+  if (byType) return EXACT[byType.key] ?? byType.label;
+  return ({ asset: "Current asset", liability: "Current liability", equity: "Capital", income: "Indirect income", expense: "Indirect expense" } as Record<string, string>)[l.type] ?? groupOf(l).label;
+}
 const HEAD_LABEL: Record<string, string> = {
   debtors: "Customer", creditors: "Supplier", indirect_expense: "Expense", indirect_income: "Income", sales: "Sales",
   purchase: "Purchase", bank: "Bank", cash: "Cash", duties: "Tax (GST/TDS)", capital: "Capital", loan: "Loan",
@@ -70,7 +80,7 @@ export default function LedgerPicker({ value, ledgers, isNew, head, recent = [],
         <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value || "Choose ledger"}</span>
         {isNew
           ? <span style={{ fontSize: 10.5, fontWeight: 800, color: "#8A5A00", background: "rgba(184,120,0,0.12)", padding: "1px 7px", borderRadius: 999, whiteSpace: "nowrap" }}>New · {HEAD_LABEL[head ?? guessGroup(value)] ?? "Ledger"}</span>
-          : g && <span style={{ fontSize: 10.5, fontWeight: 800, color: g.ink, background: g.tint, padding: "1px 7px", borderRadius: 999, whiteSpace: "nowrap" }}>{(current?.group_key && EXACT[current.group_key]) || g.label}</span>}
+          : g && <span style={{ fontSize: 10.5, fontWeight: 800, color: g.ink, background: g.tint, padding: "1px 7px", borderRadius: 999, whiteSpace: "nowrap" }}>{current ? groupLabel(current) : g.label}</span>}
         <span aria-hidden="true" style={{ color: "#8A90AE", fontSize: 11 }}>▾</span>
       </button>
 
