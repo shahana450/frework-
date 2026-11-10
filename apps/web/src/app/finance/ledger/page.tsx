@@ -1,4 +1,5 @@
 "use client";
+import { LEDGER_HEADS, inferHead } from "@/lib/ledgerHeads";
 import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -28,6 +29,8 @@ function LedgerContent() {
   const searchParams = useSearchParams();
   const [bizId, setBizId] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  // Edit ledger: name, group, code
+  const [edit, setEdit] = useState<{ name: string; head: string; code: string; busy: boolean; err: string } | null>(null);
   const [selectedAccId, setSelectedAccId] = useState(searchParams.get("account") ?? "");
   const [selectedAcc, setSelectedAcc] = useState<Account | null>(null);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
@@ -53,7 +56,7 @@ function LedgerContent() {
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
       supabase.from("fw_fin_businesses").select("name").eq("id", saved).maybeSingle().then(({ data }) => setBizName(data?.name ?? ""));
-      const { data } = await supabase.from("fw_fin_chart_of_accounts").select("id,code,name,type").eq("business_id", saved).eq("is_group", false).order("code");
+      const { data } = await supabase.from("fw_fin_chart_of_accounts").select("id,code,name,type,sub_type").eq("business_id", saved).eq("is_group", false).order("code");
       setAccounts(data ?? []);
     });
   }, []);
@@ -369,9 +372,42 @@ function LedgerContent() {
                   <h1 style={{ margin: "4px 0", fontSize: "2.6rem", fontWeight: 400, fontStyle: "italic", letterSpacing: "-0.01em" }}>{selectedAcc.name}</h1>
                   <div style={{ color: T.muted, fontSize: "0.92rem" }}>Code {selectedAcc.code} · Type {selectedAcc.type} · Normal balance {normalSide}</div>
                 </div>
+                <button onClick={() => { const a = selectedAcc as Account & { sub_type?: string | null }; const h = LEDGER_HEADS.find(x => x.type === a.type && x.sub_type === a.sub_type) ?? inferHead(a.name) ?? LEDGER_HEADS.find(x => x.type === a.type); setEdit({ name: a.name, head: h?.key ?? "", code: a.code ?? "", busy: false, err: "" }); }} style={{ ...lightBtn, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>✎ Edit ledger</button>
                 <button onClick={() => goAcc(-1)} disabled={idx <= 0} style={{ ...lightBtn, opacity: idx <= 0 ? 0.5 : 1 }}>← Previous account</button>
                 <button onClick={() => goAcc(1)} disabled={idx < 0 || idx >= order.length - 1} style={{ ...lightBtn, opacity: idx >= order.length - 1 ? 0.5 : 1 }}>Next account →</button>
               </div>
+
+              {edit && (
+                <div role="dialog" aria-modal="true" aria-label="Edit ledger" onClick={() => !edit.busy && setEdit(null)} style={{ position: "fixed", inset: 0, background: "rgba(16,36,31,.45)", display: "grid", placeItems: "center", padding: 16, zIndex: 60 }}>
+                  <div onClick={e => e.stopPropagation()} style={{ width: "min(520px,100%)", background: T.paper, border: `1px solid ${T.line}`, borderRadius: 18, padding: 22, display: "grid", gap: 14 }}>
+                    <div style={{ fontSize: "1.5rem", fontStyle: "italic" }}>Edit ledger</div>
+                    <label style={{ display: "grid", gap: 5, fontSize: "0.85rem", color: T.muted }}>Name
+                      <input value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} style={{ height: 42, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 12px", fontSize: "1rem", fontFamily: "inherit", color: T.ink }} />
+                    </label>
+                    <label style={{ display: "grid", gap: 5, fontSize: "0.85rem", color: T.muted }}>Group (under)
+                      <select value={edit.head} onChange={e => setEdit({ ...edit, head: e.target.value })} style={{ height: 42, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 10px", fontSize: "1rem", fontFamily: "inherit", color: T.ink, background: "#FFFFFF" }}>
+                        {LEDGER_HEADS.map(h => <option key={h.key} value={h.key}>{h.label}</option>)}
+                      </select>
+                    </label>
+                    <label style={{ display: "grid", gap: 5, fontSize: "0.85rem", color: T.muted }}>Code
+                      <input value={edit.code} onChange={e => setEdit({ ...edit, code: e.target.value })} style={{ height: 42, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 12px", fontSize: "1rem", fontFamily: "inherit", color: T.ink }} />
+                    </label>
+                    <div style={{ fontSize: "0.82rem", color: T.muted, lineHeight: 1.5 }}>Every entry already posted to this ledger moves with it — reports, Trial Balance and Balance Sheet follow the new group. If the ledger is already in Tally, rename it there too, or the next push creates a new ledger.</div>
+                    {edit.err && <div role="alert" style={{ color: "#B4321F", fontSize: "0.9rem" }}>{edit.err}</div>}
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                      <button onClick={() => setEdit(null)} disabled={edit.busy} style={lightBtn}>Cancel</button>
+                      <button disabled={edit.busy || !edit.name.trim()} onClick={async () => {
+                        setEdit({ ...edit, busy: true, err: "" });
+                        const r = await fetch("/api/finance/ledger-edit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, account_id: selectedAcc.id, name: edit.name, head: edit.head, code: edit.code }) });
+                        const d = await r.json().catch(() => ({}));
+                        if (!r.ok) { setEdit({ ...edit, busy: false, err: d.error ?? "Couldn't save." }); return; }
+                        setAccounts(list => list.map(a => a.id === selectedAcc.id ? { ...a, ...d.account } : a));
+                        setEdit(null);
+                      }} style={{ ...lightBtn, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>{edit.busy ? "Saving…" : "Save"}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Period */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "12px 16px", background: T.paper, border: `1px solid ${T.line}`, borderRadius: 14 }}>
