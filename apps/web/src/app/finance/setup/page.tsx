@@ -316,7 +316,7 @@ export default function BusinessSetup() {
         @media(max-width:720px){.su-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.su-tab-sub{display:none}}`}</style>
       <header style={{ background: "#FFFFFF", borderBottom: "1px solid #ECE7DC", padding: "0 clamp(16px,4vw,48px)", height: 72, display: "flex", alignItems: "center", gap: 14 }}>
         <Link href="/finance" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 9, background: "#12352D", color: "#D9B56F", display: "grid", placeItems: "center", fontWeight: 900 }}>F</span>
+          <img src="/frebook-logo.png" alt="" width={36} height={36} style={{ width: 36, height: 36, borderRadius: 10, display: "block" }} />
           <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "#12352D" }}>Fre<span style={{ color: "#B68A2E" }}>Book</span></span>
         </Link>
         <span style={{ width: 1, height: 22, background: "#E2DDD0" }} />
