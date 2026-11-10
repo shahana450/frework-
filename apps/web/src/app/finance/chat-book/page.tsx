@@ -716,7 +716,8 @@ export default function FreBookPage() {
             </button>
           )}
         </div>
-        <div style={{ flex: 1 }} />
+        {/* The business you're working in, in the middle of the bar */}
+        <div className="fb-bizname" title={bizName} style={{ flex: 1, minWidth: 0, textAlign: "center", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: "1.15rem", fontWeight: 700, color: "#F4EFE4", letterSpacing: "0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", padding: "0 12px" }}>{bizName}</div>
         <InstallApp />
         {[
           { href: "/finance/journals", label: "Journal" },
@@ -1343,6 +1344,7 @@ export default function FreBookPage() {
         }
         @media (prefers-reduced-motion: reduce) { .fb-tile, .fb-tile:hover { transition: none; transform: none; } }
         @media (max-width: 900px) { .fb-glance { grid-template-columns: 1fr 1fr !important; } .fb-glance > :first-child { grid-column: 1 / -1; } } .fb-nchip:hover { border-color: #D9B56F !important; } .fb-many summary::-webkit-details-marker { display: none; }
+        @media (max-width: 760px) { .fb-bizname { display: none !important; } }
         @media (max-width: 640px) { .fb-glance { grid-template-columns: 1fr !important; } .fb-desk-groups { grid-template-columns: 1fr !important; } .fb-desk { justify-content: flex-start !important; } }
         ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:#FFFFFF;border-radius:2px}
       `}</style>
