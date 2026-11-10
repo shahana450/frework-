@@ -81,6 +81,34 @@ export default function BusinessSetup() {
   }, []);
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  // GSTIN first: fill everything the number and the public GST record can tell us
+  const [gstLook, setGstLook] = useState<{ busy: boolean; msg: string; ok: boolean; filled: string[] }>({ busy: false, msg: "", ok: true, filled: [] });
+  async function lookupGstin(raw: string) {
+    const g = raw.toUpperCase().replace(/\s+/g, "");
+    setForm(f => ({ ...f, gstin: g }));
+    if (g.length < 15) { setGstLook({ busy: false, msg: "", ok: true, filled: [] }); return; }
+    setGstLook({ busy: true, msg: "Reading the GST record…", ok: true, filled: [] });
+    const r = await fetch(`/api/finance/gstin-lookup?gstin=${g}`);
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { setGstLook({ busy: false, msg: d.error ?? "Couldn't read that GSTIN.", ok: false, filled: [] }); return; }
+    const filled: string[] = [];
+    const patch: Record<string, string> = { gstin: g, country: "IN" };
+    const put = (k: string, v: string | undefined, label: string) => { if (v && String(v).trim()) { patch[k] = String(v).trim(); filled.push(label); } };
+    put("state", STATES.includes(d.state) ? d.state : undefined, "state");
+    put("pan", d.pan, "PAN");
+    put("business_type", d.businessType, "business type");
+    put("name", d.tradeName || d.legalName, "business name");
+    if (d.legalName && d.tradeName && d.legalName !== d.tradeName) put("legal_name", d.legalName, "legal name");
+    put("gst_trade_name", d.tradeName, "trade name");
+    put("address", d.address, "address");
+    put("city", d.city, "city");
+    put("pincode", d.pincode, "PIN code");
+    put("gst_registration_type", d.registrationType ?? "regular", "GST type");
+    setForm(f => ({ ...f, ...patch }));
+    const inactive = d.status && !/active/i.test(d.status) ? ` ⚠ The GST record says this registration is "${d.status}".` : "";
+    setGstLook({ busy: false, ok: true, filled, msg: `${d.note ? d.note + " " : ""}${inactive}` });
+  }
   const isIN = form.country === "IN";
   const country = COUNTRIES.find(c => c.code === form.country) ?? COUNTRIES[0];
   const baseFy = isIN ? indianFyStart() : fyStartFor(+form.fy_start.slice(5, 7) || 1);
@@ -314,6 +342,20 @@ export default function BusinessSetup() {
           {step === 1 && (
             <>
               <h2 style={{ margin: "0 0 1.5rem", fontSize: "1.2rem", fontWeight: 700 }}>Business Information</h2>
+              {isIN && (
+                <div style={{ background: "#EEF6F0", border: "1px solid #CFE4D6", borderRadius: 16, padding: "18px 20px", marginBottom: "1.5rem" }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+                    <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 9, background: "#8A6420", color: "#FFFFFF", display: "grid", placeItems: "center", fontSize: 17 }}>⚡</span>
+                    <div><div style={{ fontWeight: 800, fontSize: "1rem", color: "#10241F" }}>Have a GSTIN? Start here</div>
+                      <div style={{ fontSize: "0.8rem", color: "#4D5B56" }}>We&apos;ll fill in your name, PAN, state, business type and address from it.</div></div>
+                  </div>
+                  <input aria-label="GSTIN" value={form.gstin} maxLength={15} onChange={e => lookupGstin(e.target.value)} placeholder="E.G. 32ABCDE1234F1Z5"
+                    style={{ ...inputStyle, height: 48, fontSize: "1rem", letterSpacing: "0.12em", fontFamily: "'IBM Plex Mono',ui-monospace,monospace", textTransform: "uppercase", borderColor: !gstLook.ok ? "#C2321F" : gstLook.filled.length ? "#0B7A55" : undefined }} />
+                  <div role="status" style={{ fontSize: "0.8rem", marginTop: 8, color: !gstLook.ok ? "#C2321F" : "#2E5A45" }}>
+                    {gstLook.busy ? "Reading the GST record…" : !gstLook.ok ? gstLook.msg : gstLook.filled.length ? `✓ Filled from GSTIN: ${gstLook.filled.join(", ")}. Check them below.${gstLook.msg ? " " + gstLook.msg : ""}` : "Optional — you can add it in the next step."}
+                  </div>
+                </div>
+              )}
               <div style={fieldStyle}>
                 <label style={labelStyle}>Country *</label>
                 <select style={inputStyle} value={form.country} onChange={e => {
@@ -339,9 +381,18 @@ export default function BusinessSetup() {
               </div>
               <div style={fieldStyle}>
                 <label style={labelStyle}>Business Type</label>
-                <select style={inputStyle} value={form.business_type} onChange={e => set("business_type", e.target.value)}>
-                  {BIZ_TYPES.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
-                </select>
+                <div role="radiogroup" aria-label="Business type" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
+                  {BIZ_TYPES.map(b => {
+                    const on = form.business_type === b.value;
+                    return (
+                      <button key={b.value} type="button" role="radio" aria-checked={on} onClick={() => set("business_type", b.value)}
+                        style={{ textAlign: "left", padding: "12px 14px", borderRadius: 12, border: `1.5px solid ${on ? "#0B5E42" : "rgba(20,26,58,0.13)"}`, background: on ? "#EEF6F0" : "#FFFFFF", cursor: "pointer", fontFamily: "inherit", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#10241F" }}>{b.label}</span>
+                        {on && <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: "50%", background: "#0B5E42", color: "#FFFFFF", display: "grid", placeItems: "center", fontSize: 11, flexShrink: 0 }}>✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div style={fieldStyle}>
