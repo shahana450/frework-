@@ -14,6 +14,10 @@
     {
       "path": "/api/cron/collect-alerts",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/warm",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

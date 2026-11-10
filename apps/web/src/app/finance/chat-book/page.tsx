@@ -221,7 +221,10 @@ export default function FreBookPage() {
   useEffect(() => {
     if (!bizId) return;
     let off = false;
-    fetch(`/api/finance/dashboard?business_id=${bizId}`).then(r => r.ok ? r.json() : null).then(d => { if (!off && d && !d.error) setDeskDash(d as Dashboard); }).catch(() => null);
+    // Last figures at once from this device, fresh ones when they arrive
+    const key = `fw_desk_dash_${bizId}`;
+    try { const c = JSON.parse(localStorage.getItem(key) ?? "null"); if (c) setDeskDash(c as Dashboard); } catch { /* */ }
+    fetch(`/api/finance/dashboard?business_id=${bizId}`).then(r => r.ok ? r.json() : null).then(d => { if (!off && d && !d.error) { setDeskDash(d as Dashboard); try { localStorage.setItem(key, JSON.stringify(d)); } catch { /* full */ } } }).catch(() => null);
     return () => { off = true; };
   }, [bizId]);
   const [sessions, setSessions] = useState<Session[]>([]);
