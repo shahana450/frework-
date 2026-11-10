@@ -517,7 +517,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       )}
       <main key={active.businessId ?? "none"} className="fw-main" style={{ flex: 1, marginLeft: sidebarW, minWidth: 0, transition: "margin-left 0.2s" }}>
         {/* Main icons along the top (FreBook has its own top bar) */}
-        {!pathname.startsWith("/finance/chat-book") && (
+        {!pathname.startsWith("/finance/chat-book") && (<>
           {bizName && <div className="fw-bizbar" title={bizName} style={{ textAlign: "center", padding: "10px 16px 0", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: "1.2rem", fontWeight: 700, color: "#12352D", letterSpacing: "0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bizName}</div>}
           <div style={{ position: "relative" }}>
           {topMore.l && <button type="button" className="fw-topnudge" aria-label="Scroll the menu left" onClick={() => nudgeTop(-1)} style={{ left: 22 }}>‹</button>}
@@ -541,7 +541,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             </a>
           </nav>
           </div>
-        )}
+        </>)}
         {bizSwitched && (
           <div role="alert" style={{ margin: "10px 16px 0", padding: "10px 14px", borderRadius: 12, background: "#FFF4DB", border: "1px solid #F2D29B", color: "#5A3A00", fontSize: 13.5, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <b>Now working in {bizSwitched.to}</b><span>(was {bizSwitched.from}). Check the business before you post.</span>
