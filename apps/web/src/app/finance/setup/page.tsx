@@ -107,7 +107,7 @@ export default function BusinessSetup() {
     put("gst_registration_type", d.registrationType ?? "regular", "GST type");
     setForm(f => ({ ...f, ...patch }));
     const inactive = d.status && !/active/i.test(d.status) ? ` ⚠ The GST record says this registration is "${d.status}".` : "";
-    setGstLook({ busy: false, ok: true, filled, msg: `${d.note ? d.note + " " : ""}${inactive}` });
+    setGstLook({ busy: false, ok: true, filled, msg: `${d.note ? d.note + " " : ""}${inactive}${d.reason ? ` (${String(d.reason).slice(0, 140)})` : ""}` });
   }
   const isIN = form.country === "IN";
   const country = COUNTRIES.find(c => c.code === form.country) ?? COUNTRIES[0];
@@ -296,11 +296,11 @@ export default function BusinessSetup() {
   }
 
   const inputStyle: React.CSSProperties = {
-    width: "100%", background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.21)",
-    color: "#141A3A", padding: "10px 14px", borderRadius: 8, fontSize: "0.9rem",
+    width: "100%", background: "#FFFFFF", border: "1px solid #E2DDD0",
+    color: "#10241F", padding: "12px 14px", borderRadius: 10, fontSize: "0.95rem", fontFamily: "inherit",
     outline: "none", boxSizing: "border-box",
   };
-  const labelStyle: React.CSSProperties = { display: "block", marginBottom: "0.4rem", fontSize: "0.78rem", color: "rgba(20,26,58,0.75)", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" };
+  const labelStyle: React.CSSProperties = { display: "block", marginBottom: "0.45rem", fontSize: "0.86rem", color: "#10241F", fontWeight: 600 };
   const fieldStyle: React.CSSProperties = { marginBottom: "1.25rem" };
 
   const steps: { num: Step; label: string }[] = [
@@ -309,39 +309,46 @@ export default function BusinessSetup() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#232A63", fontWeight: 900, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
-          <span>📚</span> FreBook
+    <div style={{ minHeight: "100vh", background: "#F6F4EE", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
+      <style>{`.su-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}.su-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+        .su-main input:focus,.su-main select:focus,.su-main textarea:focus{border-color:#0B5E42 !important;box-shadow:0 0 0 3px rgba(11,94,66,.12)}
+        @media(max-width:980px){.su-grid{grid-template-columns:minmax(0,1fr)}.su-side{order:2}}
+        @media(max-width:720px){.su-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.su-tab-sub{display:none}}`}</style>
+      <header style={{ background: "#FFFFFF", borderBottom: "1px solid #ECE7DC", padding: "0 clamp(16px,4vw,48px)", height: 72, display: "flex", alignItems: "center", gap: 14 }}>
+        <Link href="/finance" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+          <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 9, background: "#12352D", color: "#D9B56F", display: "grid", placeItems: "center", fontWeight: 900 }}>F</span>
+          <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "#12352D" }}>Fre<span style={{ color: "#B68A2E" }}>Book</span></span>
         </Link>
-        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
-        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Set Up Your Business</span>
-      </nav>
+        <span style={{ width: 1, height: 22, background: "#E2DDD0" }} />
+        <span style={{ fontSize: "0.92rem", color: "#4D5B56" }}>Business setup</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#8A6420", background: "#F7EED6", padding: "6px 12px", borderRadius: 999 }}>✓ Changes kept as you go</span>
+        <Link href="/finance" style={{ fontSize: "0.92rem", fontWeight: 700, color: "#0B5E42", textDecoration: "none" }}>Save &amp; exit</Link>
+      </header>
 
-      <div style={{ maxWidth: 640, margin: "3rem auto", padding: "0 1.5rem" }}>
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.65)", letterSpacing: "0.05em" }}> — let's get your books ready</div>
-        </div>
-        {/* Step indicator */}
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2.5rem" }}>
-          {steps.map((s, i) => (
-            <div key={s.num} style={{ flex: 1, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                background: step >= s.num ? "#232A63" : "rgba(20,26,58,0.14)",
-                color: step >= s.num ? "#F5F6FA" : "rgba(20,26,58,0.65)",
-                fontSize: "0.75rem", fontWeight: 800, flexShrink: 0,
-              }}>{s.num}</div>
-              <div style={{ fontSize: "0.72rem", color: step >= s.num ? "#232A63" : "rgba(20,26,58,0.65)", whiteSpace: "nowrap" }}>{s.label}</div>
-              {i < steps.length - 1 && <div style={{ flex: 1, height: 1, background: step > s.num ? "#232A63" : "rgba(20,26,58,0.14)" }} />}
-            </div>
-          ))}
-        </div>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px clamp(16px,4vw,48px) 60px" }}>
+        <div style={{ fontSize: "0.8rem", fontWeight: 800, letterSpacing: "0.12em", color: "#9A7A2E" }}>STEP {step} OF 4 · ABOUT 2 MINUTES</div>
+        <h1 style={{ margin: "8px 0 6px", fontSize: "clamp(1.8rem,3.4vw,2.4rem)", fontWeight: 800, letterSpacing: "-0.02em", color: "#10241F" }}>{["Tell us about your business", "Tax & GST", "Set up your accounts", "Check and create"][step - 1]}</h1>
+        <p style={{ margin: "0 0 22px", fontSize: "1rem", color: "#4D5B56" }}>{["This shows on your invoices and sets up your books. You can change it later.", "Your GST registration, PAN and how you file returns.", "Your financial year, the kind of business and opening balances.", "One last look before FreBook creates your books."][step - 1]}</p>
 
-        <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 16, padding: "2rem" }}>
+        <nav aria-label="Setup steps" className="su-tabs" style={{ background: "#FFFFFF", border: "1px solid #ECE7DC", borderRadius: 16, padding: 8, marginBottom: 24 }}>
+          {([[1, "Business info", "Name, type, contact"], [2, "Tax & GST", "GSTIN, PAN, returns"], [3, "Accounts setup", "Year, balances, sync"], [4, "Review", "Check and create"]] as [Step, string, string][]).map(([n, t, sub]) => {
+            const on = step === n, done = step > n;
+            return (
+              <button key={n} type="button" onClick={() => { if (n < step) setStep(n); }} aria-current={on ? "step" : undefined}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, border: "none", background: on ? "#EEF6F0" : "transparent", cursor: n < step ? "pointer" : "default", textAlign: "left", fontFamily: "inherit" }}>
+                <span style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, display: "grid", placeItems: "center", fontWeight: 800, fontSize: "0.88rem", background: on ? "#12352D" : done ? "#0B7A55" : "#FFFFFF", color: on || done ? "#FFFFFF" : "#4D5B56", border: on || done ? "none" : "1px solid #E2DDD0" }}>{done ? "✓" : n}</span>
+                <span style={{ minWidth: 0 }}><span style={{ display: "block", fontWeight: 700, fontSize: "0.92rem", color: "#10241F" }}>{t}</span><span className="su-tab-sub" style={{ display: "block", fontSize: "0.78rem", color: "#5E6B66" }}>{sub}</span></span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="su-grid">
+        <div className="su-main" style={{ background: "#FFFFFF", border: "1px solid #ECE7DC", borderRadius: 20, overflow: "hidden" }}>
+        <div style={{ padding: "clamp(20px,3vw,32px)" }}>
           {step === 1 && (
             <>
-              <h2 style={{ margin: "0 0 1.5rem", fontSize: "1.2rem", fontWeight: 700 }}>Business Information</h2>
               {isIN && (
                 <div style={{ background: "#EEF6F0", border: "1px solid #CFE4D6", borderRadius: 16, padding: "18px 20px", marginBottom: "1.5rem" }}>
                   <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
@@ -576,34 +583,71 @@ export default function BusinessSetup() {
             </>
           )}
         </div>
-
-        {/* Navigation */}
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1.5rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "16px clamp(20px,3vw,32px)", background: "#FAF8F3", borderTop: "1px solid #ECE7DC" }}>
           {step > 1 ? (
-            <button onClick={() => setStep(s => (s - 1) as Step)} style={{ background: "rgba(20,26,58,0.11)", border: "none", color: "#141A3A", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontSize: "0.9rem" }}>
-              ← Back
-            </button>
+            <button onClick={() => setStep(s => (s - 1) as Step)} style={{ background: "#FFFFFF", border: "1px solid #E2DDD0", color: "#10241F", height: 48, padding: "0 22px", borderRadius: 12, cursor: "pointer", fontSize: "0.95rem", fontWeight: 700, fontFamily: "inherit" }}>← Back</button>
           ) : (
-            <Link href="/finance" style={{ background: "rgba(20,26,58,0.08)", border: "none", color: "rgba(20,26,58,0.75)", padding: "10px 24px", borderRadius: 8, textDecoration: "none", fontSize: "0.9rem" }}>
-              Cancel
-            </Link>
+            <Link href="/finance" style={{ color: "#5E6B66", fontSize: "0.92rem", textDecoration: "none" }}>Cancel</Link>
           )}
-          {step < 4 ? (
-            <button
-              onClick={() => { const e = stepError(step, form); if (e) { setError(e); return; } setError(""); if (step === 3) setReviewSince(Date.now()); setStep(s => (s + 1) as Step); }}
-              style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "10px 28px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem" }}
-            >
-              Next →
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "10px 28px", borderRadius: 8, cursor: saving ? "wait" : "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: saving ? 0.7 : 1 }}
-            >
-              {saving ? "Creating…" : "Create Business →"}
-            </button>
-          )}
+          <span style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span style={{ fontSize: "0.85rem", color: "#5E6B66" }}>* Required</span>
+            {step < 4 ? (
+              <button onClick={() => { const e = stepError(step, form); if (e) { setError(e); return; } setError(""); if (step === 3) setReviewSince(Date.now()); setStep(s => (s + 1) as Step); }}
+                style={{ background: "#12352D", border: "none", color: "#FFFFFF", height: 50, padding: "0 24px", borderRadius: 12, cursor: "pointer", fontWeight: 800, fontSize: "1rem", fontFamily: "inherit" }}>
+                Continue to {["Tax & GST", "Accounts setup", "Review"][step - 1]} →
+              </button>
+            ) : (
+              <button onClick={handleSubmit} disabled={saving} style={{ background: "#12352D", border: "none", color: "#FFFFFF", height: 50, padding: "0 24px", borderRadius: 12, cursor: saving ? "wait" : "pointer", fontWeight: 800, fontSize: "1rem", opacity: saving ? 0.7 : 1, fontFamily: "inherit" }}>
+                {saving ? "Creating…" : "Create business →"}
+              </button>
+            )}
+          </span>
+        </div>
+        {error && step < 4 && <div role="alert" style={{ padding: "0 clamp(20px,3vw,32px) 16px", background: "#FAF8F3", color: "#C2321F", fontSize: "0.88rem" }}>{error}</div>}
+        </div>
+
+        <aside className="su-side" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {(() => {
+            const typeLabel = BIZ_TYPES.find(b => b.value === form.business_type)?.label ?? "";
+            const checks: [string, boolean][] = [["Business name", !!form.name.trim()], ["Business type", !!form.business_type], ["State", !!form.state], ["Email & mobile", !!form.email.trim() && !!form.phone.trim()], ["Address", !!form.address.trim()], ["PAN / GSTIN", !!(form.pan.trim() || form.gstin.trim())]];
+            const pct = Math.round((checks.filter(c => c[1]).length / checks.length) * 100);
+            return (<>
+              <section style={{ background: "#FFFFFF", border: "1px solid #ECE7DC", borderRadius: 18, padding: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 800, letterSpacing: "0.1em", color: "#4D5B56", marginBottom: 12 }}>LIVE INVOICE PREVIEW<span style={{ color: "#B68A2E", letterSpacing: 0 }}>● Updating</span></div>
+                <div style={{ border: "1px solid #ECE7DC", borderRadius: 14, padding: 16 }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    {form.logo_url ? <img src={form.logo_url} alt="" style={{ width: 44, height: 44, objectFit: "contain", borderRadius: 10 }} /> : <span aria-hidden="true" style={{ width: 44, height: 44, borderRadius: 10, background: "#12352D", color: "#FFFFFF", display: "grid", placeItems: "center", fontWeight: 800 }}>{(form.name.trim() || "FB").split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase()}</span>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: "0.98rem", color: "#10241F", lineHeight: 1.25 }}>{form.name.trim() || "Your business name"}</div>
+                      <div style={{ fontSize: "0.78rem", color: "#5E6B66" }}>{typeLabel}</div>
+                    </div>
+                    <span style={{ fontSize: "0.68rem", fontWeight: 800, letterSpacing: "0.06em", color: "#0B5E42", border: "1px solid #CFE4D6", borderRadius: 6, padding: "3px 7px", whiteSpace: "nowrap" }}>{form.gstin ? "TAX INVOICE" : "INVOICE"}</span>
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "#4D5B56", margin: "12px 0" }}>{[form.address, form.city, form.state, form.pincode].filter(x => x?.trim()).join(", ") || "Your registered address appears here"}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {[["GSTIN", form.gstin || "—"], ["Place of supply", isIN ? form.state || "—" : form.state || "—"]].map(([k, v]) => <div key={k} style={{ background: "#F6F4EE", borderRadius: 8, padding: "7px 9px" }}><div style={{ fontSize: "0.72rem", color: "#5E6B66" }}>{k}</div><div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#10241F", wordBreak: "break-all" }}>{v}</div></div>)}
+                  </div>
+                  <div aria-hidden="true" style={{ marginTop: 14, borderTop: "1px dashed #E2DDD0", paddingTop: 10, display: "grid", gap: 6 }}>
+                    <span style={{ display: "flex", justifyContent: "space-between" }}><span style={{ width: "60%", height: 6, borderRadius: 4, background: "#EEEAE0" }} /><span style={{ width: "18%", height: 6, borderRadius: 4, background: "#EEEAE0" }} /></span>
+                    <span style={{ display: "flex", justifyContent: "flex-end" }}><span style={{ width: "28%", height: 8, borderRadius: 4, background: "#E8D5A0" }} /></span>
+                  </div>
+                </div>
+              </section>
+              <section style={{ background: "#FFFFFF", border: "1px solid #ECE7DC", borderRadius: 18, padding: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><b style={{ fontSize: "1rem", color: "#10241F" }}>Setup progress</b><b style={{ fontSize: "1.4rem", color: "#B68A2E" }}>{pct}%</b></div>
+                <div aria-hidden="true" style={{ height: 6, borderRadius: 999, background: "#EEEAE0", margin: "10px 0 14px", overflow: "hidden" }}><div style={{ width: `${pct}%`, height: "100%", background: "#C9A24A", transition: "width .3s" }} /></div>
+                <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 9 }}>
+                  {checks.map(([t, ok]) => <li key={t} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.9rem", color: ok ? "#10241F" : "#5E6B66", fontWeight: ok ? 600 : 400 }}><span aria-hidden="true" style={{ width: 18, height: 18, borderRadius: "50%", display: "grid", placeItems: "center", fontSize: 10, background: ok ? "#8A6420" : "transparent", color: "#FFFFFF", border: ok ? "none" : "1.5px solid #CFC8B8" }}>{ok ? "✓" : ""}</span>{t}</li>)}
+                </ul>
+              </section>
+              <section style={{ background: "#12352D", borderRadius: 18, padding: 20, color: "#F4EFE4" }}>
+                <b style={{ fontSize: "1rem", color: "#FFFFFF" }}>Stuck on something?</b>
+                <p style={{ margin: "6px 0 14px", fontSize: "0.88rem", lineHeight: 1.5, color: "#C9D3CE" }}>Type your GSTIN in the green box — FreBook fills the rest. Questions? Ask FreBook once your books are created.</p>
+                <Link href="/finance/help" style={{ display: "block", textAlign: "center", background: "#D9B56F", color: "#12352D", fontWeight: 800, borderRadius: 12, padding: "12px 0", textDecoration: "none" }}>Open help</Link>
+              </section>
+            </>);
+          })()}
+        </aside>
         </div>
       </div>
     </div>
