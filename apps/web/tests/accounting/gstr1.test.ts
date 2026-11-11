@@ -99,3 +99,10 @@ test("invoice from an income entry", () => {
   assert.equal(amountInWords(26500), "Rupees Twenty Six Thousand Five Hundred Only");
   assert.equal(amountInWords(12345678), "Rupees One Crore Twenty Three Lakh Forty Five Thousand Six Hundred Seventy Eight Only");
 });
+
+test("a Tally sale with no party name finds the customer through its ledger (B2B)", () => {
+  const docs = docsFromJournals([
+    J("2026-11-05", "sales", null, "SCL/585/26-27", [["ACME INDUSTRIES", 11800, 0], ["Sales", 0, 10000], ["Output CGST", 0, 900], ["Output SGST", 0, 900]]),
+  ], [{ id: "c1", name: "Acme Industries", gstin: "32AAPFU0939F1ZV", state: "Kerala" }]);
+  assert.equal(docs[0].gstin, "32AAPFU0939F1ZV");
+});

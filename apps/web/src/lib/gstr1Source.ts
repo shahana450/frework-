@@ -30,7 +30,9 @@ export function docsFromJournals(journals: SrcJournal[], contacts: SrcContact[])
   for (const j of journals) {
     const kind = j.type === "sales" ? "invoice" : j.type === "credit_note" ? "credit_note" : null;
     if (!kind) continue;
-    const c = (j.contact_id && byId.get(j.contact_id)) || (j.party_name ? byName.get(j.party_name.trim().toLowerCase()) : undefined);
+    // The customer: linked contact, else the party name, else the ledger the sale was debited to (Tally imports)
+    const c = (j.contact_id && byId.get(j.contact_id)) || (j.party_name ? byName.get(j.party_name.trim().toLowerCase()) : undefined)
+      || j.lines.map(l => byName.get(l.account.trim().toLowerCase())).find(x => !!x);
     const saved = (j.metadata?.gst_invoice ?? null) as SavedInvoice | null;
     const no = (j.reference_no || j.entry_no).trim();
 

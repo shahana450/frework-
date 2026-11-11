@@ -111,9 +111,9 @@ function extractCompanyName(xml: string): string {
 
 // ── Import ledgers FROM Tally → fw_fin_accounts ──────────────────────────────
 
-function parseTallyLedgers(xml: string): { name: string; parent: string }[] {
+function parseTallyLedgers(xml: string): { name: string; parent: string; gstin?: string; state?: string }[] {
   const seen = new Set<string>();
-  const results: { name: string; parent: string }[] = [];
+  const results: { name: string; parent: string; gstin?: string; state?: string }[] = [];
 
   // Method 1: Tally Prime collection format — <LEDGER NAME="...">...<PARENT.LIST><PARENT>...</PARENT>
   // Tally Prime format: <LEDGER NAME="..."><PARENT TYPE="String">GroupName</PARENT>
@@ -126,7 +126,10 @@ function parseTallyLedgers(xml: string): { name: string; parent: string }[] {
     // PARENT tag may have attributes like TYPE="String" — match with [^>]*
     const parentMatch = block.match(/<PARENT[^>]*>([^<]+)<\/PARENT>/i);
     const parent = parentMatch?.[1]?.trim() ?? "";
-    if (!seen.has(name)) { seen.add(name); results.push({ name, parent }); }
+    // GSTIN and state: TallyPrime 3+ keeps them in LEDGSTREGDETAILS.LIST; older releases in PARTYGSTIN / LEDSTATENAME
+    const gstin = (block.match(/<(?:PARTYGSTIN|GSTIN)[^>]*>\s*([0-9]{2}[A-Z0-9]{13})\s*</i)?.[1] ?? "").toUpperCase() || undefined;
+    const state = (block.match(/<(?:LEDSTATENAME|STATE|STATENAME|PRIORSTATENAME)[^>]*>([^<]+)</i)?.[1] ?? "").trim() || undefined;
+    if (!seen.has(name)) { seen.add(name); results.push({ name, parent, gstin, state }); }
   }
 
   // Fallback: child element format
@@ -731,7 +734,7 @@ export default function TallyPage() {
     setSyncing("import"); setSyncResult(null);
     try {
       // Tally Prime format: Collection export using VERSION + TYPE=Collection + DESC
-      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ledgers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ledgers" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
+      const xml = `<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>FP_Ledgers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME="FP_Ledgers" ISMODIFY="No"><TYPE>Ledger</TYPE><FETCH>Name,Parent,PartyGSTIN,LedStateName,LedGSTRegDetails,LedMailingDetails</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>`;
       const res = await tallyFetch(tallyUrl, xml, 20000);
       const text = await res.text();
       setRawDebug(text.slice(0, 2000));
@@ -768,7 +771,27 @@ export default function TallyPage() {
           .insert(rows.slice(i, i + 50));
         if (!error) inserted += Math.min(50, rows.length - i);
       }
-      setSyncResult({ ok: true, msg: `Imported ${inserted} new ledgers from Tally into Chart of Accounts (${existingNames.size} already existed).` });
+      // Customers' and suppliers' GSTIN + state onto their FreBook contacts — GSTR-1 needs them for B2B
+      let gstinSaved = 0;
+      const withGstin = ledgers.filter(l => l.gstin);
+      if (withGstin.length) {
+        const [{ data: accs }, { data: contacts }] = await Promise.all([
+          supabase.from("fw_fin_chart_of_accounts").select("id,name,sub_type").eq("business_id", bizId).eq("is_group", false),
+          supabase.from("fw_fin_contacts").select("id,name,ledger_account_id").eq("business_id", bizId),
+        ]);
+        const key = (x: string) => x.trim().toLowerCase();
+        for (const l of withGstin) {
+          const acc = (accs ?? []).find(a => key(a.name) === key(l.name));
+          const c = (contacts ?? []).find(x => (acc && x.ledger_account_id === acc.id) || key(x.name) === key(l.name));
+          const patch = { gstin: l.gstin, ...(l.state ? { state: l.state } : {}), ...(l.gstin ? { state_code: l.gstin.slice(0, 2) } : {}) };
+          const isCust = /debtor|receivable|customer/i.test(l.parent) || acc?.sub_type === "trade_receivables";
+          const { error } = c
+            ? await supabase.from("fw_fin_contacts").update(patch).eq("id", c.id)
+            : await supabase.from("fw_fin_contacts").insert({ business_id: bizId, name: l.name, type: isCust ? "customer" : "vendor", is_active: true, ...(acc ? { ledger_account_id: acc.id } : {}), ...patch });
+          if (!error) gstinSaved++;
+        }
+      }
+      setSyncResult({ ok: true, msg: `Imported ${inserted} new ledgers from Tally into Chart of Accounts (${existingNames.size} already existed).${gstinSaved ? ` Saved GSTIN for ${gstinSaved} customer${gstinSaved === 1 ? "" : "s"}/supplier${gstinSaved === 1 ? "" : "s"} — GSTR-1 now shows their sales as B2B.` : withGstin.length ? "" : " No GSTINs found on Tally ledgers."}` });
 
       // Refresh journal count
       const { count } = await supabase.from("fw_fin_journals").select("id", { count: "exact", head: true }).eq("business_id", bizId).eq("status", "posted");
