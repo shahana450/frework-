@@ -39,6 +39,16 @@ export default function GstDesk() {
   const [q, setQ] = useState("");
   const [only, setOnly] = useState<"all" | "pending">("all");
   const [uid, setUid] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+  const [checking, setChecking] = useState("");
+  const checkFilings = async () => {
+    setChecking("Checking each client on the GST portal…");
+    const r = await fetch("/api/finance/gst-desk", { method: "POST" });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { setChecking(d.error ?? "Couldn't check filings."); return; }
+    setChecking(`Checked ${d.checked} client${d.checked === 1 ? "" : "s"} on the GST portal${d.failed?.length ? ` — couldn't read ${d.failed.length}: ${d.failed.slice(0, 3).map((f: { name: string; error: string }) => `${f.name} (${f.error})`).join("; ")}` : "."}`);
+    setTick(t => t + 1);
+  };
 
   useEffect(() => { supabase.auth.getUser().then(({ data: { user } }) => { if (!user) router.replace("/login?next=/finance/gst/desk"); else setUid(user.id); }); }, [router]);
   useEffect(() => {
@@ -48,7 +58,7 @@ export default function GstDesk() {
       const d = await r.json().catch(() => ({}));
       if (!r.ok) setErr(d.error ?? "Couldn't load the GST desk."); else { setRows(d.businesses ?? []); setNoGstin(d.without_gstin ?? 0); }
     }).catch(() => setErr("Couldn't load the GST desk."));
-  }, [uid, month]);
+  }, [uid, month, tick]);
 
   const scheme = (id: string): Scheme => { try { const s = localStorage.getItem(`fw_gst_scheme_${id}`); return s === "qrmp" || s === "composition" ? s : "monthly"; } catch { return "monthly"; } };
   const cell = (r: Row, form: "GSTR-1" | "GSTR-3B") => {
@@ -82,9 +92,9 @@ export default function GstDesk() {
     <div style={{ minHeight: "100vh", background: HT.cream, color: HT.ink, fontFamily: SERIF }}>
       <PageHero eyebrow={`GST desk · ${label}`} title="Every client's GST, one screen"
         sub="Figures from each client's books; filing status from the GST portal. Open a client to prepare the return."
-        actions={<select value={month} onChange={e => setMonth(e.target.value)} aria-label="Return month"
+        actions={<><button type="button" onClick={checkFilings} disabled={checking.startsWith("Checking")} style={{ height: 46, padding: "0 18px", borderRadius: 999, border: "none", background: "#D9B56F", color: HT.green, fontWeight: 800, fontFamily: SERIF, fontSize: 15, cursor: "pointer", marginRight: 8 }}>{checking.startsWith("Checking") ? "Checking…" : "↻ Check filings"}</button><select value={month} onChange={e => setMonth(e.target.value)} aria-label="Return month"
           style={{ height: 46, padding: "0 16px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.28)", background: HT.green, color: "#FFFFFF", fontFamily: SERIF, fontSize: 15 }}>
-          {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}</select>}
+          {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}</select></>}
         tiles={rows ? [
           { label: "GST clients", value: String(rows.length) },
           { label: "GSTR-1 filed", value: `${filed1} / ${rows.length}`, tone: filed1 === rows.length ? "good" : "warn" },
@@ -94,6 +104,7 @@ export default function GstDesk() {
         ] : undefined} />
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "26px 20px 60px", display: "flex", flexDirection: "column", gap: 14 }}>
         {err && <div role="alert" style={{ ...card, padding: "14px 18px", color: "#B4321F" }}>{err}</div>}
+        {checking && <div role="status" style={{ ...card, padding: "12px 18px", fontSize: 14, color: HT.ink }}>{checking}</div>}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Find a client by name or GSTIN" aria-label="Find a client" style={{ ...input, flex: "1 1 260px" }} />
           {(["all", "pending"] as const).map(k => (

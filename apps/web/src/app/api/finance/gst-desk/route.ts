@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireUser, serverError } from "@/lib/apiAuth";
 import { monthJournals } from "@/lib/gstr1Export";
 import { gstSummary } from "@/lib/gstSummary";
+import { createSandboxGstProvider } from "@/lib/portals/sandbox";
 
 // GST desk — every GST-registered business the signed-in person can open (owned, or as a team member / CA), with the
 // month's figures from the books and the GSTR-1 / GSTR-3B filing status recorded from the portal. Read-only.
@@ -11,6 +12,45 @@ export const maxDuration = 60;
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const FILED = ["filed", "e_verified", "processed"];
+
+// The businesses this person can open, with a GSTIN
+async function gstBusinesses(user: { id: string; email?: string | null }) {
+  const [{ data: owned }, { data: member }] = await Promise.all([
+    supabase.from("fw_fin_businesses").select("id,name,gstin,deleted_at").eq("owner_id", user.id),
+    user.email ? supabase.from("fw_fin_team_members").select("business_id").ilike("invited_email", user.email.replace(/[\\%_]/g, c => `\\${c}`)).in("status", ["active", "pending"]) : Promise.resolve({ data: [] }),
+  ]);
+  const ids = ((member ?? []) as { business_id: string }[]).map(m => m.business_id).filter(id => !(owned ?? []).some(b => b.id === id));
+  const { data: shared } = ids.length ? await supabase.from("fw_fin_businesses").select("id,name,gstin,deleted_at").in("id", ids) : { data: [] };
+  return [...(owned ?? []), ...(shared ?? [])].filter(b => !b.deleted_at && b.gstin && String(b.gstin).trim().length === 15) as { id: string; name: string; gstin: string }[];
+}
+
+// Check filings: read every client's GSTR-1 / GSTR-3B filing status from the public GST record (no OTP) and save it
+export async function POST(req: NextRequest) {
+  try {
+    const user = await requireUser(req);
+    if (user instanceof NextResponse) return user;
+    const list = await gstBusinesses(user);
+    const provider = createSandboxGstProvider();
+    const now = new Date(), fyStart = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    let updated = 0; const failed: { name: string; error: string }[] = [];
+    for (let i = 0; i < list.length; i += 4) {
+      await Promise.all(list.slice(i, i + 4).map(async b => {
+        try {
+          const rows = await provider.fetchStatuses(b.gstin.trim().toUpperCase(), { token: "public", expiresAt: "" }, fyStart);
+          if (rows.length) {
+            const { error } = await supabase.from("fw_fin_portal_status").upsert(rows.map(r => ({
+              business_id: b.id, portal: "gst", kind: r.kind, form: r.form, period: r.period, status: r.status, arn: r.arn ?? null, filed_on: r.filedOn ?? null,
+              amount: r.amount ?? null, details: r.details ?? {}, demo: false, fetched_at: new Date().toISOString(),
+            })), { onConflict: "business_id,portal,form,period" });
+            if (error) throw error;
+          }
+          updated++;
+        } catch (e) { failed.push({ name: b.name, error: e instanceof Error ? e.message : "Couldn't read the GST record" }); }
+      }));
+    }
+    return NextResponse.json({ ok: true, checked: list.length, updated, failed });
+  } catch (e) { return serverError("gst-desk refresh", e, "Couldn't check filings right now."); }
+}
 
 export async function GET(req: NextRequest) {
   try {
