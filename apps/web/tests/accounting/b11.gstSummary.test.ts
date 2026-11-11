@@ -22,3 +22,16 @@ test("B11: a sale marked 0% / exempt is nil-exempt, not taxable or non-GST", () 
   assert.equal(classifySale({ lines: [{ account: "Sales", dr: 0, cr: 5000 }], metadata: { gst: { applicable: true, rate: 0 } } }), "nil_exempt");
   assert.equal(classifySale({ lines: [{ account: "Sales", dr: 0, cr: 5000 }] }), "non_gst");
 });
+
+test("taxable value comes from the invoice whatever the income ledger is called; GST journals are kept apart", () => {
+  const s = gstSummary([
+    { lines: [{ account: "ACME INDUSTRIES", dr: 11800, cr: 0 }, { account: "ACCOUNTS FINALISATION", dr: 0, cr: 10000 }, { account: "CGST", dr: 0, cr: 900 }, { account: "SGST", dr: 0, cr: 900 }] },
+    // Credit note reverses it
+    { lines: [{ account: "AUDIT FEE", dr: 1000, cr: 0 }, { account: "CGST", dr: 90, cr: 0 }, { account: "SGST", dr: 90, cr: 0 }, { account: "ACME INDUSTRIES", dr: 0, cr: 1180 }] },
+    // GST journal: tax moved between tax ledgers / bank — not a sale
+    { lines: [{ account: "CGST", dr: 0, cr: 5000 }, { account: "GST Payable", dr: 5000, cr: 0 }] },
+  ]);
+  assert.equal(s.taxable_sales, 9000);
+  assert.equal(s.output_tax, 1620);
+  assert.equal(s.other_tax_movement, 5000);
+});

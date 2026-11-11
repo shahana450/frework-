@@ -19,6 +19,7 @@ type GSTSummary = {
   igst_payable: number;
   input_credit: number;
   net_gst_payable: number;
+  other_tax_movement?: number;
 };
 
 const MONTHS = [
@@ -111,9 +112,9 @@ export default function GSTPage() {
               {monthOptions.map(mo => <option key={mo.value} value={mo.value}>{mo.label}</option>)}
             </select></span>}
             tiles={[
-              { label: "Taxable sales", value: summary ? `₹${fmt(summary.taxable_sales ?? summary.total_sales)}` : "—" },
+              { label: "Taxable sales", sub: "As in GSTR-1 — every invoice that charged GST", value: summary ? `₹${fmt(summary.taxable_sales ?? summary.total_sales)}` : "—" },
               { label: "Purchases", value: summary ? `₹${fmt(summary.total_purchases)}` : "—" },
-              ...(gstin ? [{ label: "Net GST payable", value: summary ? `₹${fmt(summary.net_gst_payable)}` : "—", tone: (summary && summary.net_gst_payable > 0 ? "bad" : "good") as "bad" | "good", sub: `GSTR-1 due 11 ${nxt} · GSTR-3B due 20 ${nxt}` }] : []),
+              ...(gstin ? [{ label: "Net GST payable", value: summary ? `₹${fmt(summary.net_gst_payable)}` : "—", tone: (summary && summary.net_gst_payable > 0 ? "bad" : "good") as "bad" | "good", sub: summary ? `Output ₹${fmt(summary.output_tax ?? 0)} − ITC ₹${fmt(summary.input_credit ?? 0)} on invoices${Math.abs(summary.other_tax_movement ?? 0) >= 1 ? ` · ₹${fmt(summary.other_tax_movement ?? 0)} moved on GST ledgers by journals, not counted` : ""} · GSTR-1 due 11 ${nxt}, 3B due 20 ${nxt}` : `GSTR-1 due 11 ${nxt} · GSTR-3B due 20 ${nxt}` }] : []),
             ]}
             side={gstin ? undefined : <>
               <div style={{ fontSize: 17 }}><span style={{ color: HT.rose }}>●</span> GSTIN not set</div>
