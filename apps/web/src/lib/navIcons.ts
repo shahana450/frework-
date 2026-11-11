@@ -47,7 +47,7 @@ const P = {
 };
 
 const BY_PATH: Record<string, string> = {
-  "/finance": P.home, "/finance/chat-book": P.spark, "/finance/inbox": P.upload, "/finance/gst/itc": P.scale, "/finance/gst/returns": P.doc, "/finance/gst/3b": P.doc, "/finance/gst/annual": P.doc, "/finance/gst/composition": P.doc, "/finance/mis": P.doc, "/finance/start": P.spark, "/finance/tax-docs": P.doc,
+  "/finance": P.home, "/finance/portfolio": "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z", "/finance/chat-book": P.spark, "/finance/inbox": P.upload, "/finance/gst/itc": P.scale, "/finance/gst/returns": P.doc, "/finance/gst/3b": P.doc, "/finance/gst/annual": P.doc, "/finance/gst/composition": P.doc, "/finance/mis": P.doc, "/finance/start": P.spark, "/finance/tax-docs": P.doc,
   "/finance/sales/new": P.plusDoc, "/finance/sales": P.doc, "/finance/receivables": P.inbox, "/finance/collect": P.whatsapp, "/finance/credit-note": P.minusDoc,
   "/finance/purchases/new": P.bag, "/finance/payables": P.outbox, "/finance/debit-note": P.minusDoc, "/finance/contacts": P.users,
   "/finance/expenses": P.wallet, "/finance/payment": P.card, "/finance/banking": P.bank, "/finance/banking/import": P.upload, "/finance/banking/history": P.history, "/finance/payroll": P.payroll,

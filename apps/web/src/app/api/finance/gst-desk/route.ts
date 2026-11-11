@@ -32,6 +32,9 @@ export async function GET(req: NextRequest) {
 
     // Filing status for the month, all businesses in one read
     const { data: st } = gst.length ? await supabase.from("fw_fin_portal_status").select("business_id,form,period,status,arn,filed_on").in("business_id", gst.map(b => b.id)).eq("portal", "gst").eq("period", month).in("form", ["GSTR-1", "GSTR-3B"]) : { data: [] };
+    // The latest return actually filed for each client, whatever the month
+    const { data: lastRows } = gst.length ? await supabase.from("fw_fin_portal_status").select("business_id,form,period,arn,filed_on,status").in("business_id", gst.map(b => b.id)).eq("portal", "gst").in("form", ["GSTR-1", "GSTR-3B"]).in("status", FILED).order("period", { ascending: false }).limit(2000) : { data: [] };
+    const lastFiled = (id: string, form: string) => { const r = ((lastRows ?? []) as { business_id: string; form: string; period: string; arn: string | null; filed_on: string | null }[]).find(x => x.business_id === id && x.form === form); return r ? { period: r.period, on: r.filed_on, arn: r.arn } : null; };
     const status = (id: string, form: string) => ((st ?? []) as { business_id: string; form: string; status: string; arn: string | null; filed_on: string | null }[]).find(s => s.business_id === id && s.form === form) ?? null;
 
     // Each business's month from its books — a few at a time
@@ -44,7 +47,8 @@ export async function GET(req: NextRequest) {
           const g1 = status(b.id, "GSTR-1"), g3 = status(b.id, "GSTR-3B");
           return { id: b.id, name: b.name, gstin: b.gstin, entries: rows.length, taxable: s.taxable_sales, exempt: s.nil_exempt_sales + s.non_gst_sales, output: s.output_tax, itc: s.input_credit, net: s.net_gst_payable,
             gstr1: g1 ? { status: g1.status, filed: FILED.includes(g1.status), arn: g1.arn, on: g1.filed_on } : null,
-            gstr3b: g3 ? { status: g3.status, filed: FILED.includes(g3.status), arn: g3.arn, on: g3.filed_on } : null };
+            gstr3b: g3 ? { status: g3.status, filed: FILED.includes(g3.status), arn: g3.arn, on: g3.filed_on } : null,
+            last1: lastFiled(b.id, "GSTR-1"), last3: lastFiled(b.id, "GSTR-3B") };
         } catch (e) { return { id: b.id, name: b.name, gstin: b.gstin, error: e instanceof Error ? e.message : "Couldn't read the books" }; }
       }));
       out.push(...part);

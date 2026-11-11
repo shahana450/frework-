@@ -8,7 +8,9 @@ import { setActiveBusiness, confirmBusinessSwitch, readActiveBusiness } from "@/
 import PageHero, { HT, SERIF } from "@/components/finance/PageHero";
 
 type Filing = { status: string; filed: boolean; arn: string | null; on: string | null } | null;
-type Row = { id: string; name: string; gstin: string; entries?: number; taxable?: number; exempt?: number; output?: number; itc?: number; net?: number; gstr1?: Filing; gstr3b?: Filing; error?: string };
+type Row = { id: string; name: string; gstin: string; entries?: number; taxable?: number; exempt?: number; output?: number; itc?: number; net?: number; gstr1?: Filing; gstr3b?: Filing; last1?: Last | null; last3?: Last | null; error?: string };
+type Last = { period: string; on: string | null; arn: string | null };
+const lastText = (l?: Last | null) => l ? `Last filed ${new Date(l.period + "-01T00:00:00").toLocaleDateString("en-IN", { month: "short", year: "numeric" })}${l.on ? ` · ${new Date(l.on + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}` : "No filing on record";
 type Scheme = "monthly" | "qrmp" | "composition";
 
 const inr = (n: number) => "₹" + Math.round(n || 0).toLocaleString("en-IN");
@@ -119,8 +121,8 @@ export default function GstDesk() {
                         <td style={{ padding: 10 }}>{inr(r.taxable ?? 0)}{(r.exempt ?? 0) > 0 && <div style={{ fontSize: 11.5, color: HT.muted }}>+ {inr(r.exempt ?? 0)} exempt / non-GST</div>}</td>
                         <td style={{ padding: 10 }}>{inr(r.output ?? 0)}</td><td style={{ padding: 10 }}>{inr(r.itc ?? 0)}</td>
                         <td style={{ padding: 10, fontWeight: 700 }}>{inr(r.net ?? 0)}</td></>}
-                      <td style={{ padding: 10, textAlign: "center" }}>{pill(a)}</td>
-                      <td style={{ padding: 10, textAlign: "center" }}>{pill(b)}</td>
+                      <td style={{ padding: 10, textAlign: "center" }}>{pill(a)}<div title={r.last1?.arn ? `ARN ${r.last1.arn}` : undefined} style={{ fontSize: 11, color: HT.muted, marginTop: 4, whiteSpace: "nowrap" }}>{lastText(r.last1)}</div></td>
+                      <td style={{ padding: 10, textAlign: "center" }}>{pill(b)}<div title={r.last3?.arn ? `ARN ${r.last3.arn}` : undefined} style={{ fontSize: 11, color: HT.muted, marginTop: 4, whiteSpace: "nowrap" }}>{lastText(r.last3)}</div></td>
                       <td style={{ padding: "10px 18px", whiteSpace: "nowrap" }}>
                         <button type="button" onClick={() => open(r, "/finance/gst")} style={{ height: 32, padding: "0 12px", borderRadius: 999, border: `1px solid ${HT.line}`, background: "#FFFFFF", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, marginRight: 6 }}>GSTR-1</button>
                         <button type="button" onClick={() => open(r, "/finance/gst/3b")} style={{ height: 32, padding: "0 12px", borderRadius: 999, border: "none", background: "#12352D", color: "#FFFFFF", cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}>3B</button>

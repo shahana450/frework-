@@ -5,6 +5,7 @@ export type NavGroup = { label: string; items: NavItem[] };
 export const FINANCE_NAV: NavGroup[] = [
   { label: "", items: [
     { icon: "🏠", label: "Dashboard", href: "/finance" },
+    { icon: "🗂", label: "All Businesses", href: "/finance/portfolio" },
     { icon: "✨", label: "FreBook", href: "/finance/chat-book" },
     { icon: "📥", label: "Smart Inbox", href: "/finance/inbox" },
     { icon: "🚀", label: "Get Started", href: "/finance/start" },
