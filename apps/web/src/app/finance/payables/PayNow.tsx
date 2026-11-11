@@ -19,8 +19,8 @@ const isMoney = (a: Acc) => a.sub_type === "bank" || a.sub_type === "cash" || (a
 const upiLink = (d: Details, name: string, amt: number, note: string) => `upi://pay?pa=${encodeURIComponent(d.upi)}&pn=${encodeURIComponent(name)}&am=${amt.toFixed(2)}&cu=INR&tn=${encodeURIComponent(note.slice(0, 50))}`;
 const isPhone = () => typeof navigator !== "undefined" && /android|iphone|ipad|mobile/i.test(navigator.userAgent);
 
-export default function PayNow({ bizId, suppliers, accounts, onPaid }: { bizId: string; suppliers: Sup[]; accounts: Acc[]; onPaid: () => void }) {
-  const owed = useMemo(() => suppliers.filter(s => s.outstanding > 0.5).sort((a, b) => b.outstanding - a.outstanding), [suppliers]);
+export default function PayNow({ bizId, suppliers, accounts, onPaid, only, onClose }: { bizId: string; suppliers: Sup[]; accounts: Acc[]; onPaid: () => void; only?: string | null; onClose?: () => void }) {
+  const owed = useMemo(() => suppliers.filter(s => s.outstanding > 0.5 && (!only || s.id === only)).sort((a, b) => b.outstanding - a.outstanding), [suppliers, only]);
   const money = useMemo(() => accounts.filter(isMoney), [accounts]);
   const defBank = money.find(a => a.sub_type === "bank")?.id ?? money[0]?.id ?? "";
   const [rows, setRows] = useState<Record<string, Row>>({});
@@ -95,7 +95,7 @@ export default function PayNow({ bizId, suppliers, accounts, onPaid }: { bizId: 
   const btn = (primary?: boolean): React.CSSProperties => ({ height: 36, padding: "0 14px", borderRadius: 999, border: primary ? "none" : `1px solid ${T.line}`, background: primary ? T.green : "#FFFFFF", color: primary ? "#FFFFFF" : T.ink, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" });
   const field: React.CSSProperties = { height: 36, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 10px", fontFamily: "inherit", fontSize: 14, background: "#FFFFFF", color: T.ink };
 
-  return (
+  const panel = (
     <section style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 20, overflow: "hidden" }}>
       <button onClick={() => setOpen(o => !o)} aria-expanded={open} style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", width: "calc(100% - 40px)" }}>
         <span style={{ fontSize: 22, fontStyle: "italic", color: T.ink }}>Pay now</span>
@@ -170,5 +170,14 @@ export default function PayNow({ bizId, suppliers, accounts, onPaid }: { bizId: 
         </div>
       )}
     </section>
+  );
+  if (!only) return panel;
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Pay now" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(16,36,31,.45)", display: "grid", placeItems: "center", padding: 16, zIndex: 60 }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: "min(1000px,100%)", maxHeight: "90vh", overflow: "auto", position: "relative" }}>
+        <button onClick={onClose} aria-label="Close" style={{ position: "absolute", top: 12, right: 14, zIndex: 1, width: 34, height: 34, borderRadius: "50%", border: `1px solid ${T.line}`, background: "#FFFFFF", cursor: "pointer", fontSize: 16 }}>×</button>
+        {panel}
+      </div>
+    </div>
   );
 }

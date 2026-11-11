@@ -9,9 +9,10 @@ export type PartyCard = { id: string | null; name: string; count: number; billed
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const T = { ink: "#10241F", green: "#12352D", gold: "#C9A24A", goldInk: "#9A6B22", cream: "#F4EFE4", paper: "#FFFDF8", line: "#E6DFD0", pos: "#0B7A55", neg: "#B4321F", muted: "#6B7570" };
 
-export default function PartyBoard({ kind, rows, total, overdue, loading, newHref, cardHref, cardAction, notice }: {
+export default function PartyBoard({ kind, rows, total, overdue, loading, newHref, cardHref, cardAction, notice, cardExtra }: {
   kind: "receivable" | "payable"; rows: PartyCard[]; total: number; overdue: number; loading: boolean;
   newHref: string; cardHref: (r: PartyCard) => string; cardAction: string; notice?: ReactNode;
+  cardExtra?: (r: PartyCard) => ReactNode;   // an extra button after the card action (e.g. Pay now)
 }) {
   const [q, setQ] = useState("");
   const ar = kind === "receivable";
@@ -74,6 +75,7 @@ export default function PartyBoard({ kind, rows, total, overdue, loading, newHre
                     </div>
                     {r.id && <Link href={`/finance/ledger?account=${r.id}`} style={{ color: T.goldInk }}>Ledger</Link>}
                     <Link href={cardHref(r)} style={{ padding: "8px 16px", borderRadius: 999, background: T.green, color: "#FFFFFF", textDecoration: "none", fontSize: "0.88rem" }}>{cardAction} →</Link>
+                    {cardExtra?.(r)}
                   </div>
                 </div>
               );

@@ -28,6 +28,7 @@ export default function PayablesPage() {
   const [entries, setEntries] = useState<APEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalOutstanding, setTotalOutstanding] = useState(0);
+  const [payFor, setPayFor] = useState<string | null>(null);
   const [accs, setAccs] = useState<{ id: string; name: string; type: string; sub_type: string | null }[]>([]);
   const [overdueAmount, setOverdueAmount] = useState(0);
   const [msme, setMsme] = useState<{ report: MsmeReport | null; setup: boolean; marked: number }>({ report: null, setup: false, marked: 0 });
@@ -76,7 +77,8 @@ export default function PayablesPage() {
   return (
     <PartyBoard kind="payable" loading={loading} total={totalOutstanding} overdue={overdueAmount} newHref="/finance/purchases/new" cardAction="Record payment"
       cardHref={() => "/finance/journals/new"}
-      notice={!loading ? <><MsmePanel report={msme.report} setupNeeded={msme.setup} marked={msme.marked} />{bizId && <div style={{ marginTop: 16 }}><PayNow bizId={bizId} accounts={accs} suppliers={entries.filter(e => e.contact_id).map(e => ({ id: e.contact_id!, name: e.contact_name, outstanding: e.outstanding }))} onPaid={() => loadPayables(bizId)} /></div>}</> : null}
+      cardExtra={r => r.id && r.outstanding > 0.5 ? <button onClick={() => setPayFor(r.id)} style={{ padding: "8px 16px", borderRadius: 999, background: "#D9B56F", color: "#12352D", border: "none", fontSize: "0.88rem", cursor: "pointer", fontFamily: "inherit" }}>Pay now</button> : null}
+      notice={!loading ? <><MsmePanel report={msme.report} setupNeeded={msme.setup} marked={msme.marked} />{bizId && payFor && <PayNow only={payFor} onClose={() => setPayFor(null)} bizId={bizId} accounts={accs} suppliers={entries.filter(e => e.contact_id).map(e => ({ id: e.contact_id!, name: e.contact_name, outstanding: e.outstanding }))} onPaid={() => loadPayables(bizId)} />}{bizId && <div style={{ marginTop: 16 }}><PayNow bizId={bizId} accounts={accs} suppliers={entries.filter(e => e.contact_id).map(e => ({ id: e.contact_id!, name: e.contact_name, outstanding: e.outstanding }))} onPaid={() => loadPayables(bizId)} /></div>}</> : null}
       rows={entries.map(e => ({ id: e.contact_id, name: e.contact_name, count: e.bill_count, billed: e.total_billed, settled: e.total_paid, outstanding: e.outstanding, oldest: e.oldest_bill, days: e.days_pending }))} />
   );
 }
