@@ -26,9 +26,15 @@ export async function GET(req: NextRequest) {
     const { data: shared } = memberIds.length ? await sb.from("fw_fin_businesses").select("*").in("id", memberIds) : { data: [] };
     const all = [...(owned ?? []), ...(shared ?? [])].filter(b => !(b as { deleted_at?: string | null }).deleted_at) as Record<string, unknown>[];
     if (!all.length) return NextResponse.json({ businesses: [] });
+    // ?list=1 → just the businesses, at once; ?id=… → one business's figures (the page loads them in parallel)
+    const sp = req.nextUrl.searchParams;
+    if (sp.get("list")) return NextResponse.json({ businesses: all.map(b => ({ id: b.id, name: b.name, gstin: (b.gstin as string) ?? null, role: b.owner_id === user.id ? "owner" : roleOf.get(b.id as string) ?? "member" })) });
+    const only = sp.get("id");
+    if (only && !all.some(b => b.id === only)) return NextResponse.json({ error: "Not your business." }, { status: 403 });
+    const pick = only ? all.filter(b => b.id === only) : all;
 
     const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-    const ids = all.map(b => b.id as string);
+    const ids = pick.map(b => b.id as string);
     const [fys, drafts, pending, portal] = await Promise.all([
       sb.from("fw_fin_financial_years").select("business_id,label,start_date,end_date").in("business_id", ids).lte("start_date", today).gte("end_date", today),
       sb.from("fw_fin_journals").select("business_id").in("business_id", ids).eq("status", "draft").limit(5000),
@@ -63,7 +69,7 @@ export async function GET(req: NextRequest) {
       } catch (e) { return { id, name: b.name as string, gstin: (b.gstin as string) ?? null, error: e instanceof Error ? e.message : "Couldn't read the books" }; }
     };
     const out: unknown[] = [];
-    for (let i = 0; i < all.length; i += 4) out.push(...await Promise.all(all.slice(i, i + 4).map(one)));
+    for (let i = 0; i < pick.length; i += 4) out.push(...await Promise.all(pick.slice(i, i + 4).map(one)));
     return NextResponse.json({ today, businesses: out });
   } catch (e) { return serverError("portfolio", e, "Couldn't load your businesses."); }
 }

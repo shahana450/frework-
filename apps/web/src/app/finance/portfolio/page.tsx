@@ -13,7 +13,7 @@ type Biz = {
   id: string; name: string; gstin: string | null; role?: string; period?: string; error?: string;
   cash?: number; receivables?: number; payables?: number; revenue?: number; expenses?: number; profit?: number; monthRevenue?: number;
   drafts?: number; pendingReview?: number; health?: number; alerts?: number; entries?: number; lastEntry?: string | null;
-  overdue?: Due[]; next?: Due | null; gstr1?: Last; gstr3b?: Last;
+  overdue?: Due[]; next?: Due | null; gstr1?: Last; gstr3b?: Last; loading?: boolean;
 };
 type Sort = "attention" | "name" | "cash" | "receivables" | "profit";
 
@@ -33,15 +33,37 @@ export default function Portfolio() {
   const [sort, setSort] = useState<Sort>("attention");
   const [only, setOnly] = useState<"all" | "attention">("all");
 
-  const load = () => {
-    setRows(null); setErr("");
-    fetch("/api/finance/portfolio").then(r => r.json().then(d => ({ ok: r.ok, d }))).then(({ ok, d }) => { if (!ok) setErr(d.error ?? "Couldn't load."); else setRows(d.businesses ?? []); }).catch(() => setErr("Couldn't load."));
+  // List first (instant), then each business's figures — 6 at a time — filling the cards as they arrive.
+  // The last figures seen on this device show straight away and are replaced as fresh ones come in.
+  const load = async (userId = uid) => {
+    setErr("");
+    const key = `fw_portfolio_${userId}`;
+    let cached: Biz[] = [];
+    try { cached = JSON.parse(localStorage.getItem(key) ?? "[]"); } catch { /* */ }
+    const r = await fetch("/api/finance/portfolio?list=1").catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (!r?.ok) { setErr(d.error ?? "Couldn't load your businesses."); return; }
+    const list = (d.businesses ?? []) as Biz[];
+    const fresh = new Map<string, Biz>();
+    setRows(list.map(b => ({ ...(cached.find(c => c.id === b.id) ?? {}), ...b, loading: true })));
+    let next = 0;
+    const worker = async () => {
+      while (next < list.length) {
+        const b = list[next++];
+        const x = await fetch(`/api/finance/portfolio?id=${b.id}`).then(res => res.json()).catch(() => null);
+        const row: Biz = x?.businesses?.[0] ?? { ...b, error: x?.error ?? "Couldn't read the books" };
+        fresh.set(b.id, row);
+        setRows(rs => (rs ?? []).map(o => o.id === b.id ? { ...row, loading: false } : o));
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(6, list.length) }, worker));
+    try { localStorage.setItem(key, JSON.stringify([...fresh.values()].filter(x => !x.error))); } catch { /* full */ }
   };
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace("/login"); return; }
       setUid(user.id); setActive((readActiveBusiness(user.id) ?? "").trim());
-      load();
+      load(user.id);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
@@ -91,7 +113,7 @@ export default function Portfolio() {
               </h1>
               <p style={{ margin: 0, maxWidth: 720, fontSize: 17, lineHeight: 1.6, color: "#E3E8E3" }}>The same figures as each business&apos;s Home, side by side — and what needs you in each. Open one to work in it.</p>
             </div>
-            <button onClick={load} className="pf-btn" style={{ height: 48, padding: "0 24px", borderRadius: 999, border: "none", background: GOLD, color: INK, fontFamily: "inherit", fontSize: 16, cursor: "pointer" }}>Refresh</button>
+            <button onClick={() => load()} className="pf-btn" style={{ height: 48, padding: "0 24px", borderRadius: 999, border: "none", background: GOLD, color: INK, fontFamily: "inherit", fontSize: 16, cursor: "pointer" }}>Refresh</button>
           </div>
           {rows && (
             <div className="pf-tiles" style={{ borderTop: "1px solid rgba(255,255,255,0.18)", marginTop: 36, paddingTop: 26 }}>
@@ -134,7 +156,8 @@ export default function Portfolio() {
                       <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
                       <div style={{ fontSize: 12.5, color: HT.muted, fontFamily: "ui-monospace,monospace" }}>{b.gstin ?? "No GSTIN"}{b.id === active ? " · open now" : ""}{b.role && b.role !== "owner" ? ` · ${b.role}` : ""}</div>
                     </div>
-                    {!b.error && b.health != null && <span title="Books health — 100 is clean (no drafts, reviews or warnings)" style={{ fontSize: 26, color: b.health >= 50 ? INK : "#B4321F" }}>{b.health}</span>}
+                    {b.loading && <span style={{ fontSize: 12, color: HT.muted, fontStyle: "italic" }}>updating…</span>}
+                    {!b.error && !b.loading && b.health != null && <span title="Books health — 100 is clean (no drafts, reviews or warnings)" style={{ fontSize: 26, color: b.health >= 50 ? INK : "#B4321F" }}>{b.health}</span>}
                   </div>
                   {b.error ? <div style={{ color: "#B4321F" }}>{b.error}</div> : <>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
