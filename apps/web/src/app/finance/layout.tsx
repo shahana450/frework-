@@ -519,7 +519,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       <main key={active.businessId ?? "none"} className="fw-main" style={{ flex: 1, marginLeft: sidebarW, minWidth: 0, transition: "margin-left 0.2s" }}>
         {/* Main icons along the top (FreBook has its own top bar) */}
         {!pathname.startsWith("/finance/chat-book") && (<>
-          {bizName && <div className="fw-bizbar" title={bizName} style={{ textAlign: "center", padding: "10px 16px 0", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: "1.2rem", fontWeight: 700, color: "#12352D", letterSpacing: "0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bizName}</div>}
+          {bizName && !/^\/finance\/(portfolio|gst\/desk|ca-dashboard|select-business)/.test(pathname) && <div className="fw-bizbar" title={bizName} style={{ textAlign: "center", padding: "10px 16px 0", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: "1.2rem", fontWeight: 700, color: "#12352D", letterSpacing: "0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bizName}</div>}
           <div style={{ position: "relative" }}>
           {topMore.l && <button type="button" className="fw-topnudge" aria-label="Scroll the menu left" onClick={() => nudgeTop(-1)} style={{ left: 22 }}>‹</button>}
           {topMore.r && <button type="button" className="fw-topnudge" aria-label="Scroll the menu right" onClick={() => nudgeTop(1)} style={{ right: 22 }}>›</button>}
