@@ -35,3 +35,15 @@ test("taxable value comes from the invoice whatever the income ledger is called;
   assert.equal(s.output_tax, 1620);
   assert.equal(s.other_tax_movement, 5000);
 });
+
+test("one shared CGST/SGST ledger: purchase tax is input credit, not a negative sale", () => {
+  const s = gstSummary([
+    { type: "sales", lines: [{ account: "ABC Ltd", dr: 11800, cr: 0, accType: "asset" }, { account: "Sales", dr: 0, cr: 10000, accType: "income" }, { account: "CGST", dr: 0, cr: 900, accType: "liability" }, { account: "SGST", dr: 0, cr: 900, accType: "liability" }] },
+    { type: "purchase", lines: [{ account: "Raw Material", dr: 5000, cr: 0, accType: "expense" }, { account: "CGST", dr: 450, cr: 0, accType: "liability" }, { account: "SGST", dr: 450, cr: 0, accType: "liability" }, { account: "XYZ Supplier", dr: 0, cr: 5900, accType: "liability" }] },
+  ]);
+  assert.equal(s.taxable_sales, 10000);
+  assert.equal(s.output_tax, 1800);
+  assert.equal(s.input_credit, 900);
+  assert.equal(s.net_gst_payable, 900);
+  assert.equal(s.total_purchases, 5000);
+});

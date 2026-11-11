@@ -5,6 +5,7 @@
 import { useEffect, useRef } from "react";
 import { tallyFetch, tallyQueueBusy, alterIdIndexXml, alterIdsInRange, vouchersByAlterIdXml, parseTallyVouchers } from "@/lib/tallyUtils";
 import { readTallyLedgerGroups, importTallyVouchers } from "@/lib/integrations/tallyClient";
+import { pullPartyGstins } from "@/lib/tallyPartyGstin";
 import { tallyBusy, type TallyState } from "@/lib/tallyConnection";
 
 const ON = "fw_tally_autosync";          // `${ON}:${bizId}` = "1" when switched on
@@ -57,6 +58,11 @@ export async function syncTallyOnce(bizId: string, t: TallyState, period = fyNow
   }
   const groups = await readTallyLedgerGroups(url, company);
   const sum = await importTallyVouchers(bizId, vouchers as never, { ledgerGroups: groups, company });
+  // Once a day: parties' GSTINs from Tally, so GSTR-1 shows their sales as B2B without a manual step
+  try {
+    const k = `fw_tally_gstin_day:${bizId}`, today = new Date().toLocaleDateString("en-CA");
+    if (localStorage.getItem(k) !== today) { await pullPartyGstins(url, bizId, company ?? null); localStorage.setItem(k, today); }
+  } catch { /* never stops the sync */ }
   if (!sum.failedCount && all.length) localStorage.setItem(key, String(all[all.length - 1]));
   const parts = [sum.imported && `${sum.imported} new`, sum.repaired && `${sum.repaired} updated`].filter(Boolean).join(", ");
   return { ok: !sum.failedCount, text: `Tally sync: ${parts || "no changes"}${sum.failedCount ? ` · ${sum.failedCount} couldn't be imported (open the Tally page)` : ""}.` };

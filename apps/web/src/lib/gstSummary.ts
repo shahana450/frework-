@@ -5,8 +5,8 @@
 // charges output GST, the taxable value is every non-tax line on the same side as the tax (whatever the income ledger
 // is called — "Audit fee", "Accounts finalisation"…), and a credit note reverses it. GST journals that only move tax
 // ledgers (set-off, payment, transfer) are not sales and are kept apart as "other_tax_movement".
-export type GstLine = { account: string; dr: number; cr: number };
-export type GstEntry = { lines: GstLine[]; metadata?: { gst?: { applicable?: boolean; rate?: number; supply?: string } | null } | null };
+export type GstLine = { account: string; dr: number; cr: number; accType?: string | null };
+export type GstEntry = { type?: string | null; lines: GstLine[]; metadata?: { gst?: { applicable?: boolean; rate?: number; supply?: string } | null } | null };
 export type SalesClass = "taxable" | "nil_exempt" | "non_gst";
 export type GstSummary = {
   total_sales: number; taxable_sales: number; nil_exempt_sales: number; non_gst_sales: number;
@@ -39,14 +39,21 @@ export function gstSummary(entries: GstEntry[]): GstSummary {
     const tax = { cgst: 0, sgst: 0, igst: 0 };
     for (const l of e.lines) { const k = outKind(l.account); if (k) tax[k] += (l.cr || 0) - (l.dr || 0); }
     const outNet = tax.cgst + tax.sgst + tax.igst;
+    // Outward supply: a sales voucher or credit/debit note; without a voucher type, an entry with an income line.
+    // Purchases often use the same plain "CGST"/"SGST" ledger — tax debited there is input credit, not a credit note.
+    const typed = !!e.type && e.type !== "journal";
+    const hasIncome = e.lines.some(l => l.accType === "income" && !isTaxLedger(l.account));
+    const outward = typed ? /^(sales|credit_note|debit_note)$/.test(e.type!) : e.lines.some(l => l.accType) ? hasIncome : outNet !== 0;
     // Value on the same side as the tax: credits for a sale, debits for a credit note
     const side = Math.sign(outNet);
-    const value = side ? e.lines.filter(l => !isTaxLedger(l.account) && side * ((l.cr || 0) - (l.dr || 0)) > 0).reduce((s, l) => s + (l.cr || 0) - (l.dr || 0), 0) : 0;
-    if (outNet !== 0 && value !== 0) {
+    const value = side ? e.lines.filter(l => !isTaxLedger(l.account) && side * ((l.cr || 0) - (l.dr || 0)) > 0 && (!l.accType || !/^(asset|liability)$/.test(l.accType) || l.accType === "income")).reduce((s, l) => s + (l.cr || 0) - (l.dr || 0), 0) : 0;
+    if (outward && outNet !== 0 && value !== 0) {
       cgst += tax.cgst; sgst += tax.sgst; igst += tax.igst;
       sales.taxable += value;
+    } else if (!outward && outNet < 0) {
+      input += -outNet;   // GST on a purchase / expense booked to a shared CGST / SGST / IGST ledger
     } else if (outNet !== 0) {
-      other += outNet;   // tax moved without a sale behind it
+      other += outNet;   // tax moved without a sale behind it (journal, set-off)
     }
     let inputHere = 0;
     for (const l of e.lines) {
@@ -56,6 +63,7 @@ export function gstSummary(entries: GstEntry[]): GstSummary {
       if (isPurchaseLedger(l.account)) purchases -= net;
     }
     // A bill with input GST under a non-"purchase" head (services, expenses) still counts as a purchase
+    if (!outward && outNet < 0) inputHere += -outNet;
     if (inputHere > 0 && !e.lines.some(l => isPurchaseLedger(l.account)))
       purchases += e.lines.filter(l => !isTaxLedger(l.account) && (l.dr || 0) > (l.cr || 0)).reduce((s, l) => s + (l.dr || 0) - (l.cr || 0), 0);
   }

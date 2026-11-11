@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
       const part = await Promise.all(gst.slice(i, i + 5).map(async b => {
         try {
           const rows = await monthJournals(supabase, b.id, from, to);
-          const s = gstSummary(rows.map(j => ({ metadata: (j.metadata ?? null) as never, lines: (j.fw_fin_journal_lines ?? []).map(l => ({ account: l.fw_fin_chart_of_accounts?.name ?? "", dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0 })) })));
+          const s = gstSummary(rows.map(j => ({ type: j.type, metadata: (j.metadata ?? null) as never, lines: (j.fw_fin_journal_lines ?? []).map(l => ({ account: l.fw_fin_chart_of_accounts?.name ?? "", accType: l.fw_fin_chart_of_accounts?.type ?? null, dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0 })) })));
           const g1 = status(b.id, "GSTR-1"), g3 = status(b.id, "GSTR-3B");
           return { id: b.id, name: b.name, gstin: b.gstin, entries: rows.length, taxable: s.taxable_sales, exempt: s.nil_exempt_sales + s.non_gst_sales, output: s.output_tax, itc: s.input_credit, net: s.net_gst_payable,
             gstr1: g1 ? { status: g1.status, filed: FILED.includes(g1.status), arn: g1.arn, on: g1.filed_on } : null,

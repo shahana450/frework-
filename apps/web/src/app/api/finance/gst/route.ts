@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     if (report === "summary") {
       const rows = await monthJournals(bizId!, from, to);
       // Sales are classified per entry: taxable only when that entry charged output GST
-      const s = gstSummary(rows.map(j => ({ metadata: (j.metadata ?? null) as never, lines: (j.fw_fin_journal_lines ?? []).map(l => ({ account: l.fw_fin_chart_of_accounts?.name ?? "", dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0 })) })));
+      const s = gstSummary(rows.map(j => ({ type: j.type, metadata: (j.metadata ?? null) as never, lines: (j.fw_fin_journal_lines ?? []).map(l => ({ account: l.fw_fin_chart_of_accounts?.name ?? "", accType: l.fw_fin_chart_of_accounts?.type ?? null, dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0 })) })));
       return NextResponse.json({ month, ...s });
     }
 

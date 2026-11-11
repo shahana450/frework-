@@ -1,4 +1,5 @@
 "use client";
+import { pullPartyGstins } from "@/lib/tallyPartyGstin";
 import { cur, activeMoney } from "@/lib/money";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { findTallyPort, tallyFetch, parseTallyVouchers, vouchersInRangeXml, voucherIndexXml, voucherTypesInRange, vouchersOfTypeXml, alterIdIndexXml, alterIdsInRange, vouchersByAlterIdXml } from "@/lib/tallyUtils";
@@ -514,7 +515,8 @@ export default function TallyPage() {
         } catch (e) { lastError = e instanceof Error ? e.message : String(e); failed = true; }
       }
       if (upToDate && !failed) {
-        setImportVoucherResult({ ok: true, msg: "✓ Up to date — no new or changed vouchers in Tally since the last sync." });
+        const g0 = await pullPartyGstins(tallyUrl, bizId, companyName || null).catch(() => 0);
+        setImportVoucherResult({ ok: true, msg: "✓ Up to date — no new or changed vouchers in Tally since the last sync." + (g0 ? ` GSTIN updated for ${g0} customer/supplier${g0 === 1 ? "" : "s"}.` : "") });
         setTallyBusy(false); setSyncing(null); return;
       }
       if (failed) {
@@ -535,7 +537,8 @@ export default function TallyPage() {
       // Through FreWork's posting engine: validated, year-lock aware, audit-logged, never imported twice
       const sum = await importTallyVouchers(bizId, allVouchers as never, { ledgerGroups: groups, company: companyName || null, onProgress: setSyncProgress });
       const imported = sum.imported;
-      setImportVoucherResult({ ok: sum.failedCount === 0 && !partialNote, msg: summaryText(sum) + partialNote });
+      const g1 = await pullPartyGstins(tallyUrl, bizId, companyName || null).catch(() => 0);
+      setImportVoucherResult({ ok: sum.failedCount === 0 && !partialNote, msg: summaryText(sum) + partialNote + (g1 ? ` GSTIN updated for ${g1} customer/supplier${g1 === 1 ? "" : "s"} — their sales file as B2B.` : "") });
       // Remember how far this sync got — only when every voucher went in, so failures are read again next time
       if (pieces && maxSeen && sum.failedCount === 0) { try { localStorage.setItem(syncKey, String(maxSeen)); } catch { /* */ } }
       setAutoSyncDone(true);
