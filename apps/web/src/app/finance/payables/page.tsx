@@ -9,6 +9,7 @@ import { partyBalances } from "@/lib/partyBalances";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import { msmeReport, type MsmeReport, type MsmeSupplier } from "@/lib/msme43bh";
 import MsmePanel from "./MsmePanel";
+import PayNow from "./PayNow";
 
 type APEntry = {
   contact_id: string | null;
@@ -27,6 +28,7 @@ export default function PayablesPage() {
   const [entries, setEntries] = useState<APEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalOutstanding, setTotalOutstanding] = useState(0);
+  const [accs, setAccs] = useState<{ id: string; name: string; type: string; sub_type: string | null }[]>([]);
   const [overdueAmount, setOverdueAmount] = useState(0);
   const [msme, setMsme] = useState<{ report: MsmeReport | null; setup: boolean; marked: number }>({ report: null, setup: false, marked: 0 });
 
@@ -46,6 +48,7 @@ export default function PayablesPage() {
     const today = new Date().toLocaleDateString("en-CA");
     const { lines, accounts } = await loadBookLines(supabase, bid, today);
     const report = partyBalances("payable", accounts, lines, today);
+    setAccs(accounts as unknown as { id: string; name: string; type: string; sub_type: string | null }[]);
     const result: APEntry[] = report.rows.map(r => {
       const own = lines.filter(l => l.account_id === r.id);
       return {
@@ -73,7 +76,7 @@ export default function PayablesPage() {
   return (
     <PartyBoard kind="payable" loading={loading} total={totalOutstanding} overdue={overdueAmount} newHref="/finance/purchases/new" cardAction="Record payment"
       cardHref={() => "/finance/journals/new"}
-      notice={!loading ? <MsmePanel report={msme.report} setupNeeded={msme.setup} marked={msme.marked} /> : null}
+      notice={!loading ? <><MsmePanel report={msme.report} setupNeeded={msme.setup} marked={msme.marked} />{bizId && <div style={{ marginTop: 16 }}><PayNow bizId={bizId} accounts={accs} suppliers={entries.filter(e => e.contact_id).map(e => ({ id: e.contact_id!, name: e.contact_name, outstanding: e.outstanding }))} onPaid={() => loadPayables(bizId)} /></div>}</> : null}
       rows={entries.map(e => ({ id: e.contact_id, name: e.contact_name, count: e.bill_count, billed: e.total_billed, settled: e.total_paid, outstanding: e.outstanding, oldest: e.oldest_bill, days: e.days_pending }))} />
   );
 }
