@@ -13,6 +13,7 @@ export default function Gstr1Panel({ bizId, month, monthLabel }: { bizId: string
   const [data, setData] = useState<(Gstr1 & { gstin: string }) | null>(null);
   const [err, setErr] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [openSec, setOpenSec] = useState<string | null>(null);
   // HSN / SAC for sales that have none (kept per business on this device) — the portal rejects a blank code
   const hsnKey = `fw_gst_default_hsn:${bizId}`;
   const [hsn, setHsn] = useState("");
@@ -62,13 +63,38 @@ export default function Gstr1Panel({ bizId, month, monthLabel }: { bizId: string
               {["Section", "Docs", "Taxable value", "IGST", "CGST", "SGST"].map((h, i) => <th key={h} style={{ padding: "9px 14px", textAlign: i < 2 ? "left" : "right", fontWeight: 700 }}>{h}</th>)}
             </tr></thead>
             <tbody>
-              {data.totals.map(t => (
-                <tr key={t.section} style={{ borderTop: `1px solid ${C.line}` }}>
-                  <td style={{ padding: "10px 14px", fontWeight: 600 }}>{t.section}</td>
-                  <td style={{ padding: "10px 14px" }}>{t.count}</td>
-                  {[t.taxable, t.igst, t.cgst, t.sgst].map((v, i) => <td key={i} style={{ padding: "10px 14px", textAlign: "right", fontFamily: MONO }}>{fmt(v)}</td>)}
-                </tr>
-              ))}
+              {data.totals.map(t => {
+                const open = openSec === t.section;
+                const docs = (t as { docs?: { no: string; date: string; party: string | null; gstin: string | null; rate: number | null; taxable: number; igst: number; cgst: number; sgst: number; value: number }[] }).docs ?? [];
+                return [
+                  <tr key={t.section} onClick={() => setOpenSec(open ? null : t.section)} aria-expanded={open} title="Show the invoices in this section" style={{ borderTop: `1px solid ${C.line}`, cursor: "pointer", background: open ? "#FBF7EE" : undefined }}>
+                    <td style={{ padding: "10px 14px", fontWeight: 600 }}><span aria-hidden="true" style={{ display: "inline-block", width: 14, color: C.muted }}>{open ? "▾" : "▸"}</span>{t.section}</td>
+                    <td style={{ padding: "10px 14px" }}>{t.count}</td>
+                    {[t.taxable, t.igst, t.cgst, t.sgst].map((v, i) => <td key={i} style={{ padding: "10px 14px", textAlign: "right", fontFamily: MONO }}>{fmt(v)}</td>)}
+                  </tr>,
+                  open && (
+                    <tr key={t.section + "-docs"}><td colSpan={6} style={{ padding: "0 14px 14px", background: "#FBF7EE" }}>
+                      <div style={{ maxHeight: 420, overflow: "auto", border: `1px solid ${C.line}`, borderRadius: 10, background: "#FFFFFF" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                          <thead><tr style={{ position: "sticky", top: 0, background: "#F8F3E8", color: C.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            {["Invoice", "Date", "Party", "GSTIN", "Rate", "Taxable", "IGST", "CGST", "SGST", "Value"].map((h, i) => <th key={h} style={{ padding: "8px 10px", textAlign: i < 4 ? "left" : "right" }}>{h}</th>)}
+                          </tr></thead>
+                          <tbody>{docs.map((d, i) => (
+                            <tr key={d.no + i} style={{ borderTop: `1px solid ${C.line}` }}>
+                              <td style={{ padding: "7px 10px", fontWeight: 600 }}><Link href={`/finance/journals?q=${encodeURIComponent(d.no)}`} style={{ color: C.primary }}>{d.no}</Link></td>
+                              <td style={{ padding: "7px 10px", whiteSpace: "nowrap" }}>{new Date(d.date + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</td>
+                              <td style={{ padding: "7px 10px" }}>{d.party ?? "—"}</td>
+                              <td style={{ padding: "7px 10px", fontFamily: MONO, fontSize: 12 }}>{d.gstin ?? "—"}</td>
+                              <td style={{ padding: "7px 10px", textAlign: "right" }}>{d.rate != null ? `${d.rate}%` : <span style={{ color: C.neg }}>mixed</span>}</td>
+                              {[d.taxable, d.igst, d.cgst, d.sgst, d.value].map((v, k) => <td key={k} style={{ padding: "7px 10px", textAlign: "right", fontFamily: MONO }}>{fmt(v)}</td>)}
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </td></tr>
+                  ),
+                ];
+              })}
               {data.totals.length > 0 && (
                 <tr style={{ borderTop: `2px solid #C9CEDF`, background: "#F8F3E8", fontWeight: 700 }}>
                   <td style={{ padding: "10px 14px" }} colSpan={2}>Total</td>

@@ -29,11 +29,12 @@ export type Doc = {
   derived: boolean;                         // items worked out from ledger amounts (no item detail saved)
   origNo?: string | null; origDate?: string | null;
 };
+export type SectionDoc = { no: string; date: string; party: string | null; gstin: string | null; kind: Doc["kind"]; rate: number | null; taxable: number; igst: number; cgst: number; sgst: number; value: number };
 export type Issue = { level: "error" | "warn"; doc?: string; text: string };
 export type Gstr1 = {
   json: Record<string, unknown>;
   issues: Issue[];
-  totals: { section: string; count: number; taxable: number; igst: number; cgst: number; sgst: number }[];
+  totals: { section: string; count: number; taxable: number; igst: number; cgst: number; sgst: number; docs?: SectionDoc[] }[];
 };
 
 /** Nearest standard GST rate for a tax/taxable pair; null when it doesn't fit one rate. */
@@ -79,15 +80,22 @@ export function buildGstr1(gstin: string, homeState: string | null, period: stri
   const cdnur: unknown[] = [];
   const hsnB2b = new Map<string, { hsn_sc: string; desc: string; uqc: string; qty: number; rt: number; txval: number; iamt: number; camt: number; samt: number; csamt: number }>();
   const hsnB2c = new Map<string, typeof hsnB2b extends Map<string, infer V> ? V : never>();
-  const tot = new Map<string, { section: string; count: number; taxable: number; igst: number; cgst: number; sgst: number }>();
+  const tot = new Map<string, { section: string; count: number; taxable: number; igst: number; cgst: number; sgst: number; docs: SectionDoc[] }>();
+  let cur: Doc | null = null;   // the document being added (for the per-section list)
   const add = (section: string, items: Item[], sign = 1) => {
-    const t = tot.get(section) ?? { section, count: 0, taxable: 0, igst: 0, cgst: 0, sgst: 0 };
+    const t = tot.get(section) ?? { section, count: 0, taxable: 0, igst: 0, cgst: 0, sgst: 0, docs: [] };
     t.count++; for (const i of items) { t.taxable = r2(t.taxable + sign * i.taxable); t.igst = r2(t.igst + sign * i.igst); t.cgst = r2(t.cgst + sign * i.cgst); t.sgst = r2(t.sgst + sign * i.sgst); }
+    if (cur) {
+      const sum = (k: "taxable" | "igst" | "cgst" | "sgst") => r2(sign * items.reduce((x, i) => x + i[k], 0));
+      const rates = [...new Set(items.map(i => i.rate))];
+      t.docs.push({ no: cur.no, date: cur.date, party: cur.party, gstin: cur.gstin, kind: cur.kind, rate: rates.length === 1 && rates[0] >= 0 ? rates[0] : null, taxable: sum("taxable"), igst: sum("igst"), cgst: sum("cgst"), sgst: sum("sgst"), value: r2(sign * cur.value) });
+    }
     tot.set(section, t);
   };
 
   for (const d of docs) {
     if (d.date.slice(0, 7) !== period) continue;
+    cur = d;
     const label = `${d.kind === "invoice" ? "Invoice" : d.kind === "credit_note" ? "Credit note" : "Debit note"} ${d.no}`;
     const g = d.gstin?.toUpperCase().replace(/\s/g, "") || null;
     const registered = !!g && GSTIN_RE.test(g);

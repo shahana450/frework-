@@ -87,7 +87,7 @@ export default function JournalsPage() {
   const [bizId, setBizId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "draft" | "posted" | "ai">("all");
   const [loadErr, setLoadErr] = useState("");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");   // ?q= from links (e.g. a GSTR-1 invoice number)
   const [typeSel, setTypeSel] = useState<string>("");
   const [view, setView] = useState<"timeline" | "table">("timeline");
   const [linesById, setLinesById] = useState<Record<string, TLine[]>>({});             // one entry type, or "" for all
