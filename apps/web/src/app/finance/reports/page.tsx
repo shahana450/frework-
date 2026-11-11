@@ -417,12 +417,7 @@ function Schedule3PLView({ s }: { s: Schedule3PL }) {
         </div>
         {notes && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {heads.map(h => (
-              <div key={h.key} className="s3-card">
-                <div className="s3-nh"><span><span style={{ color: "#9A6B22" }}>Note {h.note}</span> · {h.label}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{signedMoney(h.total)}</span></div>
-                <div className="s3-chips">Ledgers:{h.lines.map(l => { const href = ledgerHref(l.id); return href ? <Link key={l.id} href={href} className="s3-chip">{l.name} →</Link> : <span key={l.id} className="s3-chip">{l.name}</span>; })}</div>
-              </div>
-            ))}
+            {heads.map(h => <NoteCard key={h.key} h={h} money={signedMoney} href={ledgerHref} />)}
             <div style={{ fontSize: 13, fontStyle: "italic", color: "#6B7570" }}>Click a ledger to open it.</div>
           </div>
         )}
@@ -613,5 +608,33 @@ function CashFlowStatement({ bizId, from, to }: { bizId: string | null; from: st
       </table>
       {cf.items.length === 0 && <div style={{ padding: "2rem", textAlign: "center", color: "rgba(16,36,31,0.55)", fontSize: "0.88rem" }}>No cash or bank movements in this period.</div>}
     </>
+  );
+}
+
+// One Schedule III note: its ledgers with amounts, largest first — six shown, the rest one click away; the heading folds it
+function NoteCard({ h, money, href }: { h: { key: string; label: string; note: number; total: number; lines: { id: string; name: string; amount: number }[] }; money: (n: number) => string; href: (id: string) => string | null }) {
+  const [shut, setShut] = useState(false);
+  const [all, setAll] = useState(false);
+  const lines = [...h.lines].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+  const shown = all ? lines : lines.slice(0, 6);
+  return (
+    <div className="s3-card">
+      <button type="button" onClick={() => setShut(v => !v)} aria-expanded={!shut} className="s3-nh" style={{ width: "100%", border: "none", cursor: "pointer", font: "inherit", textAlign: "left" }}>
+        <span><span style={{ color: "#9A6B22" }}>Note {h.note}</span> · {h.label} <span style={{ fontSize: 12, color: "#6B7570" }}>({h.lines.length})</span></span>
+        <span style={{ fontVariantNumeric: "tabular-nums" }}>{money(h.total)} <span aria-hidden="true" style={{ color: "#9A6B22", fontSize: 12 }}>{shut ? "▸" : "▾"}</span></span>
+      </button>
+      {!shut && (
+        <div style={{ padding: "4px 18px 12px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+            <tbody>{shown.map(l => { const to = href(l.id); return (
+              <tr key={l.id} style={{ borderTop: "1px dashed #EADFC8" }}>
+                <td style={{ padding: "5px 0" }}>{to ? <Link href={to} style={{ color: "#10241F", textDecoration: "none" }}>{l.name}</Link> : l.name}</td>
+                <td style={{ padding: "5px 0", textAlign: "right", fontVariantNumeric: "tabular-nums", color: l.amount < 0 ? "#B4321F" : "#10241F" }}>{money(l.amount)}</td>
+              </tr>); })}</tbody>
+          </table>
+          {lines.length > 6 && <button type="button" onClick={() => setAll(v => !v)} style={{ marginTop: 6, border: "none", background: "none", padding: 0, color: "#9A6B22", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>{all ? "Show fewer" : `Show all ${lines.length}`}</button>}
+        </div>
+      )}
+    </div>
   );
 }

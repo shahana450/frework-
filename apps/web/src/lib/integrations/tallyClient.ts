@@ -1,7 +1,8 @@
 "use client";
 // Browser side of the Tally provider: reads from Tally through the local bridge and hands vouchers to the server.
 import { tallyFetch, parseTallyVouchers, monthsInRange, type TallyVoucher } from "../tallyUtils";
-import { ledgersXml, ledgersFrom, vouchersXml } from "./tally";
+import { ledgersXml, ledgersFrom, vouchersXml, headForTallyGroup } from "./tally";
+import { groupsXml, groupsFrom, groupChain } from "./tallyBooks";
 
 export type ImportSummary = { imported: number; repaired?: number; skipped: number; fromFreWork: number; failedCount: number; failed: { voucher: string; error: string }[]; newLedgers: number };
 
@@ -9,7 +10,14 @@ export type ImportSummary = { imported: number; repaired?: number; skipped: numb
 export async function readTallyLedgerGroups(tallyUrl: string, company?: string | null): Promise<Record<string, string>> {
   try {
     const text = await (await tallyFetch(tallyUrl, ledgersXml(company), 20000)).text();
-    return Object.fromEntries(ledgersFrom(text).map(l => [l.name, l.parent]));
+    // A ledger in a group the company made ("SALES @18%" under Sales Accounts) is mapped by the nearest group in its
+    // chain that FreBook knows — otherwise it fell back to a guess and sales could vanish from the P&L
+    let groups: Record<string, string> = {};
+    try { groups = groupsFrom(await (await tallyFetch(tallyUrl, groupsXml(company), 20000)).text()); } catch { /* direct parent only */ }
+    return Object.fromEntries(ledgersFrom(text).map(l => {
+      const known = groupChain(l.parent, groups).find(g => headForTallyGroup(g));
+      return [l.name, known ?? l.parent];
+    }));
   } catch { return {}; }
 }
 

@@ -45,6 +45,23 @@ export async function POST(req: NextRequest) {
     for (const n of names) heads[n] = (groups[n] && headForTallyGroup(groups[n])?.key) || inferHead(n)?.key || "current_liability";
     const resolved = await resolveLedgers(supabase, business_id, names.map(name => ({ name })), heads, "Tally import");
     if (!resolved.ok) return NextResponse.json({ error: "Some Tally ledgers couldn't be matched." }, { status: 422 });
+    // Ledgers filed under the wrong group by an earlier import (e.g. a sales ledger in a company-made sub-group that fell
+    // back to Current Liabilities): Tally's own group decides, so they move to the right head and the P&L picks them up
+    let regrouped = 0;
+    {
+      const known = names.map(n => ({ n, h: groups[n] ? headForTallyGroup(groups[n]) : null })).filter(x => x.h);
+      if (known.length) {
+        const ids = known.map(x => resolved.ids.get(x.n)?.id).filter(Boolean) as string[];
+        const { data: cur } = await supabase.from("fw_fin_chart_of_accounts").select("id,name,type,sub_type").eq("business_id", business_id).in("id", ids);
+        for (const a of cur ?? []) {
+          const h = known.find(x => x.n === a.name)?.h;
+          if (!h || (a.type === h.type && (a.sub_type ?? "") === h.sub_type)) continue;
+          let { error } = await supabase.from("fw_fin_chart_of_accounts").update({ type: h.type, sub_type: h.sub_type, group_key: h.key }).eq("id", a.id).eq("business_id", business_id);
+          if (error && /group_key/.test(error.message)) ({ error } = await supabase.from("fw_fin_chart_of_accounts").update({ type: h.type, sub_type: h.sub_type }).eq("id", a.id).eq("business_id", business_id));
+          if (!error) regrouped++;
+        }
+      }
+    }
 
     let imported = 0, skipped = 0, repaired = 0;
     // Tally's lines → FreWork lines. Tally allows one ledger on both sides of a voucher (e.g. Salary Dr 30,000 and
@@ -115,7 +132,7 @@ export async function POST(req: NextRequest) {
         }
       }));
     }    if (imported || repaired) await logAudit(supabase, { businessId: business_id, actor: gate.user.id, action: "tally_import", source: "integration", detail: { imported, repaired, skipped, from_frework: fromFreWork, failed: failed.length, company: company ?? null, new_ledgers: resolved.created.length } });
-    return NextResponse.json({ imported, repaired, skipped, from_frework: fromFreWork, failed: failed.slice(0, 50), failed_count: failed.length, created_ledgers: resolved.created });
+    return NextResponse.json({ imported, repaired, regrouped, skipped, from_frework: fromFreWork, failed: failed.slice(0, 50), failed_count: failed.length, created_ledgers: resolved.created });
   } catch (e) {
     return serverError("integrations/tally/import", e, "We couldn't import from Tally. Please try again.");
   }
