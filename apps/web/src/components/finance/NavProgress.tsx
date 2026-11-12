@@ -38,7 +38,7 @@ export default function NavProgress() {
       const href = u.pathname + u.search;
       if (seen.has(href)) return;
       seen.add(href);
-      try { router.prefetch(href); } catch { /* prefetch is only a speed-up */ }
+      try { router.prefetch(href, { kind: "full" as never }); } catch { /* prefetch is only a speed-up */ }
     };
     document.addEventListener("click", onClick, true);
     document.addEventListener("mouseover", onOver, { passive: true });

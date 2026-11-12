@@ -179,7 +179,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
     const hrefs = TOP_ICONS.map(t => t.href.split("?")[0]);
     let i = 0, stop = false;
     const idle = (fn: () => void) => ("requestIdleCallback" in window ? (window as unknown as { requestIdleCallback: (f: () => void, o?: { timeout: number }) => number }).requestIdleCallback(fn, { timeout: 2000 }) : globalThis.setTimeout(fn, 300));
-    const step = () => { if (stop || i >= hrefs.length) return; try { router.prefetch(hrefs[i++]); } catch { /* speed-up only */ } idle(step); };
+    const step = () => { if (stop || i >= hrefs.length) return; try { router.prefetch(hrefs[i++], { kind: "full" as never }); } catch { /* speed-up only */ } idle(step); };
     const t = window.setTimeout(() => idle(step), 2500);
     return () => { stop = true; window.clearTimeout(t); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
