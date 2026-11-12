@@ -135,13 +135,16 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
     const m = new Map<string, string>();
     const consider = (name: string, aiType: string) => {
       const n = name.trim(); if (!isNew(n) || m.has(n)) return;
-      m.set(n, heads[n] ?? inferHead(n)?.key ?? headFromType(aiType).key);
+      const used = rows.filter(r => r.ledger.trim() === n);
+      const side = used.length ? (used.filter(r => r.credit > 0).length >= used.length / 2 ? "in" : "out") : null;
+      m.set(n, heads[n] ?? inferHead(n)?.key ?? guessGroup(n, side) ?? headFromType(aiType).key);
     };
-    if (bankLedger) consider(bankLedger, "asset");
+    if (bankLedger && isNew(bankLedger)) m.set(bankLedger.trim(), heads[bankLedger.trim()] ?? "bank");
     rows.filter(r => r.state !== "posted" && selected.has(r.id) && r.ledger).forEach(r => consider(r.ledger, r.aiType));
     return m;
   }, [rows, selected, bankLedger, heads, existing]);
-  const unsureHeads = [...newLedgers.keys()].filter(n => !inferHead(n) && !heads[n]);
+  // Groups are guessed and shown in an editable list — nothing to confirm before posting
+  const unsureHeads: string[] = [];
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -193,8 +196,12 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
   function toggle(id: string) { setSelected(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
   function sortBy(key: SortKey) { setSort(s => ({ key, dir: s.key === key ? (s.dir === 1 ? -1 : 1) : 1 })); }
   function applyBulk() {
-    if (!bulkLedger.trim()) return;
-    setRows(prev => prev.map(r => selected.has(r.id) && r.state !== "posted" ? { ...r, ledger: bulkLedger.trim() } : r));
+    const l = bulkLedger.trim();
+    if (!l) { setProgress("Type or pick a ledger in the box, then press Apply."); return; }
+    setRows(prev => prev.map(r => selected.has(r.id) && r.state !== "posted" ? { ...r, ledger: l } : r));
+    // The group cards show their own ledger — set it for every group that has a selected row
+    setGroupLedger(gl => { const n = { ...gl }; for (const g of groups) if (g.rowIds.some(id => selected.has(id))) n[g.key] = l; return n; });
+    setProgress(`✓ ${l} applied to ${selected.size} entr${selected.size === 1 ? "y" : "ies"}.`);
   }
   function selectSimilar(r: Row) {
     const key = r.description.toLowerCase().replace(/[0-9/:\-_.]+/g, " ").split(/\s+/).filter(w => w.length > 3).slice(0, 2).join(" ");
@@ -471,13 +478,17 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
             <div style={{ borderTop: `1px solid ${T.line}`, padding: "0.8rem 1.4rem", display: "flex", flexDirection: "column", gap: "0.6rem", background: "#F1EADB" }}>
               {newLedgers.size > 0 && (
                 <div style={{ display: "flex", gap: "0.5rem 1rem", flexWrap: "wrap", alignItems: "center", fontSize: "0.78rem" }}>
-                  <span style={{ color: unsureHeads.length ? AMBER : MUTED, fontWeight: 700 }}>{unsureHeads.length ? "🤔 Choose a group for new ledgers:" : "New ledgers will be created:"}</span>
-                  {[...newLedgers.entries()].map(([name, key]) => (
-                    <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%" }}>
-                      <b style={{ minWidth: 140, color: unsureHeads.includes(name) ? AMBER : TEXT }}>{name}</b>
-                      <GroupChips compact value={key} onChange={k => setHeads(h => ({ ...h, [name]: k }))} />
-                    </div>
-                  ))}
+                  <span style={{ color: unsureHeads.length ? AMBER : MUTED, fontWeight: 700 }}>{`${newLedgers.size} new ledger${newLedgers.size === 1 ? "" : "s"} will be created — group guessed, change if wrong:`}</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 8, width: "100%", maxHeight: 160, overflowY: "auto" }}>
+                    {[...newLedgers.entries()].map(([name, key]) => (
+                      <label key={name} style={{ display: "flex", alignItems: "center", gap: 8, background: T.paper, border: `1px solid ${T.line}`, borderRadius: 10, padding: "4px 6px 4px 10px" }}>
+                        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: TEXT, fontWeight: 700 }} title={name}>{name}</span>
+                        <select aria-label={`Group for ${name}`} value={key} onChange={e => setHeads(h => ({ ...h, [name]: e.target.value }))} style={{ height: 30, borderRadius: 8, border: `1px solid ${T.line}`, background: "#FFFFFF", fontFamily: "inherit", fontSize: "0.8rem", maxWidth: 170 }}>
+                          {LEDGER_HEADS.map(h => <option key={h.key} value={h.key}>{h.label}</option>)}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
                   {unsureHeads.length > 0 && (
                     <button onClick={() => setHeads(h => ({ ...h, ...Object.fromEntries(unsureHeads.map(n => [n, newLedgers.get(n)!])) }))} style={{ ...chip(true, AMBER) }}>✓ Use these groups</button>
                   )}
@@ -494,7 +505,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
                 <button onClick={onClose} disabled={posting} style={{ height: 42, padding: "0 20px", borderRadius: 999, border: `1px solid ${T.line}`, background: T.paper, color: T.ink, fontFamily: SERIF, fontSize: "0.95rem", cursor: "pointer" }}>Close</button>
                 <button onClick={postSelected} disabled={posting || !sel.length || selMissing > 0 || !bankLedger.trim() || unsureHeads.length > 0}
                   style={{ background: T.gold, color: T.ink, border: `1px solid ${T.goldInk}`, height: 42, padding: "0 26px", borderRadius: 999, fontSize: "0.98rem", cursor: "pointer", fontFamily: SERIF, opacity: posting || !sel.length || selMissing > 0 || !bankLedger.trim() || unsureHeads.length > 0 ? 0.45 : 1 }}>
-                  {posting ? "Posting…" : sel.length ? `Post ${sel.length} selected` : "Post selected"}
+                  {posting ? "Posting…" : !bankLedger.trim() ? "Choose the bank ledger (top right)" : selMissing ? `${selMissing} without a ledger` : sel.length ? `Post ${sel.length} selected` : "Tick entries to post"}
                 </button>
               </div>
             </div>

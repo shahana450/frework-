@@ -34,6 +34,8 @@ export function guessGroup(name: string, side?: "in" | "out" | "party" | null): 
   if (/\b(purchases?)\b/.test(n)) return "purchase";
   if (/\b(capital|drawings?)\b/.test(n)) return "capital";
   if (/\b(loan|od|overdraft)\b/.test(n)) return "loan";
+  // Income words first: "Boat Rent Income", "Rent received" are income, not rent expense
+  if (/\b(income|received|receipts?|interest earned|rebate)\b/.test(n) && !/\b(tax|tds|gst)\b/.test(n)) return "indirect_income";
   if (/\b(rent|salary|salaries|wages|electricity|power|telephone|internet|fuel|petrol|diesel|repairs?|stationery|printing|travel|conveyance|freight|transport|loading|unloading|food|tea|office|maintenance|insurance|fees?|charges?|expenses?|advertis\w*|commission paid|bonus)\b/.test(n)) return "indirect_expense";
   if (/\b(interest received|commission received|discount received|income|rebate)\b/.test(n)) return "indirect_income";
   const business = /\b(traders?|trading|enterprises?|agenc(y|ies)|stores?|ltd|limited|pvt|private|llp|& ?co|company|industries|suppliers?|distributors?|marketing|associates|solutions|services|corp|corporation|inc|co)\b\.?/.test(n);
