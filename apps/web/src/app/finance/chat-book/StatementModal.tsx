@@ -484,9 +484,9 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
                   <span style={{ color: unsureHeads.length ? AMBER : MUTED, fontWeight: 700 }}>{`${newLedgers.size} new ledger${newLedgers.size === 1 ? "" : "s"} will be created — group guessed, change if wrong:`}</span>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 8, width: "100%", maxHeight: 160, overflowY: "auto" }}>
                     {[...newLedgers.entries()].map(([name, key]) => (
-                      <label key={name} style={{ display: "flex", alignItems: "center", gap: 8, background: T.paper, border: `1px solid ${T.line}`, borderRadius: 10, padding: "4px 6px 4px 10px" }}>
+                      <label key={name} style={{ display: "flex", alignItems: "center", gap: 8, background: T.paper, border: `1px solid ${T.line}`, borderRadius: 10, padding: "5px 6px 5px 12px", minHeight: 44, boxSizing: "border-box", fontSize: 14 }}>
                         <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: TEXT, fontWeight: 700 }} title={name}>{name}</span>
-                        <select aria-label={`Group for ${name}`} value={key} onChange={e => setHeads(h => ({ ...h, [name]: e.target.value }))} style={{ height: 30, borderRadius: 8, border: `1px solid ${T.line}`, background: "#FFFFFF", fontFamily: "inherit", fontSize: "0.8rem", maxWidth: 170 }}>
+                        <select aria-label={`Group for ${name}`} value={key} onChange={e => setHeads(h => ({ ...h, [name]: e.target.value }))} style={{ height: 34, lineHeight: "normal", padding: "0 8px", borderRadius: 8, border: `1px solid ${T.line}`, background: "#FFFFFF", fontFamily: "system-ui, sans-serif", fontSize: 13, color: TEXT, width: 190, flexShrink: 0 }}>
                           {LEDGER_HEADS.map(h => <option key={h.key} value={h.key}>{h.label}</option>)}
                         </select>
                       </label>
