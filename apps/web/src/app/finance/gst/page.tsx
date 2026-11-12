@@ -66,6 +66,13 @@ export default function GSTPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"dashboard" | "gstr1" | "gstr3b">("dashboard");
+  // Opened from a request like "prepare GSTR1 Oct 2026": ?tab=gstr1&month=2026-10
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const t = sp.get("tab"), m = sp.get("month");
+    if (t === "gstr1" || t === "gstr3b") setActiveTab(t);
+    if (m && /^\d{4}-\d{2}$/.test(m)) setSelectedMonth(m);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {

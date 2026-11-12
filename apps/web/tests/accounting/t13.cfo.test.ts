@@ -31,3 +31,13 @@ test("CFO view: margins, break-even from fixed vs variable costs, avoidable expe
   assert.equal(c.topCustomers[0].name, "Acme Ltd"); assert.equal(c.topCustomers[0].share, 100);
   assert.equal(c.cash.operating, 28000);
 });
+
+import { gstReturnLink } from "../../src/lib/gstIntent";
+test("GST return requests open the GST page on the right return and month", () => {
+  const now = new Date("2026-11-12T10:00:00");
+  assert.equal(gstReturnLink("prepare GSTR1 Oct 2026", now), "/finance/gst?tab=gstr1&month=2026-10");
+  assert.equal(gstReturnLink("file 3B for September", now), "/finance/gst?tab=gstr3b&month=2026-09");
+  assert.equal(gstReturnLink("GSTR-1", now), "/finance/gst?tab=gstr1&month=2026-10");
+  assert.equal(gstReturnLink("prepare GSTR1 December", now), "/finance/gst?tab=gstr1&month=2025-12");
+  assert.equal(gstReturnLink("paid rent 25000 by bank", now), null);
+});

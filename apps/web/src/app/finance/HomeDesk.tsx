@@ -8,6 +8,7 @@ import { useTally, tallyLabel } from "@/lib/tallyConnection";
 import Link from "next/link";
 import { useBrand } from "@/lib/brand";
 import { useRouter } from "next/navigation";
+import { gstReturnLink } from "@/lib/gstIntent";
 import type { Dashboard } from "@/lib/dashboard";
 
 const LIGHT = {
@@ -52,7 +53,8 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
   const [text, setText] = useState("");
   const [allDues, setAllDues] = useState(false);
   const [allNeeds, setAllNeeds] = useState(false);
-  const go = (t: string) => { const v = t.trim(); if (v) router.push(`/finance/chat-book?q=${encodeURIComponent(v)}`); };
+  // A GST return request opens the GST page on that return and month; everything else goes to the FreBook chat
+  const go = (t: string) => { const v = t.trim(); if (!v) return; const gst = gstReturnLink(v); router.push(gst ?? `/finance/chat-book?q=${encodeURIComponent(v)}`); };
 
   // Figures as accountants write them: grouped, no symbol (the card says the unit), negatives in brackets
   const locale = dash?.locale ?? "en-IN";

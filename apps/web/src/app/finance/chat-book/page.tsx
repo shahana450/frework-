@@ -1,4 +1,5 @@
-"use client";
+"use client";
+import { gstReturnLink } from "@/lib/gstIntent";
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -466,6 +467,8 @@ export default function FreBookPage() {
   const sendMessage = useCallback(async (text: string, file?: File) => {
     const bid = bizIdRef.current; const uid = userIdRef.current;
     if (!bid || !uid || (!text.trim() && !file)) return;
+    // "Prepare GSTR-1 Oct 2026" is not a transaction: open the GST page on that return and month
+    if (!file) { const gst = gstReturnLink(text); if (gst) { router.push(gst); return; } }
     (recognitionRef.current as { stop: () => void } | null)?.stop(); recognitionRef.current = null; setListening(false); setVoiceInterim("");
     setLoading(true);
 
