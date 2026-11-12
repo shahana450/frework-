@@ -26,7 +26,6 @@ export type ImportedBankEntry = { id: string; entryNo: string; date: string; amo
  */
 export function findDuplicates(rows: BankRow[], existing: ImportedBankEntry[]): Map<string, string> {
   const out = new Map<string, string>();
-  const seen = new Map<string, string>();      // within-batch: date|amount|ref → row key
   const seenRef = new Set<string>();            // within-batch: cheque/UTR refs
   for (const r of rows) {
     const amt = r2(r.amount);
@@ -34,10 +33,10 @@ export function findDuplicates(rows: BankRow[], existing: ImportedBankEntry[]): 
     if (hit) { out.set(r.key, `Already imported as ${hit.entryNo} (${hit.date}, ₹${amt.toLocaleString("en-IN")})`); continue; }
     const sameRef = r.ref ? existing.find(e => e.ref === r.ref) : undefined;
     if (sameRef) { out.set(r.key, `Reference ${r.ref} was already imported as ${sameRef.entryNo} (${sameRef.date}, ₹${r2(sameRef.amount).toLocaleString("en-IN")})`); continue; }
-    const k = `${r.date}|${amt}|${r.ref ?? ""}`;
-    if (seen.has(k)) out.set(r.key, "Appears twice in this file");
-    else if (r.ref && seenRef.has(r.ref)) out.set(r.key, `Reference ${r.ref} appears twice in this file`);
-    seen.set(k, r.key); if (r.ref) seenRef.add(r.ref);
+    // Two lines in one statement are two bank lines (two EMIs, rent and salary on the same day) — only a repeated
+    // UTR / cheque number in the file is a duplicate
+    if (r.ref && seenRef.has(r.ref)) out.set(r.key, `Reference ${r.ref} appears twice in this file`);
+    if (r.ref) seenRef.add(r.ref);
   }
   return out;
 }

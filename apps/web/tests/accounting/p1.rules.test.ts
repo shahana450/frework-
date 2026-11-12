@@ -73,6 +73,11 @@ test("duplicates: same cheque twice (26 Mar ₹20L, 27 Mar ₹1L), same date+amo
   ], existing);
   assert.match(d.get("a")!, /Reference CL011206 was already imported/);
   assert.match(d.get("b")!, /Already imported as RCT\/2025-26\/0004/);
-  assert.equal(d.has("c"), false); assert.match(d.get("d")!, /twice in this file/);
+  assert.equal(d.has("c"), false); assert.match(d.get("d")!, /appears twice in this file/);
   assert.equal(d.has("e"), false);
+});
+
+test("two EMIs or rents of the same amount on the same day in one statement are not duplicates", () => {
+  const d = findDuplicates([{ key: "x", date: "2026-05-05", amount: 25000, ref: null }, { key: "y", date: "2026-05-05", amount: 25000, ref: null }], []);
+  assert.equal(d.size, 0);
 });

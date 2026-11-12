@@ -40,6 +40,8 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
   const [bankLedger, setBankLedger] = useState("");
   const [heads, setHeads] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Rows the user chose to post although they look like an earlier entry (EMI, rent, salary of the same amount)
+  const [dupOk, setDupOk] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<"all" | "debit" | "credit" | "unassigned" | "posted">("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "date", dir: 1 });
@@ -230,7 +232,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
              { account: r.ledger.trim(), debit: 0, credit: amount, confidence: 1, is_new_account: isNew(r.ledger), suggested_type: null }],
         needs_clarification: [], warnings: [], confidence: 1,
       };
-      return { ref: r.id, transaction: tx, original_message: `Bank statement ${file.name}: ${r.description}` };
+      return { ref: r.id, transaction: tx, original_message: `Bank statement ${file.name}: ${r.description}`, confirm_duplicate: dupOk.has(r.id) };
     };
 
     const BATCH = 100;
@@ -463,7 +465,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
                         <td style={{ padding: "0.4rem 0.6rem", whiteSpace: "nowrap", fontSize: "0.72rem" }}>
                           {posted ? <span style={{ color: GREEN, fontWeight: 700 }}>✓ {r.entryNo}</span>
                             : r.state === "posting" ? <span style={{ color: BLUE }}>Posting…</span>
-                            : r.state === "failed" ? <span style={{ color: RED }} title={r.error}>✗ {r.error?.slice(0, 40)}</span>
+                            : r.state === "failed" ? <span style={{ color: RED }} title={r.error}>✗ {r.error?.slice(0, 40)}{/duplicate/i.test(r.error ?? "") && <button type="button" onClick={() => { setDupOk(d => new Set(d).add(r.id)); setRows(prev => prev.map(x => x.id === r.id ? { ...x, state: "open" as const, error: undefined } : x)); setSelected(sl => new Set(sl).add(r.id)); }} style={{ marginLeft: 6, border: `1px solid ${GOLD}`, background: "#FFFFFF", color: "#10241F", borderRadius: 999, padding: "1px 8px", fontSize: "0.68rem", cursor: "pointer" }}>Post anyway</button>}</span>
                             : null}
                         </td>
                       </tr>
@@ -500,6 +502,12 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
                   {selMissing > 0 && <span style={{ color: AMBER }}> · {selMissing} selected without a ledger</span>}
                   {!bankLedger.trim() && <span style={{ color: AMBER }}> · choose the bank ledger at the top</span>}
                 </span>
+                {rows.some(r => r.state === "failed" && /duplicate/i.test(r.error ?? "")) && (
+                  <button type="button" onClick={() => { const ids = rows.filter(r => r.state === "failed" && /duplicate/i.test(r.error ?? "")).map(r => r.id); setDupOk(d => new Set([...d, ...ids])); setRows(prev => prev.map(x => ids.includes(x.id) ? { ...x, state: "open" as const, error: undefined } : x)); setSelected(new Set(ids)); setProgress(`${ids.length} flagged entr${ids.length === 1 ? "y" : "ies"} ready — press Post to post them anyway.`); }}
+                    style={{ height: 36, padding: "0 14px", borderRadius: 999, border: `1px solid ${GOLD}`, background: "#FFFFFF", color: "#10241F", cursor: "pointer", fontFamily: "inherit" }}>
+                    Post {rows.filter(r => r.state === "failed" && /duplicate/i.test(r.error ?? "")).length} flagged duplicates anyway
+                  </button>
+                )}
                 <div style={{ flex: 1 }} />
                 {view === "groups" && <button onClick={applyAllSuggestions} disabled={!groups.some(g => !needsLook(g))} style={{ height: 42, padding: "0 20px", borderRadius: 999, border: `1px solid ${T.green}`, background: "transparent", color: T.ink, fontFamily: SERIF, fontSize: "0.95rem", cursor: "pointer" }}>Apply all ready · {groups.filter(g => !needsLook(g)).length}</button>}
                 <button onClick={onClose} disabled={posting} style={{ height: 42, padding: "0 20px", borderRadius: 999, border: `1px solid ${T.line}`, background: T.paper, color: T.ink, fontFamily: SERIF, fontSize: "0.95rem", cursor: "pointer" }}>Close</button>
