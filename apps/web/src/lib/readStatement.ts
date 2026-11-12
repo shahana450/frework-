@@ -44,7 +44,17 @@ async function readPdfLocally(file: File, password?: string): Promise<StatementT
   const rows = r.rows.filter(x => x.date && (x.debit > 0 || x.credit > 0));
   // Trust it only when it clearly found a statement: enough dated rows with amounts
   if (rows.length < 3 || rows.length < r.rows.length * 0.6) return null;
-  return rows.map(x => ({ date: x.date, description: x.description, debit: x.debit, credit: x.credit, balance: x.balance }));
+  // The statement's opening balance ("Opening Balance … 10265.00 CR"), so the first row can be checked too
+  const openRow = grid.find(g => g.some(c => /opening\s+balance/i.test(c)));
+  const openNum = openRow ? openRow.map(c => c.match(/(-?[\d,]+\.\d{2})/)?.[1]).filter(Boolean).pop() : null;
+  const opening = openNum ? Number(openNum.replace(/,/g, "")) : null;
+  const out = rows.map(x => ({ date: x.date, description: x.description, debit: x.debit, credit: x.credit, balance: x.balance }));
+  // Trust the exact reading only when its rows add up to the bank's own running balance; a layout whose columns or
+  // lines ran together (some Federal Bank PDFs) is read by the AI instead
+  const { rebuildByBalance, balanceBreaks } = await import("./bankDirection");
+  const fixed = rebuildByBalance(out, opening).rows;
+  if (out.some(x => (x.balance ?? 0) > 0) && balanceBreaks(fixed, opening) > 0) return null;
+  return Object.assign(fixed, { opening });
 }
 
 // A password-protected PDF: unlocked in the browser, its text sent in page batches (the password never leaves here)
@@ -113,13 +123,16 @@ async function readPdfAsImages(file: File, opts: { bizId?: string; shelf?: boole
   return { transactions, missingPages, stoppedReason };
 }
 
-import { fixDirections } from "./bankDirection";
+import { fixDirections, rebuildByBalance, balanceBreaks } from "./bankDirection";
 
 /** Reads a statement; withdrawals and deposits are then checked against the running balance (see bankDirection). */
-export async function readBankStatement(file: File, opts: { bizId?: string; shelf?: boolean; password?: string; onProgress?: (p: ReadProgress) => void } = {}): Promise<{ transactions: StatementTx[]; missingPages: string[]; stoppedReason?: string; directionFixed?: number }> {
+export async function readBankStatement(file: File, opts: { bizId?: string; shelf?: boolean; password?: string; onProgress?: (p: ReadProgress) => void } = {}): Promise<{ transactions: StatementTx[]; missingPages: string[]; stoppedReason?: string; directionFixed?: number; balanceBreaks?: number }> {
   const r = await readRaw(file, opts);
-  const f = fixDirections(r.transactions);
-  return { ...r, transactions: f.rows, directionFixed: f.fixed };
+  // Columns that ran together (amount and balance in the wrong cells) are rebuilt from the running balance first
+  const opening = (r.transactions as StatementTx[] & { opening?: number | null }).opening ?? null;
+  const b = rebuildByBalance(r.transactions, opening);
+  const f = fixDirections(b.rows);
+  return { ...r, transactions: f.rows, directionFixed: b.fixed + f.fixed, balanceBreaks: balanceBreaks(f.rows, opening) };
 }
 
 async function readRaw(file: File, opts: { bizId?: string; shelf?: boolean; password?: string; onProgress?: (p: ReadProgress) => void } = {}): Promise<{ transactions: StatementTx[]; missingPages: string[]; stoppedReason?: string }> {

@@ -87,7 +87,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
         return;
       }
 
-      let data: { transactions: { date: string; description: string; debit: number; credit: number }[] };
+      let data: { transactions: { date: string; description: string; debit: number; credit: number }[]; balanceBreaks?: number };
       try { data = await readBankStatement(file, { bizId, password: password || undefined, onProgress: p => { if (!cancelled) setProgress(p.label); } }); }
       catch (e) {
         if (cancelled) return;
@@ -97,7 +97,8 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
       }
       setLocked(null);
       if (cancelled) return;
-      setProgress("");   // the reading progress line; the same line later shows posting progress
+      // Rows that don't add up to the bank's printed balance: say so before anything is posted
+      setProgress(data.balanceBreaks ? `⚠ ${data.balanceBreaks} row${data.balanceBreaks === 1 ? "" : "s"} don't add up to the bank's running balance — compare with the PDF before posting (a line may be missing or on the wrong side).` : "");
       const parsed: Row[] = (data.transactions as { date: string; description: string; debit: number; credit: number }[])
         .filter(t => (Number(t.debit) || 0) > 0 || (Number(t.credit) || 0) > 0)
         .map((t, i) => ({ id: `r${i}`, date: String(t.date ?? "").slice(0, 10), description: String(t.description ?? ""), debit: Number(t.debit) || 0, credit: Number(t.credit) || 0, ledger: "", aiLedger: "", aiType: "", confidence: 0, state: "open" }));
