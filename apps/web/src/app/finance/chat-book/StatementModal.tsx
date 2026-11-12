@@ -40,6 +40,9 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
   const [bankLedger, setBankLedger] = useState("");
   const [heads, setHeads] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // The summary cards fold into one line once the list is scrolled, giving the rows the room
+  const [slim, setSlim] = useState(false);
+  const onListScroll = (e: React.UIEvent<HTMLDivElement>) => { const t = e.currentTarget.scrollTop; if (t > 24 && !slim) setSlim(true); else if (t === 0 && slim) setSlim(false); };
   // Rows the user chose to post although they look like an earlier entry (EMI, rent, salary of the same amount)
   const [dupOk, setDupOk] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<"all" | "debit" | "credit" | "unassigned" | "posted">("all");
@@ -281,7 +284,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(10,24,20,0.55)", backdropFilter: "blur(3px)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
-      <div style={{ background: T.cream, border: `1px solid ${T.line}`, borderRadius: 16, width: "100%", maxWidth: 1180, height: "92vh", display: "flex", flexDirection: "column", color: T.ink, boxShadow: "0 30px 90px rgba(0,0,0,0.35)", overflow: "hidden", fontFamily: SERIF }}>
+      <div style={{ background: T.cream, border: `1px solid ${T.line}`, borderRadius: 16, width: "100%", maxWidth: 1560, height: "96vh", display: "flex", flexDirection: "column", color: T.ink, boxShadow: "0 30px 90px rgba(0,0,0,0.35)", overflow: "hidden", fontFamily: SERIF }}>
 
         {/* Header — the bank book */}
         <div style={{ padding: "1rem 1.4rem", background: T.green, color: "#F4EFE4", display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap", borderBottom: `2px solid ${T.gold}` }}>
@@ -307,6 +310,15 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
           const money = (n: number) => { const [a, b] = fmt(Math.abs(n)).split("."); return <>{n < 0 ? "−" : ""}{cur()}{a}<span style={{ fontSize: "0.62em" }}>.{b ?? "00"}</span></>; };
           const tile = (top: string, dark = false): React.CSSProperties => ({ background: dark ? T.green : T.paper, color: dark ? "#FFFFFF" : T.ink, border: `1px solid ${dark ? T.green : T.line}`, borderTop: `3px solid ${top}`, borderRadius: 10, padding: "10px 14px" });
           const lab: React.CSSProperties = { fontSize: "0.62rem", letterSpacing: "0.16em", textTransform: "uppercase", color: T.muted };
+          if (slim) return (
+            <div style={{ padding: "0.45rem 1.4rem", borderBottom: `1px solid ${T.line}`, display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap", fontSize: "0.86rem", background: T.paper }}>
+              <span>In <b style={{ color: T.pos }}>{money(totals.cr)}</b></span>
+              <span>Out <b style={{ color: T.neg }}>{money(totals.dr)}</b></span>
+              <span>Net <b>{money(net)}</b></span>
+              <span style={{ color: T.muted }}>Ledgers {ready}/{openGroups} · Posted {postedN}/{rows.length}</span>
+              <button type="button" onClick={() => setSlim(false)} style={{ marginLeft: "auto", border: "none", background: "none", color: T.goldInk, cursor: "pointer", fontFamily: "inherit", fontSize: "0.82rem" }}>Show summary ▾</button>
+            </div>
+          );
           return (
             <div style={{ padding: "0.9rem 1.4rem", borderBottom: `1px solid ${T.line}`, display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
               <div style={tile(T.pos)}><div style={lab}>Money in · Cr</div><div style={{ fontSize: "1.55rem", color: T.pos }}>{money(totals.cr)}</div><div style={{ fontSize: "0.72rem", fontStyle: "italic", color: T.muted }}>{nIn} receipt{nIn === 1 ? "" : "s"}</div></div>
@@ -367,7 +379,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
               const cols = "34px 40px minmax(180px,1.5fr) 110px 110px minmax(220px,1.3fr) 110px";
               let n = 0;
               return (
-              <div style={{ flex: 1, overflow: "auto", padding: "0.4rem 1.4rem 1rem", background: "#FAF7F0" }}>
+              <div onScroll={onListScroll} style={{ flex: 1, overflow: "auto", padding: "0.4rem 1.4rem 1rem", background: "#FAF7F0" }}>
                 <div style={{ display: "grid", gridTemplateColumns: cols, gap: 12, padding: "10px 12px", borderBottom: `1px solid ${T.ink}`, fontSize: "0.66rem", letterSpacing: "0.18em", color: T.muted, position: "sticky", top: 0, background: "#FAF7F0", zIndex: 1 }}>
                   <span /><span>NO.</span><span>PARTICULARS</span><span style={{ textAlign: "right" }}>DR {cur()}</span><span style={{ textAlign: "right" }}>CR {cur()}</span><span>LEDGER</span><span />
                 </div>
@@ -429,7 +441,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
 
             {/* Table */}
             {view === "rows" && (
-            <div style={{ flex: 1, overflow: "auto" }}>
+            <div onScroll={onListScroll} style={{ flex: 1, overflow: "auto" }}>
               {groupFilter && (
                 <div style={{ padding: "6px 12px", fontSize: "0.76rem", background: "rgba(31,94,255,0.06)", color: BLUE, display: "flex", gap: 10, alignItems: "center" }}>
                   Showing group: <b>{groupFilter.label}</b>
