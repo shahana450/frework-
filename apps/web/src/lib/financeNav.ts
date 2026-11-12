@@ -46,6 +46,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "🏛", label: "Balance Sheet", href: "/finance/reports?tab=balance_sheet" },
     { icon: "💧", label: "Cash Flow", href: "/finance/reports?tab=cash_flow" },
     { icon: "🗓", label: "Monthly Recap", href: "/finance/recap" },
+    { icon: "📈", label: "Business Analysis", href: "/finance/cfo" },
     { icon: "🔍", label: "Analysis & Audit", href: "/finance/audit", accountant: true },
     { icon: "🕵", label: "Accounting Detective", href: "/finance/detective", accountant: true },
     { icon: "🧮", label: "GST Returns", href: "/finance/gst/returns", india: true },
