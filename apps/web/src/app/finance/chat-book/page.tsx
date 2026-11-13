@@ -707,7 +707,7 @@ export default function FreBookPage() {
       {/* Top nav */}
       <nav className="fb-top" style={{ borderBottom: "1px solid rgba(217,181,111,0.18)", padding: "0 1rem", display: "flex", alignItems: "center", gap: "0.6rem", height: 60, background: "#0F2B25", flexShrink: 0, zIndex: 20, overflowX: "auto", paddingTop: "env(safe-area-inset-top)" }}>
         <button onClick={() => setSidebarOpen(o => !o)} aria-label="Previous chats" style={{ background: "none", border: "none", color: "#C9D3CE", cursor: "pointer", fontSize: "1.1rem", padding: "4px 8px" }}>☰</button>
-        <Link href="/finance" style={{ display: "flex", alignItems: "baseline", gap: 8, textDecoration: "none" }}><span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 700, fontSize: "1.45rem", color: "#FFFFFF" }}>FreBook</span><span className="fb-tag" style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontStyle: "italic", fontSize: "0.85rem", color: "#D9B56F" }}>Chat in. Books out.</span></Link>
+        <Link href="/finance" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}><img src="/frebook-face.jpg" alt="" aria-hidden="true" width={30} height={30} style={{ width: 30, height: 30, borderRadius: "50%", objectFit: "cover", boxShadow: "0 0 0 2px #5DCAA5" }} /><span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 700, fontSize: "1.45rem", color: "#FFFFFF" }}>FreBook</span><span className="fb-tag" style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontStyle: "italic", fontSize: "0.85rem", color: "#D9B56F" }}>Chat in. Books out.</span></Link>
                 <Link href="/finance/select-business" title="Switch business" style={{ marginLeft: 10, fontSize: "0.78rem", fontWeight: 700, color: "#E7ECE9", border: "1px solid rgba(217,181,111,0.3)", background: "rgba(255,255,255,0.04)", padding: "6px 12px", borderRadius: 999, whiteSpace: "nowrap", textDecoration: "none" }}>{bizName} <span aria-hidden="true" style={{ color: "#D9B56F" }}>⇄</span></Link>
         {/* Tally status + auto-push */}
         <div style={{ marginLeft: 6, display: "flex", alignItems: "center", gap: 0, border: "1px solid rgba(217,181,111,0.3)", background: "rgba(255,255,255,0.04)", borderRadius: 999, height: 32, flexShrink: 0, overflow: "hidden" }}>
@@ -783,6 +783,7 @@ export default function FreBookPage() {
             {/* Night desk: centred greeting, the composer, books at a glance and what needs you */}
             <section className="fb-night" style={{ background: "#0B1F1A", color: "#F6F1E7", padding: "clamp(28px, 5vw, 60px) clamp(16px, 4vw, 48px) clamp(32px, 5vw, 64px)" }}>
               <div style={{ maxWidth: 1180, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 14, textAlign: "center" }}>
+                <img src="/frebook-avatar.jpg" alt="FreBook, your virtual accountant" width={112} height={112} className="fb-hero-av" style={{ width: 112, height: 112, borderRadius: "50%", objectFit: "cover", objectPosition: "50% 22%", boxShadow: "0 0 0 3px #0B1F1A, 0 0 0 5px #5DCAA5, 0 0 40px 6px rgba(93,202,165,0.35)" }} />
                 <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: "#D9B56F" }}>
                   <span aria-hidden="true" style={{ width: 40, height: 1, background: "#D9B56F" }} />{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).replace(",", " ·")}<span aria-hidden="true" style={{ width: 40, height: 1, background: "#D9B56F" }} />
                 </div>
@@ -1090,7 +1091,7 @@ export default function FreBookPage() {
                 {/* Answer from the books */}
                 {msg.role === "ai" && msg.answer && (
                   <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <span aria-hidden="true" className="fb-av" style={{ width: 32, height: 32, borderRadius: "50%", background: "#0F2B25", color: "#D9B56F", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SERIF, fontWeight: 700, flexShrink: 0 }}>F</span>
+                    <img src="/frebook-face.jpg" alt="" aria-hidden="true" className="fb-av" width={32} height={32} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", flexShrink: 0, boxShadow: "0 0 0 2px #FFFFFF, 0 0 0 3px #9FE1CB" }} />
                     <div style={{ flex: 1, minWidth: 0 }}><AnswerCard answer={msg.answer} /></div>
                   </div>
                 )}
@@ -1098,7 +1099,7 @@ export default function FreBookPage() {
                 {/* AI response */}
                 {msg.role === "ai" && !msg.answer && (
                   <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <span aria-hidden="true" className="fb-av" style={{ width: 32, height: 32, borderRadius: "50%", background: "#0F2B25", color: "#D9B56F", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SERIF, fontWeight: 700, flexShrink: 0 }}>F</span>
+                    <img src="/frebook-face.jpg" alt="" aria-hidden="true" className="fb-av" width={32} height={32} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", flexShrink: 0, boxShadow: "0 0 0 2px #FFFFFF, 0 0 0 3px #9FE1CB" }} />
                     <div style={{ flex: 1, minWidth: 0, maxWidth: 720, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                       {/* Clarification question */}
                       {msg.transaction?.status === "needs_clarification" && (
@@ -1169,7 +1170,7 @@ export default function FreBookPage() {
 
             {loading && (
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <span aria-hidden="true" className="fb-av" style={{ width: 32, height: 32, borderRadius: "50%", background: "#0F2B25", color: "#D9B56F", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SERIF, fontWeight: 700, flexShrink: 0 }}>F</span>
+                <img src="/frebook-face.jpg" alt="" aria-hidden="true" className="fb-av fb-av-think" width={32} height={32} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", flexShrink: 0, boxShadow: "0 0 0 2px #FFFFFF, 0 0 0 3px #9FE1CB" }} />
                 <div style={{ background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: "6px 18px 18px 18px", padding: "12px 16px", display: "flex", gap: 6, alignItems: "center" }}>
                   {[0, 1, 2].map(i => <span key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "#C99A4E", display: "inline-block", animation: `bounce 0.9s ease-in-out ${i * 0.15}s infinite` }} />)}
                   <span style={{ fontSize: "0.82rem", color: "#5E6B66", marginLeft: 6 }}>Drafting the entry…</span>
@@ -1339,7 +1340,7 @@ export default function FreBookPage() {
         .fb-box:focus-within { border-color: #C99A4E !important; box-shadow: 0 0 0 3px rgba(217,181,111,0.25), 0 22px 50px -32px rgba(15,43,37,0.55) !important; }
         .fb-msg { animation: fbIn .25s ease-out both; } @keyframes fbIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
         .fb-chips::-webkit-scrollbar { display: none; } .fb-hint-sp { display: none; }
-        @media (max-width: 640px) { .fb-welcome { grid-template-columns: minmax(0,1fr) !important; } .fb-welcome > div { border-left: none !important; border-top: 1px solid #EFE8D9; } .fb-hint { display: none; } .fb-hint-sp { display: block; } .fb-av { width: 26px !important; height: 26px !important; font-size: 0.8rem; } }
+        @keyframes fbThink { 0%,100% { box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 3px #9FE1CB; } 50% { box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 6px rgba(93,202,165,0.55); } } .fb-av-think { animation: fbThink 1.4s ease-in-out infinite; } @media (prefers-reduced-motion: reduce) { .fb-av-think { animation: none; } } @media (max-width: 640px) { .fb-hero-av { width: 84px !important; height: 84px !important; } } @media (max-width: 640px) { .fb-welcome { grid-template-columns: minmax(0,1fr) !important; } .fb-welcome > div { border-left: none !important; border-top: 1px solid #EFE8D9; } .fb-hint { display: none; } .fb-hint-sp { display: block; } .fb-av { width: 26px !important; height: 26px !important; font-size: 0.8rem; } }
         @media (prefers-reduced-motion: reduce) { .fb-msg { animation: none; } }
         .fb-toplink:hover, .fb-toplink:focus-visible { background: rgba(217,181,111,0.14); color: #FFFFFF !important; outline: none; }
         @media (max-width: 760px) {
