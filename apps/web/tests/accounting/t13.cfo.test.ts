@@ -41,3 +41,25 @@ test("GST return requests open the GST page on the right return and month", () =
   assert.equal(gstReturnLink("prepare GSTR1 December", now), "/finance/gst?tab=gstr1&month=2025-12");
   assert.equal(gstReturnLink("paid rent 25000 by bank", now), null);
 });
+
+import { reconcileBank } from "../../src/lib/bankRecon";
+test("Bank reconciliation matches by reference, then amount and date, and builds the BRS", () => {
+  const bank = [
+    { id: "a", date: "2026-10-03", description: "NEFT UTR123456 ACME", debit: 0, credit: 5000 },
+    { id: "b", date: "2026-10-05", description: "RENT", debit: 25000, credit: 0 },
+    { id: "c", date: "2026-10-30", description: "BANK CHARGES", debit: 118, credit: 0, balance: 49882 },
+  ];
+  const book = [
+    { id: "1", date: "2026-10-02", entryNo: "R1", narration: "Acme", ref: "UTR123456", dr: 5000, cr: 0 },
+    { id: "2", date: "2026-10-04", entryNo: "P1", narration: "Rent", ref: null, dr: 0, cr: 25000 },
+    { id: "3", date: "2026-10-31", entryNo: "P2", narration: "Cheque 001", ref: "001", dr: 0, cr: 3000 },
+  ];
+  const r = reconcileBank(bank, book, { openingBook: 70000 });
+  assert.equal(r.matched.length, 2);
+  assert.equal(r.matched[0].how, "ref");
+  assert.deepEqual(r.bankOnly.map(b => b.id), ["c"]);
+  assert.deepEqual(r.bookOnly.map(b => b.id), ["3"]);
+  assert.equal(r.bookBalance, 47000);
+  assert.equal(r.computedBank, 49882);
+  assert.equal(r.difference, 0);
+});

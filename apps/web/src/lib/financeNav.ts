@@ -29,6 +29,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "💳", label: "Payments", href: "/finance/payment" },
     { icon: "🏦", label: "Banking", href: "/finance/banking" },
     { icon: "⬆", label: "Import Statement", href: "/finance/banking/import" },
+    { icon: "⚖", label: "Bank Reconciliation", href: "/finance/banking/reconcile" },
     { icon: "📑", label: "Bank History", href: "/finance/banking/history", accountant: true },
     { icon: "👩‍💼", label: "Payroll", href: "/finance/payroll", accountant: true },
   ] },
