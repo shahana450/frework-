@@ -219,12 +219,19 @@ export default function SmartInbox() {
         if (tpl && tpl.length) { addItems(fromSimple(job, tpl)); note = `${tpl.length} entries (template)`; }
         else note = await readStatement(job, file);
       } else if (STATEMENT_NAME.test(file.name) || CARD_NAME.test(file.name)) note = await readStatement(job, file);
-      else note = await readDocument(job, file);
+      else note = await readDocument(job, file);   // bills are kept on the Shelf by FreBook itself
       setJob(job.id, { status: "done", note });
+      if (/\.(xlsx|xls|csv)$/i.test(file.name) || STATEMENT_NAME.test(file.name) || CARD_NAME.test(file.name)) keepOnShelf(file, "bank");
     } catch (e) {
       failedFiles.current.set(job.id, file);   // kept so "Retry failed" can read it again
       setJob(job.id, { status: "error", note: e instanceof Error ? e.message : "Couldn't read this file" });
     }
+  }
+  // A copy of every statement / Excel goes to the Shelf (source "inbox") so History can show it later
+  function keepOnShelf(file: File, rack: string) {
+    const fd = new FormData();
+    fd.append("business_id", bizId); fd.append("file", file); fd.append("rack", rack); fd.append("source", "inbox"); fd.append("title", file.name);
+    void fetch("/api/finance/shelf", { method: "POST", body: fd }).catch(() => {});
   }
   const failedFiles = useRef<Map<string, File>>(new Map());
   function retryFailed() {

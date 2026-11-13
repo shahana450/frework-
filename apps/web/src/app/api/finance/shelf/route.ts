@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const saved = await fileToShelf(supabase, {
       businessId: bizId, actorId: gate.user.id, rack, fy, period: (form.get("period") as string) || c.period || null,
       title: (form.get("title") as string) || c.title || file.name, fileName: file.name, mime: file.type, bytes: new Uint8Array(await file.arrayBuffer()),
-      source: "upload", docType: c.doc_type ?? null, reference: c.reference ?? null, authority: c.authority ?? null,
+      source: form.get("source") === "inbox" ? "inbox" : "upload", docType: c.doc_type ?? null, reference: c.reference ?? null, authority: c.authority ?? null,
       replyDue: c.reply_due && ISO.test(c.reply_due) ? c.reply_due : null, amount: typeof c.amount === "number" && isFinite(c.amount) ? c.amount : null,
       aiSummary: c.summary ?? null, notes: (form.get("notes") as string) || null,
     });

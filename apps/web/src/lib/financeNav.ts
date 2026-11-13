@@ -65,6 +65,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "🤖", label: "Review Queue", href: "/finance/ai-review", badge: "review" },
     { icon: "📎", label: "Upload Documents", href: "/finance/upload" },
     { icon: "🗄", label: "Shelf", href: "/finance/shelf" },
+    { icon: "🕘", label: "History", href: "/finance/history" },
     { icon: "💡", label: "Insights", href: "/finance/insights" },
   ] },
   { label: "Settings", items: [

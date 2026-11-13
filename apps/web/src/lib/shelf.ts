@@ -25,7 +25,7 @@ export function fyOfDate(date: string | null | undefined): string | null {
 
 export type ShelfFile = {
   businessId: string; actorId: string | null; rack: RackKey; title: string; fileName: string; mime: string; bytes: Uint8Array;
-  source: "upload" | "frebook" | "statement" | "gstr1" | "system"; fy?: string | null; period?: string | null; docType?: string | null;
+  source: "upload" | "frebook" | "inbox" | "statement" | "gstr1" | "system"; fy?: string | null; period?: string | null; docType?: string | null;
   reference?: string | null; authority?: string | null; replyDue?: string | null; amount?: number | null; aiSummary?: string | null; notes?: string | null;
 };
 

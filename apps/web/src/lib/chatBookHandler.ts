@@ -65,7 +65,7 @@ export async function handleChatBook(req: NextRequest, deps: { readAttachment?: 
     // Every document given to FreBook is also kept on the Shelf (Bills & Invoices rack) — saved after the reply is sent
     if (uploaded) {
       const file = uploaded, bytes = new Uint8Array(await uploaded.arrayBuffer()), note = message && !/^book this transaction/i.test(message) ? message.slice(0, 300) : null, actor = user_id;
-      after(() => fileToShelf(supabase, { businessId: business_id, actorId: actor, rack: "bills", title: file.name, fileName: file.name, mime: file.type, bytes, source: "frebook", fy: fyOfDate(new Date().toISOString().slice(0, 10)), notes: note }));
+      after(() => fileToShelf(supabase, { businessId: business_id, actorId: actor, rack: "bills", title: file.name, fileName: file.name, mime: file.type, bytes, source: bulk ? "inbox" : "frebook", fy: fyOfDate(new Date().toISOString().slice(0, 10)), notes: note }));
     }
 
     // One parallel round to the database: rate limit, saved conversation, ledgers, financial year, business
