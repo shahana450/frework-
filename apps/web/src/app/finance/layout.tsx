@@ -7,6 +7,7 @@ import { useTallyAutoCatchUp, AUTO_PUSH_EVENT } from "@/lib/tallyAutoCatchUp";
 import WindowDock, { openInWindow } from "@/components/finance/WindowDock";
 import { useTallyAutoSync, AUTOSYNC_EVENT } from "@/lib/tallyAutoSync";
 import InstallApp from "@/components/finance/InstallApp";
+import FreBookBuddy from "@/components/finance/FreBookBuddy";
 import BizSwitcher from "@/components/finance/BizSwitcher";
 import NavProgress from "@/components/finance/NavProgress";
 import { useBrand, BRAND_CSS } from "@/lib/brand";
@@ -565,6 +566,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         <ActiveBusinessProvider>{children}</ActiveBusinessProvider>
         <WindowDock />
         <InstallApp />
+        <FreBookBuddy />
       </main>
 
       {/* Phone tab bar */}
