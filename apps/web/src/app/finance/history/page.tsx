@@ -98,9 +98,13 @@ export default function HistoryPage() {
                     <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 8, background: HT.cream }}>
                       {open.msgs == null ? <div style={{ color: HT.muted, fontSize: 13 }}>Opening…</div>
                         : !open.msgs.length ? <div style={{ color: HT.muted, fontSize: 13 }}>No messages saved in this chat.</div>
-                        : open.msgs.map((m, k) => (
-                          <div key={k} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "80%", background: m.role === "user" ? HT.ink : HT.paper, color: m.role === "user" ? HT.paper : HT.ink, border: `1px solid ${HT.line}`, borderRadius: 12, padding: "8px 12px", fontSize: 13.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
-                        ))}
+                        : open.msgs.map((m, k) => m.role === "user"
+                          ? <div key={k} style={{ alignSelf: "flex-end", maxWidth: "75%", background: "#0F2B25", color: "#FFFFFF", borderRadius: "16px 16px 4px 16px", padding: "9px 14px", fontSize: 14, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
+                          : <div key={k} style={{ alignSelf: "flex-start", display: "flex", gap: 8, alignItems: "flex-start", maxWidth: "85%" }}>
+                              <img src="/frebook-face.jpg" alt="" width={28} height={28} style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0, boxShadow: "0 0 0 2px #9FE1CB" }} />
+                              <Reply text={m.content} />
+                            </div>
+                        )}
                     </div>
                   )}
                 </div>
@@ -124,6 +128,49 @@ export default function HistoryPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+// One FreBook reply as it looked in the chat: a drafted entry card, a "Posted" chip, or plain text
+type Draft = { action?: string; transaction_type?: string; transaction_date?: string; amount?: number; payment_account?: string | null; counter_account?: string | null; party_name?: string | null; invoice_number?: string | null; narrative?: string | null; question?: string | null; clarification_question?: string | null;
+  gst?: { applicable?: boolean; rate?: number } | null; tds?: { applicable?: boolean; section?: string | null; amount?: number } | null; lines?: { account: string; debit?: number; credit?: number }[] | null };
+const rs = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const nice = (s?: string) => (s ?? "").replace(/_/g, " ").replace(/^./, c => c.toUpperCase());
+function Reply({ text }: { text: string }) {
+  const bubble: React.CSSProperties = { background: "#FFFFFF", border: `1px solid ${HT.line}`, borderRadius: "4px 16px 16px 16px", padding: "9px 14px", fontSize: 14, whiteSpace: "pre-wrap", wordBreak: "break-word", color: HT.ink };
+  const posted = text.match(/^✓\s*Posted:\s*(.+)$/);
+  if (posted) return <span style={{ background: "#E3F3EC", color: "#0B5E42", borderRadius: 999, padding: "5px 12px", fontSize: 13, fontWeight: 600 }}>✓ Posted · {posted[1]}</span>;
+  let d: Draft | null = null;
+  const raw = text.trim().replace(/^```(?:json)?|```$/g, "").trim();
+  if (raw.startsWith("{")) { try { d = JSON.parse(raw); } catch { d = null; } }
+  if (!d || typeof d !== "object") return <div style={bubble}>{text}</div>;
+  const q = d.clarification_question ?? d.question;
+  const lines = d.lines?.length ? d.lines : d.amount ? [
+    { account: d.counter_account ?? "—", debit: /receipt|sale|income/i.test(d.action ?? d.transaction_type ?? "") ? 0 : d.amount, credit: /receipt|sale|income/i.test(d.action ?? d.transaction_type ?? "") ? d.amount : 0 },
+    { account: d.payment_account ?? "—", debit: /receipt|sale|income/i.test(d.action ?? d.transaction_type ?? "") ? d.amount : 0, credit: /receipt|sale|income/i.test(d.action ?? d.transaction_type ?? "") ? 0 : d.amount },
+  ] : [];
+  return (
+    <div style={{ ...bubble, whiteSpace: "normal", padding: 0, overflow: "hidden", minWidth: 280 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "10px 14px", background: "#F6F1E7", borderBottom: `1px solid ${HT.line}`, fontSize: 13 }}>
+        <strong style={{ fontWeight: 600 }}>{nice(d.action ?? d.transaction_type) || "Entry"}</strong>
+        <span style={{ color: HT.muted }}>{d.transaction_date ? new Date(d.transaction_date + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : ""}</span>
+      </div>
+      {q && <div style={{ padding: "10px 14px", fontSize: 14 }}>{q}</div>}
+      {lines.length > 0 && (
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, fontVariantNumeric: "tabular-nums" }}>
+          <thead><tr style={{ color: HT.muted, fontSize: 11.5, textTransform: "uppercase", letterSpacing: "0.06em" }}><th style={{ textAlign: "left", padding: "8px 14px 4px", fontWeight: 500 }}>Account</th><th style={{ textAlign: "right", padding: "8px 8px 4px", fontWeight: 500 }}>Debit</th><th style={{ textAlign: "right", padding: "8px 14px 4px", fontWeight: 500 }}>Credit</th></tr></thead>
+          <tbody>{lines.map((l, i) => <tr key={i} style={{ borderTop: `1px solid ${HT.line}` }}><td style={{ padding: "7px 14px" }}>{l.account}</td><td style={{ textAlign: "right", padding: "7px 8px" }}>{l.debit ? rs(l.debit) : ""}</td><td style={{ textAlign: "right", padding: "7px 14px" }}>{l.credit ? rs(l.credit) : ""}</td></tr>)}</tbody>
+        </table>
+      )}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: "8px 14px 11px", fontSize: 12.5, color: HT.muted, borderTop: lines.length ? `1px solid ${HT.line}` : undefined }}>
+        {d.party_name && <span>Party: {d.party_name}</span>}
+        {d.invoice_number && <span>· Ref {d.invoice_number}</span>}
+        {d.gst?.applicable && <span>· GST {d.gst.rate}%</span>}
+        {d.tds?.applicable && <span>· TDS {d.tds.section ?? ""} {d.tds.amount ? rs(d.tds.amount) : ""}</span>}
+        {d.narrative && <span style={{ flexBasis: "100%" }}>{d.narrative}</span>}
+        {!d.party_name && !d.invoice_number && !d.gst?.applicable && !d.tds?.applicable && !d.narrative && <span>{d.amount ? `Amount ${rs(d.amount)}` : "Draft"}</span>}
+      </div>
     </div>
   );
 }
