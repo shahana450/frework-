@@ -82,7 +82,7 @@ type SbBody = { code?: number; message?: string; data?: { status_cd?: string; er
 const headers = (authorization: string) => ({ authorization, "x-api-key": process.env.SANDBOX_API_KEY ?? "", "x-api-version": "1.0.0", "Content-Type": "application/json" });
 
 /** Throws a clear PortalError for HTTP failures and GST-portal errors (HTTP 200 with status_cd "0"). Exported for tests. */
-export function checkReply(http: number, body: unknown, when: "otp" | "verify" | "2b"): SbBody {
+export function checkReply(http: number, body: unknown, when: "otp" | "verify" | "2b" | "ret"): SbBody {
   const b = (body ?? {}) as SbBody;
   if (http === 401 || http === 403) { cached = null; throw new PortalError("PROVIDER", "Sandbox refused the request — check that GST taxpayer APIs are enabled on your Sandbox plan."); }
   if (http === 422 || b.code === 422) throw new PortalError("INVALID", b.message ?? "Invalid GSTIN.");
@@ -93,7 +93,8 @@ export function checkReply(http: number, body: unknown, when: "otp" | "verify" |
     const msg = inner.error?.message ?? "The GST portal returned an error.";
     if (when === "verify") throw new PortalError("OTP_INVALID", `The GST portal didn't accept the OTP: ${msg}`);
     if (when === "2b" && /^RET2B10(23|16)$/.test(code)) throw new PortalError("INVALID", `GSTR-2B isn't available for that month on the portal yet (${msg}). It's generated on the 14th of the next month.`);
-    if (when === "2b" && /^AUTH/.test(code)) throw new PortalError("SESSION_EXPIRED", "The GST portal session ended — send a new OTP.");
+    if (when === "ret" && /^RET/.test(code) && /not\s*(filed|available|found)|no\s*(data|record|invoice)/i.test(msg)) return { data: { data: null } };
+    if ((when === "2b" || when === "ret") && /^AUTH/.test(code)) throw new PortalError("SESSION_EXPIRED", "The GST portal session ended — send a new OTP.");
     if (when === "otp" && code === "AUTH403") throw new PortalError("PROVIDER", "The GST portal says too many sessions are open for this account. Try again later.");
     throw new PortalError("PROVIDER", `${msg}${code ? ` (${code})` : ""}`);
   }
@@ -152,4 +153,25 @@ export async function sandboxGstr2b(taxpayerToken: string, ym: string): Promise<
   const parts: unknown[] = [];
   for (let n = 1; n <= first.files; n++) { const p = await get(n); if (p.payload) parts.push(p.payload); }
   return parts;
+}
+
+/** Filed GSTR-1 sections for the month (b2b, b2cl, b2cs, cdnr, exp), merged into one GSTR-1 JSON. Missing sections are empty. */
+export async function sandboxGstr1(taxpayerToken: string, ym: string): Promise<Record<string, unknown>> {
+  const [y, m] = ym2b(ym);
+  const out: Record<string, unknown> = {};
+  for (const sec of ["b2b", "b2cl", "b2cs", "cdnr", "exp"]) {
+    const r = await fetch(`${BASE()}/gst/compliance/tax-payer/gstrs/gstr-1/${sec}/${y}/${m}`, { headers: headers(taxpayerToken) });
+    const body = checkReply(r.status, await r.json().catch(() => ({})), "ret");
+    const d = body.data?.data as Record<string, unknown> | unknown[] | null | undefined;
+    const list = Array.isArray(d) ? d : d && typeof d === "object" ? (d as Record<string, unknown>)[sec] : null;
+    if (Array.isArray(list) && list.length) out[sec] = list;
+  }
+  return out;
+}
+
+/** Filed (or saved) GSTR-3B for the month, GSTN JSON. */
+export async function sandboxGstr3b(taxpayerToken: string, ym: string): Promise<unknown> {
+  const [y, m] = ym2b(ym);
+  const r = await fetch(`${BASE()}/gst/compliance/tax-payer/gstrs/gstr-3b/${y}/${m}`, { headers: headers(taxpayerToken) });
+  return checkReply(r.status, await r.json().catch(() => ({})), "ret").data?.data ?? null;
 }

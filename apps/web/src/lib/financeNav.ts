@@ -58,6 +58,7 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "📄", label: "Composition (CMP-08)", href: "/finance/gst/composition", india: true, accountant: true },
     { icon: "📑", label: "MIS Report", href: "/finance/mis" },
     { icon: "🧾", label: "ITC Match & 3B Table 4", href: "/finance/gst/itc", india: true },
+    { icon: "⚖", label: "GSTR-1 / 3B vs Books", href: "/finance/gst/reconcile", india: true },
     { icon: "🔄", label: "GST Reconciliation", href: "/finance/audit/gst-recon", india: true, accountant: true },
     { icon: "🔖", label: "TDS", href: "/finance/tds", india: true, accountant: true },
     { icon: "📄", label: "Form 168 / 130 (26AS / 16)", href: "/finance/tax-docs", india: true },

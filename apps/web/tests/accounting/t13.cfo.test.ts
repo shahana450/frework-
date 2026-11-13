@@ -63,3 +63,17 @@ test("Bank reconciliation matches by reference, then amount and date, and builds
   assert.equal(r.computedBank, 49882);
   assert.equal(r.difference, 0);
 });
+
+import { compareGstr1, parse3B, compare3B } from "../../src/lib/gstPortalRecon";
+test("GSTR-1 filed vs books flags missing and differing invoices; 3B compares tables", () => {
+  const it = (t: number, c: number) => [{ itm_det: { txval: t, camt: c, samt: c } }];
+  const books = { b2b: [{ ctin: "32AAAAA0000A1Z5", inv: [{ inum: "INV/001", itms: it(1000, 90) }, { inum: "INV/002", itms: it(500, 45) }] }] };
+  const portal = { b2b: [{ ctin: "32AAAAA0000A1Z5", inv: [{ inum: "INV/001", itms: it(1000, 90) }, { inum: "INV/003", itms: it(200, 18) }] }] };
+  const r = compareGstr1(books, portal);
+  assert.deepEqual(r.invoices.map(i => i.status).sort(), ["match", "onlyBooks", "onlyPortal"]);
+  const p3 = parse3B({ sup_details: { osup_det: { txval: 1500, camt: 135, samt: 135 } }, itc_elg: { itc_net: { camt: 50, samt: 50 } } });
+  assert.equal(p3.a.taxable, 1500); assert.equal(p3.itc.cgst, 50);
+  const Z = { taxable: 0, igst: 0, cgst: 0, sgst: 0, cess: 0 };
+  const rows = compare3B({ a: { ...Z, taxable: 1500, cgst: 135, sgst: 135 }, b: Z, c: Z, d: Z, e: Z, itc: { ...Z, cgst: 40, sgst: 40 } }, p3);
+  assert.equal(rows[0].diff, 0); assert.equal(rows[5].diff, 20);
+});
