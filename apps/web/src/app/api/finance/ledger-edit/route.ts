@@ -16,6 +16,22 @@ export async function POST(req: NextRequest) {
     if (gate instanceof NextResponse) return gate;
     if (!can(gate.role, "post")) return NextResponse.json({ error: "Your role can view ledgers but not change them." }, { status: 403 });
     const bizId = body.business_id!;
+    // No account_id → create a new ledger under the chosen group
+    if (!body.account_id) {
+      const name = String(body.name ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
+      const head = body.head ? headByKey(body.head) : null;
+      if (!name) return NextResponse.json({ error: "The ledger needs a name." }, { status: 400 });
+      if (!head) return NextResponse.json({ error: "Choose a group from the list." }, { status: 400 });
+      const { data: same } = await sb.from("fw_fin_chart_of_accounts").select("id").eq("business_id", bizId).ilike("name", name.replace(/[\\%_]/g, c => `\\${c}`)).limit(1);
+      if (same?.length) return NextResponse.json({ error: `A ledger called "${name}" already exists.` }, { status: 409 });
+      const code = String(body.code ?? "").trim().slice(0, 40) || `AUTO-${Date.now().toString().slice(-7)}`;
+      const row: Record<string, unknown> = { business_id: bizId, name, code, type: head.type, sub_type: head.sub_type, group_key: head.key, is_group: false, is_system: false, description: "Added from Ledger" };
+      let { data, error } = await sb.from("fw_fin_chart_of_accounts").insert(row).select("id,name,code,type,sub_type").single();
+      if (error && /group_key/.test(error.message)) { delete row.group_key; ({ data, error } = await sb.from("fw_fin_chart_of_accounts").insert(row).select("id,name,code,type,sub_type").single()); }
+      if (error || !data) return serverError("ledger-create", error, "Couldn't create the ledger.");
+      await logAudit(sb, { businessId: bizId, actor: gate.user.id, action: "ledger_created", detail: { account: data.id, name, head: head.key } });
+      return NextResponse.json({ ok: true, created: true, account: { ...data, group_key: head.key } });
+    }
     const { data: acc } = await sb.from("fw_fin_chart_of_accounts").select("id,name,code,type,sub_type,is_group").eq("id", body.account_id ?? "").eq("business_id", bizId).maybeSingle();
     if (!acc || acc.is_group) return NextResponse.json({ error: "Ledger not found." }, { status: 404 });
 

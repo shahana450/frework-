@@ -30,7 +30,7 @@ function LedgerContent() {
   const [bizId, setBizId] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   // Edit ledger: name, group, code
-  const [edit, setEdit] = useState<{ name: string; head: string; code: string; busy: boolean; err: string } | null>(null);
+  const [edit, setEdit] = useState<{ name: string; head: string; code: string; busy: boolean; err: string; isNew?: boolean } | null>(null);
   const [selectedAccId, setSelectedAccId] = useState(searchParams.get("account") ?? "");
   const [selectedAcc, setSelectedAcc] = useState<Account | null>(null);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
@@ -334,6 +334,7 @@ function LedgerContent() {
         {/* Accounts */}
         <aside className="lg-side" style={{ width: 262, flexShrink: 0, background: T.paper, border: `1px solid ${T.line}`, borderRadius: 14, position: "sticky", top: 24, maxHeight: "calc(100vh - 48px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <div style={{ padding: 14, borderBottom: `1px solid ${T.line}` }}>
+            <button onClick={() => setEdit({ name: search.trim(), head: LEDGER_HEADS[0]?.key ?? "", code: "", busy: false, err: "", isNew: true })} style={{ ...lightBtn, width: "100%", marginBottom: 10, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>+ New ledger</button>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search accounts…"
               style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${T.line}`, borderRadius: 999, padding: "9px 16px", fontFamily: SERIF, fontStyle: "italic", fontSize: "0.85rem", background: "#FFFFFF", color: T.ink, outline: "none" }} />
           </div>
@@ -363,6 +364,38 @@ function LedgerContent() {
 
         {/* Ledger */}
         <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
+              {edit && (
+                <div role="dialog" aria-modal="true" aria-label={edit.isNew ? "New ledger" : "Edit ledger"} onClick={() => !edit.busy && setEdit(null)} style={{ position: "fixed", inset: 0, background: "rgba(16,36,31,.45)", display: "grid", placeItems: "center", padding: 16, zIndex: 60 }}>
+                  <div onClick={e => e.stopPropagation()} style={{ width: "min(520px,100%)", background: T.paper, border: `1px solid ${T.line}`, borderRadius: 18, padding: 22, display: "grid", gap: 14 }}>
+                    <div style={{ fontSize: "1.5rem", fontStyle: "italic" }}>{edit.isNew ? "New ledger" : "Edit ledger"}</div>
+                    <label style={{ display: "grid", gap: 5, fontSize: "0.85rem", color: T.muted }}>Name
+                      <input value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} style={{ height: 42, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 12px", fontSize: "1rem", fontFamily: "inherit", color: T.ink }} />
+                    </label>
+                    <label style={{ display: "grid", gap: 5, fontSize: "0.85rem", color: T.muted }}>Group (under)
+                      <select value={edit.head} onChange={e => setEdit({ ...edit, head: e.target.value })} style={{ height: 42, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 10px", fontSize: "1rem", fontFamily: "inherit", color: T.ink, background: "#FFFFFF" }}>
+                        {LEDGER_HEADS.map(h => <option key={h.key} value={h.key}>{h.label}</option>)}
+                      </select>
+                    </label>
+                    <label style={{ display: "grid", gap: 5, fontSize: "0.85rem", color: T.muted }}>Code
+                      <input value={edit.code} onChange={e => setEdit({ ...edit, code: e.target.value })} style={{ height: 42, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 12px", fontSize: "1rem", fontFamily: "inherit", color: T.ink }} />
+                    </label>
+                    {!edit.isNew && <div style={{ fontSize: "0.82rem", color: T.muted, lineHeight: 1.5 }}>Every entry already posted to this ledger moves with it — reports, Trial Balance and Balance Sheet follow the new group. If the ledger is already in Tally, rename it there too, or the next push creates a new ledger.</div>}
+                    {edit.err && <div role="alert" style={{ color: "#B4321F", fontSize: "0.9rem" }}>{edit.err}</div>}
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                      <button onClick={() => setEdit(null)} disabled={edit.busy} style={lightBtn}>Cancel</button>
+                      <button disabled={edit.busy || !edit.name.trim()} onClick={async () => {
+                        setEdit({ ...edit, busy: true, err: "" });
+                        const r = await fetch("/api/finance/ledger-edit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, account_id: edit.isNew ? undefined : selectedAcc?.id, name: edit.name, head: edit.head, code: edit.code }) });
+                        const d = await r.json().catch(() => ({}));
+                        if (!r.ok) { setEdit({ ...edit, busy: false, err: d.error ?? "Couldn't save." }); return; }
+                        if (d.created) { setAccounts(list => [...list, d.account]); setSelectedAccId(d.account.id); } else setAccounts(list => list.map(a => a.id === selectedAcc?.id ? { ...a, ...d.account } : a));
+                        setEdit(null);
+                        if (d.note) window.alert(d.note);
+                      }} style={{ ...lightBtn, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>{edit.busy ? "Saving…" : "Save"}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
           {!selectedAcc ? (
             <div style={{ textAlign: "center", padding: "6rem 2rem", color: T.muted, fontStyle: "italic" }}>Select an account on the left to open its ledger.</div>
           ) : (
@@ -378,40 +411,7 @@ function LedgerContent() {
                 <button onClick={() => goAcc(1)} disabled={idx < 0 || idx >= order.length - 1} style={{ ...lightBtn, opacity: idx >= order.length - 1 ? 0.5 : 1 }}>Next account →</button>
               </div>
 
-              {edit && (
-                <div role="dialog" aria-modal="true" aria-label="Edit ledger" onClick={() => !edit.busy && setEdit(null)} style={{ position: "fixed", inset: 0, background: "rgba(16,36,31,.45)", display: "grid", placeItems: "center", padding: 16, zIndex: 60 }}>
-                  <div onClick={e => e.stopPropagation()} style={{ width: "min(520px,100%)", background: T.paper, border: `1px solid ${T.line}`, borderRadius: 18, padding: 22, display: "grid", gap: 14 }}>
-                    <div style={{ fontSize: "1.5rem", fontStyle: "italic" }}>Edit ledger</div>
-                    <label style={{ display: "grid", gap: 5, fontSize: "0.85rem", color: T.muted }}>Name
-                      <input value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} style={{ height: 42, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 12px", fontSize: "1rem", fontFamily: "inherit", color: T.ink }} />
-                    </label>
-                    <label style={{ display: "grid", gap: 5, fontSize: "0.85rem", color: T.muted }}>Group (under)
-                      <select value={edit.head} onChange={e => setEdit({ ...edit, head: e.target.value })} style={{ height: 42, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 10px", fontSize: "1rem", fontFamily: "inherit", color: T.ink, background: "#FFFFFF" }}>
-                        {LEDGER_HEADS.map(h => <option key={h.key} value={h.key}>{h.label}</option>)}
-                      </select>
-                    </label>
-                    <label style={{ display: "grid", gap: 5, fontSize: "0.85rem", color: T.muted }}>Code
-                      <input value={edit.code} onChange={e => setEdit({ ...edit, code: e.target.value })} style={{ height: 42, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 12px", fontSize: "1rem", fontFamily: "inherit", color: T.ink }} />
-                    </label>
-                    <div style={{ fontSize: "0.82rem", color: T.muted, lineHeight: 1.5 }}>Every entry already posted to this ledger moves with it — reports, Trial Balance and Balance Sheet follow the new group. If the ledger is already in Tally, rename it there too, or the next push creates a new ledger.</div>
-                    {edit.err && <div role="alert" style={{ color: "#B4321F", fontSize: "0.9rem" }}>{edit.err}</div>}
-                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                      <button onClick={() => setEdit(null)} disabled={edit.busy} style={lightBtn}>Cancel</button>
-                      <button disabled={edit.busy || !edit.name.trim()} onClick={async () => {
-                        setEdit({ ...edit, busy: true, err: "" });
-                        const r = await fetch("/api/finance/ledger-edit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, account_id: selectedAcc.id, name: edit.name, head: edit.head, code: edit.code }) });
-                        const d = await r.json().catch(() => ({}));
-                        if (!r.ok) { setEdit({ ...edit, busy: false, err: d.error ?? "Couldn't save." }); return; }
-                        setAccounts(list => list.map(a => a.id === selectedAcc.id ? { ...a, ...d.account } : a));
-                        setEdit(null);
-                        if (d.note) window.alert(d.note);
-                      }} style={{ ...lightBtn, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>{edit.busy ? "Saving…" : "Save"}</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Period */}
+{/* Period */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "12px 16px", background: T.paper, border: `1px solid ${T.line}`, borderRadius: 14 }}>
                 <span style={{ fontSize: "0.75rem", letterSpacing: "0.22em", color: T.muted }}>PERIOD</span>
                 <div style={{ display: "inline-flex", gap: 2, padding: 3, borderRadius: 999, background: "#EFE6D3" }}>
