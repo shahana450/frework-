@@ -1,4 +1,5 @@
 "use client";
+import { featureHelp } from "@/lib/featureHelp";
 import { gstReturnLink } from "@/lib/gstIntent";
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -46,6 +47,7 @@ type ChatMessage = {
   createdLedgers?: { name: string; head: string }[];
   postArgs?: { sessId: string | null; originalMsg: string };
   answer?: Answer & { tool: string };
+  help?: { title: string; body: string; href?: string }[];
   duplicate?: { entry_no: string; date: string; narration: string } | null;
   fyLocked?: boolean;
   timestamp: number;
@@ -469,6 +471,8 @@ export default function FreBookPage() {
     if (!bid || !uid || (!text.trim() && !file)) return;
     // "Prepare GSTR-1 Oct 2026" is not a transaction: open the GST page on that return and month
     if (!file) { const gst = gstReturnLink(text); if (gst) { router.push(gst); return; } }
+    // "What can you do?" / "How do I reconcile the bank?" — answered here, not drafted as an entry
+    if (!file) { const help = featureHelp(text); if (help) { const now = Date.now(); setMessages(prev => [...prev, { id: `u-${now}`, role: "user", text: text.trim(), timestamp: now }, { id: `h-${now}`, role: "ai", help, timestamp: now }]); setInput(""); return; } }
     (recognitionRef.current as { stop: () => void } | null)?.stop(); recognitionRef.current = null; setListening(false); setVoiceInterim("");
     setLoading(true);
 
@@ -1074,7 +1078,7 @@ export default function FreBookPage() {
                 {/* User bubble */}
                 {msg.role === "user" && (
                   <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <div style={{ maxWidth: "min(78%, 560px)", background: "#0F2B25", color: "#FFFFFF", borderRadius: "18px 18px 6px 18px", padding: "11px 16px", fontSize: "0.95rem", lineHeight: 1.55, boxShadow: "0 10px 24px -18px rgba(15,43,37,0.7)", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                    <div style={{ maxWidth: "min(78%, 560px)", background: "#0F2B25", color: "#FFFFFF", borderRadius: "18px 18px 6px 18px", padding: "11px 16px", fontSize: "0.95rem", lineHeight: 1.55, boxShadow: "0 10px 24px -18px rgba(15,43,37,0.7)", whiteSpace: "pre-wrap", overflowWrap: "break-word", minWidth: 0 }}>
                       {msg.text}
                     </div>
                   </div>
@@ -1085,6 +1089,23 @@ export default function FreBookPage() {
                   <div style={{ display: "flex", justifyContent: "center" }}>
                     <div style={{ maxWidth: "90%", background: "#EFE8D9", borderRadius: 999, padding: "7px 16px", fontSize: "0.82rem", color: "#2E3B36", lineHeight: 1.5, whiteSpace: "pre-wrap", textAlign: "center" }}
                       dangerouslySetInnerHTML={{ __html: (msg.text ?? "").replace(/</g, "&lt;").replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />
+                  </div>
+                )}
+
+                {/* FreBook explaining its own features */}
+                {msg.role === "ai" && msg.help && (
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <img src="/frebook-face.jpg" alt="" aria-hidden="true" className="fb-av" width={32} height={32} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", flexShrink: 0, boxShadow: "0 0 0 2px #FFFFFF, 0 0 0 3px #9FE1CB" }} />
+                    <div style={{ flex: 1, minWidth: 0, maxWidth: 720, background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: "6px 18px 18px 18px", padding: "14px 16px", display: "grid", gap: 12 }}>
+                      <div style={{ fontSize: "0.98rem", color: "#10241F" }}>{msg.help.length > 3 ? "Here's what I can do for you:" : "Here's how:"}</div>
+                      {msg.help.map(h => (
+                        <div key={h.title} style={{ display: "grid", gap: 3 }}>
+                          <div style={{ fontWeight: 700, color: "#0F2B25", fontSize: "0.93rem" }}>{h.title}</div>
+                          <div style={{ color: "#2E3B36", fontSize: "0.9rem", lineHeight: 1.55, whiteSpace: "pre-line" }}>{h.body}</div>
+                          {h.href && h.href !== "/finance/chat-book" && <a href={h.href} style={{ color: "#8A6420", fontSize: "0.85rem", fontWeight: 600 }}>Open {h.title} →</a>}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

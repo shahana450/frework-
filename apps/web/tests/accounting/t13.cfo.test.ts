@@ -77,3 +77,12 @@ test("GSTR-1 filed vs books flags missing and differing invoices; 3B compares ta
   const rows = compare3B({ a: { ...Z, taxable: 1500, cgst: 135, sgst: 135 }, b: Z, c: Z, d: Z, e: Z, itc: { ...Z, cgst: 40, sgst: 40 } }, p3);
   assert.equal(rows[0].diff, 0); assert.equal(rows[5].diff, 20);
 });
+
+import { featureHelp } from "../../src/lib/featureHelp";
+test("FreBook answers feature questions itself and leaves transactions alone", () => {
+  assert.ok((featureHelp("what are the features you have") ?? []).length > 5);
+  assert.deepEqual(featureHelp("how do I reconcile my bank?")?.map(h => h.title), ["Reconciliation"]);
+  assert.equal(featureHelp("paid rent 25000 by bank"), null);
+  assert.equal(featureHelp("how much do customers owe?"), null);
+  assert.equal(featureHelp("how much gst did I pay this month"), null);
+});
