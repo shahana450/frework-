@@ -519,6 +519,8 @@ export default function DashboardPage() {
     );
   }
 
+  // The admin works from the new dashboard at /admin; the old panel stays at /dashboard?old=1
+  if (isAdmin && !(typeof window !== "undefined" && new URLSearchParams(window.location.search).has("old"))) return <GoToAdmin />;
   if (isAdmin) {
     return (
       <div className="min-h-screen" style={{ background: "#F2F3F6", color: "#141A3A", fontFamily: "var(--font-plus-jakarta),var(--font-inter),system-ui,sans-serif" }}>
@@ -918,3 +920,8 @@ export default function DashboardPage() {
   );
 }
 
+
+function GoToAdmin() {
+  useEffect(() => { window.location.replace("/admin"); }, []);
+  return <div style={{ padding: 40, textAlign: "center", color: "#5E6B66" }}>Opening the admin dashboard…</div>;
+}
