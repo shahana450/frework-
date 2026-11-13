@@ -16,14 +16,14 @@ const TOPICS: Topic[] = [
   { k: /\b(history|old chats?|past)\b/, title: "History", body: "Every chat, attachment and Smart Inbox file is kept under AI → History.", href: "/finance/history" },
 ];
 
-const ALL = /\b(features?|what can you|what (all )?do you|what all|capabilit\w*|what is frebook|who are you|^help$|help me|options)\b/i;
+const ALL = /\b(fea?t[a-z]*?u?res?|featur[a-z]*|fucntions?|functions?|services? (do|can) you|what can you|what (all )?do you|what all|capabilit\w*|what is frebook|who are you|^help$|help me|options)\b/i;
 // "How do I…", "Can you…", "Do you support…", "Explain…" — about using FreBook, not a question for the books
 const HOWTO = /\b(how (do|can|should) i|how to|can (you|i|frebook)|do you|does (it|frebook)|is there|explain|tell me about|what is (the )?(smart inbox|reconciliation|brs|voice))\b/i;
 
 export function featureHelp(text: string): { title: string; body: string; href?: string }[] | null {
   const t = text.toLowerCase().trim();
   if (!t) return null;
-  if (/\d[\d,]{2,}/.test(t) && !ALL.test(t)) return null;   // amounts mean a transaction or a books question
+  if (/\d[\d,]{2,}/.test(t) ) return null;   // amounts mean a transaction or a books question
   const hit = TOPICS.filter(x => x.title !== "Ask your books" && x.k.test(t));
   if (ALL.test(t) && !(HOWTO.test(t) && hit.length)) return TOPICS;
   if (HOWTO.test(t) && hit.length) return hit.slice(0, 3);

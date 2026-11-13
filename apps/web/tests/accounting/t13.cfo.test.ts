@@ -86,3 +86,10 @@ test("FreBook answers feature questions itself and leaves transactions alone", (
   assert.equal(featureHelp("how much do customers owe?"), null);
   assert.equal(featureHelp("how much gst did I pay this month"), null);
 });
+test("Feature questions with typos still get the feature list", () => {
+  assert.ok((featureHelp("what are the fetures do you have?") ?? []).length > 5);
+  assert.ok((featureHelp("what services do you offer") ?? []).length > 5);
+});
+test("A transaction mentioning services is never feature help", () => {
+  assert.equal(featureHelp("paid for consulting services 5000"), null);
+});
