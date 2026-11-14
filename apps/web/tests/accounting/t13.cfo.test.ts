@@ -93,3 +93,10 @@ test("Feature questions with typos still get the feature list", () => {
 test("A transaction mentioning services is never feature help", () => {
   assert.equal(featureHelp("paid for consulting services 5000"), null);
 });
+
+import { splitDated } from "../../src/lib/splitDated";
+test("Lines with different dates become separate entries", () => {
+  assert.deepEqual(splitDated("Sales\n30-04-2025 25000\n31-05-2025 35000"), ["Sales on 30-04-2025 25000", "Sales on 31-05-2025 35000"]);
+  assert.equal(splitDated("Paid rent 25000 by bank"), null);
+  assert.equal(splitDated("Salary 30-04-2025\nRavi 10000\nAnu 12000"), null);
+});
