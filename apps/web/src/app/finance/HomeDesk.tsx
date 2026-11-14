@@ -137,7 +137,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
             </div>
             <span className="hd-tip" style={{ fontSize: 12.5, color: C.muted }}>{mode === "record" ? `Write it the way you'd say it — ${brand} drafts the voucher.` : "Ask anything about your books."}</span>
           </div>
-          <textarea id="hd-chat" aria-label="Describe a transaction or ask a question" rows={2} value={text} onChange={e => setText(e.target.value)}
+          <textarea id="hd-chat" aria-label="Describe a transaction or ask a question" rows={2} value={text} onChange={e => { setText(e.target.value); const t = e.currentTarget; t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 320) + "px"; }}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); go(text); } }}
             placeholder={mode === "record" ? (india ? "e.g. Paid office rent ₹25,000 from the bank for October" : `e.g. Paid office rent ${cur()}2,500 from the bank for October`) : "e.g. Who owes me for more than 60 days?"}
             style={{ width: "100%", minHeight: 70, resize: "vertical", boxSizing: "border-box", border: "none", outline: "none", background: "transparent", padding: "12px 2px", fontSize: 20, lineHeight: 1.5, color: C.ink, fontFamily: SERIF }} />

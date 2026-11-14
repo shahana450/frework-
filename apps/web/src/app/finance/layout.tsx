@@ -357,7 +357,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       {slim && tip && <span className="fw-tip" role="tooltip" style={{ left: sidebarW + 8, top: tip.top }}>{tip.label}</span>}
       {/* Sidebar */}
       <aside className="fw-side"
-        onMouseEnter={() => { if (collapsed && window.matchMedia("(hover: hover) and (min-width: 760px)").matches) { clearTimeout(peekTimer.current); peekTimer.current = setTimeout(() => setPeek(true), 180); } }}
+        onMouseEnter={() => { if (collapsed && !pathname?.startsWith("/finance/chat-book") && window.matchMedia("(hover: hover) and (min-width: 760px)").matches) { clearTimeout(peekTimer.current); peekTimer.current = setTimeout(() => setPeek(true), 600); } }}
         onMouseLeave={() => { clearTimeout(peekTimer.current); setPeek(false); }}
         style={{
         width: slim ? 96 : 240, boxShadow: peek ? "18px 0 40px -20px rgba(0,0,0,0.55)" : "none", flexShrink: 0, background: "#0F2B25",

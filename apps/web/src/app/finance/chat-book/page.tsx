@@ -337,6 +337,20 @@ export default function FreBookPage() {
   // Keep the unposted drafts saved as they change (posted or cancelled ones drop out)
   useEffect(() => { if (bizIdRef.current && restoredRef.current) saveDrafts(localStorage, bizIdRef.current, messages as unknown as StoredMsg[]); }, [messages]);
   const openDrafts = messages.filter(m => isOpenDraft(m as unknown as StoredMsg)).length;
+  // Leaving FreBook with unposted drafts: ask — keep them for later, discard them, or stay
+  const [leaveTo, setLeaveTo] = useState<string | null>(null);
+  useEffect(() => {
+    if (!openDrafts) return;
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement | null)?.closest?.("a"); if (!a) return;
+      const href = a.getAttribute("href") ?? "";
+      if (!href.startsWith("/") || href.startsWith("/finance/chat-book") || a.target === "_blank" || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      e.preventDefault(); e.stopPropagation(); setLeaveTo(href);
+    };
+    const onUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    document.addEventListener("click", onClick, true); window.addEventListener("beforeunload", onUnload);
+    return () => { document.removeEventListener("click", onClick, true); window.removeEventListener("beforeunload", onUnload); };
+  }, [openDrafts]);
 
   // Handoff from the dashboard command box: ?q= sends straight away, ?prefill= fills the box
   const handoffDone = useRef(false);
@@ -1326,6 +1340,19 @@ export default function FreBookPage() {
         <SimpleTemplateModal fileName={simpleBulk.fileName} fileKey={simpleBulk.fileKey} entries={simpleBulk.entries} bizId={bizId} initialDone={simpleBulk.initialDone}
           onClose={() => setSimpleBulk(null)}
           onPosted={(count, total, journals) => { setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `✓ Posted ${count} entr${count > 1 ? "ies" : "y"} (${fmt(total)}) from ${simpleBulk.fileName}. See them in 📚 Books.`, timestamp: Date.now() }]); void autoPushToTally(journals ?? []); }} />
+      )}
+      {leaveTo && (
+        <div role="dialog" aria-modal="true" aria-label="Unposted drafts" onClick={() => setLeaveTo(null)} style={{ position: "fixed", inset: 0, background: "rgba(11,31,26,0.45)", display: "grid", placeItems: "center", padding: 16, zIndex: 300 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "min(440px,100%)", background: "#FFFFFF", borderRadius: 18, padding: 22, display: "grid", gap: 14, boxShadow: "0 30px 60px -30px rgba(0,0,0,0.5)" }}>
+            <div style={{ fontFamily: SERIF, fontSize: "1.35rem", color: "#0F2B25" }}>{openDrafts} unposted draft{openDrafts === 1 ? "" : "s"}</div>
+            <div style={{ fontSize: "0.92rem", color: "#4D5B56", lineHeight: 1.5 }}>Nothing has been posted yet. Keep them to finish later, or discard them?</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              <button onClick={() => { const to = leaveTo; setLeaveTo(null); router.push(to); }} style={{ height: 44, borderRadius: 999, border: "none", background: "#0F2B25", color: "#FFFFFF", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Save drafts and leave</button>
+              <button onClick={() => { const to = leaveTo; setLeaveTo(null); setMessages(prev => prev.map(m => isOpenDraft(m as unknown as StoredMsg) ? { ...m, status: "cancelled" as MsgStatus } : m)); setTimeout(() => router.push(to), 60); }} style={{ height: 44, borderRadius: 999, border: "1px solid #F0C9C0", background: "#FFF6F4", color: "#8A2A1A", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Discard drafts and leave</button>
+              <button onClick={() => setLeaveTo(null)} style={{ height: 40, borderRadius: 999, border: "1px solid #E6DFD0", background: "transparent", color: "#10241F", cursor: "pointer", fontFamily: "inherit" }}>Cancel — stay here</button>
+            </div>
+          </div>
+        </div>
       )}
       {bulk && bizId && userId && (
         <BulkTemplateModal fileName={bulk.fileName} fileKey={bulk.fileKey} sentences={bulk.sentences} bizId={bizId} userId={userId} initialRows={bulk.initialRows}
