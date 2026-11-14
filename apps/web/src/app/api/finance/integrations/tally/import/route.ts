@@ -124,7 +124,12 @@ export async function POST(req: NextRequest) {
             businessId: business_id, actorId: gate.user.id, date: String(v.date).slice(0, 10), type: tallyVoucherTypeToFP(v.voucherType),
             narration: xmlDec(v.narration) || entryNo, referenceNo: v.voucherNumber || null, source: "tally_import", entryNo,
             lines, metadata: { tally: { voucher_type: v.voucherType, voucher_number: v.voucherNumber, company: company ?? null } },
+            // Tally is the books of record: post what it says (e.g. an exempt sale with no GST lines) instead of holding it as a draft
+            reviewed: true,
           });
+          // Drafts an earlier import left for this voucher are no longer needed
+          const { data: old } = await supabase.from("fw_fin_journals").select("id").eq("business_id", business_id).eq("status", "draft").eq("source", "tally_import").eq("date", String(v.date).slice(0, 10)).eq("reference_no", v.voucherNumber || "");
+          for (const d of old ?? []) { await supabase.from("fw_fin_journal_lines").delete().eq("journal_id", d.id); await supabase.from("fw_fin_journals").delete().eq("id", d.id); }
           imported++;
         } catch (e) {
           if (e instanceof PostingError && e.code === "DUPLICATE") { skipped++; return; }
