@@ -474,7 +474,7 @@ export default function FreBookPage() {
     if (!file) { const gst = gstReturnLink(text); if (gst) { router.push(gst); return; } }
     // "What can you do?" / "How do I reconcile the bank?" — answered here, not drafted as an entry
     // Several lines with different dates ("Sales / 30-04-2025 25000 / 31-05-2025 35000") → one entry per date
-    if (!file) { const parts = splitDated(text); if (parts) { setInput(""); setBatchTotal(parts.length); setRowQueue(parts); setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", text: `📅 ${parts.length} different dates — recording them as ${parts.length} separate entries.`, timestamp: Date.now() }]); return; } }
+    if (!file) { const parts = splitDated(text); if (parts) { setInput(""); setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: "user", text: text.trim(), timestamp: Date.now() }, { id: `s-${Date.now()}`, role: "system", text: `📅 ${parts.length} different dates — ${parts.length} entries, opened together for review.`, timestamp: Date.now() }]); setBulk({ fileName: "Your message", fileKey: `msg-${Date.now()}`, sentences: parts }); return; } }
     if (!file) { const help = featureHelp(text); if (help) { const now = Date.now(); setMessages(prev => [...prev, { id: `u-${now}`, role: "user", text: text.trim(), timestamp: now }, { id: `h-${now}`, role: "ai", help, timestamp: now }]); setInput(""); return; } }
     (recognitionRef.current as { stop: () => void } | null)?.stop(); recognitionRef.current = null; setListening(false); setVoiceInterim("");
     setLoading(true);
