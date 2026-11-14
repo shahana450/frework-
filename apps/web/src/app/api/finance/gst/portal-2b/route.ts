@@ -9,10 +9,10 @@ import { parse2BJson, type TwoBDoc } from "@/lib/itcMatch";
 // "Fetch 2B from portal" on ITC Match, through Sandbox's taxpayer APIs.
 // Step 1 (otp): the GST portal sends an OTP to the taxpayer. Step 2 (fetch): verify it and read GSTR-2B for the month.
 // The taxpayer token (which could also file returns) lives only inside step 2 and is never stored.
-export const maxDuration = 60;
+export const maxDuration = 300;
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-type Body = { business_id?: string; action?: "otp" | "fetch"; username?: string; otp?: string; month?: string };
+type Body = { business_id?: string; action?: "otp" | "fetch"; username?: string; otp?: string; month?: string; months?: string[] };
 
 export async function POST(req: NextRequest) {
   const b = await req.json().catch(() => ({})) as Body;
@@ -34,9 +34,11 @@ export async function POST(req: NextRequest) {
     }
     if (b.action === "fetch") {
       const session = await sandboxTaxpayerVerify(gstin, username, (b.otp ?? "").trim());
-      const parts = await sandboxGstr2b(session.token, b.month ?? "");
+      const months = (b.months?.length ? b.months : [b.month ?? ""]).slice(0, 12);
+      const parts: unknown[] = [];
+      for (const m of months) parts.push(...await sandboxGstr2b(session.token, m));
       const docs: TwoBDoc[] = parts.flatMap(p => parse2BJson(p));
-      await logAudit(supabase, { businessId: b.business_id!, actor: gate.user.id, action: "gstr2b_fetch", source: "portals", detail: { month: b.month, documents: docs.length, provider: "sandbox" } });
+      await logAudit(supabase, { businessId: b.business_id!, actor: gate.user.id, action: "gstr2b_fetch", source: "portals", detail: { months, documents: docs.length, provider: "sandbox" } });
       return NextResponse.json({ ok: true, docs, month: b.month });
     }
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });

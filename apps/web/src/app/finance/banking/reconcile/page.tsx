@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import { readBankStatement } from "@/lib/readStatement";
 import { reconcileBank, type BankLine, type BookLine, type BankRecon } from "@/lib/bankRecon";
+import PeriodPicker, { periodFrom, periodTo, periodLabel } from "@/components/finance/PeriodPicker";
 import PageHero, { HT, SERIF } from "@/components/finance/PageHero";
 
 type Acc = { id: string; name: string };
@@ -45,8 +46,7 @@ export default function BankReconPage() {
     });
   }, [router]);
 
-  const from = `${month}-01`;
-  const to = useMemo(() => { const d = new Date(`${month}-01T00:00:00Z`); d.setUTCMonth(d.getUTCMonth() + 1); d.setUTCDate(0); return d.toISOString().slice(0, 10); }, [month]);
+  const from = periodFrom(month), to = periodTo(month);
 
   async function onFile(f: File) {
     setErr(""); setRes(null); setFileName(f.name); setBusy("Reading the statement…");
@@ -89,7 +89,7 @@ export default function BankReconPage() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Date", "Description", "Withdrawal", "Deposit"], ...res.bankOnly.map(b => [b.date, b.description, b.debit || "", b.credit || ""])]), "In bank, not in FreBook");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Date", "Entry", "Narration", "Debit", "Credit"], ...res.bookOnly.map(l => [l.date, l.entryNo, l.narration, l.dr || "", l.cr || ""])]), "In FreBook, not in bank");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Bank date", "Description", "Amount", "FreBook entry", "Book date", "Matched by"], ...res.matched.map(p => [p.bank.date, p.bank.description, p.bank.credit || -p.bank.debit, p.book.entryNo, p.book.date, p.how === "ref" ? "Reference" : "Amount and date"])]), "Matched");
-    XLSX.writeFile(wb, `BRS-${bank.replace(/[^\w]+/g, "-")}-${month}.xlsx`);
+    XLSX.writeFile(wb, `BRS-${bank.replace(/[^\w]+/g, "-")}-${month}.xlsx`.replace(/[^A-Za-z0-9.-]+/g, "-"));
   }
 
   const post = (b: BankLine) => router.push(`/finance/chat-book?q=${encodeURIComponent(`${b.credit ? "Received" : "Paid"} ${b.credit || b.debit} ${b.credit ? "in" : "from"} ${banks.find(x => x.id === bankId)?.name ?? "bank"} on ${b.date} — ${b.description}`)}`);
@@ -112,8 +112,8 @@ export default function BankReconPage() {
               {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </label>
-          <label style={{ display: "grid", gap: 4, fontSize: 13, color: HT.muted }}>Month
-            <input type="month" value={month} onChange={e => { setMonth(e.target.value); setRes(null); }} style={{ height: 40, borderRadius: 10, border: `1px solid ${HT.line}`, padding: "0 10px", fontSize: 14, fontFamily: "inherit", background: "#FFFFFF", color: HT.ink }} />
+          <label style={{ display: "grid", gap: 4, fontSize: 13, color: HT.muted }}>Period
+            <PeriodPicker value={month} onChange={k => { setMonth(k); setRes(null); }} />
           </label>
           <label style={{ ...btn, display: "inline-flex", alignItems: "center", height: 40, boxSizing: "border-box" }}>
             {fileName ? `📄 ${fileName}` : "Upload statement (PDF, Excel, CSV)"}

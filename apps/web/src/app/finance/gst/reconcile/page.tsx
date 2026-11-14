@@ -8,6 +8,7 @@ import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import { compareGstr1, parse3B, compare3B, taxOf, type Gstr1Json, type Amt } from "@/lib/gstPortalRecon";
+import PeriodPicker, { periodMonths, periodLabel } from "@/components/finance/PeriodPicker";
 import PageHero, { HT, SERIF } from "@/components/finance/PageHero";
 
 const inr = (n: number) => `${n < 0 ? "−" : ""}₹${Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
@@ -19,6 +20,9 @@ const btn: React.CSSProperties = { border: `1px solid ${HT.line}`, background: H
 const input: React.CSSProperties = { height: 40, borderRadius: 10, border: `1px solid ${HT.line}`, padding: "0 10px", fontSize: 14, fontFamily: "inherit", background: "#FFFFFF", color: HT.ink };
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); };
 const Z: Amt = { taxable: 0, igst: 0, cgst: 0, sgst: 0, cess: 0 };
+const addA = (x: Amt, y: Amt): Amt => ({ taxable: x.taxable + y.taxable, igst: x.igst + y.igst, cgst: x.cgst + y.cgst, sgst: x.sgst + y.sgst, cess: x.cess + y.cess });
+type R3 = Record<"a" | "b" | "c" | "d" | "e" | "itc", Amt>;
+const sum3 = (x: R3, y: R3): R3 => ({ a: addA(x.a, y.a), b: addA(x.b, y.b), c: addA(x.c, y.c), d: addA(x.d, y.d), e: addA(x.e, y.e), itc: addA(x.itc, y.itc) });
 const STATUS = { match: ["Matches", "#E3F3EC", "#0B5E42"], diff: ["Amount differs", "#FBF1DA", "#7A5300"], onlyBooks: ["In books, not in filed return", "#FBE3DE", "#8A2A1A"], onlyPortal: ["In filed return, not in books", "#E8F0FF", "#1F3F99"] } as const;
 
 export default function GstReconPage() {
@@ -46,38 +50,62 @@ export default function GstReconPage() {
   useEffect(() => {
     if (!bizId) return;
     setBooks1(null); setBooks3(null); setPortal1(null); setPortal3(null); setSrc(""); setErr("");
-    fetch(`/api/finance/gst/portal-returns?business_id=${bizId}&month=${month}`).then(r => r.json()).then(d => d.error ? setErr(d.error) : setBooks1(d.books1 ?? {})).catch(() => setErr("Couldn't build GSTR-1 from your books."));
-    fetch(`/api/finance/gst?business_id=${bizId}&month=${month}&report=gstr3b`).then(r => r.json()).then(d => {
-      if (!d.table3) return;
-      const t = d.table3 as Record<"a" | "b" | "c" | "d" | "e", Amt>; const itc = d.itc ?? Z;
-      setBooks3({ a: t.a, b: t.b, c: t.c, d: t.d, e: t.e, itc: { taxable: 0, igst: itc.igst, cgst: itc.cgst, sgst: itc.sgst, cess: itc.cess } });
-    }).catch(() => { /* 3B books shown when available */ });
+    // Month, quarter or year: the books are built month by month and added up
+    const months = periodMonths(month);
+    Promise.all(months.map(m => fetch(`/api/finance/gst/portal-returns?business_id=${bizId}&month=${m}`).then(r => r.json()))).then(list => {
+      const bad = list.find(d => d.error); if (bad) { setErr(bad.error); return; }
+      const merged: Record<string, unknown[]> = {};
+      for (const d of list) for (const [k, v] of Object.entries(d.books1 ?? {})) if (Array.isArray(v)) merged[k] = [...(merged[k] ?? []), ...v];
+      setBooks1(merged as Gstr1Json);
+    }).catch(() => setErr("Couldn't build GSTR-1 from your books."));
+    Promise.all(months.map(m => fetch(`/api/finance/gst?business_id=${bizId}&month=${m}&report=gstr3b`).then(r => r.json()).catch(() => ({})))).then(list => {
+      let acc: Record<"a" | "b" | "c" | "d" | "e" | "itc", Amt> | null = null;
+      for (const d of list) {
+        if (!d.table3) continue;
+        const t = d.table3 as Record<"a" | "b" | "c" | "d" | "e", Amt>; const itc = d.itc ?? Z;
+        const one = { a: t.a, b: t.b, c: t.c, d: t.d, e: t.e, itc: { taxable: 0, igst: itc.igst, cgst: itc.cgst, sgst: itc.sgst, cess: itc.cess } };
+        acc = acc ? sum3(acc, one) : one;
+      }
+      setBooks3(acc);
+    });
   }, [bizId, month]);
 
   async function portal(action: "otp" | "fetch") {
     setPull(p => ({ ...p, busy: true, msg: "" })); setErr("");
-    const r = await fetch("/api/finance/gst/portal-returns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action, username: pull.username.trim(), otp: pull.otp.trim(), month }) }).catch(() => null);
+    const r = await fetch("/api/finance/gst/portal-returns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action, username: pull.username.trim(), otp: pull.otp.trim(), months: periodMonths(month) }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : { error: "The GST portal didn't respond." };
     if (!r?.ok) { setPull(p => ({ ...p, busy: false, msg: d.error ?? "The GST portal didn't respond.", step: d.code === "SESSION_EXPIRED" ? "user" : p.step, otp: "" })); return; }
     if (action === "otp") { try { localStorage.setItem(`fw_gst_user_${bizId}`, pull.username.trim()); } catch { /* */ } setPull(p => ({ ...p, busy: false, step: "otp", msg: d.message ?? "OTP sent." })); return; }
-    setPortal1(d.gstr1 ?? {}); setPortal3(d.gstr3b ?? null); setSrc("Downloaded from the GST portal");
+    setPortal1(d.gstr1 ?? {}); setPortal3(Array.isArray(d.gstr3b) && d.gstr3b.length ? d.gstr3b : null); setSrc(`Downloaded from the GST portal · ${periodLabel(month)}`);
     setPull(p => ({ ...p, busy: false, step: "user", otp: "", msg: "" }));
   }
 
-  async function onFile(f: File) {
+  // Several files at once (one per month of a quarter or year): GSTR-1 files are merged, 3B files added up
+  async function onFiles(fs: File[]) {
     setErr("");
+    let g1: Record<string, unknown[]> = {}, g3: unknown[] = [], names: string[] = [];
     try {
-      const j = JSON.parse(await f.text());
-      const body = j?.data?.data ?? j?.data ?? j;
-      if (body.sup_details || body.itc_elg) { setPortal3(body); setTab("3b"); }
-      else if (body.b2b || body.b2cs || body.b2cl || body.cdnr || body.exp) { setPortal1(body); setTab("1"); }
-      else throw new Error("This isn't a GSTR-1 or GSTR-3B JSON from the GST portal.");
-      setSrc(`Uploaded: ${f.name}`);
-    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn't read this file."); }
+      for (const f of fs) {
+        const j = JSON.parse(await f.text());
+        const body = j?.data?.data ?? j?.data ?? j;
+        if (body.sup_details || body.itc_elg) g3.push(body);
+        else if (body.b2b || body.b2cs || body.b2cl || body.cdnr || body.exp) { for (const [k, v] of Object.entries(body)) if (Array.isArray(v)) g1[k] = [...(g1[k] ?? []), ...v]; }
+        else throw new Error(`${f.name} isn't a GSTR-1 or GSTR-3B JSON from the GST portal.`);
+        names.push(f.name);
+      }
+    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn't read this file."); return; }
+    if (Object.keys(g1).length) { setPortal1(g1 as Gstr1Json); setTab("1"); }
+    if (g3.length) { setPortal3(g3); if (!Object.keys(g1).length) setTab("3b"); }
+    setSrc(`Uploaded: ${names.join(", ")}`);
+    g1 = {}; g3 = []; names = [];
   }
 
   const r1 = useMemo(() => books1 && portal1 ? compareGstr1(books1, portal1) : null, [books1, portal1]);
-  const r3 = useMemo(() => books3 && portal3 ? compare3B(books3, parse3B(portal3)) : null, [books3, portal3]);
+  const r3 = useMemo(() => {
+    if (!books3 || !portal3) return null;
+    const parts = (Array.isArray(portal3) ? portal3 : [portal3]).map(parse3B);
+    return compare3B(books3, parts.reduce((a, b) => sum3(a, b)));
+  }, [books3, portal3]);
   const issues1 = r1 ? r1.invoices.filter(i => i.status !== "match").length : 0;
 
   function exportXl() {
@@ -104,7 +132,7 @@ export default function GstReconPage() {
       <main style={{ maxWidth: 1180, margin: "0 auto", padding: "22px clamp(14px,3vw,28px) 60px", display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={{ ...card, padding: 16, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
           <label style={{ display: "grid", gap: 4, fontSize: 13, color: HT.muted }}>Return period
-            <input type="month" value={month} onChange={e => setMonth(e.target.value)} style={input} />
+            <PeriodPicker value={month} onChange={setMonth} />
           </label>
           <label style={{ display: "grid", gap: 4, fontSize: 13, color: HT.muted }}>GST portal username
             <input value={pull.username} onChange={e => setPull(p => ({ ...p, username: e.target.value }))} style={{ ...input, width: 180 }} autoComplete="off" />
@@ -114,10 +142,10 @@ export default function GstReconPage() {
           </label>}
           <button disabled={pull.busy || !pull.username.trim() || (pull.step === "otp" && !pull.otp.trim())} onClick={() => portal(pull.step === "user" ? "otp" : "fetch")}
             style={{ ...btn, height: 40, background: HT.ink, color: HT.paper, borderColor: HT.ink }}>
-            {pull.busy ? "Working…" : pull.step === "user" ? "Send OTP" : "Download GSTR-1 and 3B"}
+            {pull.busy ? "Working…" : pull.step === "user" ? "Send OTP" : "Download GSTR-1 and 3B for " + periodLabel(month)}
           </button>
           <label style={{ ...btn, height: 40, boxSizing: "border-box", display: "inline-flex", alignItems: "center" }}>Or upload return JSON
-            <input type="file" accept=".json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
+            <input type="file" accept=".json" multiple hidden onChange={e => { const f = Array.from(e.target.files ?? []); if (f.length) onFiles(f); e.target.value = ""; }} />
           </label>
           {(r1 || r3) && <button onClick={exportXl} style={{ ...btn, height: 40 }}>Download Excel</button>}
           <div style={{ flexBasis: "100%", fontSize: 13, color: pull.msg && !/sent/i.test(pull.msg) ? "#8A2A1A" : HT.muted }}>
@@ -131,7 +159,7 @@ export default function GstReconPage() {
           <Link href={`/finance/gst/itc`} style={{ marginLeft: "auto", fontSize: 14, color: HT.ink }}>ITC vs GSTR-2B →</Link>
         </div>
 
-        {tab === "1" && (!portal1 ? <div style={{ ...card, padding: 20, color: HT.muted }}>Download or upload the filed GSTR-1 for {month} to compare it with the books.</div> : !r1 ? <div style={{ color: HT.muted }}>Building GSTR-1 from your books…</div> : (
+        {tab === "1" && (!portal1 ? <div style={{ ...card, padding: 20, color: HT.muted }}>Download or upload the filed GSTR-1 for {periodLabel(month)} to compare it with the books.</div> : !r1 ? <div style={{ color: HT.muted }}>Building GSTR-1 from your books…</div> : (
           <>
             <div style={{ ...card, overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -151,7 +179,7 @@ export default function GstReconPage() {
           </>
         ))}
 
-        {tab === "3b" && (!portal3 ? <div style={{ ...card, padding: 20, color: HT.muted }}>Download or upload the filed GSTR-3B for {month} to compare it with the books.</div> : !r3 ? <div style={{ color: HT.muted }}>Working out 3B from your books…</div> : (
+        {tab === "3b" && (!portal3 ? <div style={{ ...card, padding: 20, color: HT.muted }}>Download or upload the filed GSTR-3B for {periodLabel(month)} to compare it with the books.</div> : !r3 ? <div style={{ color: HT.muted }}>Working out 3B from your books…</div> : (
           <div style={{ ...card, overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr><th style={th}>Table</th><th style={{ ...th, textAlign: "right" }}>Books taxable</th><th style={{ ...th, textAlign: "right" }}>Books tax</th><th style={{ ...th, textAlign: "right" }}>Filed taxable</th><th style={{ ...th, textAlign: "right" }}>Filed tax</th><th style={{ ...th, textAlign: "right" }}>Difference</th></tr></thead>

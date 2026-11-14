@@ -9,7 +9,7 @@ import { buildMonthGstr1 } from "@/lib/gstr1Export";
 // GST Returns Reconciliation: download the month's filed GSTR-1 and GSTR-3B from the portal (Sandbox taxpayer APIs) with one
 // OTP, and return them with the GSTR-1 FreBook builds from the books. Read-only; the taxpayer token is never stored.
 // GET ?business_id&month → books' GSTR-1 only (works without the portal, e.g. with an uploaded return).
-export const maxDuration = 60;
+export const maxDuration = 300;
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 export async function GET(req: NextRequest) {
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   } catch (e) { return serverError("gst/portal-returns books", e, "Couldn't build GSTR-1 from your books."); }
 }
 
-type Body = { business_id?: string; action?: "otp" | "fetch"; username?: string; otp?: string; month?: string };
+type Body = { business_id?: string; action?: "otp" | "fetch"; username?: string; otp?: string; month?: string; months?: string[] };
 export async function POST(req: NextRequest) {
   const b = await req.json().catch(() => ({})) as Body;
   const gate = await requireBusiness(req, b.business_id, { action: "integrate" });
@@ -41,10 +41,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, message: "OTP sent to the mobile and email registered on the GST portal." });
     }
     if (b.action === "fetch") {
-      if (!/^\d{4}-\d{2}$/.test(b.month ?? "")) return NextResponse.json({ error: "Pick a month." }, { status: 400 });
+      const months = (b.months?.length ? b.months : [b.month ?? ""]).slice(0, 12);
+      if (months.some(m => !/^\d{4}-\d{2}$/.test(m))) return NextResponse.json({ error: "Pick a period." }, { status: 400 });
       const session = await sandboxTaxpayerVerify(gstin, username, (b.otp ?? "").trim());
-      const [gstr1, gstr3b] = await Promise.all([sandboxGstr1(session.token, b.month!), sandboxGstr3b(session.token, b.month!)]);
-      await logAudit(supabase, { businessId: b.business_id!, actor: gate.user.id, action: "gst_returns_fetch", source: "portals", detail: { month: b.month, provider: "sandbox" } });
+      // One portal session for the whole period: each month's GSTR-1 sections are merged; 3B comes back month by month
+      const gstr1: Record<string, unknown[]> = {}; const gstr3b: unknown[] = [];
+      for (const m of months) {
+        const [g1, g3] = await Promise.all([sandboxGstr1(session.token, m), sandboxGstr3b(session.token, m)]);
+        for (const [k, v] of Object.entries(g1)) if (Array.isArray(v)) gstr1[k] = [...(gstr1[k] ?? []), ...v];
+        if (g3) gstr3b.push(g3);
+      }
+      await logAudit(supabase, { businessId: b.business_id!, actor: gate.user.id, action: "gst_returns_fetch", source: "portals", detail: { months, provider: "sandbox" } });
       return NextResponse.json({ ok: true, gstr1, gstr3b });
     }
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });

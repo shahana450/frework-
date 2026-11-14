@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import PeriodPicker, { periodMonths, periodTo, periodLabel } from "@/components/finance/PeriodPicker";
 import { usePortalFilings } from "@/lib/portals/usePortalFilings";
 import SupplierChase from "./SupplierChase";
 import { parse2BJson, parse2BGrid, purchaseRegister, matchItc, table4, taxOf, type TwoBDoc, type BookDoc, type Tax, type ItcRow } from "@/lib/itcMatch";
@@ -43,7 +44,7 @@ export default function ItcMatchPage() {
   async function portal2b(action: "otp" | "fetch") {
     setPull(p => ({ ...p, busy: true, msg: "" })); setErr("");
     try {
-      const r = await fetch("/api/finance/gst/portal-2b", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action, username: pull.username.trim(), otp: pull.otp.trim(), month }) });
+      const r = await fetch("/api/finance/gst/portal-2b", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action, username: pull.username.trim(), otp: pull.otp.trim(), month, months: periodMonths(month) }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setPull(p => ({ ...p, busy: false, ok: false, msg: d.error ?? "The GST portal didn't respond.", step: d.code === "SESSION_EXPIRED" ? "user" : p.step, otp: "" })); return; }
       if (action === "otp") {
@@ -51,7 +52,7 @@ export default function ItcMatchPage() {
         setPull(p => ({ ...p, busy: false, ok: true, step: "otp", msg: d.message ?? "OTP sent." }));
       } else {
         setTwoB((d.docs ?? []) as TwoBDoc[]);
-        setFileName(`GSTR-2B from the GST portal (${new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "short", year: "numeric", timeZone: "UTC" })})`);
+        setFileName(`GSTR-2B from the GST portal (${periodLabel(month)})`);
         setPull(p => ({ ...p, open: false, otp: "", step: "user", busy: false, msg: "", ok: false }));
       }
     } catch { setPull(p => ({ ...p, busy: false, ok: false, msg: "The GST portal didn't respond. Try again, or upload the file." })); }
@@ -70,7 +71,7 @@ export default function ItcMatchPage() {
   useEffect(() => {
     if (!bizId) return;
     setLoading(true); setErr("");
-    fetch(`/api/finance/books?business_id=${bizId}&from=${back(month, 6)}&to=${monthEnd(month)}`).then(r => r.json()).then(d => {
+    fetch(`/api/finance/books?business_id=${bizId}&from=${back(periodMonths(month)[0], 6)}&to=${periodTo(month)}`).then(r => r.json()).then(d => {
       const js = ((d.journals ?? []) as { id: string; entry_no: string; date: string; status: string; narration: string | null; reference_no: string | null; fw_fin_journal_lines: { dr_amount: number; cr_amount: number; fw_fin_chart_of_accounts: { name: string } | null }[] }[])
         .filter(j => j.status === "posted")
         .map(j => ({ id: j.id, entry_no: j.entry_no, date: j.date, narration: j.narration, reference_no: j.reference_no, lines: (j.fw_fin_journal_lines ?? []).map(l => ({ name: l.fw_fin_chart_of_accounts?.name ?? "", dr: Number(l.dr_amount) || 0, cr: Number(l.cr_amount) || 0 })) }));
@@ -78,27 +79,30 @@ export default function ItcMatchPage() {
     }).catch(() => setErr("Couldn't load your purchase entries.")).finally(() => setLoading(false));
   }, [bizId, month]);
 
-  async function onFile(f: File) {
-    setErr(""); setFileName(f.name);
+  async function onFile(f: File, append = false) {
+    setErr(""); setFileName(n => append && n ? `${n}, ${f.name}` : f.name);
+    const put = (d: TwoBDoc[]) => setTwoB(prev => append ? [...prev, ...d] : d);
     try {
-      if (/\.json$/i.test(f.name)) setTwoB(parse2BJson(JSON.parse(await f.text())));
+      if (/\.json$/i.test(f.name)) put(parse2BJson(JSON.parse(await f.text())));
       else {
         const XLSX = await import("xlsx");
         const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
         const docs: TwoBDoc[] = [];
         for (const name of wb.SheetNames.filter(n => /b2b/i.test(n))) docs.push(...parse2BGrid(XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "", raw: true }) as unknown[][]));
         if (!docs.length) throw new Error("No B2B invoices found — upload the GSTR-2B Excel or JSON from the GST portal.");
-        setTwoB(docs);
+        put(docs);
       }
     } catch (e) { setTwoB([]); setErr(e instanceof Error ? e.message : "Couldn't read this file."); }
   }
 
+  const inPeriod = useMemo(() => new Set(periodMonths(month)), [month]);
+  const many = inPeriod.size > 1;
   // Match; book entries outside the month only count when they match something in 2B
   const rows = useMemo(() => {
     if (!twoB.length) return [];
-    return matchItc(twoB, books).filter(r => r.status !== "onlyBooks" || r.book!.date.slice(0, 7) === month);
-  }, [twoB, books, month]);
-  const t4 = useMemo(() => table4(twoB, books.filter(b => b.date.slice(0, 7) === month), blocked, other), [twoB, books, month, blocked, other]);
+    return matchItc(twoB, books).filter(r => r.status !== "onlyBooks" || inPeriod.has(r.book!.date.slice(0, 7)));
+  }, [twoB, books, inPeriod]);
+  const t4 = useMemo(() => table4(twoB, books.filter(b => inPeriod.has(b.date.slice(0, 7))), blocked, other), [twoB, books, inPeriod, blocked, other]);
   const n = (s: ItcRow["status"]) => rows.filter(r => r.status === s).length;
   const sum = (s: ItcRow["status"]) => rows.filter(r => r.status === s).reduce((a, r) => a + Math.abs(r.diff || (r.b2b ? taxOf(r.b2b) : 0)), 0);
   const shown = filter === "all" ? rows : rows.filter(r => r.status === filter);
@@ -140,15 +144,15 @@ export default function ItcMatchPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.ink, fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <input ref={fileRef} type="file" accept=".json,.xlsx,.xls" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
+      <input ref={fileRef} type="file" accept=".json,.xlsx,.xls" multiple style={{ display: "none" }} onChange={async e => { const fl = Array.from(e.target.files ?? []); e.target.value = ""; for (const [i, f] of fl.entries()) await onFile(f, many || i > 0); }} />
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "clamp(16px,3vw,32px)", display: "flex", flexDirection: "column", gap: 18 }}>
         <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.16em", color: "#8A6420" }}>GST · INPUT TAX CREDIT</div>
             <h1 style={{ margin: "6px 0 0", fontFamily: SERIF, fontSize: "clamp(1.7rem,3.4vw,2.4rem)", fontWeight: 700 }}>ITC match &amp; GSTR-3B Table 4</h1>
           </div>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.muted }}>Return month
-            <input type="month" value={month} onChange={e => setMonth(e.target.value)} style={{ height: 40, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 10px", fontFamily: "inherit", fontSize: 14 }} />
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.muted }}>Return period
+            <PeriodPicker value={month} onChange={k => { setMonth(k); setTwoB([]); setFileName(""); }} />
           </label>
         </header>
 
@@ -158,7 +162,7 @@ export default function ItcMatchPage() {
           </span>
           <div style={{ flex: 1, minWidth: 240 }}>
             <b style={{ fontSize: 15 }}>{fileName ? `${fileName} · ${twoB.length} documents` : "Upload GSTR-2B for the month"}</b>
-            <div style={{ fontSize: 13, color: C.muted }}>GST portal → Returns → GSTR-2B → Download (JSON or Excel). Your purchase entries load automatically{loading ? " — loading…" : ` (${books.filter(b => b.date.slice(0, 7) === month).length} this month)`}.</div>
+            <div style={{ fontSize: 13, color: C.muted }}>GST portal → Returns → GSTR-2B → Download (JSON or Excel). Your purchase entries load automatically{loading ? " — loading…" : ` (${books.filter(b => inPeriod.has(b.date.slice(0, 7))).length} this month)`}.</div>
           </div>
           {portal.gstProvider === "sandbox" && <button onClick={() => setPull(p => ({ ...p, open: !p.open, msg: "", step: "user", otp: "" }))} style={btn(false)} aria-expanded={pull.open}>Fetch 2B from portal</button>}
           <button onClick={() => fileRef.current?.click()} style={btn(true)}>{fileName ? "Upload another" : "Upload GSTR-2B"}</button>
@@ -166,7 +170,7 @@ export default function ItcMatchPage() {
         </section>
         {pull.open && (
           <section aria-label="Fetch GSTR-2B from the GST portal" style={{ ...card, display: "flex", flexDirection: "column", gap: 10 }}>
-            <b style={{ fontSize: 15 }}>Fetch GSTR-2B for {new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" })} from the GST portal</b>
+            <b style={{ fontSize: 15 }}>Fetch GSTR-2B for {periodLabel(month)} from the GST portal</b>
             <div style={{ fontSize: 13, color: C.muted }}>First, on the GST portal: View Profile → Manage API Access → Enable API Request = Yes. The portal then sends an OTP to your registered mobile and email. FreWork uses that session once for this fetch and doesn&apos;t keep it.</div>
             <form onSubmit={e => { e.preventDefault(); portal2b(pull.step === "user" ? "otp" : "fetch"); }} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
               <input aria-label="GST portal username" placeholder="GST portal username" autoComplete="username" value={pull.username} disabled={pull.step === "otp"} onChange={e => setPull(p => ({ ...p, username: e.target.value }))}
@@ -223,7 +227,7 @@ export default function ItcMatchPage() {
             </section>
 
             {/* Rows */}
-            <SupplierChase bizId={bizId} month={month} rows={rows} />
+            <SupplierChase bizId={bizId} month={periodMonths(month).slice(-1)[0]} rows={rows} />
 
             <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {shown.slice(0, 500).map((r, i) => (
