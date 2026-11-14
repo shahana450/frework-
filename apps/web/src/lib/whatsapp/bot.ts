@@ -1,6 +1,7 @@
 // FreBook on WhatsApp. A registered number acts as its FreWork user: drafts entries (posted only on YES) and answers questions
 // with the same engine, rules, compliance checks and duplicate guard as FreBook in the app.
 import { featureHelp } from "@/lib/featureHelp";
+import { splitDated } from "@/lib/splitDated";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAI } from "../ai";
 import { roleOf } from "../apiAuth";
@@ -287,6 +288,26 @@ Works once and expires soon. Don't forward this link — it signs in as you. Sha
   ].join("\n") : "";
   const userTurn = `${header}${draftNote}\n\nUser message: ${message || "Book this transaction from the attached document."}`;
   const msgs = [...sess.history.slice(-6).map(h => ({ role: h.role, content: h.content })), { role: "user" as const, content: attachment ? [...attachment.blocks, { type: "text" as const, text: userTurn }] : userTurn }];
+  // "Sales / 30-04-2025 25000 / 31-05-2025 35000": one entry per date, read one line at a time, one YES for all
+  const dateParts = !attachment && !waiting && can(role, "post") ? splitDated(message) : null;
+  if (dateParts && dateParts.length <= 12) {
+    const drafts = await Promise.all(dateParts.map(async part => {
+      try {
+        const r = await getAI().messages.create({ model: "claude-sonnet-4-6", max_tokens: 1500, system: intentSystemFor(biz), messages: [{ role: "user", content: `${header}\n\nUser message: ${part}` }] as never }, { timeout: 45000 });
+        const txt = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+        const one = JSON.parse(txt.match(/\{[\s\S]*\}/)?.[0] ?? "") as AiIntent;
+        if (one.kind === "query") return { part, parsed: null };
+        const p = await interpret(sb, one, accounts ?? [], link.business_id, today, biz);
+        p.lines = mergeSameLedgerLines(p.lines);
+        return { part, parsed: p };
+      } catch { return { part, parsed: null }; }
+    }));
+    const stuck = drafts.find(d => !d.parsed || d.parsed.status === "needs_clarification");
+    if (stuck) return stuck.parsed?.needs_clarification?.length ? `❓ For "${stuck.part}": ${stuck.parsed.needs_clarification[0]}\n\nSend that line again with the detail.` : `🤔 I couldn't read "${stuck.part}". Send it again with a little more detail, e.g. *Sales to ABC 25000 on 30-04-2025*.`;
+    const all = drafts.map(d => ({ ...d.parsed!, more: undefined })).sort((a, b) => a.transaction_date.localeCompare(b.transaction_date));
+    await save({ pending: { parsed: all[0], key: `wa:${m.id}`, original: message.slice(0, 300), queue: all.slice(1) }, history: [...sess.history, { role: "user" as const, content: message.slice(0, 500) }, { role: "assistant" as const, content: `${all.length} entries drafted, one per date` }] });
+    return [`📅 Your lines are on *${all.length} different dates* — ${all.length} separate entries:`, ...all.map((d, i) => `*${i + 1}.* ` + draftText(d, [], biz.baseCurrency).replace(/\n*Reply \*YES\* to post · \*NO\* to cancel$/, ""))].join("\n\n") + `\n\nReply *YES* to post all ${all.length} · *NO* to cancel`;
+  }
   // Load the books while the AI reads the message (used for answers and the smart checks)
   const booksToday = loadQueryBooks(sb, link.business_id, today);
   booksToday.catch(() => null);
