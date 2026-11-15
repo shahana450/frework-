@@ -107,10 +107,19 @@ const HOME_GROUPS = [
   { label: "Workspace", span: 3, items: ["/finance", "/finance/portfolio", "/finance/chat-book", "/finance/inbox"] },
   { label: "Transactions", span: 4, items: ["/finance/sales/new", "/finance/purchases/new", "/finance/receivables", "/finance/payables", "/finance/banking"] },
   { label: "Books", span: 2, items: ["/finance/books", "/finance/journals", "/finance/ledger"] },
-  { label: "Reports", span: 3, items: ["/finance/reports?tab=trial_balance", "/finance/reports?tab=profit_loss", "/finance/reports?tab=balance_sheet", "/finance/cfo"] },
-  { label: "Compliance", span: 3, items: ["/finance/gst/returns", "/finance/audit360"] },
-  { label: "Inventory & files", span: 4, items: ["/finance/inventory", "/finance/shelf"] },
-  { label: "Settings", span: 5, items: ["/finance/tally", "/finance/settings", "/finance/help"] },
+  { label: "Reports", span: 3, items: ["/finance/reports?tab=trial_balance", "/finance/reports?tab=profit_loss", "/finance/reports?tab=balance_sheet", "/finance/cfo", "/finance/mis"] },
+  { label: "Compliance", span: 2, items: ["/finance/gst/returns", "/finance/audit360"] },
+  { label: "Reconciliations", span: 4, items: ["/finance/banking/reconcile", "/finance/gst/reconcile", "/finance/gst/itc", "/finance/audit"] },
+  { label: "Inventory & files", span: 2, items: ["/finance/inventory", "/finance/shelf"] },
+  { label: "Settings", span: 4, items: ["/finance/tally", "/finance/settings", "/finance/help"] },
+];
+// Home-only shortcuts that are not in the one-line strip
+const HOME_EXTRA = [
+  { href: "/finance/mis", label: "MIS Report" },
+  { href: "/finance/banking/reconcile", label: "Bank Recon" },
+  { href: "/finance/gst/reconcile", label: "GSTR-1 / 3B vs Books" },
+  { href: "/finance/gst/itc", label: "ITC vs 2B" },
+  { href: "/finance/audit", label: "Analysis & Audit" },
 ];
 const TOP_ICONS = [
   { href: "/finance", label: "Home" },
@@ -556,12 +565,12 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         {!pathname.startsWith("/finance/chat-book") && (<>
           {bizName && !/^\/finance\/(portfolio|gst\/desk|ca-dashboard|select-business)/.test(pathname) && <div className="fw-bizbar" title={bizName} style={{ textAlign: "center", padding: "10px 16px 0", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: "1.2rem", fontWeight: 700, color: "#12352D", letterSpacing: "0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bizName}</div>}
           <div style={{ position: "relative" }}>
-          {topMore.l && <button type="button" className="fw-topnudge" aria-label="Scroll the menu left" onClick={() => nudgeTop(-1)} style={{ left: 22 }}>‹</button>}
-          {topMore.r && <button type="button" className="fw-topnudge" aria-label="Scroll the menu right" onClick={() => nudgeTop(1)} style={{ right: 22 }}>›</button>}
+          {topMore.l && pathname !== "/finance" && <button type="button" className="fw-topnudge" aria-label="Scroll the menu left" onClick={() => nudgeTop(-1)} style={{ left: 22 }}>‹</button>}
+          {topMore.r && pathname !== "/finance" && <button type="button" className="fw-topnudge" aria-label="Scroll the menu right" onClick={() => nudgeTop(1)} style={{ right: 22 }}>›</button>}
           {/* Home: the sections grouped into panels (other pages keep the one-line strip) */}
           {pathname === "/finance" && !viewOnly ? (
             <nav className="fw-groups" aria-label="Main sections">
-              {HOME_GROUPS.map(g => ({ ...g, items: g.items.filter(h => india || !h.startsWith("/finance/gst")).map(h => TOP_ICONS.find(t => t.href === h)!).filter(Boolean) })).filter(g => g.items.length).map(g => (
+              {HOME_GROUPS.map(g => ({ ...g, items: g.items.filter(h => india || !h.startsWith("/finance/gst")).map(h => [...TOP_ICONS, ...HOME_EXTRA].find(t => t.href === h)!).filter(Boolean) })).filter(g => g.items.length).map(g => (
                 <section key={g.label} className="fw-grp" style={{ gridColumn: `span ${g.span}` }}>
                   <div className="fw-grp-h">{g.label}</div>
                   <div className="fw-grp-row">
