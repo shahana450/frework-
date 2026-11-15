@@ -928,18 +928,20 @@ export default function FreBookPage() {
                   const neg = "#F3A58F";
                   const darkCard: React.CSSProperties = { background: "#10241F", border: "1px solid #24403A", borderRadius: 24, padding: "26px 26px 24px", display: "flex", flexDirection: "column", gap: 14, minWidth: 0, textDecoration: "none", color: "#F6F1E7" };
                   const label: React.CSSProperties = { fontSize: 11.5, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase" };
-                  const big: React.CSSProperties = { fontFamily: SERIF_F, fontSize: "clamp(2rem, 3.6vw, 3rem)", lineHeight: 1.05, fontVariantNumeric: "tabular-nums" };
+                  const big: React.CSSProperties = { fontFamily: SERIF_F, fontSize: "clamp(2rem, 3.6vw, 3rem)", lineHeight: 1.05, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" };
+                  const fit = (txt: string, rem: number, vw: number) => { const k = Math.min(1, 9 / Math.max(9, txt.length)); return `clamp(1.4rem, ${(vw * k).toFixed(2)}vw, ${(rem * k).toFixed(2)}rem)`; };
+                  const profitTxt = d ? `${(d.profit ?? 0) < 0 ? "(" : ""}₹${Math.round(Math.abs(d.profit ?? 0)).toLocaleString("en-IN")}${(d.profit ?? 0) < 0 ? ")" : ""}` : "—";
                   return (
                     <>
                       <div className="fb-glance" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 18 }}>
                         <Link href="/finance/reports?tab=profit_loss" style={{ ...darkCard, background: "#D9B96F", border: "none", color: "#10241F" }}>
                           <span style={label}>{(d?.profit ?? 0) < 0 ? "Net loss" : "Net profit"} · {d?.period.label ?? "This year"}</span>
-                          <span style={{ ...big, fontSize: "clamp(2.6rem, 4.6vw, 3.8rem)" }}>{d ? `${(d.profit ?? 0) < 0 ? "(" : ""}₹${Math.round(Math.abs(d.profit ?? 0)).toLocaleString("en-IN")}${(d.profit ?? 0) < 0 ? ")" : ""}` : "—"}</span>
+                          <span style={{ ...big, fontSize: fit(profitTxt, 3.8, 4.6) }}>{profitTxt}</span>
                           <span style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(16,36,31,0.18)", paddingTop: 12, fontSize: "0.88rem" }}><span>Income {n(d?.revenue)}</span><span>Expenses {n(d?.expenses)}</span></span>
                         </Link>
                         <Link href="/finance/banking" style={darkCard}>
                           <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><span style={{ ...label, color: "#B9C7C1" }}>Cash &amp; bank</span>{(d?.cash ?? 0) < 0 && <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 10px", borderRadius: 999, background: neg, color: "#3A120A" }}>Overdrawn</span>}</span>
-                          <span style={{ ...big, color: (d?.cash ?? 0) < 0 ? neg : "#F6F1E7", margin: "auto 0" }}>{n(d?.cash)}</span>
+                          <span style={{ ...big, fontSize: fit(String(n(d?.cash)), 3, 3.6), color: (d?.cash ?? 0) < 0 ? neg : "#F6F1E7", margin: "auto 0" }}>{n(d?.cash)}</span>
                           <span style={{ fontSize: "0.88rem", color: "#D9B56F", fontWeight: 600 }}>Check bank balances →</span>
                         </Link>
                         <div style={{ ...darkCard, gap: 0 }}>

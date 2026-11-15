@@ -44,8 +44,8 @@ const CAT_META: Record<FlagCategory, { label: string; icon: string; color: strin
   critical:      { label: "Critical",       icon: "🔴", color: "#C2321F", bg: "rgba(194,50,31,0.07)", border: "rgba(194,50,31,0.25)" },
   compliance:    { label: "Compliance",     icon: "⚖️",  color: "#B4561E", bg: "rgba(180,86,30,0.07)",  border: "rgba(180,86,30,0.25)"  },
   documentation: { label: "Documentation", icon: "📋", color: "#8A5A00", bg: "rgba(184,120,0,0.07)",  border: "rgba(184,120,0,0.25)"  },
-  timing:        { label: "Timing",         icon: "🕐", color: "#5B4BC4", bg: "rgba(91,75,196,0.07)", border: "rgba(91,75,196,0.25)" },
-  pattern:       { label: "Pattern",        icon: "🔁", color: "#1F5EFF", bg: "rgba(31,94,255,0.07)",  border: "rgba(31,94,255,0.25)"  },
+  timing:        { label: "Timing",         icon: "🕐", color: "#8A6420", bg: "rgba(91,75,196,0.07)", border: "rgba(91,75,196,0.25)" },
+  pattern:       { label: "Pattern",        icon: "🔁", color: "#12352D", bg: "rgba(31,94,255,0.07)",  border: "rgba(31,94,255,0.25)"  },
   review:        { label: "Review",         icon: "🔍", color: "#0B7A55", bg: "rgba(11,122,85,0.07)",  border: "rgba(11,122,85,0.25)"  },
 };
 
@@ -581,42 +581,51 @@ export default function AuditPage() {
     { key: "ledger",         label: "Ledger" },
   ];
 
-  const inp: React.CSSProperties = { background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.15)", color: "#141A3A", padding: "5px 10px", borderRadius: 7, fontSize: "0.8rem", fontFamily: "inherit", outline: "none", cursor: "pointer" };
+  const inp: React.CSSProperties = { background: "#FFFFFF", border: "1px solid rgba(16,36,31,0.15)", color: "#10241F", padding: "5px 10px", borderRadius: 7, fontSize: "0.8rem", fontFamily: "inherit", outline: "none", cursor: "pointer" };
   const ledgerLines = selectedAccount ? lines.filter(l => l.account_id === selectedAccount && journalIds.has(l.journal_id)) : [];
   const ledgerJournals = new Map(journals.map(j => [j.id, j]));
   const filteredTb = tb.filter(r => !tbSearch || r.name.toLowerCase().includes(tbSearch.toLowerCase()) || r.type.toLowerCase().includes(tbSearch.toLowerCase()));
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "Manrope,'DM Sans',system-ui,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; }
-        .au-card { background: #FFFFFF; border: 1px solid rgba(20,26,58,0.11); border-radius: 14px; padding: 1.25rem 1.4rem; }
-        .au-tab { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 0.82rem; font-weight: 600; padding: 8px 14px; border-radius: 8px; transition: all 0.15s; color: rgba(20,26,58,0.65); white-space: nowrap; }
-        .au-tab:hover { color: rgba(20,26,58,0.95); background: #FFFFFF; }
-        .au-tab-active { color: #141A3A; background: #FFFFFF; }
+        .au-card { background: #FFFFFF; border: 1px solid rgba(16,36,31,0.11); border-radius: 14px; padding: 1.25rem 1.4rem; }
+        .au-tab { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 0.82rem; font-weight: 600; padding: 8px 14px; border-radius: 8px; transition: all 0.15s; color: rgba(16,36,31,0.65); white-space: nowrap; }
+        .au-tab:hover { color: rgba(16,36,31,0.95); background: #FFFFFF; }
+        .au-tab-active { color: #10241F; background: #FFFFFF; }
         .au-tr:hover td { background: #FFFFFF; }
         td, th { padding: 0.45rem 0.85rem; }
         .au-mono { font-family: 'IBM Plex Mono', monospace; }
+        .au-card { border-color: #E6DFD0 !important; border-radius: 18px !important; box-shadow: 0 14px 30px -26px rgba(15,43,37,0.45); }
+        .au-card h2, .au-card h3, h1 { font-family: 'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif; font-weight: 400 !important; letter-spacing: 0; }
+        .au-tab { border-radius: 999px !important; }
+        .au-tab-active { background: #0F2B25 !important; color: #FFFFFF !important; }
+        .au-catbtn { border-radius: 999px !important; border-color: #E6DFD0 !important; }
+        .au-catbtn-active { background: #0F2B25 !important; color: #FFFFFF !important; border-color: #0F2B25 !important; }
+        table { font-variant-numeric: tabular-nums; }
+        th.au-num, td.au-num, .au-amt { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .au-tr:hover td { background: #FBF7EE !important; }
         select option { background: #FFFFFF; }
         .au-flag { border-radius: 11px; padding: 0.9rem 1.05rem; transition: opacity 0.15s; }
         .au-flag-reviewed { opacity: 0.4; }
-        .au-catbtn { background: none; border: 1px solid rgba(20,26,58,0.12); border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.75rem; font-weight: 600; padding: 5px 11px; transition: all 0.15s; color: rgba(20,26,58,0.70); display: flex; align-items: center; gap: 5px; }
-        .au-catbtn:hover { border-color: rgba(20,26,58,0.20); color: rgba(20,26,58,1.00); }
-        .au-catbtn-active { color: #141A3A !important; }
+        .au-catbtn { background: none; border: 1px solid rgba(16,36,31,0.12); border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.75rem; font-weight: 600; padding: 5px 11px; transition: all 0.15s; color: rgba(16,36,31,0.70); display: flex; align-items: center; gap: 5px; }
+        .au-catbtn:hover { border-color: rgba(16,36,31,0.20); color: rgba(16,36,31,1.00); }
+        .au-catbtn-active { color: #10241F !important; }
         .au-act { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 6px; border: none; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.15s; }
         .au-act:hover { opacity: 0.8; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #C9CEDF; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #D9CBAE; border-radius: 4px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slide { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
       `}</style>
 
       {/* Nav */}
-      <nav style={{ borderBottom: "1px solid rgba(20,26,58,0.10)", padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.75rem", height: 52, position: "sticky", top: 0, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(16px)", zIndex: 30 }}>
-        <Link href="/finance" style={{ color: "#1F5EFF", fontWeight: 700, textDecoration: "none", fontSize: "0.88rem" }}>← Finance</Link>
-        <span style={{ color: "rgba(20,26,58,0.35)" }}>›</span>
+      <nav style={{ borderBottom: "1px solid rgba(16,36,31,0.10)", padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.75rem", height: 52, position: "sticky", top: 0, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(16px)", zIndex: 30 }}>
+        <Link href="/finance" style={{ color: "#12352D", fontWeight: 700, textDecoration: "none", fontSize: "0.88rem" }}>← Finance</Link>
+        <span style={{ color: "rgba(16,36,31,0.35)" }}>›</span>
         <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Audit & Reports</span>
         {criticalCount > 0 && (
           <span style={{ fontSize: "0.65rem", fontWeight: 800, background: "rgba(194,50,31,0.15)", border: "1px solid rgba(194,50,31,0.3)", color: "#C2321F", padding: "2px 9px", borderRadius: 20 }}>
@@ -627,7 +636,7 @@ export default function AuditPage() {
         <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} style={inp}>
           {fys.map(f => <option key={f.id} value={f.id}>FY {f.label.replace(/^FY\s*/i, "")}</option>)}
         </select>
-        <Link href="/finance/audit/gst-recon" style={{ fontSize: "0.78rem", color: "#5B4BC4", background: "rgba(91,75,196,0.08)", border: "1px solid rgba(91,75,196,0.2)", padding: "5px 12px", borderRadius: 7, textDecoration: "none", fontWeight: 600 }}>
+        <Link href="/finance/audit/gst-recon" style={{ fontSize: "0.78rem", color: "#8A6420", background: "rgba(91,75,196,0.08)", border: "1px solid rgba(91,75,196,0.2)", padding: "5px 12px", borderRadius: 7, textDecoration: "none", fontWeight: 600 }}>
           🏷 GST Recon
         </Link>
         <Link href="/finance/tally" style={{ fontSize: "0.78rem", color: "#0B7A55", background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.2)", padding: "5px 12px", borderRadius: 7, textDecoration: "none", fontWeight: 600 }}>
@@ -648,29 +657,29 @@ export default function AuditPage() {
         <div style={{ display: "flex", gap: "0.625rem", flexWrap: "wrap", marginBottom: "1.25rem", alignItems: "center" }}>
           {/* Connection */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: tallyConnected ? "rgba(11,122,85,0.07)" : tallyConnected === false ? "rgba(107,114,128,0.07)" : "rgba(107,114,128,0.05)", border: `1px solid ${tallyConnected ? "rgba(11,122,85,0.2)" : "rgba(107,114,128,0.15)"}`, borderRadius: 8, padding: "5px 10px" }}>
-            <span style={{ fontSize: "0.5rem", color: tallyConnected ? "#0B7A55" : tallyConnected === false ? "#6B7280" : "#6B7280" }}>●</span>
-            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: tallyConnected ? "#0B7A55" : "#6B7280" }}>
+            <span style={{ fontSize: "0.5rem", color: tallyConnected ? "#0B7A55" : tallyConnected === false ? "#5E6B66" : "#5E6B66" }}>●</span>
+            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: tallyConnected ? "#0B7A55" : "#5E6B66" }}>
               {tallyConnected === null ? "Checking Tally…" : tallyConnected ? "Tally Connected" : "Tally Not Connected"}
             </span>
-            {tallyCompany && <span style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.85)", borderLeft: "1px solid rgba(20,26,58,0.15)", paddingLeft: 8 }}>{tallyCompany}</span>}
+            {tallyCompany && <span style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.85)", borderLeft: "1px solid rgba(16,36,31,0.15)", paddingLeft: 8 }}>{tallyCompany}</span>}
           </div>
           {/* Vouchers */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(31,94,255,0.06)", border: "1px solid rgba(31,94,255,0.15)", borderRadius: 8, padding: "5px 10px" }}>
             <span style={{ fontSize: "0.72rem" }}>🧾</span>
-            <span style={{ fontSize: "0.75rem", color: journals.length > 0 ? "#1F5EFF" : "#6B7280", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.75rem", color: journals.length > 0 ? "#12352D" : "#5E6B66", fontWeight: 600 }}>
               {journals.length > 0 ? `${journals.length} Vouchers` : "No Vouchers"}
             </span>
-            <span style={{ fontSize: "0.68rem", color: journals.length > 0 ? "rgba(31,94,255,0.7)" : "#4B5563" }}>
+            <span style={{ fontSize: "0.68rem", color: journals.length > 0 ? "rgba(31,94,255,0.7)" : "#4A5752" }}>
               {journals.length > 0 ? "imported" : "not imported"}
             </span>
           </div>
           {/* Ledgers / Accounts */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(91,75,196,0.06)", border: "1px solid rgba(91,75,196,0.15)", borderRadius: 8, padding: "5px 10px" }}>
             <span style={{ fontSize: "0.72rem" }}>📒</span>
-            <span style={{ fontSize: "0.75rem", color: accounts.length > 0 ? "#5B4BC4" : "#6B7280", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.75rem", color: accounts.length > 0 ? "#8A6420" : "#5E6B66", fontWeight: 600 }}>
               {accounts.length > 0 ? `${accounts.length} Ledgers` : "No Ledgers"}
             </span>
-            <span style={{ fontSize: "0.68rem", color: accounts.length > 0 ? "rgba(91,75,196,0.7)" : "#4B5563" }}>
+            <span style={{ fontSize: "0.68rem", color: accounts.length > 0 ? "rgba(91,75,196,0.7)" : "#4A5752" }}>
               {accounts.length > 0 ? "synced" : "not synced"}
             </span>
           </div>
@@ -683,8 +692,8 @@ export default function AuditPage() {
           )}
           {/* Action / progress */}
           {importing ? (
-            <div style={{ marginLeft: "auto", fontSize: "0.73rem", color: "#1F5EFF", display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ display: "inline-block", width: 10, height: 10, border: "2px solid #1F5EFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+            <div style={{ marginLeft: "auto", fontSize: "0.73rem", color: "#12352D", display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ display: "inline-block", width: 10, height: 10, border: "2px solid #12352D", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
               {importMsg}
             </div>
           ) : importDone ? (
@@ -704,31 +713,31 @@ export default function AuditPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(20,26,58,0.55)", fontSize: "0.88rem" }}>
+          <div style={{ textAlign: "center", padding: "5rem", color: "rgba(16,36,31,0.55)", fontSize: "0.88rem" }}>
             <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>⏳</div>Loading data…
           </div>
         ) : journals.length === 0 ? (
           <div style={{ textAlign: "center", padding: "4rem" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>{importing ? "⏳" : "📥"}</div>
-            <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "#141A3A", marginBottom: "0.4rem" }}>
+            <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "#10241F", marginBottom: "0.4rem" }}>
               {importing ? "Importing from Tally…" : "No vouchers imported yet"}
             </div>
-            <div style={{ color: "rgba(20,26,58,0.65)", fontSize: "0.84rem", marginBottom: importing ? "0.5rem" : "1.75rem" }}>
+            <div style={{ color: "rgba(16,36,31,0.65)", fontSize: "0.84rem", marginBottom: importing ? "0.5rem" : "1.75rem" }}>
               {importing ? importMsg : "Import your Tally data once — all reports fill in automatically."}
             </div>
             {importing && (
               <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
                 <div style={{ width: 180, height: 4, background: "#FFFFFF", borderRadius: 4, overflow: "hidden" }}>
-                  <div style={{ height: "100%", background: "#1F5EFF", width: "60%", borderRadius: 4, animation: "slide 1.2s ease-in-out infinite" }} />
+                  <div style={{ height: "100%", background: "#12352D", width: "60%", borderRadius: 4, animation: "slide 1.2s ease-in-out infinite" }} />
                 </div>
               </div>
             )}
             {!importing && (
               <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-                <button onClick={quickImport} style={{ background: "#232A63", color: "#fff", border: "none", padding: "12px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", fontFamily: "inherit" }}>
+                <button onClick={quickImport} style={{ background: "#0F2B25", color: "#fff", border: "none", padding: "12px 28px", borderRadius: 9, fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", fontFamily: "inherit" }}>
                   ⬇ Import from Tally
                 </button>
-                <Link href="/finance/tally" style={{ background: "transparent", color: "#6B7280", border: "1px solid #5A6080", padding: "12px 20px", borderRadius: 9, textDecoration: "none", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center" }}>
+                <Link href="/finance/tally" style={{ background: "transparent", color: "#5E6B66", border: "1px solid #5E6B66", padding: "12px 20px", borderRadius: 9, textDecoration: "none", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center" }}>
                   Tally Sync page →
                 </Link>
               </div>
@@ -746,11 +755,11 @@ export default function AuditPage() {
                     {[
                       { label: "Revenue",      value: fmt(pl.revenue),   color: "#0B7A55" },
                       { label: "Net Profit",   value: (pl.netProfit < 0 ? "−" : "") + fmt(pl.netProfit), color: pl.netProfit >= 0 ? "#0B7A55" : "#C2321F" },
-                      { label: "Total Entries",value: String(journals.length), color: "#1F5EFF" },
+                      { label: "Total Entries",value: String(journals.length), color: "#12352D" },
                       { label: "Open Findings",value: String(unreviewedCount), color: unreviewedCount > 0 ? (criticalCount > 0 ? "#C2321F" : "#8A5A00") : "#0B7A55" },
                     ].map(k => (
                       <div key={k.label} className="au-card">
-                        <div style={{ fontSize: "0.57rem", color: "rgba(20,26,58,0.55)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.7rem" }}>{k.label}</div>
+                        <div style={{ fontSize: "0.57rem", color: "rgba(16,36,31,0.55)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: "0.7rem" }}>{k.label}</div>
                         <div style={{ fontSize: "1.35rem", fontWeight: 900, color: k.color, fontFamily: "'IBM Plex Mono',monospace", lineHeight: 1 }}>{k.value}</div>
                       </div>
                     ))}
@@ -765,13 +774,13 @@ export default function AuditPage() {
                     {[
                       { label: "Sales / Revenue",      val: pl.revenue,     color: "#0B7A55" },
                       { label: "Purchase / Direct Exp",val: -pl.cogs,       color: "#C2321F" },
-                      { label: "Gross Profit",          val: pl.grossProfit, color: "#1F5EFF", bold: true },
+                      { label: "Gross Profit",          val: pl.grossProfit, color: "#12352D", bold: true },
                       ...(pl.otherIncome ? [{ label: "Indirect Income", val: pl.otherIncome, color: "#0B7A55" }] : []),
                       { label: "Indirect Expenses",    val: -pl.expenses,   color: "#C2321F" },
                       { label: pl.netProfit >= 0 ? "Net Profit" : "Net Loss", val: pl.netProfit, color: pl.netProfit >= 0 ? "#0B7A55" : "#C2321F", bold: true },
                     ].map(r => (
-                      <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.38rem 0", borderTop: "1px solid rgba(20,26,58,0.10)", fontWeight: r.bold ? 700 : 400, fontSize: r.bold ? "0.88rem" : "0.83rem" }}>
-                        <span style={{ color: "rgba(20,26,58,0.85)" }}>{r.label}</span>
+                      <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.38rem 0", borderTop: "1px solid rgba(16,36,31,0.10)", fontWeight: r.bold ? 700 : 400, fontSize: r.bold ? "0.88rem" : "0.83rem" }}>
+                        <span style={{ color: "rgba(16,36,31,0.85)" }}>{r.label}</span>
                         <span className="au-mono" style={{ color: r.color }}>{r.val < 0 ? "−" : ""}{fmt(r.val)}</span>
                       </div>
                     ))}
@@ -782,16 +791,16 @@ export default function AuditPage() {
                     <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "1rem" }}>Recent Transactions</div>
                     <div style={{ overflowX: "auto" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
-                        <thead><tr style={{ color: "rgba(20,26,58,0.55)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                        <thead><tr style={{ color: "rgba(16,36,31,0.55)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                           <th style={{ textAlign: "left" }}>Entry</th><th style={{ textAlign: "left" }}>Date</th><th style={{ textAlign: "left" }}>Type</th><th style={{ textAlign: "left" }}>Narration</th><th style={{ textAlign: "right" }}>Amount</th>
                         </tr></thead>
                         <tbody>
                           {journals.slice(-10).reverse().map(j => (
-                            <tr key={j.id} className="au-tr" style={{ borderTop: "1px solid rgba(20,26,58,0.10)" }}>
-                              <td className="au-mono" style={{ color: "rgba(20,26,58,0.65)", fontSize: "0.7rem" }}>{j.entry_no}</td>
-                              <td style={{ color: "rgba(20,26,58,0.75)", whiteSpace: "nowrap" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</td>
-                              <td><span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#1F5EFF", background: "rgba(31,94,255,0.1)", padding: "2px 7px", borderRadius: 20 }}>{j.type}</span></td>
-                              <td style={{ color: "rgba(20,26,58,0.85)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
+                            <tr key={j.id} className="au-tr" style={{ borderTop: "1px solid rgba(16,36,31,0.10)" }}>
+                              <td className="au-mono" style={{ color: "rgba(16,36,31,0.65)", fontSize: "0.7rem" }}>{j.entry_no}</td>
+                              <td style={{ color: "rgba(16,36,31,0.75)", whiteSpace: "nowrap" }}>{new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}</td>
+                              <td><span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#12352D", background: "rgba(31,94,255,0.1)", padding: "2px 7px", borderRadius: 20 }}>{j.type}</span></td>
+                              <td style={{ color: "rgba(16,36,31,0.85)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j.narration}</td>
                               <td className="au-mono" style={{ textAlign: "right", color: "#0B7A55" }}>{fmt(Math.max(j.total_debit, j.total_credit))}</td>
                             </tr>
                           ))}
@@ -812,14 +821,14 @@ export default function AuditPage() {
                       const c = CAT_META[cat]; const cnt = catCounts[cat];
                       if (!cnt.total) return null;
                       return (
-                        <div key={cat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.45rem 0", borderTop: "1px solid rgba(20,26,58,0.10)" }}>
+                        <div key={cat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.45rem 0", borderTop: "1px solid rgba(16,36,31,0.10)" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                             <span style={{ fontSize: "0.85rem" }}>{c.icon}</span>
-                            <span style={{ fontSize: "0.8rem", color: "rgba(20,26,58,0.95)" }}>{c.label}</span>
+                            <span style={{ fontSize: "0.8rem", color: "rgba(16,36,31,0.95)" }}>{c.label}</span>
                           </div>
                           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                             {cnt.unreviewed > 0 && <span style={{ fontSize: "0.68rem", fontWeight: 800, color: c.color, background: c.bg, border: `1px solid ${c.border}`, padding: "1px 8px", borderRadius: 20 }}>{cnt.unreviewed}</span>}
-                            {cnt.unreviewed < cnt.total && <span style={{ fontSize: "0.62rem", color: "rgba(20,26,58,0.35)" }}>+{cnt.total - cnt.unreviewed} done</span>}
+                            {cnt.unreviewed < cnt.total && <span style={{ fontSize: "0.62rem", color: "rgba(16,36,31,0.35)" }}>+{cnt.total - cnt.unreviewed} done</span>}
                           </div>
                         </div>
                       );
@@ -848,7 +857,7 @@ export default function AuditPage() {
                     ) : (
                       <div style={{ fontSize: "0.78rem", color: "#8A5A00", lineHeight: 1.6 }}>
                         ⚠ Difference: {fmt(Math.abs(bs.totalAssets - bs.totalLiabEq))}<br />
-                        <span style={{ color: "rgba(20,26,58,0.65)", fontSize: "0.7rem" }}>Some entries may have missing or unclassified accounts.</span>
+                        <span style={{ color: "rgba(16,36,31,0.65)", fontSize: "0.7rem" }}>Some entries may have missing or unclassified accounts.</span>
                       </div>
                     )}
                   </div>
@@ -862,10 +871,10 @@ export default function AuditPage() {
 
                 {/* Left: category filter sidebar */}
                 <div className="au-card" style={{ position: "sticky", top: 68 }}>
-                  <div style={{ fontWeight: 800, fontSize: "0.82rem", marginBottom: "1rem", color: "rgba(20,26,58,0.85)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Categories</div>
+                  <div style={{ fontWeight: 800, fontSize: "0.82rem", marginBottom: "1rem", color: "rgba(16,36,31,0.85)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Categories</div>
                   {/* All */}
                   <button onClick={() => setFilterCat("all")} className={`au-catbtn${filterCat === "all" ? " au-catbtn-active" : ""}`}
-                    style={{ width: "100%", marginBottom: 4, ...(filterCat === "all" ? { background: "#FFFFFF", borderColor: "rgba(20,26,58,0.20)" } : {}) }}>
+                    style={{ width: "100%", marginBottom: 4, ...(filterCat === "all" ? { background: "#FFFFFF", borderColor: "rgba(16,36,31,0.20)" } : {}) }}>
                     <span>🗂</span><span>All ({flags.filter(f => !reviewed.has(f.id+f.reason) || showReviewed).length})</span>
                   </button>
                   {(Object.keys(CAT_META) as FlagCategory[]).map(cat => {
@@ -877,23 +886,23 @@ export default function AuditPage() {
                         style={{ width: "100%", marginBottom: 4, justifyContent: "space-between",
                           ...(isActive ? { background: c.bg, borderColor: c.border, color: c.color } : {}) }}>
                         <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span>{c.icon}</span><span>{c.label}</span></span>
-                        {cnt.unreviewed > 0 && <span style={{ fontSize: "0.65rem", fontWeight: 800, color: isActive ? c.color : "rgba(20,26,58,0.75)", background: isActive ? c.bg : "#FFFFFF", padding: "1px 7px", borderRadius: 20, border: isActive ? `1px solid ${c.border}` : "1px solid transparent" }}>{cnt.unreviewed}</span>}
+                        {cnt.unreviewed > 0 && <span style={{ fontSize: "0.65rem", fontWeight: 800, color: isActive ? c.color : "rgba(16,36,31,0.75)", background: isActive ? c.bg : "#FFFFFF", padding: "1px 7px", borderRadius: 20, border: isActive ? `1px solid ${c.border}` : "1px solid transparent" }}>{cnt.unreviewed}</span>}
                       </button>
                     );
                   })}
 
-                  <div style={{ borderTop: "1px solid rgba(20,26,58,0.10)", marginTop: "0.85rem", paddingTop: "0.85rem" }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Severity</div>
+                  <div style={{ borderTop: "1px solid rgba(16,36,31,0.10)", marginTop: "0.85rem", paddingTop: "0.85rem" }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.5rem" }}>Severity</div>
                     {(["all","high","medium","low"] as const).map(s => (
                       <button key={s} onClick={() => setFilterSev(s)} className={`au-catbtn${filterSev === s ? " au-catbtn-active" : ""}`}
-                        style={{ width: "100%", marginBottom: 3, ...(filterSev === s && s !== "all" ? { color: s === "high" ? "#C2321F" : s === "medium" ? "#8A5A00" : "#1F5EFF", background: s === "high" ? "rgba(194,50,31,0.07)" : s === "medium" ? "rgba(184,120,0,0.07)" : "rgba(31,94,255,0.07)", borderColor: s === "high" ? "rgba(194,50,31,0.25)" : s === "medium" ? "rgba(184,120,0,0.25)" : "rgba(31,94,255,0.25)" } : filterSev === s ? { background: "#FFFFFF", color: "#141A3A" } : {}) }}>
+                        style={{ width: "100%", marginBottom: 3, ...(filterSev === s && s !== "all" ? { color: s === "high" ? "#C2321F" : s === "medium" ? "#8A5A00" : "#12352D", background: s === "high" ? "rgba(194,50,31,0.07)" : s === "medium" ? "rgba(184,120,0,0.07)" : "rgba(31,94,255,0.07)", borderColor: s === "high" ? "rgba(194,50,31,0.25)" : s === "medium" ? "rgba(184,120,0,0.25)" : "rgba(31,94,255,0.25)" } : filterSev === s ? { background: "#FFFFFF", color: "#10241F" } : {}) }}>
                         {s === "all" ? "All severities" : `${s === "high" ? "🔴" : s === "medium" ? "🟡" : "🔵"} ${s.charAt(0).toUpperCase() + s.slice(1)}`}
                       </button>
                     ))}
                   </div>
 
-                  <div style={{ borderTop: "1px solid rgba(20,26,58,0.10)", marginTop: "0.85rem", paddingTop: "0.85rem" }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: "0.78rem", color: "rgba(20,26,58,0.75)", cursor: "pointer" }}>
+                  <div style={{ borderTop: "1px solid rgba(16,36,31,0.10)", marginTop: "0.85rem", paddingTop: "0.85rem" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: "0.78rem", color: "rgba(16,36,31,0.75)", cursor: "pointer" }}>
                       <input type="checkbox" checked={showReviewed} onChange={e => setShowReviewed(e.target.checked)} style={{ accentColor: "#0B7A55" }} />
                       Show reviewed
                     </label>
@@ -909,7 +918,7 @@ export default function AuditPage() {
                 {/* Right: flag cards */}
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
-                    <div style={{ fontSize: "0.82rem", color: "rgba(20,26,58,0.65)" }}>
+                    <div style={{ fontSize: "0.82rem", color: "rgba(16,36,31,0.65)" }}>
                       {visibleFlags.length} finding{visibleFlags.length !== 1 ? "s" : ""}
                       {filterCat !== "all" && <span style={{ color: CAT_META[filterCat].color }}> · {CAT_META[filterCat].label}</span>}
                     </div>
@@ -924,7 +933,7 @@ export default function AuditPage() {
                   {visibleFlags.length === 0 ? (
                     <div className="au-card" style={{ textAlign: "center", padding: "3.5rem" }}>
                       <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>✅</div>
-                      <div style={{ color: "rgba(20,26,58,0.75)", fontSize: "0.88rem" }}>
+                      <div style={{ color: "rgba(16,36,31,0.75)", fontSize: "0.88rem" }}>
                         {flags.length === 0 ? "No findings — all entries look clean." : "All findings reviewed for this filter."}
                       </div>
                     </div>
@@ -942,23 +951,23 @@ export default function AuditPage() {
                                 {/* Category + severity badge */}
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.3rem" }}>
                                   <span style={{ fontSize: "0.65rem", fontWeight: 800, color: c.color, textTransform: "uppercase", letterSpacing: "0.08em", background: c.bg, border: `1px solid ${c.border}`, padding: "1px 8px", borderRadius: 20 }}>{c.icon} {c.label}</span>
-                                  <span style={{ fontSize: "0.62rem", fontWeight: 700, color: f.severity === "high" ? "#C2321F" : f.severity === "medium" ? "#8A5A00" : "#1F5EFF", textTransform: "uppercase" }}>{f.severity}</span>
+                                  <span style={{ fontSize: "0.62rem", fontWeight: 700, color: f.severity === "high" ? "#C2321F" : f.severity === "medium" ? "#8A5A00" : "#12352D", textTransform: "uppercase" }}>{f.severity}</span>
                                 </div>
                                 {/* Reason */}
-                                <div style={{ fontWeight: 700, fontSize: "0.84rem", color: "#141A3A", marginBottom: f.detail ? "0.2rem" : 0 }}>{f.reason}</div>
+                                <div style={{ fontWeight: 700, fontSize: "0.84rem", color: "#10241F", marginBottom: f.detail ? "0.2rem" : 0 }}>{f.reason}</div>
                                 {/* Detail */}
-                                {f.detail && <div style={{ fontSize: "0.73rem", color: "rgba(20,26,58,0.70)", lineHeight: 1.55 }}>{f.detail}</div>}
+                                {f.detail && <div style={{ fontSize: "0.73rem", color: "rgba(16,36,31,0.70)", lineHeight: 1.55 }}>{f.detail}</div>}
                                 {/* Meta row */}
-                                <div style={{ marginTop: "0.45rem", display: "flex", gap: "0.85rem", fontSize: "0.72rem", color: "rgba(20,26,58,0.60)", flexWrap: "wrap" }}>
+                                <div style={{ marginTop: "0.45rem", display: "flex", gap: "0.85rem", fontSize: "0.72rem", color: "rgba(16,36,31,0.60)", flexWrap: "wrap" }}>
                                   <span className="au-mono">{f.entry_no}</span>
                                   <span>{new Date(f.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
-                                  <span style={{ background: "rgba(31,94,255,0.1)", color: "#1F5EFF", padding: "0px 6px", borderRadius: 20, fontWeight: 700 }}>{f.type}</span>
+                                  <span style={{ background: "rgba(31,94,255,0.1)", color: "#12352D", padding: "0px 6px", borderRadius: 20, fontWeight: 700 }}>{f.type}</span>
                                   <span style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.narration}</span>
                                 </div>
                               </div>
                               {/* Amount + actions */}
                               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
-                                <div className="au-mono" style={{ fontWeight: 800, color: "#141A3A", fontSize: "0.9rem" }}>{fmt(f.amount)}</div>
+                                <div className="au-mono" style={{ fontWeight: 800, color: "#10241F", fontSize: "0.9rem" }}>{fmt(f.amount)}</div>
                                 <div style={{ display: "flex", gap: 5 }}>
                                   {f.actionHref && (
                                     <button onClick={() => openEntryModal(f.id)} className="au-act" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.color }}>
@@ -966,7 +975,7 @@ export default function AuditPage() {
                                     </button>
                                   )}
                                   <button onClick={() => markReviewed(key)} className="au-act"
-                                    style={{ background: isRev ? "rgba(11,122,85,0.12)" : "#FFFFFF", border: isRev ? "1px solid rgba(11,122,85,0.3)" : "1px solid #FFFFFF", color: isRev ? "#0B7A55" : "rgba(20,26,58,0.65)" }}>
+                                    style={{ background: isRev ? "rgba(11,122,85,0.12)" : "#FFFFFF", border: isRev ? "1px solid rgba(11,122,85,0.3)" : "1px solid #FFFFFF", color: isRev ? "#0B7A55" : "rgba(16,36,31,0.65)" }}>
                                     {isRev ? "✓ Reviewed" : "Mark Reviewed"}
                                   </button>
                                 </div>
@@ -992,7 +1001,7 @@ export default function AuditPage() {
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                     <thead>
-                      <tr style={{ background: "#FFFFFF", color: "rgba(20,26,58,0.60)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                      <tr style={{ background: "#FFFFFF", color: "rgba(16,36,31,0.60)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                         <th style={{ textAlign: "left" }}>Account</th>
                         <th style={{ textAlign: "left" }}>Type</th>
                         <th style={{ textAlign: "right" }}>Debit (₹)</th>
@@ -1002,27 +1011,27 @@ export default function AuditPage() {
                     </thead>
                     <tbody>
                       {filteredTb.map(r => (
-                        <tr key={r.name} className="au-tr" style={{ borderTop: "1px solid rgba(20,26,58,0.10)", cursor: "pointer" }}
+                        <tr key={r.name} className="au-tr" style={{ borderTop: "1px solid rgba(16,36,31,0.10)", cursor: "pointer" }}
                           onClick={() => { setSelectedAccount(accounts.find(a => a.name === r.name)?.id ?? null); setTab("ledger"); }}>
-                          <td style={{ color: "#1F5EFF", fontWeight: 500 }}>{r.name}</td>
-                          <td><span style={{ fontSize: "0.62rem", color: "rgba(20,26,58,0.60)", background: "#FFFFFF", padding: "1px 7px", borderRadius: 20 }}>{r.type}</span></td>
-                          <td className="au-mono" style={{ textAlign: "right", color: r.dr > 0 ? "#141A3A" : "rgba(20,26,58,0.28)" }}>{r.dr > 0 ? fmt(r.dr) : "—"}</td>
-                          <td className="au-mono" style={{ textAlign: "right", color: r.cr > 0 ? "#141A3A" : "rgba(20,26,58,0.28)" }}>{r.cr > 0 ? fmt(r.cr) : "—"}</td>
+                          <td style={{ color: "#12352D", fontWeight: 500 }}>{r.name}</td>
+                          <td><span style={{ fontSize: "0.62rem", color: "rgba(16,36,31,0.60)", background: "#FFFFFF", padding: "1px 7px", borderRadius: 20 }}>{r.type}</span></td>
+                          <td className="au-mono" style={{ textAlign: "right", color: r.dr > 0 ? "#10241F" : "rgba(16,36,31,0.28)" }}>{r.dr > 0 ? fmt(r.dr) : "—"}</td>
+                          <td className="au-mono" style={{ textAlign: "right", color: r.cr > 0 ? "#10241F" : "rgba(16,36,31,0.28)" }}>{r.cr > 0 ? fmt(r.cr) : "—"}</td>
                           <td className="au-mono" style={{ textAlign: "right", color: r.balance >= 0 ? "#0B7A55" : "#C2321F", fontWeight: 600 }}>{r.balance < 0 ? "−" : ""}{fmt(r.balance)}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr style={{ borderTop: "2px solid rgba(20,26,58,0.15)", fontWeight: 800 }}>
-                        <td colSpan={2} style={{ color: "rgba(20,26,58,0.75)", fontSize: "0.78rem" }}>TOTAL</td>
+                      <tr style={{ borderTop: "2px solid rgba(16,36,31,0.15)", fontWeight: 800 }}>
+                        <td colSpan={2} style={{ color: "rgba(16,36,31,0.75)", fontSize: "0.78rem" }}>TOTAL</td>
                         <td className="au-mono" style={{ textAlign: "right", color: "#0B7A55" }}>{fmt(filteredTb.reduce((s,r) => s+r.dr,0))}</td>
-                        <td className="au-mono" style={{ textAlign: "right", color: "#1F5EFF" }}>{fmt(filteredTb.reduce((s,r) => s+r.cr,0))}</td>
+                        <td className="au-mono" style={{ textAlign: "right", color: "#12352D" }}>{fmt(filteredTb.reduce((s,r) => s+r.cr,0))}</td>
                         <td />
                       </tr>
                     </tfoot>
                   </table>
                 </div>
-                <div style={{ marginTop: "0.75rem", fontSize: "0.7rem", color: "rgba(20,26,58,0.28)" }}>
+                <div style={{ marginTop: "0.75rem", fontSize: "0.7rem", color: "rgba(16,36,31,0.28)" }}>
                   {tb.length} accounts · Click any row to drill into ledger transactions
                 </div>
               </div>
@@ -1042,17 +1051,17 @@ export default function AuditPage() {
                     <div style={{ fontSize: "0.6rem", fontWeight: 700, color: sec.color, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "0.5rem", padding: "0.35rem 0", borderBottom: `1px solid ${sec.color}22` }}>{sec.title}</div>
                     {sec.rows.map(r => (
                       <div key={r.name} onClick={() => { const id = accounts.find(a => a.name === r.name)?.id; if (id) { setSelectedAccount(id); setTab("ledger"); } }} style={{ display: "flex", justifyContent: "space-between", padding: "0.38rem 0", fontSize: "0.84rem", cursor: "pointer" }}>
-                        <span style={{ color: "rgba(20,26,58,0.90)" }}>{r.name}</span>
+                        <span style={{ color: "rgba(16,36,31,0.90)" }}>{r.name}</span>
                         <span className="au-mono" style={{ color: r.balance < 0 ? "#C2321F" : undefined }}>{r.balance < 0 ? "−" : ""}{fmtDec(r.balance)}</span>
                       </div>
                     ))}
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderTop: "1px solid rgba(20,26,58,0.12)", fontWeight: 700, fontSize: "0.85rem" }}>
-                      <span style={{ color: "rgba(20,26,58,0.65)" }}>Total</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderTop: "1px solid rgba(16,36,31,0.12)", fontWeight: 700, fontSize: "0.85rem" }}>
+                      <span style={{ color: "rgba(16,36,31,0.65)" }}>Total</span>
                       <span className="au-mono" style={{ color: sec.color }}>{fmtDec(sec.rows.reduce((s, r) => s + r.balance, 0))}</span>
                     </div>
                   </div>
                 ))}
-                <div style={{ borderTop: "2px solid rgba(20,26,58,0.18)", paddingTop: "1rem" }}>
+                <div style={{ borderTop: "2px solid rgba(16,36,31,0.18)", paddingTop: "1rem" }}>
                   {[
                     { label: "Gross Profit",                               val: pl.grossProfit },
                     { label: pl.netProfit >= 0 ? "Net Profit" : "Net Loss", val: pl.netProfit },
@@ -1076,16 +1085,16 @@ export default function AuditPage() {
                     { title: "Fixed Assets",   rows: bs.fixedAssets },
                   ].map(sec => sec.rows.length === 0 ? null : (
                     <div key={sec.title} style={{ marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(20,26,58,0.55)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
+                      <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(16,36,31,0.55)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
                       {sec.rows.map(r => (
                         <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.35rem 0", fontSize: "0.83rem" }}>
-                          <span style={{ color: "rgba(20,26,58,0.85)" }}>{r.name}</span>
+                          <span style={{ color: "rgba(16,36,31,0.85)" }}>{r.name}</span>
                           <span className="au-mono" style={{ color: r.balance < 0 ? "#C2321F" : undefined }}>{r.balance < 0 ? "−" : ""}{fmtDec(r.balance)}</span>
                         </div>
                       ))}
                     </div>
                   ))}
-                  <div style={{ borderTop: "2px solid rgba(20,26,58,0.15)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
+                  <div style={{ borderTop: "2px solid rgba(16,36,31,0.15)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
                     <span>Total Assets</span>
                     <span className="au-mono" style={{ color: "#0B7A55" }}>{bs.totalAssets < 0 ? "−" : ""}{fmtDec(bs.totalAssets)}</span>
                   </div>
@@ -1099,10 +1108,10 @@ export default function AuditPage() {
                     { title: "Tax Liabilities",     rows: bs.taxes },
                   ].map(sec => sec.rows.length === 0 ? null : (
                     <div key={sec.title} style={{ marginBottom: "1rem" }}>
-                      <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(20,26,58,0.55)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
+                      <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "rgba(16,36,31,0.55)", textTransform: "uppercase", marginBottom: "0.4rem", letterSpacing: "0.1em" }}>{sec.title}</div>
                       {sec.rows.map(r => (
                         <div key={r.name} style={{ display: "flex", justifyContent: "space-between", padding: "0.35rem 0", fontSize: "0.83rem" }}>
-                          <span style={{ color: "rgba(20,26,58,0.85)" }}>{r.name}</span>
+                          <span style={{ color: "rgba(16,36,31,0.85)" }}>{r.name}</span>
                           <span className="au-mono" style={{ color: r.balance < 0 ? "#C2321F" : undefined }}>{r.balance < 0 ? "−" : ""}{fmtDec(r.balance)}</span>
                         </div>
                       ))}
@@ -1110,13 +1119,13 @@ export default function AuditPage() {
                   ))}
                   {pl.netProfit !== 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "0.35rem 0", fontSize: "0.83rem" }}>
-                      <span style={{ color: "rgba(20,26,58,0.85)" }}>{pl.netProfit >= 0 ? "Profit" : "Loss"} for the year (from P&amp;L)</span>
+                      <span style={{ color: "rgba(16,36,31,0.85)" }}>{pl.netProfit >= 0 ? "Profit" : "Loss"} for the year (from P&amp;L)</span>
                       <span className="au-mono" style={{ color: pl.netProfit >= 0 ? "#0B7A55" : "#C2321F" }}>{pl.netProfit < 0 ? "−" : ""}{fmtDec(pl.netProfit)}</span>
                     </div>
                   )}
-                  <div style={{ borderTop: "2px solid rgba(20,26,58,0.15)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
+                  <div style={{ borderTop: "2px solid rgba(16,36,31,0.15)", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
                     <span>Total Liab. + Equity</span>
-                    <span className="au-mono" style={{ color: "#1F5EFF" }}>{bs.totalLiabEq < 0 ? "−" : ""}{fmtDec(bs.totalLiabEq)}</span>
+                    <span className="au-mono" style={{ color: "#12352D" }}>{bs.totalLiabEq < 0 ? "−" : ""}{fmtDec(bs.totalLiabEq)}</span>
                   </div>
                   {Math.abs(bs.totalAssets - bs.totalLiabEq) > 1 && (
                     <div style={{ marginTop: "0.75rem", fontSize: "0.72rem", color: "#8A5A00", background: "rgba(184,120,0,0.08)", padding: "0.5rem 0.75rem", borderRadius: 7, lineHeight: 1.6 }}>
@@ -1139,10 +1148,10 @@ export default function AuditPage() {
                 {selectedAccount && (
                   <div className="au-card">
                     <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.25rem" }}>{accounts.find(a => a.id === selectedAccount)?.name}</div>
-                    <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.55)", marginBottom: "1rem" }}>{ledgerLines.length} transaction{ledgerLines.length !== 1 ? "s" : ""}</div>
+                    <div style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.55)", marginBottom: "1rem" }}>{ledgerLines.length} transaction{ledgerLines.length !== 1 ? "s" : ""}</div>
                     <div style={{ overflowX: "auto" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
-                        <thead><tr style={{ color: "rgba(20,26,58,0.55)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", background: "#FFFFFF" }}>
+                        <thead><tr style={{ color: "rgba(16,36,31,0.55)", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", background: "#FFFFFF" }}>
                           <th style={{ textAlign: "left" }}>Entry</th>
                           <th style={{ textAlign: "left" }}>Date</th>
                           <th style={{ textAlign: "left" }}>Narration</th>
@@ -1153,21 +1162,21 @@ export default function AuditPage() {
                           {ledgerLines.map(l => {
                             const j = ledgerJournals.get(l.journal_id);
                             return (
-                              <tr key={l.id} className="au-tr" style={{ borderTop: "1px solid rgba(20,26,58,0.10)" }}>
-                                <td className="au-mono" style={{ color: "rgba(20,26,58,0.65)", fontSize: "0.7rem" }}>{j?.entry_no}</td>
-                                <td style={{ color: "rgba(20,26,58,0.75)", whiteSpace: "nowrap" }}>{j ? new Date(j.date).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"2-digit" }) : ""}</td>
-                                <td style={{ color: "rgba(20,26,58,0.85)", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j?.narration || l.narration}</td>
-                                <td className="au-mono" style={{ textAlign: "right", color: l.dr_amount > 0 ? "#0B7A55" : "rgba(20,26,58,0.28)" }}>{l.dr_amount > 0 ? fmtDec(l.dr_amount) : "—"}</td>
-                                <td className="au-mono" style={{ textAlign: "right", color: l.cr_amount > 0 ? "#1F5EFF" : "rgba(20,26,58,0.28)" }}>{l.cr_amount > 0 ? fmtDec(l.cr_amount) : "—"}</td>
+                              <tr key={l.id} className="au-tr" style={{ borderTop: "1px solid rgba(16,36,31,0.10)" }}>
+                                <td className="au-mono" style={{ color: "rgba(16,36,31,0.65)", fontSize: "0.7rem" }}>{j?.entry_no}</td>
+                                <td style={{ color: "rgba(16,36,31,0.75)", whiteSpace: "nowrap" }}>{j ? new Date(j.date).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"2-digit" }) : ""}</td>
+                                <td style={{ color: "rgba(16,36,31,0.85)", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{j?.narration || l.narration}</td>
+                                <td className="au-mono" style={{ textAlign: "right", color: l.dr_amount > 0 ? "#0B7A55" : "rgba(16,36,31,0.28)" }}>{l.dr_amount > 0 ? fmtDec(l.dr_amount) : "—"}</td>
+                                <td className="au-mono" style={{ textAlign: "right", color: l.cr_amount > 0 ? "#12352D" : "rgba(16,36,31,0.28)" }}>{l.cr_amount > 0 ? fmtDec(l.cr_amount) : "—"}</td>
                               </tr>
                             );
                           })}
                         </tbody>
                         <tfoot>
-                          <tr style={{ borderTop: "2px solid rgba(20,26,58,0.12)", fontWeight: 700 }}>
-                            <td colSpan={3} style={{ color: "rgba(20,26,58,0.55)", fontSize: "0.75rem" }}>CLOSING BALANCE</td>
+                          <tr style={{ borderTop: "2px solid rgba(16,36,31,0.12)", fontWeight: 700 }}>
+                            <td colSpan={3} style={{ color: "rgba(16,36,31,0.55)", fontSize: "0.75rem" }}>CLOSING BALANCE</td>
                             <td className="au-mono" style={{ textAlign: "right", color: "#0B7A55" }}>{fmtDec(ledgerLines.reduce((s,l) => s+l.dr_amount,0))}</td>
-                            <td className="au-mono" style={{ textAlign: "right", color: "#1F5EFF" }}>{fmtDec(ledgerLines.reduce((s,l) => s+l.cr_amount,0))}</td>
+                            <td className="au-mono" style={{ textAlign: "right", color: "#12352D" }}>{fmtDec(ledgerLines.reduce((s,l) => s+l.cr_amount,0))}</td>
                           </tr>
                         </tfoot>
                       </table>
@@ -1182,35 +1191,35 @@ export default function AuditPage() {
 
       {/* ── Entry Detail Modal ───────────────────────────────────────────── */}
       {modalJournal && (
-        <div onClick={() => setModalJournal(null)} style={{ position: "fixed", inset: 0, background: "rgba(20,26,58,0.33)", backdropFilter: "blur(4px)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.15)", borderRadius: 16, width: "100%", maxWidth: 560, maxHeight: "85vh", overflow: "auto", boxShadow: "0 24px 80px rgba(20,26,58,0.30)" }}>
+        <div onClick={() => setModalJournal(null)} style={{ position: "fixed", inset: 0, background: "rgba(16,36,31,0.33)", backdropFilter: "blur(4px)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", border: "1px solid rgba(16,36,31,0.15)", borderRadius: 16, width: "100%", maxWidth: 560, maxHeight: "85vh", overflow: "auto", boxShadow: "0 24px 80px rgba(16,36,31,0.30)" }}>
 
             {/* Header */}
-            <div style={{ padding: "1.1rem 1.25rem 0.9rem", borderBottom: "1px solid rgba(20,26,58,0.11)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ padding: "1.1rem 1.25rem 0.9rem", borderBottom: "1px solid rgba(16,36,31,0.11)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'IBM Plex Mono',monospace", color: "#232A63", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 }}>{modalJournal.entry_no}</div>
-                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#141A3A", lineHeight: 1.4 }}>{modalJournal.narration || "—"}</div>
+                <div style={{ fontFamily: "'IBM Plex Mono',monospace", color: "#0F2B25", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 }}>{modalJournal.entry_no}</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#10241F", lineHeight: 1.4 }}>{modalJournal.narration || "—"}</div>
               </div>
-              <button onClick={() => setModalJournal(null)} style={{ background: "#FFFFFF", border: "none", color: "rgba(20,26,58,0.75)", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: "1.1rem", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              <button onClick={() => setModalJournal(null)} style={{ background: "#FFFFFF", border: "none", color: "rgba(16,36,31,0.75)", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: "1.1rem", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
             </div>
 
             {/* Meta */}
-            <div style={{ padding: "0.7rem 1.25rem", borderBottom: "1px solid rgba(20,26,58,0.10)", display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center" }}>
-              <span style={{ fontSize: "0.78rem", color: "rgba(20,26,58,0.75)" }}>{new Date(modalJournal.date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</span>
-              {(() => { const c = { sales:"#0B7A55",receipt:"#0B7A55",income:"#0B7A55",payment:"#C2321F",purchase:"#C2321F",expense:"#C2321F",journal:"#1F5EFF",contra:"#5B4BC4",debit_note:"#8A5A00",credit_note:"#8A5A00" } as Record<string,string>; const col = c[modalJournal.type] ?? "#141A3A"; return <span style={{ fontSize: "0.72rem", fontWeight: 700, color: col, background: col+"15", padding: "2px 10px", borderRadius: 20 }}>{modalJournal.type}</span>; })()}
+            <div style={{ padding: "0.7rem 1.25rem", borderBottom: "1px solid rgba(16,36,31,0.10)", display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center" }}>
+              <span style={{ fontSize: "0.78rem", color: "rgba(16,36,31,0.75)" }}>{new Date(modalJournal.date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</span>
+              {(() => { const c = { sales:"#0B7A55",receipt:"#0B7A55",income:"#0B7A55",payment:"#C2321F",purchase:"#C2321F",expense:"#C2321F",journal:"#12352D",contra:"#8A6420",debit_note:"#8A5A00",credit_note:"#8A5A00" } as Record<string,string>; const col = c[modalJournal.type] ?? "#10241F"; return <span style={{ fontSize: "0.72rem", fontWeight: 700, color: col, background: col+"15", padding: "2px 10px", borderRadius: 20 }}>{modalJournal.type}</span>; })()}
               <span style={{ fontSize: "0.72rem", fontWeight: 700, color: modalJournal.status==="posted"?"#0B7A55":"#8A5A00", background: modalJournal.status==="posted"?"rgba(11,122,85,0.1)":"rgba(184,120,0,0.1)", padding: "2px 10px", borderRadius: 20 }}>{modalJournal.status}</span>
-              {modalJournal.reference_no && <span style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)" }}>Ref: {modalJournal.reference_no}</span>}
+              {modalJournal.reference_no && <span style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.65)" }}>Ref: {modalJournal.reference_no}</span>}
             </div>
 
             {/* Totals */}
-            <div style={{ padding: "0.8rem 1.25rem", borderBottom: "1px solid rgba(20,26,58,0.10)", display: "flex", gap: "2rem" }}>
+            <div style={{ padding: "0.8rem 1.25rem", borderBottom: "1px solid rgba(16,36,31,0.10)", display: "flex", gap: "2rem" }}>
               {[
                 { label: "Total Debit", val: modalJournal.total_debit, color: "#C2321F" },
                 { label: "Total Credit", val: modalJournal.total_credit, color: "#0B7A55" },
                 { label: "Difference", val: Math.abs(modalJournal.total_debit - modalJournal.total_credit), color: Math.abs(modalJournal.total_debit - modalJournal.total_credit) < 1 ? "#0B7A55" : "#C2321F" },
               ].map(t => (
                 <div key={t.label}>
-                  <div style={{ fontSize: "0.58rem", color: "rgba(20,26,58,0.55)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{t.label}</div>
+                  <div style={{ fontSize: "0.58rem", color: "rgba(16,36,31,0.55)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{t.label}</div>
                   <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: "1.05rem", fontWeight: 700, color: t.color }}>{fmt(t.val)}</div>
                 </div>
               ))}
@@ -1218,38 +1227,38 @@ export default function AuditPage() {
 
             {/* Lines */}
             <div style={{ padding: "0.8rem 1.25rem 1.1rem" }}>
-              <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "rgba(20,26,58,0.55)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.6rem" }}>Double-Entry Lines</div>
+              <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "rgba(16,36,31,0.55)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.6rem" }}>Double-Entry Lines</div>
               {modalLoading ? (
-                <div style={{ color: "rgba(20,26,58,0.55)", fontSize: "0.82rem", padding: "1rem 0", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ display: "inline-block", width: 12, height: 12, border: "2px solid #1F5EFF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                <div style={{ color: "rgba(16,36,31,0.55)", fontSize: "0.82rem", padding: "1rem 0", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ display: "inline-block", width: 12, height: 12, border: "2px solid #12352D", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
                   Loading lines…
                 </div>
               ) : !modalJournal.modalLines?.length ? (
-                <div style={{ color: "rgba(20,26,58,0.55)", fontSize: "0.82rem" }}>No line items found.</div>
+                <div style={{ color: "rgba(16,36,31,0.55)", fontSize: "0.82rem" }}>No line items found.</div>
               ) : (
                 <div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.3rem 0", borderBottom: "1px solid rgba(20,26,58,0.11)", marginBottom: "0.25rem" }}>
-                    <span style={{ fontSize: "0.62rem", color: "rgba(20,26,58,0.55)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Account</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.3rem 0", borderBottom: "1px solid rgba(16,36,31,0.11)", marginBottom: "0.25rem" }}>
+                    <span style={{ fontSize: "0.62rem", color: "rgba(16,36,31,0.55)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Account</span>
                     <span style={{ fontSize: "0.62rem", color: "#C2321F", fontWeight: 700, textTransform: "uppercase", textAlign: "right" }}>Debit</span>
                     <span style={{ fontSize: "0.62rem", color: "#0B7A55", fontWeight: 700, textTransform: "uppercase", textAlign: "right" }}>Credit</span>
                   </div>
                   {modalJournal.modalLines.map((l, i) => (
-                    <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.42rem 0", borderBottom: "1px solid rgba(20,26,58,0.10)" }}>
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.42rem 0", borderBottom: "1px solid rgba(16,36,31,0.10)" }}>
                       <div>
-                        <div style={{ fontSize: "0.84rem", color: "#141A3A", fontWeight: 500 }}>{l.account}</div>
-                        {l.accountType && <div style={{ fontSize: "0.65rem", color: "rgba(20,26,58,0.55)", marginTop: 1 }}>{l.accountType}</div>}
+                        <div style={{ fontSize: "0.84rem", color: "#10241F", fontWeight: 500 }}>{l.account}</div>
+                        {l.accountType && <div style={{ fontSize: "0.65rem", color: "rgba(16,36,31,0.55)", marginTop: 1 }}>{l.accountType}</div>}
                       </div>
-                      <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.dr > 0 ? "#C2321F" : "rgba(20,26,58,0.28)", fontWeight: l.dr > 0 ? 600 : 400 }}>
+                      <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.dr > 0 ? "#C2321F" : "rgba(16,36,31,0.28)", fontWeight: l.dr > 0 ? 600 : 400 }}>
                         {l.dr > 0 ? l.dr.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
                       </div>
-                      <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.cr > 0 ? "#0B7A55" : "rgba(20,26,58,0.28)", fontWeight: l.cr > 0 ? 600 : 400 }}>
+                      <div style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.8rem", color: l.cr > 0 ? "#0B7A55" : "rgba(16,36,31,0.28)", fontWeight: l.cr > 0 ? 600 : 400 }}>
                         {l.cr > 0 ? l.cr.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 }) : "—"}
                       </div>
                     </div>
                   ))}
                   {/* Totals footer */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.55rem 0 0", borderTop: "1px solid rgba(20,26,58,0.15)", marginTop: "0.2rem" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(20,26,58,0.70)" }}>Total</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", gap: "0.5rem", padding: "0.55rem 0 0", borderTop: "1px solid rgba(16,36,31,0.15)", marginTop: "0.2rem" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "rgba(16,36,31,0.70)" }}>Total</span>
                     <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#C2321F" }}>{modalJournal.modalLines.reduce((s,l) => s+l.dr, 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span>
                     <span style={{ textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.82rem", fontWeight: 700, color: "#0B7A55" }}>{modalJournal.modalLines.reduce((s,l) => s+l.cr, 0).toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 })}</span>
                   </div>
@@ -1258,8 +1267,8 @@ export default function AuditPage() {
             </div>
 
             {/* Footer */}
-            <div style={{ padding: "0.75rem 1.25rem 1rem", borderTop: "1px solid rgba(20,26,58,0.10)" }}>
-              <button onClick={() => setModalJournal(null)} style={{ width: "100%", background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.15)", color: "rgba(20,26,58,0.75)", padding: "9px", borderRadius: 8, fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>Close</button>
+            <div style={{ padding: "0.75rem 1.25rem 1rem", borderTop: "1px solid rgba(16,36,31,0.10)" }}>
+              <button onClick={() => setModalJournal(null)} style={{ width: "100%", background: "#FFFFFF", border: "1px solid rgba(16,36,31,0.15)", color: "rgba(16,36,31,0.75)", padding: "9px", borderRadius: 8, fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>Close</button>
             </div>
           </div>
         </div>
