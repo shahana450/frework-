@@ -10,7 +10,10 @@ import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import { useFinancialYear } from "@/lib/selectedFy";
 import PageHero, { HeroAction, HeroFyPicker, HT, SERIF } from "@/components/finance/PageHero";
-import type { AuditCheck, AuditStatus } from "@/lib/audit360";
+import type { AuditCheck, AuditStatus, AuditItem } from "@/lib/audit360";
+import { fixFor, itemFix } from "@/lib/auditFix";
+import { useTally } from "@/lib/tallyConnection";
+import { pushToTally } from "@/lib/tallyPushRun";
 import { parseGstr1, parseGstr3b, parseGstr2b, parse26asRows, type PortalData } from "@/lib/auditPortal";
 
 type Report = { fy: { id: string; label: string }; checks: AuditCheck[]; score: number; counts: Record<AuditStatus, number> };
@@ -45,6 +48,48 @@ export default function Audit360() {
   const [bizId, setBizId] = useState<string | null>(null);
   const [bizName, setBizName] = useState("");
   const { years, fy, setFy } = useFinancialYear(bizId);
+  // ── Corrections: rectification entries, sent to Tally when it's connected ──
+  const tally = useTally({ autoConnect: false });
+  const [ledgers, setLedgers] = useState<{ id: string; name: string }[]>([]);
+  const [moveTo, setMoveTo] = useState<Record<string, string>>({});
+  const [fixing, setFixing] = useState("");
+  const [fixMsg, setFixMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => {
+    if (!bizId) return;
+    supabase.from("fw_fin_chart_of_accounts").select("id,name").eq("business_id", bizId).eq("is_group", false).order("name").limit(2000).then(({ data }) => setLedgers((data ?? []) as { id: string; name: string }[]));
+  }, [bizId]);
+  async function sendToTally(list: { id: string; date: string; entryNo: string }[]): Promise<string> {
+    if (!bizId || !list.length) return "";
+    if (tally.status !== "connected" || !tally.company) return " Tally isn't connected — push it from Books when Tally is open.";
+    const r = await pushToTally({ bizId, ids: list.map(x => x.id), dates: Object.fromEntries(list.map(x => [x.id, x.date])), company: tally.company, port: tally.port, educational: tally.educational });
+    return r.ok ? ` Sent to Tally (${tally.company}).` : ` Not sent to Tally: ${r.message}`;
+  }
+  const fixDate = () => { const t = new Date().toLocaleDateString("en-CA"); return fy ? (t > fy.end_date ? fy.end_date : t < fy.start_date ? fy.start_date : t) : t; };
+  async function moveSuspense(it: AuditItem) {
+    const to = moveTo[it.account_id ?? ""]; if (!bizId || !to || !it.account_id || !it.amount) return;
+    const target = ledgers.find(l => l.id === to)?.name ?? "the ledger";
+    if (!window.confirm(`Post a rectification entry moving ₹${Math.round(it.amount).toLocaleString("en-IN")} from ${it.account} to ${target}?`)) return;
+    setFixing(it.account_id); setFixMsg(null);
+    const amt = it.amount, date = fixDate();
+    const lines = it.side === "dr" ? [{ account_id: to, dr: amt, cr: 0 }, { account_id: it.account_id, dr: 0, cr: amt }] : [{ account_id: it.account_id, dr: amt, cr: 0 }, { account_id: to, dr: 0, cr: amt }];
+    const r = await fetch("/api/finance/journals/post", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, mode: "post", date, type: "journal", narration: `Rectification (360° audit): ${it.account} balance moved to ${target}`, source: "audit_fix", lines, metadata: { audit_fix: "suspense_nil" } }) });
+    const d = await r.json().catch(() => ({}));
+    setFixing("");
+    if (!r.ok) { setFixMsg({ ok: false, text: d.error ?? "Couldn't post the correction." }); return; }
+    const t = await sendToTally([{ id: d.id, date, entryNo: d.entry_no }]);
+    setFixMsg({ ok: true, text: `✓ Posted ${d.entry_no}.${t}` }); setTick(x => x + 1);
+  }
+  async function reverseEntry(it: AuditItem, why: string) {
+    if (!bizId || !it.journal_id) return;
+    if (!window.confirm(`Reverse ${it.entry_no}? A reversal entry cancels it; the original stays in the books for the audit trail.`)) return;
+    setFixing(it.journal_id); setFixMsg(null);
+    const r = await fetch("/api/finance/journals/reverse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, journal_id: it.journal_id, reason: why }) });
+    const d = await r.json().catch(() => ({}));
+    setFixing("");
+    if (!r.ok) { setFixMsg({ ok: false, text: d.error ?? "Couldn't reverse the entry." }); return; }
+    const t = await sendToTally([{ id: d.reversal_id, date: it.date ?? fixDate(), entryNo: d.reversal_entry_no }]);
+    setFixMsg({ ok: true, text: `✓ ${it.entry_no} reversed by ${d.reversal_entry_no}.${t}` }); setTick(x => x + 1);
+  }
   const [report, setReport] = useState<Report | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -202,6 +247,7 @@ export default function Audit360() {
         ] : undefined} />
 
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "28px 20px 60px", display: "flex", flexDirection: "column", gap: 22 }}>
+        {fixMsg && <div role="status" style={{ ...card, padding: "12px 18px", color: fixMsg.ok ? "#0B5E42" : "#B4321F" }}>{fixMsg.text}</div>}
         {shelfMsg && <div role="status" style={{ ...card, padding: "12px 18px", color: shelfMsg.startsWith("✓") ? "#0B5E42" : "#5E6B66" }}>{shelfMsg}</div>}
         {err && <div role="alert" style={{ ...card, padding: "14px 18px", color: "#B4321F" }}>{err}</div>}
 
@@ -263,6 +309,11 @@ export default function Audit360() {
                           </span>
                         )}
                         {x.law && <span style={{ fontSize: 12, color: HT.muted, fontStyle: "italic" }}>{x.law}</span>}
+                        {(() => { const f = fixFor(x); return f ? (
+                          <span style={{ marginTop: 6, padding: "8px 12px", borderRadius: 10, background: "#FBF7EE", border: "1px solid #EFE2C4", fontSize: 13, color: "#4A3A12", display: "block" }}>
+                            <b style={{ color: "#8A6420" }}>Suggested correction · </b>{f.text}
+                            {f.href && <> <a href={f.href} onClick={e => e.stopPropagation()} style={{ color: "#8A6420", fontWeight: 700 }}>{f.cta} →</a></>}
+                          </span>) : null; })()}
                       </span>
                       <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <span style={{ fontSize: 12, fontWeight: 800, padding: "4px 10px", borderRadius: 999, background: t.bg, color: t.fg, whiteSpace: "nowrap" }}>{t.label}</span>
@@ -272,7 +323,7 @@ export default function Audit360() {
                     {isOpen && (
                       <div style={{ padding: "0 22px 16px 46px", overflowX: "auto" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, fontVariantNumeric: "tabular-nums" }}>
-                          <thead><tr style={{ color: HT.muted, textAlign: "left" }}><th style={{ padding: "6px 8px" }}>Entry</th><th style={{ padding: "6px 8px" }}>Date</th><th style={{ padding: "6px 8px" }}>What</th><th style={{ padding: "6px 8px", textAlign: "right" }}>Amount</th></tr></thead>
+                          <thead><tr style={{ color: HT.muted, textAlign: "left" }}><th style={{ padding: "6px 8px" }}>Entry</th><th style={{ padding: "6px 8px" }}>Date</th><th style={{ padding: "6px 8px" }}>What</th><th style={{ padding: "6px 8px", textAlign: "right" }}>Amount</th><th style={{ padding: "6px 8px" }}>Correct</th></tr></thead>
                           <tbody>
                             {x.items.map((it, i) => (
                               <tr key={i} style={{ borderTop: `1px solid ${HT.line}` }}>
@@ -280,6 +331,18 @@ export default function Audit360() {
                                 <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{it.date ?? "—"}</td>
                                 <td style={{ padding: "7px 8px" }}>{it.note}</td>
                                 <td style={{ padding: "7px 8px", textAlign: "right" }}>{it.amount ? inr(it.amount) : "—"}</td>
+                                <td style={{ padding: "5px 8px", whiteSpace: "nowrap" }}>{(() => {
+                                  const k = itemFix(x.id, it), b: React.CSSProperties = { height: 30, padding: "0 12px", borderRadius: 999, border: "1px solid #E6DFD0", background: "#FFFFFF", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, color: HT.ink };
+                                  if (k === "reclass") return (<span style={{ display: "inline-flex", gap: 6 }}>
+                                    <select aria-label="Move to ledger" value={moveTo[it.account_id!] ?? ""} onChange={e => setMoveTo(m => ({ ...m, [it.account_id!]: e.target.value }))} style={{ height: 30, borderRadius: 8, border: "1px solid #E6DFD0", maxWidth: 180, fontFamily: "inherit" }}>
+                                      <option value="">Move to…</option>{ledgers.filter(l => l.id !== it.account_id).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                                    </select>
+                                    <button type="button" disabled={!moveTo[it.account_id!] || fixing === it.account_id} onClick={() => moveSuspense(it)} style={{ ...b, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>{fixing === it.account_id ? "Posting…" : "Move"}</button>
+                                  </span>);
+                                  if (k === "reverse") return <button type="button" disabled={fixing === it.journal_id} onClick={() => reverseEntry(it, x.id === "duplicates" ? "Duplicate entry (360° audit)" : "Wrong date (360° audit)")} style={b}>{fixing === it.journal_id ? "Reversing…" : "Reverse"}</button>;
+                                  if (k === "open") return <Link href={`/finance/journals?id=${it.journal_id}`} style={{ ...b, display: "inline-flex", alignItems: "center", textDecoration: "none" }}>Open to fix</Link>;
+                                  return <span style={{ color: HT.muted }}>—</span>;
+                                })()}</td>
                               </tr>
                             ))}
                           </tbody>

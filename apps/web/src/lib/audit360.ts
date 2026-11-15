@@ -5,7 +5,7 @@ import type { QJournal } from "./bookQueries";
 
 export type AuditAccount = { id: string; name: string; type: string; sub_type: string | null };
 export type AuditStatus = "ok" | "warn" | "fail" | "na";
-export type AuditItem = { journal_id?: string; entry_no?: string; date?: string; amount?: number; note: string };
+export type AuditItem = { journal_id?: string; entry_no?: string; date?: string; amount?: number; note: string; account_id?: string; account?: string; side?: "dr" | "cr" };
 export type AuditCheck = {
   id: string; section: "books" | "cash_law" | "gstr1" | "gstr3b" | "gstr2b" | "tds_received" | "tds_deducted"; title: string; law?: string;
   status: AuditStatus; summary: string; books?: number | null; portal?: number | null; diff?: number | null; items: AuditItem[];
@@ -64,7 +64,7 @@ export function runAudit360(accounts: AuditAccount[], journals: QJournal[], peri
   const susp = accounts.filter(a => isSuspense(a) && Math.abs(bal.get(a.id) ?? 0) >= 1);
   add({ id: "suspense_nil", section: "books", title: "Suspense and difference ledgers are nil", status: susp.length ? "warn" : "ok",
     summary: susp.length ? `${susp.map(a => `${a.name} ${inr(bal.get(a.id)!)}`).join(", ")} — clear these before closing the year.` : "No balance in suspense or difference ledgers.",
-    items: susp.map(a => ({ amount: Math.abs(bal.get(a.id)!), note: `${a.name}: ${inr(bal.get(a.id)!)} ${bal.get(a.id)! > 0 ? "Dr" : "Cr"}` })) });
+    items: susp.map(a => ({ amount: Math.abs(bal.get(a.id)!), note: `${a.name}: ${inr(bal.get(a.id)!)} ${bal.get(a.id)! > 0 ? "Dr" : "Cr"}`, account_id: a.id, account: a.name, side: bal.get(a.id)! > 0 ? "dr" as const : "cr" as const })) });
 
   // Opening balances brought in
   if (opts.openingPosted !== undefined) add({ id: "opening_posted", section: "books", title: "Opening balances brought forward", status: opts.openingPosted ? "ok" : "warn",
