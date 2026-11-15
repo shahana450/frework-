@@ -30,7 +30,9 @@ function LedgerContent() {
   const [bizId, setBizId] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   // Edit ledger: name, group, code
-  const [edit, setEdit] = useState<{ name: string; head: string; code: string; busy: boolean; err: string; isNew?: boolean } | null>(null);
+  const [edit, setEdit] = useState<{ name: string; head: string; code: string; busy: boolean; err: string; isNew?: boolean; ob?: string; obSide?: "dr" | "cr"; obWas?: string; obAsOn?: string } | null>(null);
+  // The opening balance shown in the create / edit dialog comes from the current year's opening entry
+  const loadOpening = (accId: string) => { fetch(`/api/finance/opening-balances?business_id=${bizId}&view=one&account_id=${accId}`).then(r => r.json()).then(o => { if (o && o.amount != null) setEdit(e => e && !e.isNew ? { ...e, ob: o.amount ? String(o.amount) : "", obSide: o.side === "cr" ? "cr" : "dr", obWas: `${o.amount}:${o.side}`, obAsOn: o.as_on ?? "" } : e); }).catch(() => null); };
   const [selectedAccId, setSelectedAccId] = useState(searchParams.get("account") ?? "");
   const [selectedAcc, setSelectedAcc] = useState<Account | null>(null);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
@@ -379,6 +381,13 @@ function LedgerContent() {
                     <label style={{ display: "grid", gap: 5, fontSize: "0.85rem", color: T.muted }}>Code
                       <input value={edit.code} onChange={e => setEdit({ ...edit, code: e.target.value })} style={{ height: 42, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 12px", fontSize: "1rem", fontFamily: "inherit", color: T.ink }} />
                     </label>
+                    {(() => { const h = LEDGER_HEADS.find(x => x.key === edit.head); return h && (h.type === "income" || h.type === "expense") ? null : (
+                      <label style={{ display: "grid", gap: 5, fontSize: "0.85rem", color: T.muted }}>Opening balance{edit.obAsOn ? ` (as on ${edit.obAsOn})` : " (start of the current year)"}
+                        <span style={{ display: "flex", gap: 8 }}>
+                          <input inputMode="decimal" placeholder="0.00" value={edit.ob ?? ""} onChange={e => setEdit({ ...edit, ob: e.target.value.replace(/[^0-9.]/g, "") })} style={{ flex: 1, height: 42, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 12px", fontSize: "1rem", fontFamily: "inherit", color: T.ink, textAlign: "right", fontVariantNumeric: "tabular-nums" }} />
+                          {(["dr", "cr"] as const).map(sd => <button key={sd} type="button" onClick={() => setEdit({ ...edit, obSide: sd })} style={{ ...lightBtn, height: 42, background: (edit.obSide ?? "dr") === sd ? "#12352D" : T.paper, color: (edit.obSide ?? "dr") === sd ? "#FFFFFF" : T.ink }}>{sd === "dr" ? "Dr" : "Cr"}</button>)}
+                        </span>
+                      </label>); })()}
                     {!edit.isNew && <div style={{ fontSize: "0.82rem", color: T.muted, lineHeight: 1.5 }}>Every entry already posted to this ledger moves with it — reports, Trial Balance and Balance Sheet follow the new group. If the ledger is already in Tally, rename it there too, or the next push creates a new ledger.</div>}
                     {edit.err && <div role="alert" style={{ color: "#B4321F", fontSize: "0.9rem" }}>{edit.err}</div>}
                     <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -389,6 +398,16 @@ function LedgerContent() {
                         const d = await r.json().catch(() => ({}));
                         if (!r.ok) { setEdit({ ...edit, busy: false, err: d.error ?? "Couldn't save." }); return; }
                         if (d.created) { setAccounts(list => [...list, d.account]); setSelectedAccId(d.account.id); } else setAccounts(list => list.map(a => a.id === selectedAcc?.id ? { ...a, ...d.account } : a));
+                        const accId = d.created ? d.account.id : selectedAcc?.id;
+                        const obNow = `${Number(edit.ob) || 0}:${edit.obSide ?? "dr"}`;
+                        const isPl = ["income", "expense"].includes(LEDGER_HEADS.find(x => x.key === edit.head)?.type ?? "");
+                        if (accId && !isPl && obNow !== (edit.obWas ?? "0:dr")) {
+                          const o = await fetch("/api/finance/opening-balances", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "one", business_id: bizId, account_id: accId, amount: Number(edit.ob) || 0, side: edit.obSide ?? "dr" }) });
+                          const od = await o.json().catch(() => ({}));
+                          if (!o.ok) { setEdit({ ...edit, busy: false, err: `Ledger saved, but the opening balance wasn't: ${od.error ?? "try again"}` }); return; }
+                          if (od.difference) window.alert(`Opening balance saved. Debits and credits differ by ₹${Math.abs(od.difference).toLocaleString("en-IN")} — it sits in "Difference in Opening Balances" until the other ledgers' openings are entered.`);
+                          setSelectedAccId(""); setTimeout(() => setSelectedAccId(accId), 0);
+                        }
                         setEdit(null);
                         if (d.note) window.alert(d.note);
                       }} style={{ ...lightBtn, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>{edit.busy ? "Saving…" : "Save"}</button>
@@ -406,7 +425,7 @@ function LedgerContent() {
                   <h1 style={{ margin: "4px 0", fontSize: "2.6rem", fontWeight: 400, fontStyle: "italic", letterSpacing: "-0.01em" }}>{selectedAcc.name}</h1>
                   <div style={{ color: T.muted, fontSize: "0.92rem" }}>Code {selectedAcc.code} · Type {selectedAcc.type} · Normal balance {normalSide}</div>
                 </div>
-                <button onClick={() => { const a = selectedAcc as Account & { sub_type?: string | null; group_key?: string | null }; const h = LEDGER_HEADS.find(x => x.key === a.group_key) ?? LEDGER_HEADS.find(x => x.type === a.type && x.sub_type === a.sub_type) ?? inferHead(a.name) ?? LEDGER_HEADS.find(x => x.type === a.type); setEdit({ name: a.name, head: h?.key ?? "", code: a.code ?? "", busy: false, err: "" }); }} style={{ ...lightBtn, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>✎ Edit ledger</button>
+                <button onClick={() => { const a = selectedAcc as Account & { sub_type?: string | null; group_key?: string | null }; const h = LEDGER_HEADS.find(x => x.key === a.group_key) ?? LEDGER_HEADS.find(x => x.type === a.type && x.sub_type === a.sub_type) ?? inferHead(a.name) ?? LEDGER_HEADS.find(x => x.type === a.type); setEdit({ name: a.name, head: h?.key ?? "", code: a.code ?? "", busy: false, err: "" }); loadOpening(a.id); }} style={{ ...lightBtn, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>✎ Edit ledger</button>
                 <button onClick={() => goAcc(-1)} disabled={idx <= 0} style={{ ...lightBtn, opacity: idx <= 0 ? 0.5 : 1 }}>← Previous account</button>
                 <button onClick={() => goAcc(1)} disabled={idx < 0 || idx >= order.length - 1} style={{ ...lightBtn, opacity: idx >= order.length - 1 ? 0.5 : 1 }}>Next account →</button>
               </div>

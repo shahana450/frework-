@@ -37,6 +37,15 @@ export async function GET(req: NextRequest) {
     const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label,start_date,end_date,is_current,is_locked").eq("business_id", bizId!).order("start_date", { ascending: false });
     const sp = new URL(req.url).searchParams;
     // Every ledger with its opening balance for one year (from the opening entry in force)
+    // One ledger's opening balance in the current year (for the ledger edit dialog)
+    if (sp.get("view") === "one") {
+      const fy = (fys ?? []).find(f => f.is_current) ?? (fys ?? [])[0];
+      const cur = fy ? await currentOpening(bizId!, fy.id) : undefined;
+      let net = 0;
+      if (cur) { const { data: ls } = await supabase.from("fw_fin_journal_lines").select("dr_amount,cr_amount").eq("journal_id", cur.id).eq("account_id", sp.get("account_id") ?? ""); for (const l of ls ?? []) net += (Number(l.dr_amount) || 0) - (Number(l.cr_amount) || 0); }
+      net = Math.round(net * 100) / 100;
+      return NextResponse.json({ fy: fy?.label ?? null, as_on: fy?.start_date ?? null, amount: Math.abs(net), side: net < 0 ? "cr" : "dr" });
+    }
     if (sp.get("view") === "ledgers") {
       const fyId = sp.get("fy_id") ?? "";
       const accounts: { id: string; name: string; type: string; sub_type: string | null }[] = [];
@@ -94,6 +103,41 @@ export async function POST(req: NextRequest) {
     if (gate instanceof NextResponse) return gate;
     // 2a) Edit: every ledger's opening balance typed on the page. The entry in force is reversed and a new one posted —
     //     history is never rewritten.
+    // 2b) One ledger's opening balance (from the ledger create / edit dialog): the year's opening entry is re-posted with
+    //     that ledger changed; any imbalance goes to "Difference in Opening Balances" (as Tally does) until the rest is entered.
+    if (body.mode === "one") {
+      if (!can(gate.role, "post")) return NextResponse.json({ error: "Your role can't change opening balances." }, { status: 403 });
+      const one = body as unknown as { account_id?: string; amount?: number; side?: "dr" | "cr"; fy_id?: string };
+      const fyQ = supabase.from("fw_fin_financial_years").select("id,label,start_date,is_locked").eq("business_id", bizId!);
+      const { data: fy } = one.fy_id ? await fyQ.eq("id", one.fy_id).maybeSingle() : await fyQ.eq("is_current", true).maybeSingle();
+      if (!fy) return NextResponse.json({ error: "Add a financial year first (Settings → Financial Years)." }, { status: 400 });
+      if (fy.is_locked && !can(gate.role, "lock")) return NextResponse.json({ error: `FY ${fy.label.replace(/^FY\s*/i, "")} is locked.` }, { status: 403 });
+      const { data: acc } = await supabase.from("fw_fin_chart_of_accounts").select("id,type").eq("business_id", bizId!).eq("id", one.account_id ?? "").maybeSingle();
+      if (!acc) return NextResponse.json({ error: "Ledger not found." }, { status: 404 });
+      if (acc.type === "income" || acc.type === "expense") return NextResponse.json({ error: "Income and expense ledgers start each year at nil — no opening balance." }, { status: 400 });
+      const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+      const amount = r2(Math.abs(Number(one.amount) || 0));
+      const prior = await currentOpening(bizId!, fy.id);
+      const bal = new Map<string, number>();
+      if (prior) { const { data: ls } = await supabase.from("fw_fin_journal_lines").select("account_id,dr_amount,cr_amount").eq("journal_id", prior.id); for (const l of ls ?? []) bal.set(l.account_id, r2((bal.get(l.account_id) ?? 0) + (Number(l.dr_amount) || 0) - (Number(l.cr_amount) || 0))); }
+      const diffRes = await resolveLedgers(supabase, bizId!, [{ name: "Difference in Opening Balances" }], { "Difference in Opening Balances": "capital" }, "Opening balances");
+      const diffId = diffRes.ok ? diffRes.ids.get("Difference in Opening Balances")?.id : undefined;
+      if (!diffId) return NextResponse.json({ error: "Couldn't set up the opening-difference ledger." }, { status: 500 });
+      bal.delete(diffId);
+      bal.set(acc.id, one.side === "cr" ? -amount : amount);
+      const net = r2([...bal.values()].reduce((s, v) => s + v, 0));
+      if (net !== 0) bal.set(diffId, -net);
+      const lines = [...bal].filter(([, v]) => v !== 0).map(([id, v]) => ({ accountId: id, dr: v > 0 ? v : 0, cr: v < 0 ? -v : 0 }));
+      if (prior) await reverseJournal(supabase, bizId!, gate.user.id, prior.id, "Opening balance changed from the ledger", fy.start_date);
+      let entryNo: string | null = null;
+      if (lines.length >= 2) {
+        const posted = await postJournal(supabase, { businessId: bizId!, actorId: gate.user.id, date: fy.start_date, type: "journal", narration: `Opening balances as on ${fy.start_date}${prior ? ` (revised; replaces ${prior.entry_no})` : ""}`,
+          source: "opening_balances", force: fy.is_locked, reviewed: true, lines, metadata: { client_key: `${keyFor(fy.id)}:o${Date.now()}`, opening: true, replaces: prior?.id ?? null } });
+        entryNo = posted.entryNo;
+      }
+      await logAudit(supabase, { businessId: bizId!, actor: gate.user.id, action: "opening_balance_ledger", source: "opening_balances", detail: { fy: fy.label, account: acc.id, amount, side: one.side ?? "dr", entry_no: entryNo, difference: net } });
+      return NextResponse.json({ ok: true, entry_no: entryNo, difference: net });
+    }
     if (body.mode === "edit") {
       if (!can(gate.role, "post")) return NextResponse.json({ error: "Your role can't change opening balances." }, { status: 403 });
       const { data: fy } = await supabase.from("fw_fin_financial_years").select("id,label,start_date,is_locked").eq("business_id", bizId!).eq("id", body.fy_id ?? "").maybeSingle();

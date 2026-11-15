@@ -111,7 +111,7 @@ const HOME_GROUPS = [
   { label: "Compliance", span: 2, items: ["/finance/gst/returns", "/finance/audit360"] },
   { label: "Reconciliations", span: 4, items: ["/finance/banking/reconcile", "/finance/gst/reconcile", "/finance/gst/itc", "/finance/audit"] },
   { label: "Inventory & files", span: 2, items: ["/finance/inventory", "/finance/shelf"] },
-  { label: "Settings", span: 4, items: ["/finance/tally", "/finance/settings", "/finance/help"] },
+  { label: "Settings", span: 4, items: ["/finance/tally", "/finance/settings", "/finance/help", "#signout"] },
 ];
 // Home-only shortcuts that are not in the one-line strip
 const HOME_EXTRA = [
@@ -120,6 +120,7 @@ const HOME_EXTRA = [
   { href: "/finance/gst/reconcile", label: "GSTR-1 / 3B vs Books" },
   { href: "/finance/gst/itc", label: "ITC vs 2B" },
   { href: "/finance/audit", label: "Analysis & Audit" },
+  { href: "#signout", label: "Sign out" },
 ];
 const TOP_ICONS = [
   { href: "/finance", label: "Home" },
@@ -577,7 +578,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                     {g.items.map(t => {
                       const on = t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
                       return (
-                        <Link key={t.href} href={t.href} prefetch={false} onClick={e => { if (e.shiftKey) { e.preventDefault(); openInWindow(t.href, t.label); } }} className={on ? "on" : undefined} aria-current={on ? "page" : undefined}>
+                        <Link key={t.href} href={t.href === "#signout" ? "/login" : t.href} prefetch={false} onClick={async e => { if (t.href === "#signout") { e.preventDefault(); if (!window.confirm("Sign out of FreBook on this device?")) return; await supabase.auth.signOut(); window.location.href = "/login"; return; } if (e.shiftKey) { e.preventDefault(); openInWindow(t.href, t.label); } }} className={on ? "on" : undefined} aria-current={on ? "page" : undefined}>
                           <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(t.href)} /></svg></span>
                           <span>{t.href === "/finance/chat-book" ? "FreBook AI" : t.label}</span>
                         </Link>

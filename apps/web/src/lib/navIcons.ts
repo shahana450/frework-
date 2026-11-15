@@ -53,7 +53,7 @@ const BY_PATH: Record<string, string> = {
   "/finance/expenses": P.wallet, "/finance/payment": P.card, "/finance/banking": P.bank, "/finance/banking/import": P.upload, "/finance/banking/history": P.history, "/finance/payroll": P.payroll,
   "/finance/books": P.books, "/finance/journals": P.journal, "/finance/ledger": P.ledger, "/finance/reports?tab=trial_balance": P.scale, "/finance/chart-of-accounts": P.tree, "/finance/opening-balances": P.upload, "/finance/audit-log": P.shield,
   "/finance/reports?tab=profit_loss": P.trend, "/finance/reports?tab=balance_sheet": P.columns, "/finance/reports?tab=cash_flow": P.drop, "/finance/recap": P.calendar,
-  "/finance/audit": P.search, "/finance/gst": P.percent, "/finance/audit/gst-recon": P.sync, "/finance/tds": P.tag,
+  "/finance/audit": P.search, "/finance/gst": P.percent, "/finance/banking/reconcile": P.sync, "/finance/gst/reconcile": P.sync, "#signout": "M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 17l5-5-5-5M15 12H4", "/finance/audit/gst-recon": P.sync, "/finance/tds": P.tag,
   "/finance/ai-review": P.robot, "/finance/upload": P.clip, "/finance/shelf": P.shelf, "/finance/insights": P.bulb, "/finance/virtual-ca": P.plane,
   "/finance/settings/business": P.building, "/finance/settings": P.gear, "/finance/audit360": P.shield, "/finance/client": P.home, "/finance/inventory": P.bag, "/finance/gst/desk": P.columns, "/finance/clients": P.users, "/finance/settings/region": P.globe, "/finance/integrations": P.link, "/finance/portals": P.bank, "/finance/whatsapp": P.whatsapp, "/finance/fy": P.calendar,
   "/finance/team": P.team, "/finance/tally": P.plug, "/finance/ca-dashboard": P.briefcase, "/finance/help": P.help, "/dashboard": P.home,

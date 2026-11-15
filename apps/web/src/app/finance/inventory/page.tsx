@@ -27,6 +27,8 @@ export default function Inventory() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [ni, setNi] = useState({ name: "", hsn: "", unit: "NOS", qty: "", cost: "", price: "", gst: "18" });
+  const [hsn, setHsn] = useState<{ q: string; busy: boolean; hits: { hsn: string; description: string; gst_rate: number | null }[]; source: string | null; open: boolean }>({ q: "", busy: false, hits: [], source: null, open: false });
+  const existing = items.find(i => i.name.trim().toLowerCase() === ni.name.trim().toLowerCase());
 
   async function load(b: string) {
     setLoading(true);
@@ -76,8 +78,57 @@ export default function Inventory() {
     setMsg({ ok: true, text: `✓ ${form.kind === "purchase" ? "Stock in" : "Adjustment"}: ${qtyFmt(qty)} ${it.unit ?? ""} of ${it.name}.` });
     setForm(f => ({ ...f, qty: "", rate: "", note: "" })); void load(bizId);
   }
+  async function findHsn() {
+    if (!bizId || hsn.q.trim().length < 2) return;
+    setHsn(h => ({ ...h, busy: true, hits: [], source: null }));
+    const d = await fetch(`/api/finance/hsn?business_id=${bizId}&q=${encodeURIComponent(hsn.q.trim())}`).then(r => r.json()).catch(() => ({}));
+    setHsn(h => ({ ...h, busy: false, hits: d.hits ?? [], source: d.source ?? "none" }));
+  }
+  async function downloadTemplate() {
+    const XLSX = await import("xlsx");
+    const ws = XLSX.utils.aoa_to_sheet([["Item name", "HSN", "Unit", "Opening qty", "Cost per unit", "Selling price", "GST %", "Reorder level"], ["Basmati rice 25 kg", "10063020", "BAG", 40, 1850, 2100, 5, 10], ...items.map(i => [i.name, i.hsn ?? "", i.unit ?? "NOS", i.opening_qty || "", i.opening_rate || "", i.rate || "", "", i.reorder_level || ""])]);
+    ws["!cols"] = [{ wch: 34 }, { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Stock");
+    XLSX.writeFile(wb, "FreBook-Stock-Template.xlsx");
+  }
+  async function bulkUpload(f: File) {
+    if (!bizId) return;
+    setBusy(true); setMsg(null);
+    try {
+      const XLSX = await import("xlsx");
+      const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
+      const grid = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" });
+      const head = (grid[0] ?? []).map(h => String(h).toLowerCase());
+      const col = (re: RegExp) => head.findIndex(h => re.test(h));
+      const c = { name: col(/item|name|description/), hsn: col(/hsn|sac/), unit: col(/unit|uom/), qty: col(/open.*qty|qty|quantity/), cost: col(/cost/), price: col(/sell|price|rate/), gst: col(/gst|tax/), reorder: col(/reorder|min/) };
+      if (c.name < 0) throw new Error("The first row needs an 'Item name' column — download the template.");
+      const byName = new Map(items.map(i => [i.name.trim().toLowerCase(), i]));
+      let added = 0, updated = 0;
+      const num = (r: unknown[], i: number) => i < 0 ? undefined : (String(r[i]).trim() === "" ? undefined : Number(String(r[i]).replace(/[,₹\s]/g, "")) || 0);
+      for (const r of grid.slice(1)) {
+        const name = String(r[c.name] ?? "").trim();
+        if (!name || /^basmati rice 25 kg$/i.test(name) && !byName.has(name.toLowerCase())) continue;   // skip blanks and the sample row
+        const row: Record<string, unknown> = {};
+        const hsnV = c.hsn >= 0 ? String(r[c.hsn] ?? "").replace(/\D/g, "").slice(0, 8) : "";
+        if (hsnV) row.hsn = hsnV;
+        if (c.unit >= 0 && String(r[c.unit]).trim()) row.unit = String(r[c.unit]).trim().toUpperCase().slice(0, 8);
+        const q = num(r, c.qty), co = num(r, c.cost), pr = num(r, c.price), g = num(r, c.gst), ro = num(r, c.reorder);
+        if (q !== undefined) row.opening_qty = q; if (co !== undefined) row.opening_rate = co; if (pr !== undefined) row.rate = pr; if (g !== undefined) row.gst_rate = g; if (ro !== undefined) row.reorder_level = ro;
+        const old = byName.get(name.toLowerCase());
+        if (old) { if (Object.keys(row).length) { const { error } = await supabase.from("fw_fin_items").update(row).eq("id", old.id); if (!error) updated++; } }
+        else { const { error } = await supabase.from("fw_fin_items").insert({ business_id: bizId, name, unit: "NOS", is_service: false, ...row }); if (!error) { added++; byName.set(name.toLowerCase(), { name } as Item); } }
+      }
+      setMsg({ ok: true, text: `✓ ${added} item${added === 1 ? "" : "s"} added, ${updated} updated from ${f.name}.` });
+      void load(bizId);
+    } catch (e) { setMsg({ ok: false, text: e instanceof Error ? e.message : "Couldn't read that file." }); }
+    setBusy(false);
+  }
   async function addItem() {
     if (!bizId || !ni.name.trim()) { setMsg({ ok: false, text: "Type the item's name." }); return; }
+    if (existing) {
+      await saveItem(existing, { hsn: ni.hsn.trim() || null, unit: ni.unit.trim() || "NOS", rate: Number(ni.price) || 0, opening_qty: Number(ni.qty) || 0, opening_rate: Number(ni.cost) || 0 });
+      setMsg({ ok: true, text: `✓ Updated ${existing.name}.` }); setNi({ name: "", hsn: "", unit: "NOS", qty: "", cost: "", price: "", gst: "18" }); return;
+    }
     setBusy(true);
     const { error } = await supabase.from("fw_fin_items").insert({ business_id: bizId, name: ni.name.trim(), hsn: ni.hsn.trim() || null, unit: ni.unit.trim() || "NOS", rate: Number(ni.price) || 0, gst_rate: Number(ni.gst) || 0, opening_qty: Number(ni.qty) || 0, opening_rate: Number(ni.cost) || 0, is_service: false });
     setBusy(false);
@@ -149,14 +200,40 @@ export default function Inventory() {
             </div>
             <h3 style={{ margin: "8px 0 0", fontSize: 16, fontWeight: 700 }}>Add an item</h3>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <input value={ni.name} onChange={e => setNi(x => ({ ...x, name: e.target.value }))} placeholder="Item name" aria-label="New item name" style={{ ...input, flex: "2 1 200px" }} />
+              <input list="inv-items" value={ni.name} onChange={e => { const v = e.target.value; const it = items.find(i => i.name.trim().toLowerCase() === v.trim().toLowerCase()); setNi(x => it ? { name: it.name, hsn: it.hsn ?? "", unit: it.unit ?? "NOS", qty: String(it.opening_qty || ""), cost: String(it.opening_rate || ""), price: String(it.rate || ""), gst: x.gst } : { ...x, name: v }); }} placeholder="Item name" aria-label="New item name" style={{ ...input, flex: "2 1 200px" }} />
               <input value={ni.hsn} onChange={e => setNi(x => ({ ...x, hsn: e.target.value.replace(/\D/g, "").slice(0, 8) }))} placeholder="HSN" aria-label="HSN" style={{ ...input, width: 90 }} />
+              <button type="button" onClick={() => setHsn(h => ({ ...h, open: !h.open, q: h.q || ni.name }))} title="Find the HSN code" style={{ ...btn, background: "#FFFFFF", color: HT.ink, border: `1px solid ${HT.line}`, padding: "0 12px" }}>🔍 HSN</button>
               <input value={ni.unit} onChange={e => setNi(x => ({ ...x, unit: e.target.value.toUpperCase().slice(0, 8) }))} placeholder="Unit" aria-label="Unit" style={{ ...input, width: 70 }} />
               <input value={ni.qty} onChange={e => setNi(x => ({ ...x, qty: e.target.value }))} inputMode="decimal" placeholder="Opening qty" aria-label="Opening quantity" style={{ ...input, width: 100 }} />
               <input value={ni.cost} onChange={e => setNi(x => ({ ...x, cost: e.target.value }))} inputMode="decimal" placeholder="Cost / unit" aria-label="Cost per unit" style={{ ...input, width: 100 }} />
               <input value={ni.price} onChange={e => setNi(x => ({ ...x, price: e.target.value }))} inputMode="decimal" placeholder="Selling price" aria-label="Selling price" style={{ ...input, width: 110 }} />
               <select value={ni.gst} onChange={e => setNi(x => ({ ...x, gst: e.target.value }))} aria-label="GST rate" style={input}>{["0", "5", "12", "18", "28"].map(g => <option key={g} value={g}>{g}% GST</option>)}</select>
-              <button type="button" onClick={addItem} disabled={busy} style={btn}>Add item</button>
+              <button type="button" onClick={addItem} disabled={busy} style={btn}>{existing ? "Update item" : "Add item"}</button>
+            </div>
+            {existing && <div style={{ fontSize: 13, color: HT.muted }}>“{existing.name}” is already added — its details are filled in. Saving updates it.</div>}
+            {hsn.open && (
+              <div style={{ border: `1px solid ${HT.line}`, borderRadius: 14, padding: 12, display: "grid", gap: 8, background: "#FFFFFF" }}>
+                <form onSubmit={e => { e.preventDefault(); void findHsn(); }} style={{ display: "flex", gap: 8 }}>
+                  <input autoFocus value={hsn.q} onChange={e => setHsn(h => ({ ...h, q: e.target.value }))} placeholder="Describe the goods (e.g. basmati rice) or type a code" aria-label="HSN search" style={{ ...input, flex: 1 }} />
+                  <button type="submit" disabled={hsn.busy} style={btn}>{hsn.busy ? "Searching…" : "Search"}</button>
+                </form>
+                {hsn.hits.map(h => (
+                  <button key={h.hsn + h.description} type="button" onClick={() => { setNi(x => ({ ...x, hsn: h.hsn, gst: h.gst_rate != null && [0, 5, 12, 18, 28].includes(h.gst_rate) ? String(h.gst_rate) : x.gst })); setHsn(x => ({ ...x, open: false })); }}
+                    style={{ display: "flex", gap: 12, alignItems: "baseline", textAlign: "left", border: `1px solid ${HT.line}`, borderRadius: 10, background: HT.paper, padding: "8px 12px", cursor: "pointer", fontFamily: "inherit", color: HT.ink }}>
+                    <b style={{ fontVariantNumeric: "tabular-nums", minWidth: 80 }}>{h.hsn}</b><span style={{ flex: 1 }}>{h.description}</span>{h.gst_rate != null && <span style={{ color: HT.muted }}>{h.gst_rate}% GST</span>}<span style={{ color: "#8A6420", fontWeight: 700 }}>Use</span>
+                  </button>
+                ))}
+                {hsn.source === "suggested" && hsn.hits.length > 0 && <div style={{ fontSize: 12, color: "#8A5A00" }}>Suggested codes — the GST portal search didn't answer. Confirm the code and rate before filing.</div>}
+                {hsn.source && !hsn.hits.length && !hsn.busy && <div style={{ fontSize: 13, color: HT.muted }}>No match — try other words.</div>}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", fontSize: 13, color: HT.muted, marginTop: 4 }}>
+              <b style={{ color: HT.ink }}>Many items?</b>
+              <button type="button" onClick={downloadTemplate} style={{ ...btn, background: "#FFFFFF", color: HT.ink, border: `1px solid ${HT.line}` }}>⬇ Stock template</button>
+              <label style={{ ...btn, display: "inline-flex", alignItems: "center" }}>⬆ Upload filled template
+                <input type="file" accept=".xlsx,.xls,.csv" hidden onChange={e => { const f = e.target.files?.[0]; if (f) void bulkUpload(f); e.target.value = ""; }} />
+              </label>
+              <span>Items already added are updated, new ones created.</span>
             </div>
           </section>
         )}
