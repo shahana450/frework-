@@ -46,13 +46,17 @@ export default function PartyBoard({ kind, rows, total, overdue, loading, newHre
 
         {notice}
 
+        <style>{`.pb-card:hover{box-shadow:0 18px 34px -24px rgba(15,43,37,.55);transform:translateY(-2px)} .pb-card:focus-visible{outline:3px solid #D9B56F;outline-offset:2px}`}</style>
         {loading ? <div style={{ padding: "3rem", textAlign: "center", color: T.muted, fontStyle: "italic" }}>Loading {ar ? "receivables" : "payables"}…</div> : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(400px,1fr))", gap: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(400px,100%),1fr))", gap: 18 }}>
             {shown.map(r => {
               const b = bucket(r.days), adv = r.outstanding < 0;
               const edge = adv ? T.pos : COLORS[b];
               return (
-                <div key={r.id ?? r.name} style={{ background: T.paper, border: `1px solid ${T.line}`, borderTop: `3px solid ${edge}`, borderRadius: 16, overflow: "hidden" }}>
+                <div key={r.id ?? r.name} role={r.id ? "link" : undefined} tabIndex={r.id ? 0 : undefined} title={r.id ? `Open ${r.name}'s ledger` : undefined}
+                  onClick={e => { if (!r.id || (e.target as HTMLElement).closest("a,button")) return; window.location.assign(`/finance/ledger?account=${r.id}`); }}
+                  onKeyDown={e => { if (r.id && e.key === "Enter" && e.target === e.currentTarget) window.location.assign(`/finance/ledger?account=${r.id}`); }}
+                  className="pb-card" style={{ background: T.paper, border: `1px solid ${T.line}`, borderTop: `3px solid ${edge}`, borderRadius: 16, overflow: "hidden", cursor: r.id ? "pointer" : "default", transition: "box-shadow .18s, transform .18s" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "20px 22px" }}>
                     <span style={{ width: 52, height: 52, flexShrink: 0, borderRadius: 999, background: T.green, color: T.gold, display: "grid", placeItems: "center", fontStyle: "italic", fontSize: "1.2rem" }}>{initials(r.name)}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>

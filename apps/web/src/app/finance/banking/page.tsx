@@ -57,6 +57,7 @@ export default function BankingDashboard() {
         @media (max-width: 900px) { .bk-two { grid-template-columns: minmax(0,1fr); } }
         .bk-acc { cursor: pointer; text-align: left; font-family: inherit; transition: border-color .15s; }
         .bk-acc:hover { border-color: ${T.gold} !important; }
+        .bk-tile:hover { box-shadow: inset 0 0 0 1px ${T.gold}; }
         @keyframes bdgrow { from { transform: scaleY(0) } }
         .bd-bar { transform-origin: bottom; animation: bdgrow .6s ease-out both; }
         @media (prefers-reduced-motion: reduce) { .bd-bar { animation: none } }
@@ -117,10 +118,10 @@ export default function BankingDashboard() {
             </div>
             <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
               {[["Balance", sel?.balance ?? 0, T.muted], [`In · ${curMon}`, sel?.inMonth ?? 0, T.pos], [`Out · ${curMon}`, sel?.outMonth ?? 0, T.neg]].map(([l, v, c]) => (
-                <div key={l as string} style={{ background: T.soft, borderRadius: 12, padding: "12px 16px" }}>
+                <Link key={l as string} href={sel ? `/finance/ledger?account=${sel.id}` : "#"} title={sel ? "Open the ledger" : undefined} className="bk-tile" style={{ background: T.soft, borderRadius: 12, padding: "12px 16px", textDecoration: "none", color: T.ink, display: "block" }}>
                   <div style={{ fontSize: "0.8rem", color: c as string }}>{l as string}</div>
                   <div style={{ fontSize: "1.4rem", fontVariantNumeric: "tabular-nums" }}>{sel ? plain(v as number) : "—"}</div>
-                </div>
+                </Link>
               ))}
             </div>
             <div>

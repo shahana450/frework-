@@ -139,6 +139,10 @@ export default function JournalsPage() {
       if (idParam) {
         const at = rows.findIndex(j => j.id === idParam);
         if (at >= 0) { if (at >= 100) setShown(at + 20); openDrawer(rows[at]); }
+        else {
+          const { data: one } = await supabase.from("fw_fin_journals").select("*").eq("id", idParam).eq("business_id", saved).maybeSingle();
+          if (one) openDrawer(one as Journal);
+        }
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps

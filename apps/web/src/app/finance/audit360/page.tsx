@@ -3,6 +3,7 @@
 // (GSTR-1, GSTR-3B, GSTR-2B, 26AS / AIS) plus TDS deducted. Portal files are read in this browser, kept on this
 // device for the year, and sent only for the comparison — nothing is stored on the server or changed in the books.
 import { useEffect, useRef, useState } from "react";
+import { auditReportDoc } from "@/lib/auditReportDoc";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -123,11 +124,26 @@ export default function Audit360() {
     const sum = [["360° audit", bizName, `FY ${report.fy.label.replace(/^FY\s*/i, "")}`], ["Score", `${report.score}/100`], [], ["Section", "Check", "Result", "Books", "Portal", "Difference", "Finding", "Law / rule"]];
     for (const s of SECTIONS) for (const c of report.checks.filter(x => x.section === s.key))
       sum.push([s.title, c.title, TONE[c.status].label, c.books ?? "", c.portal ?? "", c.diff ?? "", c.summary, c.law ?? ""] as never);
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sum), "Summary");
+    const ws1 = XLSX.utils.aoa_to_sheet(sum);
+    ws1["!cols"] = [{ wch: 26 }, { wch: 38 }, { wch: 13 }, { wch: 15 }, { wch: 15 }, { wch: 14 }, { wch: 70 }, { wch: 70 }];
+    ws1["!freeze"] = { xSplit: 0, ySplit: 4 };
+    for (const [addr, cell] of Object.entries(ws1)) if (!addr.startsWith("!") && typeof (cell as { v?: unknown }).v === "number" && /^[DEF]\d/.test(addr)) (cell as { z?: string }).z = "#,##,##0;[Red]-#,##,##0;\"\"";
+    XLSX.utils.book_append_sheet(wb, ws1, "Summary");
     const det = [["Section", "Check", "Entry", "Date", "Amount", "Detail"]];
     for (const c of report.checks) for (const it of c.items) det.push([SECTIONS.find(s => s.key === c.section)?.title ?? "", c.title, it.entry_no ?? "", it.date ?? "", it.amount ?? "", it.note] as never);
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(det), "Details");
+    const ws2 = XLSX.utils.aoa_to_sheet(det);
+    ws2["!cols"] = [{ wch: 26 }, { wch: 38 }, { wch: 18 }, { wch: 12 }, { wch: 15 }, { wch: 90 }];
+    for (const [addr, cell] of Object.entries(ws2)) if (!addr.startsWith("!") && typeof (cell as { v?: unknown }).v === "number" && /^E\d/.test(addr)) (cell as { z?: string }).z = "#,##,##0.00";
+    XLSX.utils.book_append_sheet(wb, ws2, "Details");
     XLSX.writeFile(wb, `360-audit-${(bizName || "business").replace(/[^A-Za-z0-9]+/g, "-")}-FY${report.fy.label.replace(/^FY\s*/i, "")}.xlsx`);
+  }
+
+  function downloadDoc() {
+    if (!report) return;
+    const blob = auditReportDoc({ business: bizName || "Business", fy: `FY ${report.fy.label.replace(/^FY\s*/i, "")}`, score: report.score, counts: report.counts, checks: report.checks, sections: SECTIONS });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = `360-audit-${(bizName || "business").replace(/[^A-Za-z0-9]+/g, "-")}-FY${report.fy.label.replace(/^FY\s*/i, "")}.doc`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }
 
   const flip = (id: string) => setOpen(s => { const x = new Set(s); if (x.has(id)) x.delete(id); else x.add(id); return x; });
@@ -142,7 +158,8 @@ export default function Audit360() {
         sub="Every check reads your posted entries; portal files are compared, not stored. Nothing is changed."
         actions={<span style={{ display: "inline-flex", gap: 10, flexWrap: "wrap" }}>
           <HeroFyPicker years={years} value={fy?.id ?? ""} onChange={setFy} />
-          <HeroAction onClick={downloadReport} disabled={!report}>↓ Audit report (Excel)</HeroAction>
+          <HeroAction onClick={downloadDoc} disabled={!report}>↓ Report (Word)</HeroAction>
+          <HeroAction onClick={downloadReport} disabled={!report}>↓ Excel</HeroAction>
           <HeroAction onClick={() => setTick(t => t + 1)} primary disabled={busy}>{busy ? "Running…" : "Run again"}</HeroAction>
         </span>}
         tiles={report ? [
