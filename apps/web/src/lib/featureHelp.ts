@@ -29,3 +29,14 @@ export function featureHelp(text: string): { title: string; body: string; href?:
   if (HOWTO.test(t) && hit.length) return hit.slice(0, 3);
   return null;
 }
+
+// "Thanks", "hi", "ok", "good morning" — a short friendly reply instead of a draft asking for an amount
+export function smallTalk(text: string): string | null {
+  const t = text.toLowerCase().replace(/[!.?\s]+$/g, "").trim();
+  if (!t || /\d/.test(t) || t.split(/\s+/).length > 6) return null;
+  if (/^(thanks?( you)?( so much| a lot| very much)?|thank u|thx|ty|great,? thanks?|nice|super|awesome|perfect|good job|well done)$/.test(t)) return "You're welcome! Tell me the next transaction whenever you're ready, or ask anything about your books.";
+  if (/^(hi|hii+|hello|hey|hai|namaste|good (morning|afternoon|evening))( there| frebook)?$/.test(t)) return "Hello! Tell me what happened — e.g. \"Paid rent 25,000 by bank\" — or ask \"How much do customers owe?\".";
+  if (/^(ok|okay|k|fine|done|got it|alright|cool|sure|noted)$/.test(t)) return "👍 Ready when you are.";
+  if (/^(bye|good ?night|see you|tata)$/.test(t)) return "Bye! Your drafts stay saved on this device.";
+  return null;
+}

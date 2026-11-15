@@ -1,6 +1,6 @@
 // FreBook on WhatsApp. A registered number acts as its FreWork user: drafts entries (posted only on YES) and answers questions
 // with the same engine, rules, compliance checks and duplicate guard as FreBook in the app.
-import { featureHelp } from "@/lib/featureHelp";
+import { featureHelp, smallTalk } from "@/lib/featureHelp";
 import { splitDated } from "@/lib/splitDated";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAI } from "../ai";
@@ -84,6 +84,7 @@ export async function handleWhatsApp(sb: SupabaseClient, m: Incoming): Promise<s
 
   if (cmd.type === "help") { await sendMenu(m.from, link.name); return helpText(link.name); }
   // "What are the features?" / "How do I reconcile?" — answered here, not searched in the books
+  if (!m.media && !sess.pending?.parsed) { const hi = smallTalk(m.text); if (hi) return hi; }
   if (!m.media) { const help = featureHelp(m.text); if (help) return (help.length > 3 ? "Here's what I can do for you:" : "Here's how:") + "\n\n" + help.map(h => `*${h.title}*\n${h.body}${h.href ? `\nfrework.online${h.href}` : ""}`).join("\n\n"); }
   // GST filing status from the portal (Integrations → GST & IT portals): "GSTR status", "filing status", "GST returns filed?"
   if (!m.media && /(fil(ing|ed)|return)s?\s*status|status\s*of\s*(gst|gstr|return)|gstr?\s*-?\s*(1|3b)?\s*(filing\s*)?status|returns?\s*filed/i.test(m.text)) {

@@ -100,3 +100,9 @@ test("Lines with different dates become separate entries", () => {
   assert.equal(splitDated("Paid rent 25000 by bank"), null);
   assert.equal(splitDated("Salary 30-04-2025\nRavi 10000\nAnu 12000"), null);
 });
+import { smallTalk } from "../../src/lib/featureHelp";
+test("Thanks and greetings get a friendly reply, not a draft", () => {
+  assert.ok(smallTalk("Thank you"));
+  assert.ok(smallTalk("hi"));
+  assert.equal(smallTalk("thanks paid 5000 rent"), null);
+});

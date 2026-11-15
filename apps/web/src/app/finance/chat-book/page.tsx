@@ -1,5 +1,5 @@
 "use client";
-import { featureHelp } from "@/lib/featureHelp";
+import { featureHelp, smallTalk } from "@/lib/featureHelp";
 import { splitDated } from "@/lib/splitDated";
 import { gstReturnLink } from "@/lib/gstIntent";
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
@@ -489,6 +489,7 @@ export default function FreBookPage() {
     // "What can you do?" / "How do I reconcile the bank?" — answered here, not drafted as an entry
     // Several lines with different dates ("Sales / 30-04-2025 25000 / 31-05-2025 35000") → one entry per date
     if (!file) { const parts = splitDated(text); if (parts) { setInput(""); setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: "user", text: text.trim(), timestamp: Date.now() }, { id: `s-${Date.now()}`, role: "system", text: `📅 ${parts.length} different dates — ${parts.length} entries, opened together for review.`, timestamp: Date.now() }]); setBulk({ fileName: "Your message", fileKey: `msg-${Date.now()}`, sentences: parts }); return; } }
+    if (!file) { const hi = smallTalk(text); if (hi) { const now = Date.now(); setMessages(prev => [...prev, { id: `u-${now}`, role: "user", text: text.trim(), timestamp: now }, { id: `h-${now}`, role: "ai", help: [{ title: "", body: hi }], timestamp: now }]); setInput(""); return; } }
     if (!file) { const help = featureHelp(text); if (help) { const now = Date.now(); setMessages(prev => [...prev, { id: `u-${now}`, role: "user", text: text.trim(), timestamp: now }, { id: `h-${now}`, role: "ai", help, timestamp: now }]); setInput(""); return; } }
     (recognitionRef.current as { stop: () => void } | null)?.stop(); recognitionRef.current = null; setListening(false); setVoiceInterim("");
     setLoading(true);
@@ -1116,7 +1117,7 @@ export default function FreBookPage() {
                   <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                     <img src="/frebook-face.jpg" alt="" aria-hidden="true" className="fb-av" width={32} height={32} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", flexShrink: 0, boxShadow: "0 0 0 2px #FFFFFF, 0 0 0 3px #9FE1CB" }} />
                     <div style={{ flex: 1, minWidth: 0, maxWidth: 720, background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: "6px 18px 18px 18px", padding: "14px 16px", display: "grid", gap: 12 }}>
-                      <div style={{ fontSize: "0.98rem", color: "#10241F" }}>{msg.help.length > 3 ? "Here's what I can do for you:" : "Here's how:"}</div>
+                      <div style={{ fontSize: "0.98rem", color: "#10241F" }}>{msg.help.length > 3 ? "Here's what I can do for you:" : msg.help[0]?.title ? "Here's how:" : ""}</div>
                       {msg.help.map(h => (
                         <div key={h.title} style={{ display: "grid", gap: 3 }}>
                           <div style={{ fontWeight: 700, color: "#0F2B25", fontSize: "0.93rem" }}>{h.title}</div>
