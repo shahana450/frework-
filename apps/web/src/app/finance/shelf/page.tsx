@@ -118,7 +118,17 @@ export default function ShelfPage() {
     if (!calFy) return null;
     const y0 = Number(calFy.slice(0, 4)); if (!y0) return null;
     const months = MONTHS.map((m, i) => ({ label: m, ym: `${i < 9 ? y0 : y0 + 1}-${String(((i + 3) % 12) + 1).padStart(2, "0")}` }));
-    const has = (form: RegExp, ym: string) => (items ?? []).some(i => i.rack === "gst" && i.period?.startsWith(ym) && form.test(`${i.doc_type ?? ""} ${i.title}`));
+    // The period is saved as "2025-11", "November 2025", "Nov-25" or "112025" — read any of them (title as a fallback)
+    const MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    const ymOf = (i: { period?: string | null; title: string }) => {
+      const t = `${i.period ?? ""} ${i.title}`.toLowerCase();
+      const iso = t.match(/\b(20\d{2})-(0[1-9]|1[0-2])\b/); if (iso) return `${iso[1]}-${iso[2]}`;
+      const mm = t.match(/\b(0[1-9]|1[0-2])(20\d{2})\b/); if (mm) return `${mm[2]}-${mm[1]}`;
+      const nm = t.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s\-'.,]*(\d{4}|\d{2})\b/);
+      if (nm) { const y = nm[2].length === 2 ? `20${nm[2]}` : nm[2]; return `${y}-${String(MON.indexOf(nm[1]) + 1).padStart(2, "0")}`; }
+      return "";
+    };
+    const has = (form: RegExp, ym: string) => (items ?? []).some(i => i.rack === "gst" && ymOf(i) === ym && form.test(`${i.doc_type ?? ""} ${i.title}`));
     return { months, rows: [["GSTR-1", /GSTR-?1(?!\d)/i], ["GSTR-3B", /GSTR-?3B/i], ["GSTR-2B", /GSTR-?2B/i]].map(([label, re]) => ({ label: label as string, cells: months.map(m => has(re as RegExp, m.ym)) })) };
   }, [items, calFy]);
   const totalBytes = (items ?? []).reduce((s, i) => s + (i.size_bytes ?? 0), 0);

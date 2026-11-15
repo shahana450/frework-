@@ -52,6 +52,8 @@ export default function Audit360() {
   const [portal, setPortal] = useState<PortalData>({});
   const [files, setFiles] = useState<Record<SourceKey, string[]>>({ gstr1: [], gstr3b: [], gstr2b: [], tds26as: [] });
   const [srcMsg, setSrcMsg] = useState<Record<string, string>>({});
+  const [shelfMsg, setShelfMsg] = useState("");
+
   const [tick, setTick] = useState(0);
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
   const memKey = bizId && fy ? `fw_audit_portal:${bizId}:${fy.id}` : "";
@@ -74,6 +76,35 @@ export default function Audit360() {
     catch { setPortal({}); }
   }, [memKey]);
   const save = (p: PortalData, f: Record<SourceKey, string[]>) => { setPortal(p); setFiles(f); try { if (memKey) localStorage.setItem(memKey, JSON.stringify({ portal: p, files: f })); } catch { /* full or private */ } setTick(t => t + 1); };
+  // Returns already on the Shelf (GSTR-1, 3B, 2B, 26AS) for this year → the portal side of the audit. Files the user
+  // uploaded here keep priority; the Shelf fills whatever is missing.
+  async function fromShelf(auto = false) {
+    if (!bizId || !fy) return;
+    setShelfMsg("Reading the returns on the Shelf…");
+    const r = await fetch("/api/finance/audit360/shelf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, fy: fy.label }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (!r?.ok) { setShelfMsg(d.error ?? "Couldn't read the Shelf."); return; }
+    const got = (d.files ?? []) as { title: string; kind: string; ok: boolean }[];
+    if (!got.length) { setShelfMsg(auto ? "" : "No GSTR, 2B or 26AS files on the Shelf for this year."); return; }
+    const sp = (d.portal ?? {}) as PortalData;
+    const merged: PortalData = JSON.parse(JSON.stringify(portal));
+    if (sp.gstr1) merged.gstr1 = { months: { ...sp.gstr1.months, ...(merged.gstr1?.months ?? {}) }, b2b: merged.gstr1?.b2b?.length ? merged.gstr1.b2b : sp.gstr1.b2b };
+    if (sp.gstr3b) merged.gstr3b = { months: { ...sp.gstr3b.months, ...(merged.gstr3b?.months ?? {}) } };
+    if (sp.gstr2b) merged.gstr2b = { months: { ...sp.gstr2b.months, ...(merged.gstr2b?.months ?? {}) }, suppliers: merged.gstr2b?.suppliers?.length ? merged.gstr2b.suppliers : sp.gstr2b.suppliers };
+    if (sp.tds26as && !merged.tds26as) merged.tds26as = sp.tds26as;
+    const add = (k: SourceKey) => [...new Set([...(files[k] ?? []), ...got.filter(g => g.kind === k && g.ok).map(g => "Shelf: " + g.title)])];
+    save(merged, { gstr1: add("gstr1"), gstr3b: add("gstr3b"), gstr2b: add("gstr2b"), tds26as: add("tds26as") });
+    const bad = got.filter(g => !g.ok).length;
+    setShelfMsg(`✓ Used ${got.length - bad} return${got.length - bad === 1 ? "" : "s"} from the Shelf${bad ? ` · ${bad} couldn't be read` : ""}.`);
+  }
+  // First visit for a year with nothing uploaded: use the Shelf automatically
+  const shelfTried = useRef("");
+  useEffect(() => {
+    if (!memKey || shelfTried.current === memKey) return;
+    const t = setTimeout(() => { shelfTried.current = memKey; if (!Object.keys(portal).length) void fromShelf(true); }, 400);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memKey, portal]);
 
   useEffect(() => {
     if (!bizId || !fy) return;
@@ -158,6 +189,7 @@ export default function Audit360() {
         sub="Every check reads your posted entries; portal files are compared, not stored. Nothing is changed."
         actions={<span style={{ display: "inline-flex", gap: 10, flexWrap: "wrap" }}>
           <HeroFyPicker years={years} value={fy?.id ?? ""} onChange={setFy} />
+          <HeroAction onClick={() => void fromShelf()} disabled={!fy}>📚 Use returns on the Shelf</HeroAction>
           <HeroAction onClick={downloadDoc} disabled={!report}>↓ Report (Word)</HeroAction>
           <HeroAction onClick={downloadReport} disabled={!report}>↓ Excel</HeroAction>
           <HeroAction onClick={() => setTick(t => t + 1)} primary disabled={busy}>{busy ? "Running…" : "Run again"}</HeroAction>
@@ -170,6 +202,7 @@ export default function Audit360() {
         ] : undefined} />
 
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "28px 20px 60px", display: "flex", flexDirection: "column", gap: 22 }}>
+        {shelfMsg && <div role="status" style={{ ...card, padding: "12px 18px", color: shelfMsg.startsWith("✓") ? "#0B5E42" : "#5E6B66" }}>{shelfMsg}</div>}
         {err && <div role="alert" style={{ ...card, padding: "14px 18px", color: "#B4321F" }}>{err}</div>}
 
         {/* Portal files */}
