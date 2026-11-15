@@ -27,6 +27,18 @@ import { ActiveBusinessProvider, useActiveBusinessStore, setActiveBusiness, read
 const FINANCE_CSS = `
   .fw-topicons { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 2px; overflow-x: auto; margin: 10px 16px 0; padding: 6px; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid #E6DFD0; border-radius: 18px; box-shadow: 0 10px 28px -20px rgba(15,43,37,0.55); scrollbar-width: none; }
   .fw-topicons::-webkit-scrollbar { display: none; }
+  .fw-groups { display: grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap: 12px; margin: 12px 16px 0; }
+  .fw-grp { background: #FFFFFF; border: 1px solid #ECE5D6; border-radius: 16px; padding: 10px 12px 10px; min-width: 0; }
+  .fw-grp-h { font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #5E6B66; margin: 0 0 6px 2px; }
+  .fw-grp-row { display: flex; justify-content: space-around; gap: 2px; flex-wrap: wrap; }
+  .fw-grp a { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 64px; padding: 6px 4px; border-radius: 12px; text-decoration: none; color: #4A5752; font-size: 11.5px; font-weight: 600; text-align: center; line-height: 1.2; transition: background .18s; }
+  .fw-grp a .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: #F4EEE2; color: #0F2B25; transition: background .18s, transform .18s; }
+  .fw-grp a:hover, .fw-grp a:focus-visible { background: #FBF7EE; color: #0F2B25; outline: none; }
+  .fw-grp a:hover .ic { background: linear-gradient(160deg,#F3E4C2,#E5CE9C); transform: translateY(-2px); }
+  .fw-grp a.on { color: #0F2B25; font-weight: 800; }
+  .fw-grp a.on .ic { background: #0F2B25; color: #D9B56F; box-shadow: 0 0 0 2px #D9B56F inset; }
+  @media (max-width: 1100px) { .fw-grp { grid-column: span 6 !important; } }
+  @media (max-width: 640px) { .fw-groups { grid-template-columns: minmax(0,1fr); } .fw-grp { grid-column: span 1 !important; } }
   .fw-topnudge { position: absolute; top: 50%; transform: translateY(-50%); z-index: 31; width: 30px; height: 30px; border-radius: 50%; border: 1px solid #E6DFD0; background: #FFFFFF; color: #0F2B25; font-size: 20px; line-height: 1; font-weight: 700; cursor: pointer; box-shadow: 0 6px 16px -8px rgba(15,43,37,0.55); display: grid; place-items: center; padding: 0 0 2px; }
   .fw-topnudge:hover { background: #F4EEE2; }
   @media (hover: none) { .fw-topnudge { display: none; } }
@@ -90,6 +102,16 @@ const VIEW_ONLY_ICONS = ["/finance/books", "/finance/journals", "/finance/ledger
 const WRITE_PAGES = ["/finance/chat-book", "/finance/inbox", "/finance/sales/new", "/finance/purchases/new", "/finance/journals/new", "/finance/tally", "/finance/settings", "/finance/team", "/finance/clients", "/finance/banking/import", "/finance/opening-balances", "/finance/fy", "/finance/integrations", "/finance/portals", "/finance/whatsapp", "/finance/payment", "/finance/expenses", "/finance/credit-note", "/finance/debit-note"];
 const UNGUARDED = ["/finance/pricing", "/finance/setup", "/finance/admin", "/finance/help"];
 
+// Home shows the sections grouped; spans are columns of a 12-column grid
+const HOME_GROUPS = [
+  { label: "Workspace", span: 3, items: ["/finance", "/finance/portfolio", "/finance/chat-book", "/finance/inbox"] },
+  { label: "Transactions", span: 4, items: ["/finance/sales/new", "/finance/purchases/new", "/finance/receivables", "/finance/payables", "/finance/banking"] },
+  { label: "Books", span: 2, items: ["/finance/books", "/finance/journals", "/finance/ledger"] },
+  { label: "Reports", span: 3, items: ["/finance/reports?tab=trial_balance", "/finance/reports?tab=profit_loss", "/finance/reports?tab=balance_sheet", "/finance/cfo"] },
+  { label: "Compliance", span: 3, items: ["/finance/gst/returns", "/finance/audit360"] },
+  { label: "Inventory & files", span: 4, items: ["/finance/inventory", "/finance/shelf"] },
+  { label: "Settings", span: 5, items: ["/finance/tally", "/finance/settings", "/finance/help"] },
+];
 const TOP_ICONS = [
   { href: "/finance", label: "Home" },
   { href: "/finance/portfolio", label: "All businesses" },
@@ -536,6 +558,27 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
           <div style={{ position: "relative" }}>
           {topMore.l && <button type="button" className="fw-topnudge" aria-label="Scroll the menu left" onClick={() => nudgeTop(-1)} style={{ left: 22 }}>‹</button>}
           {topMore.r && <button type="button" className="fw-topnudge" aria-label="Scroll the menu right" onClick={() => nudgeTop(1)} style={{ right: 22 }}>›</button>}
+          {/* Home: the sections grouped into panels (other pages keep the one-line strip) */}
+          {pathname === "/finance" && !viewOnly ? (
+            <nav className="fw-groups" aria-label="Main sections">
+              {HOME_GROUPS.map(g => ({ ...g, items: g.items.filter(h => india || !h.startsWith("/finance/gst")).map(h => TOP_ICONS.find(t => t.href === h)!).filter(Boolean) })).filter(g => g.items.length).map(g => (
+                <section key={g.label} className="fw-grp" style={{ gridColumn: `span ${g.span}` }}>
+                  <div className="fw-grp-h">{g.label}</div>
+                  <div className="fw-grp-row">
+                    {g.items.map(t => {
+                      const on = t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
+                      return (
+                        <Link key={t.href} href={t.href} prefetch={false} onClick={e => { if (e.shiftKey) { e.preventDefault(); openInWindow(t.href, t.label); } }} className={on ? "on" : undefined} aria-current={on ? "page" : undefined}>
+                          <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(t.href)} /></svg></span>
+                          <span>{t.href === "/finance/chat-book" ? "FreBook AI" : t.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </nav>
+          ) : (
           <nav ref={setTopEl} className="fw-topicons" aria-label="Main sections">
             {(viewOnly ? [{ href: "/finance/client", label: "Home" }, ...TOP_ICONS.filter(t => VIEW_ONLY_ICONS.includes(t.href))] : TOP_ICONS).filter(t => india || !t.href.startsWith("/finance/gst")).map(t => {
               const on = t.href.includes("?") ? pathname + search === t.href : t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
@@ -554,6 +597,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
               <span>Sign out</span>
             </a>
           </nav>
+          )}
           </div>
         </>)}
         {bizSwitched && (
