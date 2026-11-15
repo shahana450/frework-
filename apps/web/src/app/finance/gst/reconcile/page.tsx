@@ -8,6 +8,7 @@ import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import { compareGstr1, parse3B, compare3B, taxOf, type Gstr1Json, type Amt } from "@/lib/gstPortalRecon";
+import { getKept, keep, forget, until } from "@/lib/portals/gstSessionClient";
 import PeriodPicker, { periodMonths, periodLabel } from "@/components/finance/PeriodPicker";
 import PageHero, { HT, SERIF } from "@/components/finance/PageHero";
 
@@ -70,12 +71,15 @@ export default function GstReconPage() {
     });
   }, [bizId, month]);
 
+  const kept = bizId && !pull.busy ? getKept(bizId) : null;
   async function portal(action: "otp" | "fetch") {
     setPull(p => ({ ...p, busy: true, msg: "" })); setErr("");
-    const r = await fetch("/api/finance/gst/portal-returns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action, username: pull.username.trim(), otp: pull.otp.trim(), months: periodMonths(month) }) }).catch(() => null);
+    const r = await fetch("/api/finance/gst/portal-returns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action, username: pull.username.trim(), otp: pull.otp.trim(), months: periodMonths(month), session: action === "fetch" ? getKept(bizId)?.session : undefined }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : { error: "The GST portal didn't respond." };
+    if (!r?.ok && d.code === "SESSION_EXPIRED") forget(bizId);
     if (!r?.ok) { setPull(p => ({ ...p, busy: false, msg: d.error ?? "The GST portal didn't respond.", step: d.code === "SESSION_EXPIRED" ? "user" : p.step, otp: "" })); return; }
     if (action === "otp") { try { localStorage.setItem(`fw_gst_user_${bizId}`, pull.username.trim()); } catch { /* */ } setPull(p => ({ ...p, busy: false, step: "otp", msg: d.message ?? "OTP sent." })); return; }
+    keep(bizId, d);
     setPortal1(d.gstr1 ?? {}); setPortal3(Array.isArray(d.gstr3b) && d.gstr3b.length ? d.gstr3b : null); setSrc(`Downloaded from the GST portal · ${periodLabel(month)}`);
     setPull(p => ({ ...p, busy: false, step: "user", otp: "", msg: "" }));
   }
@@ -140,16 +144,16 @@ export default function GstReconPage() {
           {pull.step === "otp" && <label style={{ display: "grid", gap: 4, fontSize: 13, color: HT.muted }}>OTP
             <input value={pull.otp} onChange={e => setPull(p => ({ ...p, otp: e.target.value }))} inputMode="numeric" style={{ ...input, width: 120 }} autoComplete="one-time-code" />
           </label>}
-          <button disabled={pull.busy || !pull.username.trim() || (pull.step === "otp" && !pull.otp.trim())} onClick={() => portal(pull.step === "user" ? "otp" : "fetch")}
+          <button disabled={pull.busy || (!kept && (!pull.username.trim() || (pull.step === "otp" && !pull.otp.trim())))} onClick={() => portal(kept || pull.step === "otp" ? "fetch" : "otp")}
             style={{ ...btn, height: 40, background: HT.ink, color: HT.paper, borderColor: HT.ink }}>
-            {pull.busy ? "Working…" : pull.step === "user" ? "Send OTP" : "Download GSTR-1 and 3B for " + periodLabel(month)}
+            {pull.busy ? "Working…" : !kept && pull.step === "user" ? "Send OTP" : "Download GSTR-1 and 3B for " + periodLabel(month)}
           </button>
           <label style={{ ...btn, height: 40, boxSizing: "border-box", display: "inline-flex", alignItems: "center" }}>Or upload return JSON
             <input type="file" accept=".json" multiple hidden onChange={e => { const f = Array.from(e.target.files ?? []); if (f.length) onFiles(f); e.target.value = ""; }} />
           </label>
           {(r1 || r3) && <button onClick={exportXl} style={{ ...btn, height: 40 }}>Download Excel</button>}
           <div style={{ flexBasis: "100%", fontSize: 13, color: pull.msg && !/sent/i.test(pull.msg) ? "#8A2A1A" : HT.muted }}>
-            {pull.msg || src || "On the GST portal, set View Profile → Manage API Access → Enable API Request = Yes once. The portal session isn't stored."}
+            {pull.msg || src || (kept ? `Portal session active until ${until(kept)} — no OTP needed.` : "") || "On the GST portal, set View Profile → Manage API Access → Enable API Request = Yes once. The portal session isn't stored."}
           </div>
         </div>
         {err && <div role="alert" style={{ color: "#8A2A1A" }}>{err}</div>}

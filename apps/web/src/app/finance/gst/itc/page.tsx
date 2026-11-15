@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import PeriodPicker, { periodMonths, periodTo, periodLabel } from "@/components/finance/PeriodPicker";
+import { getKept, keep, forget, until } from "@/lib/portals/gstSessionClient";
 import { usePortalFilings } from "@/lib/portals/usePortalFilings";
 import SupplierChase from "./SupplierChase";
 import { parse2BJson, parse2BGrid, purchaseRegister, matchItc, table4, taxOf, type TwoBDoc, type BookDoc, type Tax, type ItcRow } from "@/lib/itcMatch";
@@ -44,13 +45,15 @@ export default function ItcMatchPage() {
   async function portal2b(action: "otp" | "fetch") {
     setPull(p => ({ ...p, busy: true, msg: "" })); setErr("");
     try {
-      const r = await fetch("/api/finance/gst/portal-2b", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action, username: pull.username.trim(), otp: pull.otp.trim(), month, months: periodMonths(month) }) });
+      const r = await fetch("/api/finance/gst/portal-2b", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, action, username: pull.username.trim(), otp: pull.otp.trim(), month, months: periodMonths(month), session: action === "fetch" ? getKept(bizId)?.session : undefined }) });
       const d = await r.json().catch(() => ({}));
+      if (!r.ok && d.code === "SESSION_EXPIRED") forget(bizId);
       if (!r.ok) { setPull(p => ({ ...p, busy: false, ok: false, msg: d.error ?? "The GST portal didn't respond.", step: d.code === "SESSION_EXPIRED" ? "user" : p.step, otp: "" })); return; }
       if (action === "otp") {
         try { localStorage.setItem(`fw_gst_user_${bizId}`, pull.username.trim()); } catch { /* */ }
         setPull(p => ({ ...p, busy: false, ok: true, step: "otp", msg: d.message ?? "OTP sent." }));
       } else {
+        keep(bizId, d);
         setTwoB((d.docs ?? []) as TwoBDoc[]);
         setFileName(`GSTR-2B from the GST portal (${periodLabel(month)})`);
         setPull(p => ({ ...p, open: false, otp: "", step: "user", busy: false, msg: "", ok: false }));
@@ -164,7 +167,7 @@ export default function ItcMatchPage() {
             <b style={{ fontSize: 15 }}>{fileName ? `${fileName} · ${twoB.length} documents` : "Upload GSTR-2B for the month"}</b>
             <div style={{ fontSize: 13, color: C.muted }}>GST portal → Returns → GSTR-2B → Download (JSON or Excel). Your purchase entries load automatically{loading ? " — loading…" : ` (${books.filter(b => inPeriod.has(b.date.slice(0, 7))).length} this month)`}.</div>
           </div>
-          {portal.gstProvider === "sandbox" && <button onClick={() => setPull(p => ({ ...p, open: !p.open, msg: "", step: "user", otp: "" }))} style={btn(false)} aria-expanded={pull.open}>Fetch 2B from portal</button>}
+          {portal.gstProvider === "sandbox" && <button onClick={() => { const k = getKept(bizId); if (k) { void portal2b("fetch"); return; } setPull(p => ({ ...p, open: !p.open, msg: "", step: "user", otp: "" })); }} title={getKept(bizId) ? `Portal session active until ${until(getKept(bizId)!)} — no OTP needed` : undefined} style={btn(false)} aria-expanded={pull.open}>Fetch 2B from portal</button>}
           <button onClick={() => fileRef.current?.click()} style={btn(true)}>{fileName ? "Upload another" : "Upload GSTR-2B"}</button>
           {rows.length > 0 && <button onClick={exportExcel} style={btn(false)}>⬇ Excel</button>}
         </section>

@@ -106,3 +106,13 @@ test("Thanks and greetings get a friendly reply, not a draft", () => {
   assert.ok(smallTalk("hi"));
   assert.equal(smallTalk("thanks paid 5000 rent"), null);
 });
+import { sealSession, openSession } from "../../src/lib/portals/gstSession";
+test("A kept GST portal session opens only for its own business and GSTIN, and not after it expires", () => {
+  const soon = new Date(Date.now() + 3600_000).toISOString();
+  const { session } = sealSession("tok-123", "biz1", "32AAAAA0000A1Z5", soon);
+  assert.equal(openSession(session, "biz1", "32AAAAA0000A1Z5"), "tok-123");
+  assert.equal(openSession(session, "biz2", "32AAAAA0000A1Z5"), null);
+  assert.equal(openSession(session.slice(0, -2) + "xx", "biz1", "32AAAAA0000A1Z5"), null);
+  const old = sealSession("tok", "biz1", "G", new Date(Date.now() - 1000).toISOString()).session;
+  assert.equal(openSession(old, "biz1", "G"), null);
+});

@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireBusiness, serverError } from "@/lib/apiAuth";
 import { logAudit } from "@/lib/audit";
 import { PortalError, GSTIN_RE } from "@/lib/portals/types";
+import { sealSession, openSession } from "@/lib/portals/gstSession";
 import { sandboxTaxpayerOtp, sandboxTaxpayerVerify, sandboxGstr1, sandboxGstr3b } from "@/lib/portals/sandbox";
 import { buildMonthGstr1 } from "@/lib/gstr1Export";
 
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
   } catch (e) { return serverError("gst/portal-returns books", e, "Couldn't build GSTR-1 from your books."); }
 }
 
-type Body = { business_id?: string; action?: "otp" | "fetch"; username?: string; otp?: string; month?: string; months?: string[] };
+type Body = { business_id?: string; action?: "otp" | "fetch"; username?: string; otp?: string; month?: string; months?: string[]; session?: string };
 export async function POST(req: NextRequest) {
   const b = await req.json().catch(() => ({})) as Body;
   const gate = await requireBusiness(req, b.business_id, { action: "integrate" });
@@ -35,7 +36,8 @@ export async function POST(req: NextRequest) {
     const gstin = String(biz?.gstin ?? "").toUpperCase();
     if (!GSTIN_RE.test(gstin)) return NextResponse.json({ error: "Add this business's GSTIN in Settings first." }, { status: 400 });
     const username = (b.username ?? "").trim();
-    if (!username) return NextResponse.json({ error: "Enter your GST portal username." }, { status: 400 });
+    const kept = b.action === "fetch" ? openSession(b.session, b.business_id!, gstin) : null;
+    if (!username && !kept) return NextResponse.json({ error: "Enter your GST portal username." }, { status: 400 });
     if (b.action === "otp") {
       await sandboxTaxpayerOtp(gstin, username);
       return NextResponse.json({ ok: true, message: "OTP sent to the mobile and email registered on the GST portal." });
@@ -43,7 +45,9 @@ export async function POST(req: NextRequest) {
     if (b.action === "fetch") {
       const months = (b.months?.length ? b.months : [b.month ?? ""]).slice(0, 12);
       if (months.some(m => !/^\d{4}-\d{2}$/.test(m))) return NextResponse.json({ error: "Pick a period." }, { status: 400 });
-      const session = await sandboxTaxpayerVerify(gstin, username, (b.otp ?? "").trim());
+      // A session kept from an earlier OTP (up to 6 hours) skips the OTP; otherwise verify it now and hand back a sealed copy
+      const session = kept ? { token: kept, expiresAt: "" } : await sandboxTaxpayerVerify(gstin, username, (b.otp ?? "").trim());
+      const sealed = kept ? null : sealSession(session.token, b.business_id!, gstin, session.expiresAt);
       // One portal session for the whole period: each month's GSTR-1 sections are merged; 3B comes back month by month
       const gstr1: Record<string, unknown[]> = {}; const gstr3b: unknown[] = [];
       for (const m of months) {
@@ -52,7 +56,7 @@ export async function POST(req: NextRequest) {
         if (g3) gstr3b.push(g3);
       }
       await logAudit(supabase, { businessId: b.business_id!, actor: gate.user.id, action: "gst_returns_fetch", source: "portals", detail: { months, provider: "sandbox" } });
-      return NextResponse.json({ ok: true, gstr1, gstr3b });
+      return NextResponse.json({ ok: true, gstr1, gstr3b, ...(sealed ? { session: sealed.session, session_expires: sealed.expiresAt } : {}) });
     }
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });
   } catch (e) {
