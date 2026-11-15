@@ -116,3 +116,12 @@ test("A kept GST portal session opens only for its own business and GSTIN, and n
   const old = sealSession("tok", "biz1", "G", new Date(Date.now() - 1000).toISOString()).session;
   assert.equal(openSession(old, "biz1", "G"), null);
 });
+import { auditReportDoc } from "../../src/lib/auditReportDoc";
+test("Word audit report lists each finding with its suggested correction", async () => {
+  const blob = auditReportDoc({ business: "Demo", fy: "FY 2025-26", score: 80, counts: { ok: 1, warn: 1, fail: 0, na: 0 }, sections: [{ key: "books", title: "Books integrity", note: "" }],
+    checks: [{ id: "duplicates", section: "books", title: "No duplicate entries", status: "warn", summary: "2 possible duplicates", items: [{ journal_id: "j1", entry_no: "JV/1", date: "2025-05-01", amount: 500, note: "Same as JV/2" }] }] });
+  const html = await blob.text();
+  assert.ok(html.includes("Suggested correction"));
+  assert.ok(html.includes("JV/1"));
+  assert.ok(html.includes("1."));
+});

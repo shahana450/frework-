@@ -1,5 +1,6 @@
 // 360° audit report as a Word document (.doc — Word opens this HTML natively, with tables, colours and page margins).
 import type { AuditCheck, AuditStatus } from "./audit360";
+import { fixFor } from "./auditFix";
 
 type Section = { key: AuditCheck["section"]; title: string; note: string };
 const LABEL: Record<AuditStatus, [string, string, string]> = {
@@ -23,20 +24,35 @@ export function auditReportDoc(o: { business: string; fy: string; score: number;
         <td style="width:10%" class="n">${c.diff ? amt(c.diff) : ""}</td>
         <td style="width:33%">${esc(c.summary)}${c.law ? `<br/><span class="law">${esc(c.law)}</span>` : ""}</td>
       </tr>`).join("");
-    const items = cs.flatMap(c => c.items.slice(0, 25).map(it => ({ c, it })));
-    const det = items.length ? `
-      <p class="sub">Entries to look at</p>
-      <table class="t">
-        <tr><th style="width:24%">Check</th><th style="width:16%">Entry</th><th style="width:12%">Date</th><th style="width:14%" class="n">Amount</th><th>Detail</th></tr>
-        ${items.map(({ c, it }) => `<tr><td>${esc(c.title)}</td><td>${esc(it.entry_no ?? "")}</td><td>${esc(it.date ?? "")}</td><td class="n">${it.amount != null ? amt(it.amount) : ""}</td><td>${esc(it.note)}</td></tr>`).join("")}
-      </table>` : "";
+    // Findings one by one: what was found, the rule, the suggested correction, and the entries behind it
+    const open = cs.filter(c => c.status === "warn" || c.status === "fail");
+    const findings = open.map((c, i) => {
+      const f = fixFor(c);
+      const list = c.items.slice(0, 50);
+      return `
+      <table class="f" style="width:100%;border-collapse:collapse;margin:8pt 0 2pt"><tr>
+        <td style="width:4%;vertical-align:top;font-family:'Book Antiqua',Georgia,serif;font-size:13pt;color:#8A6420">${i + 1}.</td>
+        <td style="vertical-align:top">
+          <p style="margin:0"><b style="font-size:11pt">${esc(c.title)}</b> &nbsp;${pill(c.status)}</p>
+          <p style="margin:3pt 0 0"><b>Finding:</b> ${esc(c.summary)}</p>
+          ${c.books != null || c.portal != null ? `<p style="margin:2pt 0 0" class="law">Books ${amt(c.books ?? 0)} · Portal ${amt(c.portal ?? 0)} · Difference ${amt(c.diff ?? 0)}</p>` : ""}
+          ${c.law ? `<p style="margin:2pt 0 0" class="law"><b>Rule:</b> ${esc(c.law)}</p>` : ""}
+          ${f ? `<p style="margin:4pt 0 0;padding:4pt 6pt;background:#FBF7EE;border-left:2pt solid #D9B56F"><b style="color:#8A6420">Suggested correction:</b> ${esc(f.text)}</p>` : ""}
+          ${list.length ? `
+          <table class="t" style="margin-top:4pt">
+            <tr><th style="width:5%">#</th><th style="width:16%">Entry</th><th style="width:12%">Date</th><th style="width:14%" class="n">Amount</th><th>Detail</th></tr>
+            ${list.map((it, k) => `<tr><td>${k + 1}</td><td>${esc(it.entry_no ?? "")}</td><td>${esc(it.date ?? "")}</td><td class="n">${it.amount != null ? amt(it.amount) : ""}</td><td>${esc(it.note)}</td></tr>`).join("")}
+          </table>${c.items.length > list.length ? `<p class="law">…and ${c.items.length - list.length} more (see the Excel report).</p>` : ""}` : ""}
+        </td></tr></table>`;
+    }).join("");
     return `
       <h2>${esc(s.title)}</h2>
       <p class="note">${esc(s.note)}</p>
       <table class="t">
         <tr><th>Check</th><th style="text-align:center">Result</th><th class="n">Books</th><th class="n">Portal</th><th class="n">Difference</th><th>Finding and rule</th></tr>
         ${rows}
-      </table>${det}`;
+      </table>
+      ${findings ? `<p class="sub">Findings and suggested corrections</p>${findings}` : ""}`;
   }).join("");
 
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>360° Audit — ${esc(o.business)}</title>
