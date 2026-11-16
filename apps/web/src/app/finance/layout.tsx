@@ -372,7 +372,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
   // Don't show sidebar on setup/pricing/admin pages, and wait for sub check
   if (UNGUARDED.some(p => pathname.startsWith(p))) return <ActiveBusinessProvider>{children}</ActiveBusinessProvider>;
-  if (embedded || pathname.endsWith("/receipt")) return <ActiveBusinessProvider>{children}</ActiveBusinessProvider>;   // a window, or a thermal receipt: the page alone
+  if (embedded || pathname.endsWith("/receipt")) return <ActiveBusinessProvider>{children}{!pathname.endsWith("/receipt") && <FreBookBuddy />}</ActiveBusinessProvider>;   // FreBookBuddy hides itself inside a window   // a window, or a thermal receipt: the page alone
   if (!subChecked) return <div style={{ minHeight: "100vh", background: "#F5F6FA" }} />;
 
   const sidebarW = collapsed ? 96 : 240;

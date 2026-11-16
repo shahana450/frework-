@@ -437,6 +437,13 @@ function LedgerContent() {
                   <button style={pill(activePreset === "all")} onClick={() => { setFrom(""); setTo(""); }}>All</button>
                   {presets.map(p => <button key={p.k} style={pill(activePreset === p.k)} onClick={() => { setFrom(p.f); setTo(p.t); }}>{p.label}</button>)}
                   <button style={pill(activePreset === "custom")} onClick={() => { if (!from) setFrom(presets[1].f); }}>Custom</button>
+                  {/* Any financial year (April–March), back to the earliest one in use */}
+                  <select aria-label="Financial year" value={/^\d{4}-04-01$/.test(from) && to === `${+from.slice(0, 4) + 1}-03-31` ? from.slice(0, 4) : ""}
+                    onChange={e => { const y = +e.target.value; if (y) { setFrom(`${y}-04-01`); setTo(`${y + 1}-03-31`); } }}
+                    style={{ ...pill(/^\d{4}-04-01$/.test(from) && to === `${+from.slice(0, 4) + 1}-03-31` && from.slice(0, 4) !== String(fyStart)), cursor: "pointer" }}>
+                    <option value="">Year…</option>
+                    {Array.from({ length: 8 }, (_, i) => fyStart + 1 - i).map(y => <option key={y} value={y}>FY {y}–{String(y + 1).slice(2)}</option>)}
+                  </select>
                 </div>
                 <span style={{ color: T.muted, fontSize: "0.85rem" }}>From</span>
                 <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={dateIn} />
