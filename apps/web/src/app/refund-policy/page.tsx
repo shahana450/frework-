@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LEGAL } from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Refund & Cancellation Policy",
@@ -22,7 +23,7 @@ export default function RefundPolicyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mb-3">1. Overview</h2>
             <p>
-              FreWork (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) is operated by FreWork Business Solutions. All payments on frework.online are processed securely via PhonePe Payment Gateway. This policy governs refunds and cancellations for all services and subscription plans purchased through our platform.
+              FreWork (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) is operated by {LEGAL.entity} (CIN {LEGAL.cin}), {LEGAL.address}. All payments on frework.online are processed securely via PhonePe Payment Gateway. This policy governs refunds and cancellations for all services and subscription plans purchased through our platform.
             </p>
           </section>
 

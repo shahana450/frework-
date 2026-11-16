@@ -1,17 +1,22 @@
 // One place for the facts every legal document repeats. Fill the empty ones before charging customers;
 // a blank value shows as "[to be added]" on the page so nothing invented is ever published.
 export const LEGAL = {
-  entity: "FreWork Business Solutions",
-  entityType: "",            // e.g. "a proprietorship" / "an LLP (LLPIN …)" / "a private limited company (CIN …)"
-  gstin: "",
-  address: "",               // registered office
+  entity: "Frenode (OPC) Private Limited",
+  entityType: "a one person company incorporated under the Companies Act, 2013 (CIN U62011KL2026OPC108016)",
+  cin: "U62011KL2026OPC108016",
+  pan: "AAHCF3500G",
+  tan: "CHNF05722D",
+  incorporated: "16 November 2026",
+  gstin: "",                 // add once GST registration is granted
+  address: "C/o Sunil Paul C.M Mathew, Brothers Arcade, Nadakkavu, Eranhipalam, Kozhikode, Kerala 673006",   // registered office
   courts: "Kozhikode, Kerala",
   grievanceName: "",         // the person named as Grievance Officer
   grievanceEmail: "legal@frework.online",
   supportEmail: "support@frework.online",
   billingEmail: "billing@frework.online",
-  effective: "21 October 2026",
-  version: "1.3",   // 1.1: email provider (Resend) listed; WhatsApp alerts, bank-statement reading and page-allowance use described
+  effective: "16 November 2026",
+  version: "1.4",   // 1.4: operated by Frenode (OPC) Private Limited (CIN, registered office)
+  // previous:   // 1.1: email provider (Resend) listed; WhatsApp alerts, bank-statement reading and page-allowance use described
 } as const;
 
 export const fill = (v: string) => v.trim() || "[to be added]";

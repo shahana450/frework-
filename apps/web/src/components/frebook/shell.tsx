@@ -31,7 +31,7 @@ export function FbFooter() {
         <Link href="/frebook/tally-ai">Connect Tally with AI</Link>
         <Link href="/services/accounting">Virtual Accountant</Link>
         <Link href="/contact">Contact</Link>
-        <p>© {new Date().getFullYear()} FreWork · FreBook is a FreWork product.</p>
+        <p>© {new Date().getFullYear()} FreWork · FreBook is a FreWork product of Frenode (OPC) Private Limited.</p>
       </div>
     </footer>
   );
