@@ -125,3 +125,12 @@ test("Word audit report lists each finding with its suggested correction", async
   assert.ok(html.includes("JV/1"));
   assert.ok(html.includes("1."));
 });
+import { partyFromNarration, isControlLedger } from "../../src/lib/bankParty";
+test("Bank narrations give the party's name for its own ledger", () => {
+  assert.equal(partyFromNarration("FT IMPS/IFI/608410068861/SUVIN K/Pay to account"), "Suvin K");
+  assert.equal(partyFromNarration("UPI/DR/412345678901/RAHUL TRADERS/YESB/rahul@ybl/Payment"), "Rahul Traders");
+  assert.equal(partyFromNarration("NEFT-SBIN0001234-ACME INDIA PVT LTD-INV22"), "Acme India Pvt Ltd");
+  assert.equal(partyFromNarration("SMS CHARGES QTR"), null);
+  assert.equal(partyFromNarration("NEFT/INTEREST CREDIT/1234567"), null);
+  assert.ok(isControlLedger("SUNDRY DEBTORS")); assert.ok(!isControlLedger("Suvin K"));
+});

@@ -143,7 +143,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
       const n = name.trim(); if (!isNew(n) || m.has(n)) return;
       const used = rows.filter(r => r.ledger.trim() === n);
       const side = used.length ? (used.filter(r => r.credit > 0).length >= used.length / 2 ? "in" : "out") : null;
-      m.set(n, heads[n] ?? inferHead(n)?.key ?? guessGroup(n, side) ?? headFromType(aiType).key);
+      m.set(n, heads[n] ?? inferHead(n)?.key ?? (aiType === "debtors" || aiType === "creditors" ? aiType : null) ?? guessGroup(n, side) ?? headFromType(aiType).key);
     };
     if (bankLedger && isNew(bankLedger)) m.set(bankLedger.trim(), heads[bankLedger.trim()] ?? "bank");
     rows.filter(r => r.state !== "posted" && selected.has(r.id) && r.ledger).forEach(r => consider(r.ledger, r.aiType));

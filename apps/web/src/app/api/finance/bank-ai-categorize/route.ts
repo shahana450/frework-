@@ -4,6 +4,7 @@ import { requireBusiness } from "@/lib/apiAuth";
 export const maxDuration = 300;
 import { getAI } from "@/lib/ai";
 import { createClient } from "@supabase/supabase-js";
+import { partyFromNarration, isControlLedger } from "@/lib/bankParty";
 
 const anthropic = getAI();
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -40,7 +41,7 @@ ${JSON.stringify(rows.map(r => ({ id: r.id, date: r.date, description: r.descrip
 Rules:
 - Credit (money in) → usually Sales, Receipts from Debtors, Capital, Loan Received
 - Debit (money out) → usually Purchases, Expenses, Payment to Creditors, Loan Repayment
-- "NEFT/RTGS/IMPS" transfers → look at description for clue
+- "NEFT/RTGS/IMPS/UPI" transfers to or from a person or firm → use THAT PARTY'S NAME as the ledger (e.g. "SUVIN K"), never a group such as "Sundry Debtors", "Sundry Creditors", "Debtors" or "Creditors"
 - "SALARY" or "SAL" → Salary & Wages
 - "GST" → GST Payable or GST Input Credit
 - "EMI" or "LOAN" → Loan Repayment / Interest
@@ -68,6 +69,19 @@ Return ONLY a JSON array (no explanation):
     if (!match) return NextResponse.json({ suggestions: [] });
 
     const suggestions: Suggestion[] = JSON.parse(match[0]);
+    // A transfer naming a party gets that party's own ledger (debtor for money in, creditor for money out) instead of a
+    // vague group / control ledger — the ledger is created under Sundry Debtors / Creditors when the entry is posted
+    const byId = new Map(rows.map(r => [r.id, r]));
+    const have = new Map((accounts ?? []).map(a => [a.name.trim().toLowerCase(), a.name]));
+    for (const sg of suggestions) {
+      const row = byId.get(sg.id); if (!row) continue;
+      const party = partyFromNarration(row.description);
+      if (party && sg.account?.trim().toLowerCase() === party.toLowerCase()) { sg.account_type = row.credit > 0 ? "debtors" : "creditors"; continue; }
+      if (!party || !(isControlLedger(sg.account) || !sg.account?.trim() || /^(suspense|misc)/i.test(sg.account))) continue;
+      sg.account = have.get(party.toLowerCase()) ?? party;
+      sg.account_type = row.credit > 0 ? "debtors" : "creditors";
+      sg.confidence = Math.max(sg.confidence ?? 0, 0.7);
+    }
     return NextResponse.json({ suggestions });
   } catch (e) {
     console.error("bank-ai-categorize error", e);
