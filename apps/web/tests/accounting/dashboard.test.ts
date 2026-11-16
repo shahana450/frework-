@@ -71,7 +71,7 @@ test("every menu item points at a finance page and Simple view keeps the essenti
   assert.ok(all.every(i => i.href.startsWith("/finance")));
   assert.equal(new Set(all.map(i => i.href)).size, all.length);
   const simple = all.filter(i => !i.accountant).map(i => i.label);
-  for (const must of ["Dashboard", "FreBook", "New Invoice", "Receivables", "Expenses", "Banking", "Profit & Loss", "Balance Sheet", "Review Queue"]) assert.ok(simple.includes(must), must);
+  for (const must of ["Dashboard", "FreBook AI", "New Invoice", "Receivables", "Expenses", "Banking", "Profit & Loss", "Balance Sheet", "Review Queue"]) assert.ok(simple.includes(must), must);
 });
 
 test("menu highlights the right item, including report tabs", () => {

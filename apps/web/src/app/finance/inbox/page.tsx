@@ -1,6 +1,7 @@
 "use client";
 import { isCashBankAccount } from "@/lib/journalRules";
 import { readBankStatement } from "@/lib/readStatement";
+import { PdfPasswordError } from "@/lib/pdfUnlock";
 import { cur, activeMoney } from "@/lib/money";
 // Smart Inbox — drop every statement, bill, invoice and Excel at once. FreWork reads each file,
 // drafts the entries, marks each "Ready" or "Needs a look", posts the ready ones in one click
@@ -27,7 +28,7 @@ type Item = {
   bank?: string; card?: boolean;      // statements: the bank / card ledger of the file — the server posts against it
   dupOk?: boolean;                    // the user checked a possible duplicate and chose to post it anyway
 };
-type FileJob = { id: string; name: string; size: number; kind: string; status: "queued" | "reading" | "done" | "error"; note?: string; key: string };
+type FileJob = { id: string; name: string; size: number; kind: string; status: "queued" | "reading" | "done" | "error"; note?: string; key: string; bank?: string };
 type InboxDraft = { items: Item[]; heads: Record<string, string>; files: FileJob[]; bankLedger: string; cardLedger: string };
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", amber: "#8A5A00", amberSoft: "#FFF4DB", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA" };
@@ -122,7 +123,17 @@ export default function SmartInbox() {
     }));
 
   async function readStatement(job: FileJob, file: File, card = CARD_NAME.test(file.name)) {
-    const data = await readBankStatement(file, { bizId, onProgress: p => { if (p.total > 1) setJob(job.id, { note: p.label }); } });
+    let data: Awaited<ReturnType<typeof readBankStatement>> | null = null, password: string | undefined;
+    for (let tries = 0; !data; tries++) {
+      try { data = await readBankStatement(file, { bizId, password, onProgress: p => { if (p.total > 1) setJob(job.id, { note: p.label }); } }); }
+      catch (e) {
+        if (!(e instanceof PdfPasswordError) || tries >= 3) throw e;
+        setJob(job.id, { note: "Waiting for the PDF password…" });
+        const pw = window.prompt(`"${file.name}" is password-protected${tries ? " — that password didn't open it" : ""}.\nEnter its password (banks often use your customer ID, or name + date of birth). It's used only in this browser and never sent or stored.`);
+        if (!pw) throw new Error("Password-protected — skipped. Retry and enter its password.");
+        password = pw;
+      }
+    }
     const rows = (data.transactions as { date: string; description: string; debit: number; credit: number }[])
       .filter(t => (Number(t.debit) || 0) > 0 || (Number(t.credit) || 0) > 0)
       .map((t, i) => ({ id: `${job.id}-${i}`, date: String(t.date ?? "").slice(0, 10), description: String(t.description ?? ""), debit: Number(t.debit) || 0, credit: Number(t.credit) || 0 }));
@@ -136,7 +147,12 @@ export default function SmartInbox() {
       } catch { /* those rows stay "Needs a look" */ }
     }
     // A credit card statement: spends are debits on the card (a liability), payments to the card are credits
-    const bank = card ? (cardLedger || "Credit Card") : (bankLedger || "Bank Account");
+    const BANKS = ["sbi", "state bank", "hdfc", "icici", "axis", "kotak", "federal", "canara", "union", "bob", "baroda", "pnb", "punjab", "indian bank", "idbi", "yes", "indusind", "south indian", "sib", "csb", "catholic", "dhanlaxmi", "idfc", "au ", "rbl", "bandhan", "esaf", "kerala gramin", "iob", "overseas"];
+    const hint = (file.name + " " + rows.slice(0, 3).map(r => r.description).join(" ")).toLowerCase();
+    const named = BANKS.find(b => hint.includes(b.trim()));
+    const pick = named ? accounts.filter(a => (card ? /card/i.test(a.name) : isCashBankAccount(a as never) && !/card/i.test(a.name)) && a.name.toLowerCase().includes(named.trim())).map(a => a.name)[0] : undefined;
+    const bank = pick ?? (card ? (cardLedger || "Credit Card") : (bankLedger || "Bank Account"));
+    setJob(job.id, { bank });
     let matched = 0;
     addItems(rows.map(r => {
       const s = sugg.get(r.id); const amount = r.debit || r.credit;
@@ -158,7 +174,7 @@ export default function SmartInbox() {
         state: sure ? "ready" as const : "check" as const, reason,
       };
     }));
-    return `${rows.length} ${card ? "card " : ""}transactions${matched ? ` · ${matched} matched to bills` : ""}`;
+    return `${rows.length} ${card ? "card " : ""}transactions → ${bank}${matched ? ` · ${matched} matched to bills` : ""}`;
   }
 
   async function readDocument(job: FileJob, file: File) {
@@ -378,10 +394,10 @@ export default function SmartInbox() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.muted, flexWrap: "wrap" }}>
             Bank ledger
-            <input list="inbox-banks" value={bankLedger} onChange={e => setBankLedger(e.target.value)} placeholder="e.g. HDFC Bank" style={{ height: 38, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14, width: 180 }} />
+            <input list="inbox-banks" title={bankLedger} value={bankLedger} onChange={e => setBankLedger(e.target.value)} placeholder="e.g. HDFC Bank" style={{ height: 38, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14, width: 180 }} />
             <datalist id="inbox-banks">{accounts.filter(a => isCashBankAccount(a as never)).map(a => <option key={a.name} value={a.name} />)}</datalist>
             <span style={{ marginLeft: 8 }}>Card ledger</span>
-            <input list="inbox-cards" value={cardLedger} onChange={e => setCardLedger(e.target.value)} placeholder="e.g. HDFC Credit Card" style={{ height: 38, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14, width: 180 }} />
+            <input list="inbox-cards" title={cardLedger} value={cardLedger} onChange={e => setCardLedger(e.target.value)} placeholder="e.g. HDFC Credit Card" style={{ height: 38, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 12px", fontFamily: "inherit", fontSize: 14, width: 180 }} />
             <datalist id="inbox-cards">{accounts.filter(a => /card/i.test(a.name)).map(a => <option key={a.name} value={a.name} />)}</datalist>
           </div>
         </header>
@@ -407,6 +423,12 @@ export default function SmartInbox() {
           ))}
         </ol>
 
+        {tally.status !== "connected" && (
+          <div role="status" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "10px 16px", borderRadius: 14, background: "#FFF4DB", border: "1px solid #F2D29B", color: "#5A3A00", fontSize: 14 }}>
+            <span style={{ flex: 1, minWidth: 220 }}><b>Tally isn't connected.</b> You can still read and review everything now, post to FreBook, and send to Tally later.</span>
+            <Link href="/finance/tally" style={{ color: "#8A5A00", fontWeight: 700 }}>Connect Tally →</Link>
+          </div>
+        )}
         {/* Drop zone */}
         <div onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
           onDrop={e => { e.preventDefault(); setDrag(false); if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files); }}
@@ -416,6 +438,8 @@ export default function SmartInbox() {
           </span>
           <div style={{ fontFamily: SERIF, fontSize: "1.35rem", fontWeight: 700 }}>Drag files here</div>
           <div style={{ fontSize: 13.5, color: C.muted, maxWidth: 520 }}>Bank and credit-card statements, scanned or photographed bills (even handwritten), invoices, Excel and CSV. Hundreds at once is fine. Payments are matched to your unpaid bills and invoices automatically.</div>
+          <div style={{ fontSize: 12.5, color: "#4A5752", maxWidth: 560 }}>🔒 Password-protected bank PDFs (SBI, HDFC, ICICI…) are fine — FreBook asks for the password and opens the file in your browser; the password is never sent or stored.</div>
+          <div style={{ fontSize: 12.5, color: "#0B5E42", fontWeight: 600 }}>Encrypted in transit and at rest · only your team can see it · never sold or shared for advertising</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
             <button onClick={() => fileInput.current?.click()} style={btn(true)}>Choose files</button>
             <button onClick={() => folderInput.current?.click()} style={btn(false)}>Choose a folder</button>
@@ -552,7 +576,7 @@ export default function SmartInbox() {
         )}
 
         {!files.length && (
-          <p style={{ textAlign: "center", color: C.muted, fontSize: 13 }}>Nothing is posted until you press <b>Approve</b>. Entries already posted from the same file are never posted twice.</p>
+          <p style={{ textAlign: "center", color: "#3F4C47", fontSize: 13.5 }}>Nothing is posted until you press <b>Approve</b>. Entries already posted from the same file are never posted twice.</p>
         )}
       </div>
       <style>{`

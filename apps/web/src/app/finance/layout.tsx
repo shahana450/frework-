@@ -88,7 +88,7 @@ const FINANCE_CSS = `
 
 // Labels short enough to sit under an icon on the narrow rail
 const SHORT: Record<string, string> = {
-  "Dashboard": "Home", "FreBook": "FreBook AI", "New Invoice": "+ Invoice", "Collect Payments": "Collect", "Credit Note": "Credit note", "Debit Note": "Debit note",
+  "Dashboard": "Home", "FreBook AI": "FreBook AI", "New Invoice": "+ Invoice", "Collect Payments": "Collect", "Credit Note": "Credit note", "Debit Note": "Debit note",
   "Customers & Suppliers": "Parties", "Import Statement": "Import", "Bank History": "History", "Books & Tally Push": "Books", "Trial Balance": "TB",
   "Chart of Accounts": "Accounts", "Opening Balances": "Opening", "Audit Log": "Audit log", "Profit & Loss": "P&L", "Balance Sheet": "Bal. sheet",
   "Monthly Recap": "Recap", "Analysis & Audit": "Analysis", "GST Returns": "GST", "GST Reconciliation": "GST recon", "Review Queue": "Review",
@@ -126,7 +126,7 @@ const TOP_ICONS = [
   { href: "/finance", label: "Home" },
   { href: "/finance/portfolio", label: "All businesses" },
   { href: "/finance/cfo", label: "Analysis" },
-  { href: "/finance/chat-book", label: "FreBook" },
+  { href: "/finance/chat-book", label: "FreBook AI" },
   { href: "/finance/inbox", label: "Smart Inbox" },
   { href: "/finance/sales/new", label: "Invoice" },
   { href: "/finance/purchases/new", label: "Bill" },
@@ -196,6 +196,13 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   // Collapsed menu opens while the pointer is over it (desktop), and closes when it leaves
   const [peek, setPeek] = useState(false);
   const [showModules, setShowModules] = useState(false);
+  useEffect(() => {
+    const all = FINANCE_NAV.flatMap(g => g.items);
+    const qs = typeof window !== "undefined" ? window.location.search : "";
+    const hit = all.find(i => isActive(i, pathname, qs)) ?? all.filter(i => pathname.startsWith(i.href.split("?")[0])).sort((a, b) => b.href.length - a.href.length)[0];
+    const label = pathname === "/finance" ? "Home" : hit?.label;
+    if (label) document.title = `${label === "FreBook" ? "FreBook AI" : label} · FreBook`;
+  }, [pathname]);
   useEffect(() => { try { setShowModules(localStorage.getItem("fw-home-modules") === "1"); } catch { /* */ } }, []);
   const toggleModules = () => setShowModules(v => { try { localStorage.setItem("fw-home-modules", v ? "0" : "1"); } catch { /* */ } return !v; });
   const peekTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -370,7 +377,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
   // FreBook (Command Desk) and phones get the narrow icon strip; the arrow still expands it
   useEffect(() => {
-    setCollapsed(pathname === "/finance" || pathname.startsWith("/finance/chat-book") || window.innerWidth < 760);
+    setCollapsed(pathname.startsWith("/finance/chat-book") || window.innerWidth < 760);   // one menu everywhere: the full sidebar (FreBook chat keeps its own)
   }, [pathname]);
 
   // Don't show sidebar on setup/pricing/admin pages, and wait for sub check
@@ -453,7 +460,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
               border: `1px solid ${tallyConnected ? "rgba(127,224,180,0.35)" : "rgba(255,255,255,0.14)"}`,
               borderRadius: 8, padding: "5px 8px",
             }}>
-              <span style={{ fontSize: "0.55rem", color: tallyConnected ? "#7FE0B4" : "#8FA39B", flexShrink: 0 }}>●</span>
+              <span style={{ fontSize: "0.55rem", color: tallyConnected ? "#7FE0B4" : tallyState.status === "error" ? "#F3A58F" : "#E5B85C", flexShrink: 0 }}>{tallyConnected ? "●" : "○"}</span>
               <div style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: "0.58rem", color: tallyConnected ? "#7FE0B4" : "#8FA39B", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Tally {tallyStatusWord(tallyState)}
@@ -634,7 +641,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       {/* Phone tab bar */}
       <nav className="fw-tabs" aria-label="Tabs">
         {[
-          { href: "/finance/chat-book", label: "FreBook", d: "M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" },
+          { href: "/finance/chat-book", label: "FreBook AI", d: "M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" },
           { href: "/finance/sales", label: "Sales", d: "M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2zM9 8h6M9 12h6" },
           { href: "/finance/chat-book?prefill=", label: "", d: "M12 5v14M5 12h14" },
           { href: "/finance/banking", label: "Bank", d: "M3 8a2 2 0 012-2h14a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2zM3 10h18" },

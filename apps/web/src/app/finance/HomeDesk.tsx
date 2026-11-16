@@ -114,7 +114,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         <span aria-hidden="true" style={{ position: "absolute", right: -10, top: -40, fontFamily: SERIF, fontSize: 300, lineHeight: 1, color: "rgba(255,255,255,0.05)", pointerEvents: "none" }}>{cur().trim() || "₹"}</span>
         <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 10 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11.5, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D9B56F" }}>
-            <span aria-hidden="true" style={{ width: 28, height: 1.5, background: "#D9B56F" }} />{today.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            <span aria-hidden="true" style={{ width: 28, height: 1.5, background: "#D9B56F" }} />{today.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}<span style={{ letterSpacing: "0.04em", textTransform: "none", fontStyle: "italic", fontWeight: 600, color: "#C9D3CE", marginLeft: 6 }}>· Chat in. Books out.</span>
           </span>
           <h1 className="hd-h1" style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(30px, 4vw, 54px)", lineHeight: 1.08, textWrap: "balance", color: "#FFFDF8" }}>
             {greeting}.<br />What happened in the business <span style={{ fontStyle: "italic", color: "#D9B56F" }}>today</span>?
@@ -240,9 +240,10 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
           : dues.length === 0 ? <span style={{ fontSize: 13, color: C.pos, fontWeight: 600 }}>✓ Nothing due in the next few weeks.</span>
           : <div className="hd-dues">
             {(allDues ? dues : dues.slice(0, 5)).map(d => {
-              const late = d.daysLeft < 0 && !d.filed;
+              const unknown = d.daysLeft < 0 && !d.filed && /GSTR/i.test(d.title) && !(dash as unknown as { portalKnown?: boolean })?.portalKnown;
+              const late = d.daysLeft < 0 && !d.filed && !unknown;
               const tone = d.filed ? C.pos : late ? C.neg : d.daysLeft <= 10 ? C.goldLine : C.line;
-              const chip = d.filed ? ["Filed ✓", C.posSoft, C.pos] : late ? ["Overdue", C.negSoft, C.neg] : d.daysLeft <= 3 ? [dueChip(d.daysLeft), C.negSoft, C.neg] : [`${d.daysLeft} days`, d.daysLeft <= 10 ? C.goldSoft : C.ground, d.daysLeft <= 10 ? C.gold : C.muted];
+              const chip = d.filed ? ["Filed ✓", C.posSoft, C.pos] : unknown ? ["Status unknown", C.goldSoft, C.gold] : late ? ["Overdue", C.negSoft, C.neg] : d.daysLeft <= 3 ? [dueChip(d.daysLeft), C.negSoft, C.neg] : [`${d.daysLeft} days`, d.daysLeft <= 10 ? C.goldSoft : C.ground, d.daysLeft <= 10 ? C.gold : C.muted];
               const dt = new Date(d.due + "T00:00:00");
               return (
                 <Link key={d.key} href={d.href} title={d.note} className="lift" style={{ ...tile, padding: 14, gap: 6, borderTop: `3px solid ${tone}`, textDecoration: "none", color: C.ink, opacity: d.filed ? 0.75 : 1 }}>
