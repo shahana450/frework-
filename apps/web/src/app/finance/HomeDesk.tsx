@@ -58,7 +58,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
 
   // Figures as accountants write them: grouped, no symbol (the card says the unit), negatives in brackets
   const locale = dash?.locale ?? "en-IN";
-  const num = (n: number | undefined | null) => n == null ? "—" : (() => { const s = Math.round(Math.abs(n)).toLocaleString(locale); return n < 0 ? `(${s})` : s; })();
+  const num = (n: number | undefined | null) => n == null ? "—" : (() => { const s = `${cur()}${Math.round(Math.abs(n)).toLocaleString(locale)}`; return n < 0 ? `(${s})` : s; })();
   const money = (n: number | undefined | null) => n == null ? "—" : `${n < 0 ? "−" : ""}${cur()}${Math.round(Math.abs(n)).toLocaleString(locale)}`;
 
   const income = dash?.revenue ?? 0, spent = dash?.expenses ?? 0, profit = dash?.profit ?? 0;
@@ -71,6 +71,8 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
   // Needs you today: overdue filings first, then the books' own alerts
   const needs: { tone: "bad" | "warn" | "info"; title: string; sub: string; action: string; href: string; primary?: boolean }[] = [];
   for (const d of dues.filter(x => x.daysLeft < 0 && !x.filed).slice(0, 2)) {
+    // Without the GST portal linked FreBook can't know whether it was filed — never call it late on a guess
+    if (!(dash as unknown as { portalKnown?: boolean })?.portalKnown && /GSTR/i.test(d.title)) { needs.push({ tone: "warn", title: `${d.title} for ${d.period} — was due ${new Date(d.due + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`, sub: "Status unknown — connect the GST portal to check whether it was filed", action: "Connect portal", href: "/finance/portals" }); continue; }
     needs.push({ tone: "bad", title: `${d.title} for ${d.period} is overdue`, sub: `Due ${new Date(d.due + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · late fee running`, action: "Prepare return", href: d.href, primary: true });
   }
   for (const a of dash?.alerts ?? []) {
@@ -181,7 +183,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         <section aria-labelledby="pos" style={{ ...tile, padding: 24, gap: 6 }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap", paddingBottom: 12, borderBottom: `1px solid ${C.line}` }}>
             <h2 id="pos" style={{ ...h2, fontWeight: 400, fontSize: 23 }}>Position today</h2>
-            <span style={{ fontSize: 11.5, color: C.muted }}>{cur().trim() || dash?.currency} · (brackets) = negative</span>
+            <span style={{ fontSize: 11.5, color: C.muted }}>(brackets) = negative</span>
           </div>
           {(() => {
             const rows = [
@@ -189,7 +191,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
               { k: "Receivables", v: dash?.receivables, href: "/finance/receivables", tag: (dash?.receivables ?? 0) < 0 ? "Customers in credit" : "" },
               { k: "Payables", v: dash?.payables, href: "/finance/payables", tag: (dash?.payables ?? 0) < 0 ? "Suppliers in debit" : "" },
             ];
-            const max = Math.max(1, ...rows.map(r => Math.abs(r.v ?? 0)));
+            const max = Math.max(1, ...rows.map(r => Math.max(0, r.v ?? 0)));
             return rows.map((r, i) => (
               <Link key={r.k} href={r.href} style={{ display: "flex", flexDirection: "column", gap: 10, padding: "16px 0", borderTop: i ? `1px solid ${C.line}` : "none", color: C.ink, textDecoration: "none" }}>
                 <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -197,9 +199,11 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
                   {r.tag && <span style={{ fontSize: 10.5, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: C.negSoft, color: C.neg }}>{r.tag}</span>}
                   <span style={{ marginLeft: "auto", fontFamily: SERIF, fontSize: 24, fontVariantNumeric: "tabular-nums", color: (r.v ?? 0) < 0 ? C.neg : C.ink }}>{num(r.v)}</span>
                 </span>
-                <span aria-hidden="true" style={{ height: 6, borderRadius: 999, background: C.goldSoft, overflow: "hidden" }}>
-                  <span style={{ display: "block", height: "100%", width: `${Math.max(4, (Math.abs(r.v ?? 0) / max) * 100)}%`, background: (r.v ?? 0) < 0 ? C.neg : C.green, borderRadius: 999 }} />
-                </span>
+                {(r.v ?? 0) < 0
+                  ? <span style={{ fontSize: 12.5, color: C.neg }}>⚠ Balance on the wrong side — {r.k === "Payables" ? "more paid to suppliers than billed; check advances and missing bills" : r.k === "Receivables" ? "customers paid more than invoiced; check advances and missing invoices" : "the bank / cash ledgers are overdrawn; check missing receipts"}.</span>
+                  : <span aria-hidden="true" style={{ height: 6, borderRadius: 999, background: C.goldSoft, overflow: "hidden" }}>
+                      <span style={{ display: "block", height: "100%", width: `${Math.max(4, ((r.v ?? 0) / max) * 100)}%`, background: C.green, borderRadius: 999 }} />
+                    </span>}
               </Link>
             ));
           })()}
@@ -321,7 +325,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
 
         <section aria-labelledby="insight" style={{ ...tile, background: C.goldSoft, border: "none" }}>
           <span style={eyebrow}>Insight</span>
-          <h2 id="insight" style={{ ...h2, fontSize: 19, lineHeight: 1.3 }}>{dash?.insight ? dash.insight.text : dash ? "No unusual spending this month" : "Reading your books…"}</h2>
+          <h2 id="insight" style={{ ...h2, fontSize: 19, lineHeight: 1.3 }}>{dash?.insight ? dash.insight.text : dash ? "Nothing unusual in the recent spending" : "Reading your books…"}</h2>
           {dash?.insight ? (() => {
             const spark = dash.insight.spark, max = Math.max(1, ...spark);
             return (

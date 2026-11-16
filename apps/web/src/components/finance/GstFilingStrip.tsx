@@ -35,12 +35,15 @@ export default function GstFilingStrip({ bizId, gstin }: { bizId: string; gstin?
     return new Date(Date.UTC(y, m, form === "GSTR-1" ? 11 : 20));
   };
   const today = Date.parse(new Date().toISOString().slice(0, 10));
+  const linkedNow = !!link || (rows ?? []).length > 0;
   const pill = (form: string, ym: string) => {
     const s = (rows ?? []).find(r => r.form === form && r.period === ym);
     if (s && FILED.includes(s.status)) return { tone: "ok", text: `✓ Filed${s.filed_on ? ` ${s.filed_on.slice(8, 10)} ${MON[+s.filed_on.slice(5, 7) - 1]}` : ""}`, title: s.arn ? `ARN ${s.arn}` : "Filed" };
     const d = due(form, ym);
     if (!d) return { tone: "na", text: "Quarterly", title: "Filed with the quarter" };
     const days = Math.round((d.getTime() - today) / 86400000);
+    const dueTxt = `${d.getUTCDate()} ${MON[d.getUTCMonth()]}`;
+    if (days < 0 && !linkedNow) return { tone: "na", text: `Due ${dueTxt} · status unknown`, title: "Connect the GST portal (Portal Connect) to see whether it was filed" };
     if (days < 0) return { tone: "late", text: `${-days}d late`, title: `Was due ${d.toISOString().slice(0, 10)}` };
     return { tone: "due", text: days === 0 ? "Due today" : `Due in ${days}d`, title: `Due ${d.toISOString().slice(0, 10)}` };
   };
@@ -58,7 +61,7 @@ export default function GstFilingStrip({ bizId, gstin }: { bizId: string; gstin?
       {/* Label block */}
       <div style={{ background: "#12352D", color: "#FFFFFF", padding: "8px 14px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, minWidth: 92 }}>
         <span style={{ fontSize: 9.5, letterSpacing: "0.16em", textTransform: "uppercase", color: "#C9A24A", fontWeight: 800 }}>GST returns</span>
-        <span style={{ fontSize: 11.5, color: "#C9D3CE" }}>{linked ? <>Portal linked{updated ? <><br />updated {updated}</> : null}</> : "Portal not linked"}</span>
+        <span style={{ fontSize: 11.5, color: "#C9D3CE" }}>{linked ? <>Portal linked{updated ? <><br />updated {updated}</> : null}</> : <a href="/finance/portals" style={{ color: "#D9B56F" }}>Connect portal →</a>}</span>
       </div>
       {/* One column per month */}
       {periods.map((ym, i) => (

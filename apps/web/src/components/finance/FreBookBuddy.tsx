@@ -28,7 +28,9 @@ export default function FreBookBuddy() {
   // A short hello a few seconds after each page opens, then quiet
   useEffect(() => {
     setSay(null);
-    const t1 = setTimeout(() => setSay(LINES[Math.floor(Math.random() * LINES.length)]), 2500);
+    let greeted = false; try { greeted = sessionStorage.getItem("fb-buddy-hi") === "1"; } catch { /* */ }
+    if (greeted) return;   // one hello per session — then he stays quiet unless hovered
+    const t1 = setTimeout(() => { setSay(LINES[Math.floor(Math.random() * LINES.length)]); try { sessionStorage.setItem("fb-buddy-hi", "1"); } catch { /* */ } }, 2500);
     const t2 = setTimeout(() => setSay(null), 8500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [path]);
@@ -58,7 +60,7 @@ export default function FreBookBuddy() {
 
   if (hidden || path.startsWith("/finance/chat-book")) return null;
   return (
-    <div className="fbb" style={pos ? { right: pos.x, bottom: pos.y } : undefined} onMouseEnter={() => !drag.current && setSay("Hi! I'm FreBook, your virtual accountant. Tap to chat, or drag me anywhere.")} onMouseLeave={() => setSay(null)}>
+    <div className="fbb" style={pos ? { right: pos.x, bottom: pos.y } : undefined} onMouseEnter={() => !drag.current && setSay("Hi! I'm FreBook AI, your AI accountant. Tap to chat, or drag me anywhere.")} onMouseLeave={() => setSay(null)}>
       <style>{`
         .fbb{position:fixed;right:22px;bottom:22px;z-index:150;display:flex;align-items:flex-end;gap:10px;pointer-events:none}
         .fbb>*{pointer-events:auto}
@@ -81,12 +83,12 @@ export default function FreBookBuddy() {
       `}</style>
       {say && <div className="fbb-say" role="status">{say}</div>}
       <div style={{ position: "relative" }}>
-        <button className="fbb-btn" aria-label="Open FreBook, your virtual accountant (drag to move)"
+        <button className="fbb-btn" aria-label="Open FreBook AI, your AI accountant (drag to move)"
           onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { drag.current = null; }}
           onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push("/finance/chat-book"); } }}>
           <img src="/frebook-face.jpg" alt="" width={68} height={68} draggable={false} />
         </button>
-        <button className="fbb-x" aria-label="Hide FreBook for now" onClick={() => { setHidden(true); try { sessionStorage.setItem("fb-buddy-off", "1"); } catch {} }}>×</button>
+        <button className="fbb-x" aria-label="Hide FreBook AI for now" onClick={() => { setHidden(true); try { sessionStorage.setItem("fb-buddy-off", "1"); } catch {} }}>×</button>
       </div>
     </div>
   );

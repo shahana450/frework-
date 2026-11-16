@@ -2,7 +2,7 @@
 import { setActiveCurrency } from "@/lib/money";
 import { financeTitle } from "@/lib/dueText";
 import { useState, useEffect, useRef, Suspense } from "react";
-import { useTally, setTallyBusiness } from "@/lib/tallyConnection";
+import { useTally, setTallyBusiness, tallyStatusWord } from "@/lib/tallyConnection";
 import { useTallyAutoCatchUp, AUTO_PUSH_EVENT } from "@/lib/tallyAutoCatchUp";
 import WindowDock, { openInWindow } from "@/components/finance/WindowDock";
 import { useTallyAutoSync, AUTOSYNC_EVENT } from "@/lib/tallyAutoSync";
@@ -88,12 +88,12 @@ const FINANCE_CSS = `
 
 // Labels short enough to sit under an icon on the narrow rail
 const SHORT: Record<string, string> = {
-  "Dashboard": "Home", "FreBook": "Ask AI", "New Invoice": "Invoice", "Collect Payments": "Collect", "Credit Note": "Credit note", "Debit Note": "Debit note",
+  "Dashboard": "Home", "FreBook": "FreBook AI", "New Invoice": "+ Invoice", "Collect Payments": "Collect", "Credit Note": "Credit note", "Debit Note": "Debit note",
   "Customers & Suppliers": "Parties", "Import Statement": "Import", "Bank History": "History", "Books & Tally Push": "Books", "Trial Balance": "TB",
   "Chart of Accounts": "Accounts", "Opening Balances": "Opening", "Audit Log": "Audit log", "Profit & Loss": "P&L", "Balance Sheet": "Bal. sheet",
   "Monthly Recap": "Recap", "Analysis & Audit": "Analysis", "GST Returns": "GST", "GST Reconciliation": "GST recon", "Review Queue": "Review",
-  "Upload Documents": "Upload", "FreWork AI": "AI", "Business Details": "Business", "Region & Currency": "Region", "Portal Connect": "Portals",
-  "Financial Years": "Years", "Team & Access": "Team", "Tally Sync": "Tally", "CA Dashboard": "CA desk", "New Bill": "New bill",
+  "Upload Documents": "Upload", "FreWork AI": "FreBook AI", "Business Details": "Business", "Region & Currency": "Region", "Portal Connect": "Portals",
+  "Financial Years": "Years", "Team & Access": "Team", "Tally Sync": "Tally", "CA Dashboard": "CA desk", "New Bill": "+ Bill",
 };
 const shortLabel = (l: string) => SHORT[l] ?? l;
 
@@ -195,6 +195,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const nudgeTop = (dir: 1 | -1) => topRef.current?.scrollBy({ left: dir * Math.max(240, (topRef.current?.clientWidth ?? 600) * 0.6), behavior: "smooth" });
   // Collapsed menu opens while the pointer is over it (desktop), and closes when it leaves
   const [peek, setPeek] = useState(false);
+  const [showModules, setShowModules] = useState(false);
+  useEffect(() => { try { setShowModules(localStorage.getItem("fw-home-modules") === "1"); } catch { /* */ } }, []);
+  const toggleModules = () => setShowModules(v => { try { localStorage.setItem("fw-home-modules", v ? "0" : "1"); } catch { /* */ } return !v; });
   const peekTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const slim = collapsed && !peek;
   const [tip, setTip] = useState<{ label: string; top: number } | null>(null);
@@ -453,7 +456,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
               <span style={{ fontSize: "0.55rem", color: tallyConnected ? "#7FE0B4" : "#8FA39B", flexShrink: 0 }}>●</span>
               <div style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: "0.58rem", color: tallyConnected ? "#7FE0B4" : "#8FA39B", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Tally {tallyConnected ? "Connected" : "Disconnected"}
+                  Tally {tallyStatusWord(tallyState)}
                 </div>
                 <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#FFFFFF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {tallyCompany}
@@ -473,7 +476,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                 <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#FFFFFF", maxWidth: 84, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bizName}</span>
               </Link>
             )}
-            <Link href="/finance/tally" title={tallyCompany ? `Tally: ${tallyCompany} — ${tallyConnected ? "connected" : "not connected"}` : "Connect Tally"} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 999, border: `1px solid ${tallyConnected ? "rgba(127,224,180,0.35)" : "rgba(255,255,255,0.14)"}`, fontSize: "0.6rem", fontWeight: 700, color: tallyConnected ? "#7FE0B4" : "#8FA39B" }}>
+            <Link href="/finance/tally" title={tallyCompany ? `Tally: ${tallyCompany} — ${tallyStatusWord(tallyState).toLowerCase()}` : "Connect Tally"} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 999, border: `1px solid ${tallyConnected ? "rgba(127,224,180,0.35)" : "rgba(255,255,255,0.14)"}`, fontSize: "0.6rem", fontWeight: 700, color: tallyConnected ? "#7FE0B4" : "#8FA39B" }}>
               <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor" }} />Tally
             </Link>
           </div>
@@ -509,7 +512,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                   const badge = item.badge === "review" && reviewCount > 0 ? reviewCount : 0;
                   const isBook = item.href === "/finance/chat-book";
                   return (
-                    <Link key={item.href} href={item.href} prefetch={false} aria-label={slim ? item.label : undefined} className={`fw-nav${active ? " on" : ""}`}
+                    <Link key={item.href} href={item.href} prefetch={false} aria-label={slim ? item.label : undefined} title={item.label} className={`fw-nav${active ? " on" : ""}`}
                       onMouseEnter={e => { if (slim && shortLabel(item.label) !== item.label) { const r = e.currentTarget.getBoundingClientRect(); setTip({ label: item.label, top: r.top + r.height / 2 }); } }}
                       onFocus={e => { if (slim) { const r = e.currentTarget.getBoundingClientRect(); setTip({ label: item.label, top: r.top + r.height / 2 }); } }}
                       onMouseLeave={() => setTip(null)} onBlur={() => setTip(null)} style={{
@@ -570,7 +573,11 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
           {topMore.r && pathname !== "/finance" && <button type="button" className="fw-topnudge" aria-label="Scroll the menu right" onClick={() => nudgeTop(1)} style={{ right: 22 }}>›</button>}
           {/* Home: the sections grouped into panels (other pages keep the one-line strip) */}
           {pathname === "/finance" && !viewOnly ? (
-            <nav className="fw-groups" aria-label="Main sections">
+            <>
+            <div style={{ display: "flex", justifyContent: "flex-end", margin: "10px 16px 0" }}>
+              <button type="button" onClick={toggleModules} aria-expanded={showModules} style={{ height: 34, padding: "0 16px", borderRadius: 999, border: "1px solid #E6DFD0", background: "#FFFFFF", color: "#12352D", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>{showModules ? "✕ Hide modules" : "☰ All modules"}</button>
+            </div>
+            {showModules && <nav className="fw-groups" aria-label="Main sections">
               {HOME_GROUPS.map(g => ({ ...g, items: g.items.filter(h => india || !h.startsWith("/finance/gst")).map(h => [...TOP_ICONS, ...HOME_EXTRA].find(t => t.href === h)!).filter(Boolean) })).filter(g => g.items.length).map(g => (
                 <section key={g.label} className="fw-grp" style={{ gridColumn: `span ${g.span}` }}>
                   <div className="fw-grp-h">{g.label}</div>
@@ -587,7 +594,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                   </div>
                 </section>
               ))}
-            </nav>
+            </nav>}
+            </>
           ) : (
           <nav ref={setTopEl} className="fw-topicons" aria-label="Main sections">
             {(viewOnly ? [{ href: "/finance/client", label: "Home" }, ...TOP_ICONS.filter(t => VIEW_ONLY_ICONS.includes(t.href))] : TOP_ICONS).filter(t => india || !t.href.startsWith("/finance/gst")).map(t => {

@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
     // Returns already filed on the GST / Income-tax portal show as Filed instead of a countdown
     const { data: filed } = await supabase.from("fw_fin_portal_status").select("portal,form,period,status,arn,filed_on,demo").eq("business_id", bizId!).in("kind", ["return", "itr"]);
     if (filed?.length) dash.compliance = markFiled(dash.compliance, filed as FetchedStatus[]);
+    (dash as unknown as { portalKnown: boolean }).portalKnown = (filed ?? []).some(f => (f as { portal?: string }).portal === "gst");
     // Tax desk tile: latest GST / IT filing statuses from the portals + open notices on the Shelf
     const [links, latest, openNotices] = await Promise.all([
       supabase.from("fw_fin_portal_links").select("portal,identifier,status,last_sync_at,provider").eq("business_id", bizId!),

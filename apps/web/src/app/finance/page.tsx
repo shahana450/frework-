@@ -622,7 +622,7 @@ export default function FinanceDashboard() {
     return (
       <div style={{ minHeight: "100vh", background: "#F6F1E6", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "2rem", fontFamily: "'Manrope',system-ui,sans-serif" }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;500;600;700&display=swap');`}</style>
-        <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: "3rem", color: "#B4501E", marginBottom: "1rem", fontStyle: "italic", fontWeight: 500 }}>FreWork AI</div>
+        <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: "3rem", color: "#B4501E", marginBottom: "1rem", fontStyle: "italic", fontWeight: 500 }}>FreBook AI</div>
         <h1 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: "1.75rem", fontWeight: 600, color: "#2B2214", margin: "0 0 0.75rem" }}>Welcome to your accounting desk</h1>
         <p style={{ color: "#847457", fontSize: "1rem", maxWidth: 380, lineHeight: 1.7, margin: "0 0 2.5rem" }}>Your AI accountant is ready. Set up your business in 2 minutes.</p>
         <Link href="/finance/setup" style={{ background: "#B4501E", color: "#FFFDF8", padding: "12px 36px", borderRadius: 2, fontWeight: 700, textDecoration: "none", fontSize: "0.9rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>
@@ -666,6 +666,13 @@ export default function FinanceDashboard() {
         <main style={{ flex: 1, minWidth: 0, padding: "36px 48px", display: "flex", flexDirection: "column", gap: 26, overflowY: "auto" }}>
           {activeBiz && (
             <>
+              {/* The year on screen isn't today's year (it isn't set up yet): say so plainly, with a one-click fix */}
+              {missingFy && (
+                <div role="status" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "12px 18px", borderRadius: 14, background: "#FFF4DB", border: "1px solid #F2D29B", color: "#5A3A00", fontSize: 14 }}>
+                  <span style={{ flex: 1, minWidth: 220 }}>Showing <b>{financialYears.find(f => f.id === fyId)?.label ?? "an earlier year"}</b> — the latest year in your books. FY {missingFy.label} (today&apos;s year) isn&apos;t set up yet, so this year&apos;s entries can&apos;t be recorded.</span>
+                  <button onClick={createCurrentFy} style={{ height: 34, padding: "0 16px", borderRadius: 999, border: "none", background: "#12352D", color: "#FFFFFF", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Start FY {missingFy.label}</button>
+                </div>
+              )}
               <HomeDesk dash={dash} bizName={activeBiz.name} greeting={greeting} dashErr={dashErr} onRetry={() => setDashTick(t => t + 1)}
                 controls={<>
                   <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} title="Financial year"
@@ -708,7 +715,7 @@ export default function FinanceDashboard() {
               {tallySyncMsg && <div style={{ fontSize: 12, color: tallySyncMsg.ok ? WE.green : "#8A6D3B" }}>{tallySyncMsg.msg}</div>}
 
               <div style={{ fontSize: 11, color: WE.rule, textAlign: "center", paddingTop: 8 }}>
-                FreWork AI · FY {fyLabel} · {activeBiz.name}
+                FreBook AI · FY {fyLabel} · {activeBiz.name}
               </div>
             </>
           )}

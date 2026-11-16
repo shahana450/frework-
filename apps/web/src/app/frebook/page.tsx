@@ -23,6 +23,7 @@ export const metadata: Metadata = {
     "AI accountant", "AI accountant India", "AI bookkeeping", "AI bookkeeping software",
     "bookkeeping software India", "accounting software India", "online accounting software",
     "Tally AI", "connect Tally with AI", "Tally integration", "GST accounting software", "FreBook",
+    "AI bookkeeping Tally", "WhatsApp accounting", "WhatsApp accounting entries",
   ],
   openGraph: {
     type: "website", url: PAGE_URL, siteName: "FreWork", locale: "en_IN",
@@ -51,7 +52,7 @@ const FAQS: { q: string; a: string }[] = [
   { q: "Will FreBook replace my CA or accountant?",
     a: "No. FreBook removes day-to-day data entry so your CA can spend time on review, tax planning and filing. Every AI-drafted entry is confirmed before it posts." },
   { q: "What is FreBook AI?",
-    a: "FreBook AI is the assistant built into FreBook. Ask it about GST rates, TDS sections or how to record a transaction, in plain language." },
+    a: "FreBook AI is the AI accountant built into FreBook. Ask it about GST rates, TDS sections or how to record a transaction, in plain language." },
 ];
 
 const JSON_LD = {
@@ -163,7 +164,7 @@ export default function FreBookLandingPage() {
               {FREBOOK_PLAN.features.map(f => (
                 <div className="fb-card" key={f}><h3>{f}</h3><p>{FEATURE_TEXT[f] ?? ""}</p></div>
               ))}
-              <div className="fb-card"><h3>FreBook AI assistant</h3><p>Ask about GST rates, TDS sections or how to record anything — in plain language.</p></div>
+              <div className="fb-card"><h3>FreBook AI, the AI accountant</h3><p>Ask about GST rates, TDS sections or how to record anything — in plain language.</p></div>
             </div>
           </div>
         </section>

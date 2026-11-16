@@ -50,7 +50,7 @@ export default function BizSwitcher({ bizName }: { bizName: string }) {
     <div ref={box} style={{ position: "relative", marginBottom: 6 }}>
       <button type="button" onClick={() => setOpen(o => !o)} aria-haspopup="listbox" aria-expanded={open} title="Switch business"
         style={{ width: "100%", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", textAlign: "left", background: open ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.05)", border: "1px solid rgba(217,181,111,0.3)", borderRadius: 8, padding: "5px 8px", fontFamily: "inherit" }}>
-        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#FFFFFF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{bizName}</span>
+        <span title={bizName} style={{ fontSize: "0.75rem", fontWeight: 700, color: "#FFFFFF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{bizName}</span>
         <span aria-hidden="true" style={{ fontSize: "0.65rem", color: "#D9B56F", flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform .15s" }}>▼</span>
       </button>
       {open && (
@@ -70,7 +70,7 @@ export default function BizSwitcher({ bizName }: { bizName: string }) {
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", border: "none", borderRadius: 8, cursor: "pointer", textAlign: "left", fontFamily: "inherit", fontSize: 13, background: on ? "#E3F3EC" : "transparent", color: "#10241F" }}
                   onMouseEnter={e => { if (!on) e.currentTarget.style.background = "#F3ECDD"; }} onMouseLeave={e => { if (!on) e.currentTarget.style.background = "transparent"; }}>
                   <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: 6, flexShrink: 0, display: "grid", placeItems: "center", background: "#12352D", color: "#E8C27A", fontWeight: 800, fontSize: 11 }}>{b.name.trim()[0]?.toUpperCase()}</span>
-                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: on ? 800 : 600 }}>{b.name}</span>
+                  <span title={b.name} style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: on ? 800 : 600 }}>{b.name}</span>
                   {busy === b.id ? <span style={{ fontSize: 11, color: "#6B7570" }}>Opening…</span> : on ? <span style={{ fontSize: 12, color: "#0B7A55", fontWeight: 800 }}>✓</span> : b.role && b.role !== "owner" ? <span style={{ fontSize: 10.5, color: "#6B7570" }}>{b.role}</span> : null}
                 </button>
               );

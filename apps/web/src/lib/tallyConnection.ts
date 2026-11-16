@@ -208,11 +208,15 @@ async function linkFromServer(id: string) {
   } catch { /* the Tally page still lets the user choose */ }
 }
 export const tallyBusiness = () => biz;
+/** The one status word used everywhere: Connected / Connecting… / Not reachable / Not connected / Not set up. */
+export function tallyStatusWord(t: Pick<TallyState, "status" | "company">): string {
+  return t.status === "connected" ? "Connected" : t.status === "connecting" ? "Connecting…" : t.status === "error" ? "Not reachable" : t.company ? "Not connected" : "Not set up";
+}
 /** Short Tally status with the company name, e.g. "Tally · ABC Traders". */
 export function tallyLabel(t: Pick<TallyState, "status" | "company" | "companies">): string {
   if (t.status === "connected") return t.company ? `Tally · ${t.company}` : t.companies.length ? "Tally · choose company" : "Tally · no company open";
   if (t.status === "connecting") return `Tally · connecting${t.company ? ` to ${t.company}` : "…"}`;
-  return t.company ? `Tally off · ${t.company}` : "Tally · not connected";
+  return t.company ? `Tally ${tallyStatusWord(t).toLowerCase()} · ${t.company}` : "Tally · not set up";
 }
 
 /** The Tally company linked to the active business (read this, never the old device-wide key). */

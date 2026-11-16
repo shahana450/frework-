@@ -73,15 +73,14 @@ export const metadata: Metadata = {
     locale: "en_IN",
     url: "https://frework.online",
     title: "FreWork – GST, ITR & AI Bookkeeping (FreBook) | Business Platform India",
-    description:
-      "FreWork is India's all-in-one business platform — GST registration, ITR filing, company registration, coworking spaces and expert professionals at your fingertips.",
+    description: "FreWork is India's all-in-one business platform: GST registration, ITR filing, company registration and FreBook — AI bookkeeping with Tally and WhatsApp.",
     siteName: "FreWork",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "FreWork – GST Registration, ITR Filing & Business Services India",
-    description: "GST registration, ITR filing, company registration and business services online. India's all-in-one business platform.",
+    title: "FreWork – GST, ITR & AI Bookkeeping (FreBook) | Business Platform India",
+    description: "FreWork is India's all-in-one business platform: GST registration, ITR filing, company registration and FreBook — AI bookkeeping with Tally and WhatsApp.",
     creator: "@frework",
     images: ["/og-image.png"],
   },

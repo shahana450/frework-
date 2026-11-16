@@ -1,7 +1,7 @@
 "use client";
 // The same small Tally status on every page that uses Tally. Settings (port, company, bridge) live on the Tally page only.
 import Link from "next/link";
-import { useTally, connectTally } from "@/lib/tallyConnection";
+import { useTally, connectTally, tallyStatusWord } from "@/lib/tallyConnection";
 
 export default function TallyBar({ preferName, children, returnTo }: { preferName?: string; children?: React.ReactNode; returnTo?: string }) {
   const t = useTally();
@@ -15,7 +15,7 @@ export default function TallyBar({ preferName, children, returnTo }: { preferNam
           Tally
         </span>
         <span style={{ fontSize: "0.84rem", color: on ? "#0B7A55" : t.status === "error" ? "#C2321F" : "#5E6B66", fontWeight: on ? 700 : 500 }}>
-          {t.status === "connecting" ? "Connecting…" : on ? <>Connected to <b>{t.company || "Tally"}</b></> : t.status === "error" ? "Not reachable" : t.company ? `Not checked — ${t.company}` : "Not set up yet"}
+          {on ? <>Connected to <b>{t.company || "Tally"}</b></> : t.company ? `${tallyStatusWord(t)} — ${t.company}` : tallyStatusWord(t)}
         </span>
         {on && t.educational && <span title="Unlicensed Tally only accepts vouchers dated the 1st, 2nd or 31st" style={{ fontSize: "0.72rem", fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#FFF4DB", color: "#8A5A00" }}>Educational mode</span>}
         <span style={{ flex: 1 }} />
