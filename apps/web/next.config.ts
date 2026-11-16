@@ -22,7 +22,9 @@ const CSP = [
 const nextConfig: NextConfig = {
   env: { NEXT_PUBLIC_BUILD_ID: BUILD_ID },
   poweredByHeader: false,
-  experimental: {}, // build-bust: 2026-08-18
+  // Keep pages already opened or preloaded in the browser for a few minutes, so a click opens them at once instead of
+  // fetching them again (Next 15 drops them immediately by default — the "first click is slow" feeling)
+  experimental: { staleTimes: { dynamic: 180, static: 600 } }, // build-bust: 2026-11-17
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.amazonaws.com" },

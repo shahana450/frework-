@@ -578,7 +578,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                     {g.items.map(t => {
                       const on = t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
                       return (
-                        <Link key={t.href} href={t.href === "#signout" ? "/login" : t.href} prefetch={false} onClick={async e => { if (t.href === "#signout") { e.preventDefault(); if (!window.confirm("Sign out of FreBook on this device?")) return; await supabase.auth.signOut(); window.location.href = "/login"; return; } if (e.shiftKey) { e.preventDefault(); openInWindow(t.href, t.label); } }} className={on ? "on" : undefined} aria-current={on ? "page" : undefined}>
+                        <Link key={t.href} href={t.href === "#signout" ? "/login" : t.href} prefetch={t.href === "#signout" ? false : undefined} onClick={async e => { if (t.href === "#signout") { e.preventDefault(); if (!window.confirm("Sign out of FreBook on this device?")) return; await supabase.auth.signOut(); window.location.href = "/login"; return; } if (e.shiftKey) { e.preventDefault(); openInWindow(t.href, t.label); } }} className={on ? "on" : undefined} aria-current={on ? "page" : undefined}>
                           <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(t.href)} /></svg></span>
                           <span>{t.href === "/finance/chat-book" ? "FreBook AI" : t.label}</span>
                         </Link>
@@ -593,7 +593,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             {(viewOnly ? [{ href: "/finance/client", label: "Home" }, ...TOP_ICONS.filter(t => VIEW_ONLY_ICONS.includes(t.href))] : TOP_ICONS).filter(t => india || !t.href.startsWith("/finance/gst")).map(t => {
               const on = t.href.includes("?") ? pathname + search === t.href : t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
               return (
-                <Link key={t.href} href={t.href} prefetch={false} onClick={e => { if (e.shiftKey) { e.preventDefault(); openInWindow(t.href, t.label); } }} className={[on ? "on" : "", ["/finance/books", "/finance/reports?tab=trial_balance", "/finance/gst/returns"].includes(t.href) ? "grp" : ""].join(" ").trim() || undefined} title={t.label} aria-current={on ? "page" : undefined}>
+                <Link key={t.href} href={t.href} onClick={e => { if (e.shiftKey) { e.preventDefault(); openInWindow(t.href, t.label); } }} className={[on ? "on" : "", ["/finance/books", "/finance/reports?tab=trial_balance", "/finance/gst/returns"].includes(t.href) ? "grp" : ""].join(" ").trim() || undefined} title={t.label} aria-current={on ? "page" : undefined}>
                   <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(t.href)} /></svg></span>
                   <span>{t.label}</span>
                   <span className="win" role="button" tabIndex={-1} title={`Open ${t.label} in a window (or Shift+click)`} aria-label={`Open ${t.label} in a window`}
