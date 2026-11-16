@@ -111,6 +111,10 @@ export default function BooksPage() {
     // Read on the server: one access check instead of row security on every journal, line and ledger
     const qs = new URLSearchParams({ business_id: bizId });
     if (!allYears && fy) { qs.set("from", fy.start_date); if (fy.end_date) qs.set("to", fy.end_date); }
+    const first = new URLSearchParams(qs); first.set("limit", "300");
+    const quick = await fetch(`/api/finance/books?${first}`).catch(() => null);
+    const qd = quick && quick.ok ? await quick.json().catch(() => null) : null;
+    if (qd?.journals) { setJournals(qd.journals as Journal[]); setLoading(false); if ((qd.journals as unknown[]).length < 300) { setTotalAll(allYears ? 0 : Math.max(0, (qd.total ?? 0) - (qd.journals as unknown[]).length)); return; } }
     const r = await fetch(`/api/finance/books?${qs}`).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     if (!r || !r.ok) { console.error("books load failed", { bizId, status: r?.status, d }); setLoadErr(d.error ?? "We couldn't load your entries right now."); setJournals([]); setLoading(false); return; }

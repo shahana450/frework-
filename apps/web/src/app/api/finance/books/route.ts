@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     const gate = await requireBusiness(req, businessId);
     if (gate instanceof NextResponse) return gate;
     const from = sp.get("from"), to = sp.get("to");
+    const limit = Math.min(Math.max(Number(sp.get("limit")) || 0, 0), 5000);
     const iso = /^\d{4}-\d{2}-\d{2}$/;
 
     // 1) journals, newest first
@@ -27,11 +28,12 @@ export async function GET(req: NextRequest) {
         .eq("business_id", businessId!);
       if (from && iso.test(from)) q = q.gte("date", from);
       if (to && iso.test(to)) q = q.lte("date", to);
-      const { data, error } = await q.order("date", { ascending: false }).order("entry_no", { ascending: false }).range(at, at + PAGE - 1);
+      const size = limit ? Math.min(PAGE, limit - at) : PAGE;
+      const { data, error } = await q.order("date", { ascending: false }).order("entry_no", { ascending: false }).range(at, at + size - 1);
       if (error && /party_name/.test(error.message) && cols.endsWith(",party_name")) { cols = cols.replace(",party_name", ""); at -= PAGE; continue; }
       if (error) throw error;
       journals.push(...((data ?? []) as unknown as Record<string, unknown>[]));
-      if (!data || data.length < PAGE) break;
+      if (!data || data.length < size || (limit && journals.length >= limit)) break;
     }
 
     // 2) their lines with ledger names, in chunks
