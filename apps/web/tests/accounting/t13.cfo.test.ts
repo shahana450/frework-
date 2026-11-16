@@ -134,3 +134,19 @@ test("Bank narrations give the party's name for its own ledger", () => {
   assert.equal(partyFromNarration("NEFT/INTEREST CREDIT/1234567"), null);
   assert.ok(isControlLedger("SUNDRY DEBTORS")); assert.ok(!isControlLedger("Suvin K"));
 });
+import { formatPL, formatBS, llpCapitalSplit, formatForBusinessType, plRowsFor } from "../../src/lib/entityFormats";
+test("LLP / non-corporate / NPO formats regroup the same figures the ICAI way", () => {
+  const L = (name: string, amount: number) => ({ id: name, name, amount });
+  const pl = { revenue: { key: "revenue", label: "Revenue from operations", note: 1, lines: [L("Sales", 1000)], total: 1000 }, otherIncome: null, totalIncome: 1000,
+    expenses: [{ key: "purchases", label: "Purchases", note: 2, lines: [L("Purchases", 400)], total: 400 }, { key: "employee", label: "Employee benefits expense", note: 3, lines: [L("Salary", 100), L("Partners Remuneration", 200)], total: 300 }],
+    totalExpenses: 700, pbt: 300, tax: null, profit: 300 } as never;
+  const llp = formatPL(pl, "llp");
+  assert.equal(llp.partners?.total, 200); assert.equal(llp.beforePartners, 500); assert.equal(llp.pbt, 300); assert.equal(llp.profit, 300);
+  assert.equal(llp.expenses[0].label, "Cost of goods sold");
+  assert.ok(plRowsFor(pl, "npo", { business: "Trust", period: "FY" }).some(r => String(r[0]).includes("Excess of income over expenditure")));
+  const cap = { key: "capital", label: "Capital", note: 1, lines: [L("Partner A Capital", 500), L("Partner A Current A/c", 50)], total: 550 };
+  assert.deepEqual(llpCapitalSplit(cap as never), { contribution: 500, current: 50 });
+  const bs = formatBS({ equityLiabilities: [{ key: "equity", label: "x", heads: [cap as never], total: 550 }], assets: [], totalEL: 550, totalAssets: 0 } as never, "npo");
+  assert.equal(bs.equityLiabilities[0].heads[0].label, "NPO Funds"); assert.equal(bs.sides[0], "Sources of funds");
+  assert.equal(formatForBusinessType("partnership"), "nce"); assert.equal(formatForBusinessType("trust"), "npo"); assert.equal(formatForBusinessType("private_limited"), "company");
+});

@@ -11,19 +11,20 @@ import { bsS3Rows, plS3Rows, notesRows, tbRows, cfRows, allStatementsFileName, t
 import { readActiveBusiness } from "@/lib/activeBusiness";
 import { writeStyledWorkbook, type SheetSpec } from "@/lib/styledWorkbook";
 import type { Schedule3BS, Schedule3PL, S3Head } from "@/lib/schedule3";
+import { FORMATS, formatForBusinessType, formatTitles, formatBS, formatPL, llpCapitalSplit, bsRowsFor, plRowsFor, notesRowsFor, type EntityFormat, type FormattedPL } from "@/lib/entityFormats";
 
 // Excel: every statement in one workbook, the same lines and signs as the screen (and as Print → PDF)
-async function downloadAllStatements({ tb, pl, bs, cf, meta }: { tb: TBData; pl: PLData; bs: BSData; cf: CFExport | null; meta: ExportMeta }) {
+async function downloadAllStatements({ tb, pl, bs, cf, meta, fmt = "company" }: { tb: TBData; pl: PLData; bs: BSData; cf: CFExport | null; meta: ExportMeta; fmt?: EntityFormat }) {
   const sheets: SheetSpec[] = [];
   const add = (name: string, rows: Cell[][], widths: number[], moneyFrom: number, noteCol?: number) => sheets.push({ name, rows, widths, moneyFrom, noteCol });
-  if (bs.schedule3) add("Balance Sheet", bsS3Rows(bs.schedule3, meta), [62, 9, 22], 2, 1);
+  if (bs.schedule3) add("Balance Sheet", fmt === "company" ? bsS3Rows(bs.schedule3, meta) : bsRowsFor(bs.schedule3, fmt, meta), [62, 9, 22], 2, 1);
   else if (bs.presented) add("Balance Sheet", bsExportRows(bs.presented, meta), [62, 22], 1);
-  if (pl.schedule3) add("Profit & Loss", plS3Rows(pl.schedule3, meta), [62, 9, 22], 2, 1);
+  if (pl.schedule3) add(fmt === "npo" ? "Income & Expenditure" : "Profit & Loss", fmt === "company" ? plS3Rows(pl.schedule3, meta) : plRowsFor(pl.schedule3, fmt, meta), [62, 9, 22], 2, 1);
   else if (pl.presented) add("Profit & Loss", plExportRows(pl.presented, meta), [62, 22], 1);
-  if (bs.schedule3 || pl.schedule3) add("Notes", notesRows(bs.schedule3, pl.schedule3, meta), [66, 4, 22], 2);
+  if (bs.schedule3 || pl.schedule3) add("Notes", fmt === "company" ? notesRows(bs.schedule3, pl.schedule3, meta) : notesRowsFor(bs.schedule3, pl.schedule3, fmt, meta), [66, 4, 22], 2);
   add("Trial Balance", tbRows(tb.accounts, meta), [10, 42, 16, 16, 16, 16, 16, 16], 2);
   if (cf) add("Cash Flow", cfRows(cf, meta), [62, 22], 1);
-  await writeStyledWorkbook(sheets, allStatementsFileName(meta), `Prepared with FreBook · ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`);
+  await writeStyledWorkbook(sheets, allStatementsFileName(meta), `${formatTitles(fmt).short} · Prepared with FreBook · ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`);
 }
 
 type ReportTab = "trial_balance" | "profit_loss" | "balance_sheet" | "cash_flow";
@@ -125,6 +126,8 @@ export default function ReportsPage() {
   const [tbData, setTbData] = useState<TBData | null>(null);
   const [error, setError] = useState("");
   const [bizName, setBizName] = useState("");
+  const [fmt, setFmtState] = useState<EntityFormat>("company");
+  const setFmt = (f: EntityFormat) => { setFmtState(f); try { if (bizId) localStorage.setItem(`fw_fs_format_${bizId}`, f); } catch { /* */ } };
   const [tbDetail, setTbDetail] = useState(false);
   const [xlBusy, setXlBusy] = useState(false);   // TB: opening balance + this period's debits/credits + closing
   PERIOD = period ? { from: period.start_date, to: period.end_date, tab } : { from: "", to: "", tab };
@@ -135,7 +138,7 @@ export default function ReportsPage() {
       const saved = (readActiveBusiness(user.id) ?? "").replace(/\uFEFF/g, "").trim();
       if (!saved) { router.push("/finance/setup"); return; }
       setBizId(saved);
-      supabase.from("fw_fin_businesses").select("name").eq("id", saved).maybeSingle().then(({ data }) => { if (data?.name) setBizName(data.name); });
+      supabase.from("fw_fin_businesses").select("name,business_type").eq("id", saved).maybeSingle().then(({ data }) => { if (data?.name) setBizName(data.name); let f: EntityFormat | null = null; try { f = localStorage.getItem(`fw_fs_format_${saved}`) as EntityFormat | null; } catch { /* */ } setFmtState(f && FORMATS.some(x => x.key === f) ? f : formatForBusinessType((data as { business_type?: string } | null)?.business_type)); });
       const { data: fys } = await supabase.from("fw_fin_financial_years").select("id,label,is_current,start_date,end_date").eq("business_id", saved).order("start_date", { ascending: false });
       const list = (fys ?? []).map(f => ({ id: f.id, label: f.label, start_date: f.start_date, end_date: f.end_date }));
       // Make sure the year that contains today is always available, even if it isn't set up yet
@@ -202,6 +205,9 @@ export default function ReportsPage() {
               {financialYears.map(fy => <option key={fy.id} value={fy.id}>FY {fy.label.replace(/^FY\s*/i, "")}</option>)}
             </select>
           )}
+          <select value={fmt} onChange={e => setFmt(e.target.value as EntityFormat)} title="Format of the financial statements" style={{ ...btn(false), paddingRight: 10 }}>
+            {FORMATS.map(f => <option key={f.key} value={f.key} title={f.hint}>{f.label}</option>)}
+          </select>
           {tbData && plData && bsData && (
             <button disabled={xlBusy} title="One workbook: Balance Sheet, P&L, Notes, Trial Balance and Cash Flow" style={{ ...btn(true), cursor: xlBusy ? "wait" : "pointer" }}
               onClick={async () => {
@@ -209,7 +215,7 @@ export default function ReportsPage() {
                 try {
                   const meta = { business: bizName || "Business", period: period ? `FY ${period.label} (${period.start_date} to ${period.end_date})` : "" };
                   const cf = period && bizId ? await fetch(`/api/finance/reports?business_id=${bizId}&from=${period.start_date}&to=${period.end_date}&report=cash_flow`).then(r => r.ok ? r.json() : null).catch(() => null) : null;
-                  await downloadAllStatements({ tb: tbData, pl: plData, bs: bsData, cf, meta });
+                  await downloadAllStatements({ tb: tbData, pl: plData, bs: bsData, cf, meta, fmt });
                 } finally { setXlBusy(false); }
               }}>{xlBusy ? "Preparing…" : "↓ Excel — all statements"}</button>
           )}
@@ -226,7 +232,7 @@ export default function ReportsPage() {
             {tab === "profit_loss" && plData?.schedule3 && (
               <>
                 {plData.presented && <FootingBanner problems={plData.presented.problems} />}
-                <Schedule3PLView s={plData.schedule3} />
+                <Schedule3PLView s={formatPL(plData.schedule3, fmt)} fmt={fmt} />
               </>
             )}
             {tab === "profit_loss" && plData && !plData.schedule3 && (
@@ -266,7 +272,7 @@ export default function ReportsPage() {
                   <div style={{ fontSize: "2rem", fontStyle: "italic", marginTop: 4 }}>As at end of FY {financialYears.find(f => f.id === fyId)?.label}</div>
                 </div>
                 {bsData.presented && <FootingBanner problems={bsData.presented.problems} />}
-                {bsData.schedule3 ? <Schedule3View s={bsData.schedule3} netProfit={bsData.net_profit} /> : <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+                {bsData.schedule3 ? <Schedule3View s={formatBS(bsData.schedule3, fmt)} netProfit={bsData.net_profit} fmt={fmt} /> : <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
                   <div style={{ borderRight: "1px solid rgba(16,36,31,0.11)" }}>
                     <div style={{ padding: "0.6rem 1rem", fontSize: "0.75rem", fontWeight: 700, color: "#12352D", textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(18,53,45,0.05)" }}>Assets</div>
                     {bsData.presented ? bsData.presented.assets.map(s => <Section key={s.key} s={s} />) : <><SectionTable title="Current Assets" rows={bsData.current_assets} /><SectionTable title="Fixed Assets" rows={bsData.fixed_assets} /></>}
@@ -383,8 +389,9 @@ function S3HeadRows({ h, prefix, open, toggle, amt }: { h: S3Head; prefix: strin
 }
 
 // Statement of Profit and Loss in Schedule III format, with the notes and their ledgers alongside
-function Schedule3PLView({ s }: { s: Schedule3PL }) {
-  const heads = [s.revenue, s.otherIncome, ...s.expenses, s.tax].filter((x): x is S3Head => !!x);
+function Schedule3PLView({ s, fmt = "company" }: { s: FormattedPL; fmt?: EntityFormat }) {
+  const t = formatTitles(fmt);
+  const heads = [s.revenue, s.otherIncome, ...s.expenses, s.partners, s.tax].filter((x): x is S3Head => !!x);
   const [open, setOpen] = useState<Set<number>>(new Set());
   const [notes, setNotes] = useState(true);
   const toggle = (n: number) => setOpen(o => { const x = new Set(o); if (x.has(n)) x.delete(n); else x.add(n); return x; });
@@ -395,7 +402,7 @@ function Schedule3PLView({ s }: { s: Schedule3PL }) {
     <div className="s3">
       <style>{S3CSS}</style>
       <div className="s3-bar">
-        <span>Schedule III · click a line to see its ledgers</span>
+        <span>{t.pl} · {t.short} · click a line to see its ledgers</span>
         <button onClick={() => setNotes(v => !v)}>{notes ? "Collapse notes" : "Show notes"}</button>
       </div>
       <div className={notes ? "s3-pl" : undefined}>
@@ -409,9 +416,17 @@ function Schedule3PLView({ s }: { s: Schedule3PL }) {
               <tr className="s3-part"><td colSpan={3}><span className="s3-roman">IV</span>Expenses</td></tr>
               {s.expenses.map((h, i) => head(h, `(${String.fromCharCode(97 + i)}) `))}
               {sumRow("", "Total expenses (IV)", s.totalExpenses)}
-              {sumRow("V", `${s.pbt >= 0 ? "Profit" : "Loss"} before tax (III − IV)`, s.pbt)}
-              {s.tax && <><tr className="s3-part"><td colSpan={3}><span className="s3-roman">VI</span>Tax expense</td></tr>{head(s.tax, "")}</>}
-              {sumRow(s.tax ? "VII" : "VI", `${s.profit >= 0 ? "Profit" : "Loss"} for the year`, s.profit, "s3-total")}
+              {(fmt === "llp" || fmt === "nce") ? <>
+                {sumRow("V", `${t.result(s.beforePartners)} before partners' remuneration and tax (III − IV)`, s.beforePartners)}
+                {s.partners ? <><tr className="s3-part"><td colSpan={3}><span className="s3-roman">VI</span>Partners' remuneration and interest</td></tr>{head(s.partners, "")}</> : sumRow("VI", "Partners' remuneration and interest", 0)}
+                {sumRow("VII", `${t.result(s.pbt)} before tax (V − VI)`, s.pbt)}
+                {s.tax && <><tr className="s3-part"><td colSpan={3}><span className="s3-roman">VIII</span>Tax expense</td></tr>{head(s.tax, "")}</>}
+                {sumRow(s.tax ? "IX" : "VIII", `${t.result(s.profit)} for the year`, s.profit, "s3-total")}
+              </> : <>
+                {sumRow("V", `${t.result(s.pbt)} before tax (III − IV)`, s.pbt)}
+                {s.tax && <><tr className="s3-part"><td colSpan={3}><span className="s3-roman">VI</span>Tax expense</td></tr>{head(s.tax, "")}</>}
+                {sumRow(s.tax ? "VII" : "VI", fmt === "npo" ? `Excess of income over expenditure — ${t.result(s.profit).toLowerCase()} for the year` : `${t.result(s.profit)} for the year`, s.profit, "s3-total")}
+              </>}
             </tbody>
           </table>
         </div>
@@ -427,7 +442,7 @@ function Schedule3PLView({ s }: { s: Schedule3PL }) {
 }
 
 // Balance Sheet in Schedule III, side by side: equity & liabilities | assets
-function Schedule3View({ s, netProfit }: { s: Schedule3BS; netProfit: number }) {
+function Schedule3View({ s, netProfit, fmt = "company" }: { s: Schedule3BS & { sides?: [string, string] }; netProfit: number; fmt?: EntityFormat }) {
   const [open, setOpen] = useState<Set<number>>(new Set());
   const toggle = (n: number) => setOpen(o => { const x = new Set(o); if (x.has(n)) x.delete(n); else x.add(n); return x; });
   const amt = (n: number) => <span style={{ fontVariantNumeric: "tabular-nums", color: n < 0 ? "#B4321F" : undefined }}>{signedMoney(n)}</span>;
@@ -440,6 +455,7 @@ function Schedule3View({ s, netProfit }: { s: Schedule3BS; netProfit: number }) 
           {b.heads.map(h => (
             <Fragment key={h.key}>
               <div className="bs-r hd" onClick={() => toggle(h.note)} title="Show the ledgers in this note"><span>{h.label}<span className="bs-n">Note {h.note}</span></span>{amt(h.total)}</div>
+              {fmt === "llp" && h.key === "capital" && (() => { const sp = llpCapitalSplit(h); return <><div className="bs-r ln"><span>(i) Partners' Contribution</span>{amt(sp.contribution)}</div><div className="bs-r ln"><span>(ii) Partners' Current Account</span>{amt(sp.current)}</div></>; })()}
               {open.has(h.note) && h.lines.map(l => <div key={l.id} className="bs-r ln"><Drill id={l.id}>{l.name}</Drill><Drill id={l.id}>{amt(l.amount)}</Drill></div>)}
             </Fragment>
           ))}
@@ -453,8 +469,8 @@ function Schedule3View({ s, netProfit }: { s: Schedule3BS; netProfit: number }) 
     <div className="s3" style={{ padding: "0 24px 24px" }}>
       <style>{S3CSS}</style>
       <div className="bs-grid">
-        <div style={{ display: "flex", flexDirection: "column" }}>{col("Equity & liabilities", s.equityLiabilities, s.totalEL)}</div>
-        <div className="bs-col" style={{ display: "flex", flexDirection: "column" }}>{col("Assets", s.assets, s.totalAssets)}</div>
+        <div style={{ display: "flex", flexDirection: "column" }}>{col(s.sides?.[0] ?? "Equity & liabilities", s.equityLiabilities, s.totalEL)}</div>
+        <div className="bs-col" style={{ display: "flex", flexDirection: "column" }}>{col(s.sides?.[1] ?? "Assets", s.assets, s.totalAssets)}</div>
       </div>
       <div style={{ paddingTop: 18, textAlign: "center", fontSize: 13, fontStyle: "italic", color: "#6B7570" }}>Schedule III · click a line to see its ledgers · reserves include the {netProfit >= 0 ? "profit" : "loss"} for the year of {signedMoney(netProfit)}{Math.abs(s.totalEL - s.totalAssets) < 0.01 ? " · ✓ balanced" : ""}</div>
     </div>
