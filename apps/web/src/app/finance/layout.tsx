@@ -593,7 +593,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
               {[
                 ["📥", "Smart Inbox", "/finance/inbox"], ["⚖", "Bank Recon", "/finance/banking/reconcile"], ["🧾", "GSTR vs Books", "/finance/gst/reconcile"],
                 ["🔁", "ITC vs 2B", "/finance/gst/itc"], ["🔍", "360° Audit", "/finance/audit360"], ["📈", "CFO Analysis", "/finance/cfo"],
-                ["📑", "MIS", "/finance/mis"], ["🗄", "Shelf", "/finance/shelf"], ["🕘", "History", "/finance/history"],
+                ["📊", "Financial Statements", "/finance/reports?tab=balance_sheet"], ["📑", "MIS", "/finance/mis"], ["🗄", "Shelf", "/finance/shelf"], ["🕘", "History", "/finance/history"],
               ].filter(([, , h]) => india || !h.startsWith("/finance/gst")).map(([ic, label, href]) => (
                 <Link key={href} href={href} className="fw-qchip"><span aria-hidden="true">{ic}</span>{label}</Link>
               ))}
