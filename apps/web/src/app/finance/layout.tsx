@@ -581,6 +581,30 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
           {/* Home: the sections grouped into panels (other pages keep the one-line strip) */}
           {pathname === "/finance" && !viewOnly ? (
             <>
+            {/* Quick actions: the two things done most, then the special features one tap away */}
+            <div className="fw-quick" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "10px 16px 0" }}>
+              <Link href="/finance/sales/new" className="fw-qbig" style={{ background: "#12352D", color: "#FFFFFF" }}>
+                <span aria-hidden="true" className="fw-qic" style={{ background: "#D9B56F", color: "#12352D" }}>＋</span>Create invoice
+              </Link>
+              <Link href="/finance/chat-book" className="fw-qbig" style={{ background: "#D9B56F", color: "#12352D" }}>
+                <span aria-hidden="true" className="fw-qic" style={{ background: "#12352D", color: "#D9B56F" }}>✎</span>Book an entry
+              </Link>
+              <span style={{ width: 1, height: 28, background: "#E6DFD0", margin: "0 4px" }} aria-hidden="true" />
+              {[
+                ["📥", "Smart Inbox", "/finance/inbox"], ["⚖", "Bank Recon", "/finance/banking/reconcile"], ["🧾", "GSTR vs Books", "/finance/gst/reconcile"],
+                ["🔁", "ITC vs 2B", "/finance/gst/itc"], ["🔍", "360° Audit", "/finance/audit360"], ["📈", "CFO Analysis", "/finance/cfo"],
+                ["📑", "MIS", "/finance/mis"], ["🗄", "Shelf", "/finance/shelf"], ["🕘", "History", "/finance/history"],
+              ].filter(([, , h]) => india || !h.startsWith("/finance/gst")).map(([ic, label, href]) => (
+                <Link key={href} href={href} className="fw-qchip"><span aria-hidden="true">{ic}</span>{label}</Link>
+              ))}
+              <style>{`
+                .fw-qbig{display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 20px 0 8px;border-radius:999px;font-weight:800;font-size:15px;text-decoration:none;box-shadow:0 10px 22px -16px rgba(15,43,37,.7);transition:transform .15s}
+                .fw-qbig:hover{transform:translateY(-2px)}
+                .fw-qic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:800}
+                .fw-qchip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:1px solid #E6DFD0;background:#FFFFFF;color:#12352D;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}
+                .fw-qchip:hover{border-color:#D9B56F;background:#FBF7EE}
+              `}</style>
+            </div>
             <div style={{ display: "flex", justifyContent: "flex-end", margin: "10px 16px 0" }}>
               <button type="button" onClick={toggleModules} aria-expanded={showModules} style={{ height: 34, padding: "0 16px", borderRadius: 999, border: "1px solid #E6DFD0", background: "#FFFFFF", color: "#12352D", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>{showModules ? "✕ Hide modules" : "☰ All modules"}</button>
             </div>
