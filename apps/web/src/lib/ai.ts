@@ -92,9 +92,10 @@ export function getAI(): Anthropic {
     const create = async (params: CreateParams) => {
       try { return await geminiCreate(params); }
       catch (e) {
-        const busy = /Gemini (429|500|503)|high demand|overloaded|UNAVAILABLE|RESOURCE_EXHAUSTED/i.test(e instanceof Error ? e.message : String(e));
+        // Busy, rate-limited, or out of credit / billing problem (402, 403 billing): Claude answers instead
+        const busy = /Gemini (402|429|500|503)|high demand|overloaded|UNAVAILABLE|RESOURCE_EXHAUSTED|credits? (are )?depleted|billing|prepay/i.test(e instanceof Error ? e.message : String(e));
         if (!busy || !process.env.ANTHROPIC_API_KEY) throw e;
-        console.warn("Gemini busy — answering with Claude");
+        console.warn("Gemini unavailable (busy or out of credit) — answering with Claude");
         return anthropicCreate(params as unknown as Record<string, unknown>);
       }
     };
