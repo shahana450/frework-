@@ -7,7 +7,7 @@ import Link from "next/link";
 import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabase";
 import { readActiveBusiness } from "@/lib/activeBusiness";
-import { compareGstr1, parse3B, compare3B, taxOf, type Gstr1Json, type Amt } from "@/lib/gstPortalRecon";
+import { compareGstr1, compareGstr1Sections, parse3B, compare3B, taxOf, type Gstr1Json, type Amt } from "@/lib/gstPortalRecon";
 import { getKept, keep, forget, until } from "@/lib/portals/gstSessionClient";
 import PeriodPicker, { periodMonths, periodLabel } from "@/components/finance/PeriodPicker";
 import PageHero, { HT, SERIF } from "@/components/finance/PageHero";
@@ -34,6 +34,24 @@ export default function GstReconPage() {
   const [books1, setBooks1] = useState<Gstr1Json | null>(null);
   const [books3, setBooks3] = useState<Record<"a" | "b" | "c" | "d" | "e" | "itc", Amt> | null>(null);
   const [portal1, setPortal1] = useState<Gstr1Json | null>(null);
+  const [portal1Sum, setPortal1Sum] = useState<Record<string, Amt> | null>(null);
+  const [shelfBusy, setShelfBusy] = useState(false);
+  // Returns already saved on the Shelf for the chosen months: JSON as it is, PDFs read by the AI
+  async function fromShelf() {
+    if (!bizId) return;
+    setShelfBusy(true); setErr("");
+    const r = await fetch("/api/finance/gst/shelf-returns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ business_id: bizId, months: periodMonths(month) }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setShelfBusy(false);
+    if (!r?.ok) { setErr(d.error ?? "Couldn't read the Shelf."); return; }
+    const files = (d.files ?? []) as { title: string; kind: string; how: string; ok: boolean }[];
+    if (!files.length) { setErr(`No GSTR-1 or GSTR-3B for ${periodLabel(month)} on the Shelf (GST rack). Download them on the Shelf, or upload the JSON here.`); return; }
+    if (d.gstr1) { setPortal1(d.gstr1); setPortal1Sum(null); } else if (d.gstr1Summary) { setPortal1Sum(d.gstr1Summary); setPortal1({}); }
+    if (Array.isArray(d.gstr3b) && d.gstr3b.length) setPortal3(d.gstr3b);
+    const bad = files.filter(f => !f.ok).length;
+    setSrc(`From the Shelf: ${files.filter(f => f.ok).map(f => `${f.title} (${f.how})`).join(", ")}${bad ? ` · ${bad} couldn't be read` : ""}`);
+    setTab(d.gstr1 || d.gstr1Summary ? "1" : "3b");
+  }
   const [portal3, setPortal3] = useState<unknown>(null);
   const [src, setSrc] = useState("");
   const [err, setErr] = useState("");
@@ -50,7 +68,7 @@ export default function GstReconPage() {
 
   useEffect(() => {
     if (!bizId) return;
-    setBooks1(null); setBooks3(null); setPortal1(null); setPortal3(null); setSrc(""); setErr("");
+    setBooks1(null); setBooks3(null); setPortal1(null); setPortal1Sum(null); setPortal3(null); setSrc(""); setErr("");
     // Month, quarter or year: the books are built month by month and added up
     const months = periodMonths(month);
     Promise.all(months.map(m => fetch(`/api/finance/gst/portal-returns?business_id=${bizId}&month=${m}`).then(r => r.json()))).then(list => {
@@ -80,7 +98,7 @@ export default function GstReconPage() {
     if (!r?.ok) { setPull(p => ({ ...p, busy: false, msg: d.error ?? "The GST portal didn't respond.", step: d.code === "SESSION_EXPIRED" ? "user" : p.step, otp: "" })); return; }
     if (action === "otp") { try { localStorage.setItem(`fw_gst_user_${bizId}`, pull.username.trim()); } catch { /* */ } setPull(p => ({ ...p, busy: false, step: "otp", msg: d.message ?? "OTP sent." })); return; }
     keep(bizId, d);
-    setPortal1(d.gstr1 ?? {}); setPortal3(Array.isArray(d.gstr3b) && d.gstr3b.length ? d.gstr3b : null); setSrc(`Downloaded from the GST portal · ${periodLabel(month)}`);
+    setPortal1Sum(null); setPortal1(d.gstr1 ?? {}); setPortal3(Array.isArray(d.gstr3b) && d.gstr3b.length ? d.gstr3b : null); setSrc(`Downloaded from the GST portal · ${periodLabel(month)}`);
     setPull(p => ({ ...p, busy: false, step: "user", otp: "", msg: "" }));
   }
 
@@ -104,7 +122,7 @@ export default function GstReconPage() {
     g1 = {}; g3 = []; names = [];
   }
 
-  const r1 = useMemo(() => books1 && portal1 ? compareGstr1(books1, portal1) : null, [books1, portal1]);
+  const r1 = useMemo(() => books1 && portal1Sum ? compareGstr1Sections(books1, portal1Sum) : books1 && portal1 ? compareGstr1(books1, portal1) : null, [books1, portal1, portal1Sum]);
   const r3 = useMemo(() => {
     if (!books3 || !portal3) return null;
     const parts = (Array.isArray(portal3) ? portal3 : [portal3]).map(parse3B);
@@ -148,6 +166,7 @@ export default function GstReconPage() {
             style={{ ...btn, height: 40, background: HT.ink, color: HT.paper, borderColor: HT.ink }}>
             {pull.busy ? "Working…" : !kept && pull.step === "user" ? "Send OTP" : "Download GSTR-1 and 3B for " + periodLabel(month)}
           </button>
+          <button onClick={fromShelf} disabled={shelfBusy || !bizId} style={{ ...btn, height: 40 }}>{shelfBusy ? "Reading the Shelf…" : "📚 Use returns on the Shelf"}</button>
           <label style={{ ...btn, height: 40, boxSizing: "border-box", display: "inline-flex", alignItems: "center" }}>Or upload return JSON
             <input type="file" accept=".json" multiple hidden onChange={e => { const f = Array.from(e.target.files ?? []); if (f.length) onFiles(f); e.target.value = ""; }} />
           </label>
@@ -177,7 +196,7 @@ export default function GstReconPage() {
                 <tbody>{r1.invoices.length ? r1.invoices.map(i => <tr key={i.key}>
                   <td style={td}><span style={{ background: STATUS[i.status][1], color: STATUS[i.status][2], borderRadius: 999, padding: "3px 10px", fontSize: 12, whiteSpace: "nowrap" }}>{STATUS[i.status][0]}</span></td>
                   <td style={{ ...td, fontFamily: "ui-monospace,monospace", fontSize: 12.5 }}>{i.ctin}</td><td style={td}>{i.no}</td><td style={td}>{i.date}</td>{amtCells(i.books)}{amtCells(i.portal)}</tr>)
-                  : <tr><td style={td} colSpan={8}>No B2B invoices in either.</td></tr>}</tbody>
+                  : <tr><td style={td} colSpan={8}>{portal1Sum ? "The return on the Shelf is a PDF, so sections are compared by totals. For an invoice-by-invoice check, download the GSTR-1 JSON (Send OTP) or upload it." : "No B2B invoices in either."}</td></tr>}</tbody>
               </table>
             </div>
           </>

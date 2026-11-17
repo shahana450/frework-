@@ -66,3 +66,12 @@ export function compare3B(books: Record<"a" | "b" | "c" | "d" | "e" | "itc", Amt
   const L: [keyof typeof books, string][] = [["a", "3.1(a) Outward taxable supplies"], ["b", "3.1(b) Zero-rated (exports, SEZ)"], ["c", "3.1(c) Nil-rated / exempt"], ["d", "3.1(d) Inward supplies under reverse charge"], ["e", "3.1(e) Non-GST supplies"], ["itc", "4(C) Net ITC claimed"]];
   return L.map(([k, label]) => ({ label, books: books[k], portal: portal[k], diff: r2(portal[k].taxable - books[k].taxable + taxOf(portal[k]) - taxOf(books[k])) }));
 }
+
+/** GSTR-1 known only by section totals (a filed-return PDF): compare section by section; no invoice list. */
+export function compareGstr1Sections(books: Gstr1Json, portal: Record<string, Amt>): { sections: SectionRow[]; invoices: InvRow[]; total: { books: Amt; portal: Amt } } {
+  const b = summarise1(books);
+  const names = [...new Set([...b.sections.keys(), ...Object.keys(portal)])];
+  const sections = names.map(s => { const bb = b.sections.get(s) ?? Z(), pp = portal[s] ?? Z(); return { section: s, books: bb, portal: pp, diff: r2(pp.taxable - bb.taxable + taxOf(pp) - taxOf(bb)) }; });
+  const tot = (xs: Amt[]) => xs.reduce((s, a) => add(s, a), Z());
+  return { sections, invoices: [], total: { books: tot([...b.sections.values()]), portal: tot(Object.values(portal)) } };
+}
