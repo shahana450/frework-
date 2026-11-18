@@ -247,7 +247,7 @@ function LedgerContent() {
       if (tag === "INPUT") return;
       if (ev.key === "ArrowDown") { ev.preventDefault(); setCursor(c => Math.min(c + 1, shown.length - 1)); }
       else if (ev.key === "ArrowUp") { ev.preventDefault(); setCursor(c => Math.max(c - 1, 0)); }
-      else if (ev.key === "Enter" && shown[cursor]?.journal_id) router.push(`/finance/entry/${shown[cursor].journal_id}&from=ledger`);
+      else if (ev.key === "Enter" && shown[cursor]?.journal_id) router.push(`/finance/entry/${shown[cursor].journal_id}?from=ledger`);
     };
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
@@ -294,7 +294,7 @@ function LedgerContent() {
     const tag = tagOf(e);
     const ret = isReturn(e.narration);
     rowsOut.push(
-      <tr key={e.id} className="lg-row" onClick={() => e.journal_id && router.push(`/finance/entry/${e.journal_id}&from=ledger`)}
+      <tr key={e.id} className="lg-row" onClick={() => e.journal_id && router.push(`/finance/entry/${e.journal_id}?from=ledger`)}
         style={{ borderTop: `1px solid ${T.line}`, cursor: e.journal_id ? "pointer" : undefined, background: cursor === i ? "#F1E9D6" : ret ? "#FCF3F0" : undefined }}>
         <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>{new Date(e.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}</td>
         <td style={{ padding: "14px 10px", color: T.goldInk, whiteSpace: "nowrap" }}>{e.entry_no}</td>
