@@ -327,7 +327,7 @@ export default function Audit360() {
                           <tbody>
                             {x.items.map((it, i) => (
                               <tr key={i} style={{ borderTop: `1px solid ${HT.line}` }}>
-                                <td style={{ padding: "7px 8px" }}>{it.journal_id ? <Link href={`/finance/journals?id=${it.journal_id}`} style={{ color: HT.ink, fontWeight: 700 }}>{it.entry_no}</Link> : "—"}</td>
+                                <td style={{ padding: "7px 8px" }}>{it.journal_id ? <Link href={`/finance/entry/${it.journal_id}`} style={{ color: HT.ink, fontWeight: 700 }}>{it.entry_no}</Link> : "—"}</td>
                                 <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>{it.date ?? "—"}</td>
                                 <td style={{ padding: "7px 8px" }}>{it.note}</td>
                                 <td style={{ padding: "7px 8px", textAlign: "right" }}>{it.amount ? inr(it.amount) : "—"}</td>
@@ -340,7 +340,7 @@ export default function Audit360() {
                                     <button type="button" disabled={!moveTo[it.account_id!] || fixing === it.account_id} onClick={() => moveSuspense(it)} style={{ ...b, background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" }}>{fixing === it.account_id ? "Posting…" : "Move"}</button>
                                   </span>);
                                   if (k === "reverse") return <button type="button" disabled={fixing === it.journal_id} onClick={() => reverseEntry(it, x.id === "duplicates" ? "Duplicate entry (360° audit)" : "Wrong date (360° audit)")} style={b}>{fixing === it.journal_id ? "Reversing…" : "Reverse"}</button>;
-                                  if (k === "open") return <Link href={`/finance/journals?id=${it.journal_id}`} style={{ ...b, display: "inline-flex", alignItems: "center", textDecoration: "none" }}>Open to fix</Link>;
+                                  if (k === "open") return <Link href={`/finance/entry/${it.journal_id}`} style={{ ...b, display: "inline-flex", alignItems: "center", textDecoration: "none" }}>Open to fix</Link>;
                                   return <span style={{ color: HT.muted }}>—</span>;
                                 })()}</td>
                               </tr>

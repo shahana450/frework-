@@ -132,7 +132,7 @@ export default function BankingDashboard() {
               {!d ? <span style={{ color: T.muted }}>Loading…</span>
                 : recent.length === 0 ? <span style={{ color: T.muted, fontStyle: "italic" }}>Nothing yet — upload a statement to see transactions here.</span>
                 : recent.map((r, i) => (
-                  <Link key={r.id + i} href={`/finance/journals?id=${r.id}`} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: `1px solid ${T.line}`, textDecoration: "none", color: T.ink }}>
+                  <Link key={r.id + i} href={`/finance/entry/${r.id}`} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: `1px solid ${T.line}`, textDecoration: "none", color: T.ink }}>
                     <span style={{ width: 64, color: T.muted, flexShrink: 0 }}>{day(r.date)}</span>
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration || r.entry_no}</span>

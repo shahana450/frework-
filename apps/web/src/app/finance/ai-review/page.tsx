@@ -224,7 +224,7 @@ export default function AIReviewPage() {
                     <div style={{ borderTop: `1px solid ${BORDER}`, padding: "1rem 1.1rem", display: "flex", flexDirection: "column", gap: "1rem", background: "rgba(0,0,0,0.18)" }}>
                       {dups.length > 0 && (
                         <div style={{ background: "rgba(194,50,31,0.07)", border: "1px solid rgba(194,50,31,0.25)", borderRadius: 8, padding: "0.6rem 0.8rem", fontSize: "0.8rem" }}>
-                          {dups.map((x, i) => <div key={i} style={{ color: RED }}>⚠ {x.message}{x.kind.startsWith("posted") && x.ref && <> <Link href={`/finance/journals?id=${x.ref}`} style={{ color: BLUE }}>View</Link></>}</div>)}
+                          {dups.map((x, i) => <div key={i} style={{ color: RED }}>⚠ {x.message}{x.kind.startsWith("posted") && x.ref && <> <Link href={`/finance/entry/${x.ref}`} style={{ color: BLUE }}>View</Link></>}</div>)}
                         </div>
                       )}
                       {d.question && <div style={{ fontSize: "0.82rem", color: BLUE }}>❓ {d.question} <span style={{ color: MUTED }}>— fix it in the entry below before approving.</span></div>}

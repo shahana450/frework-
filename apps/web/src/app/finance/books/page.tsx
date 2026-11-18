@@ -507,7 +507,7 @@ export default function BooksPage() {
                               </tbody>
                             </table>
                             <div style={{ display: "flex", gap: "1rem", marginTop: 10, fontSize: "0.84rem" }}>
-                              <Link href={`/finance/journals?id=${j.id}`} style={{ color: T.goldInk, fontWeight: 700 }}>Open in Journals →</Link>
+                              <Link href={`/finance/entry/${j.id}`} style={{ color: T.goldInk, fontWeight: 700 }}>Open in Journals →</Link>
                               {j.reference_no && <span style={{ color: T.muted }}>Ref: {j.reference_no}</span>}
                             </div>
                           </div>

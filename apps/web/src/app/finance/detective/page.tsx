@@ -157,7 +157,7 @@ function IssueRow({ e, open, onToggle, team, act, onFix }: { e: Ex; open: boolea
       {open && <div style={{ padding: "0 18px 18px 18px", display: "grid", gap: 12 }}>
         <p style={{ margin: 0, lineHeight: 1.6 }}>{e.description}</p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {e.evidence.map((x, i) => <span key={i} style={{ background: "#F3EDE1", borderRadius: 10, padding: "6px 10px", fontSize: 13 }}><b>{x.label}:</b> {x.journalId ? <Link href={`/finance/journals?id=${x.journalId}`}>{x.value}</Link> : x.value}</span>)}
+          {e.evidence.map((x, i) => <span key={i} style={{ background: "#F3EDE1", borderRadius: 10, padding: "6px 10px", fontSize: 13 }}><b>{x.label}:</b> {x.journalId ? <Link href={`/finance/entry/${x.journalId}`}>{x.value}</Link> : x.value}</span>)}
         </div>
         <div style={{ fontSize: 13, color: HT.muted }}><b>Rule</b> {e.rule_id}{e.provision ? ` · ${e.provision}` : ""} · <b>Evidence</b> {CONF[e.confidence]}</div>
         {e.suggested_action && <div style={{ fontSize: 14 }}><b>Suggested:</b> {e.suggested_action}</div>}

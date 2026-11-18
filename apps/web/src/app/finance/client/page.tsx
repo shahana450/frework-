@@ -104,7 +104,7 @@ export default function ClientHome() {
           <section style={card} aria-labelledby="rec-h">
             <h2 id="rec-h" style={{ margin: 0, padding: "18px 22px 10px", fontSize: 22, fontWeight: 400, fontStyle: "italic" }}>Latest entries</h2>
             {(dash?.recent ?? []).slice(0, 8).map(r => (
-              <Link key={r.id} href={`/finance/journals?id=${r.id}`} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "11px 22px", borderTop: `1px solid ${HT.line}`, fontSize: 14.5, color: HT.ink, textDecoration: "none" }}>
+              <Link key={r.id} href={`/finance/entry/${r.id}`} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "11px 22px", borderTop: `1px solid ${HT.line}`, fontSize: 14.5, color: HT.ink, textDecoration: "none" }}>
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ color: HT.muted }}>{r.date.slice(8, 10)}/{r.date.slice(5, 7)} · </span>{r.narration || r.entry_no}</span>
                 <span style={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{inr(r.amount)}</span>
               </Link>

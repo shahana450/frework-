@@ -246,7 +246,7 @@ export default function ItcMatchPage() {
                   </div>
                   <div style={{ fontSize: 13 }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, letterSpacing: "0.08em" }}>YOUR BOOKS</div>
-                    {r.book ? <><Link href={`/finance/journals?id=${r.book.id}`} style={{ color: C.blue, fontWeight: 700 }}>{r.book.entryNo}</Link> · {r.book.docNo || "no invoice no"} · {r.book.date}<br /><span style={{ fontFamily: MONO }}>Taxable {inr(r.book.taxable)} · Tax {inr(taxOf(r.book))}</span></>
+                    {r.book ? <><Link href={`/finance/entry/${r.book.id}`} style={{ color: C.blue, fontWeight: 700 }}>{r.book.entryNo}</Link> · {r.book.docNo || "no invoice no"} · {r.book.date}<br /><span style={{ fontFamily: MONO }}>Taxable {inr(r.book.taxable)} · Tax {inr(taxOf(r.book))}</span></>
                       : <Link href="/finance/inbox" style={{ color: C.blue, fontWeight: 700 }}>Book this bill in Smart Inbox →</Link>}
                   </div>
                 </article>

@@ -1,4 +1,4 @@
-"use client";
+"use client";
 import { featureHelp, smallTalk } from "@/lib/featureHelp";
 import { splitDated } from "@/lib/splitDated";
 import { gstReturnLink } from "@/lib/gstIntent";
@@ -1702,7 +1702,7 @@ function TransactionCard({ msg, editing, editLines, editDate, editNarration, onE
           <span style={{ color: GREEN, fontWeight: 700 }}>✓ Posted — {msg.entryNo}</span>
           {msg.createdLedgers?.length ? <span style={{ fontSize: "0.72rem", color: AMBER }}>New ledger{msg.createdLedgers.length > 1 ? "s" : ""}: {msg.createdLedgers.map(c => `${c.name} (${c.head})`).join(", ")}</span> : null}
           <Link href="/finance/books?filter=chat" style={{ fontSize: "0.75rem", color: GOLD, textDecoration: "none" }}>Books / Push to Tally →</Link>
-          {msg.journalId && <Link href={`/finance/journals?id=${msg.journalId}`} style={{ fontSize: "0.75rem", color: BLUE, textDecoration: "none" }}>Journal →</Link>}
+          {msg.journalId && <Link href={`/finance/entry/${msg.journalId}`} style={{ fontSize: "0.75rem", color: BLUE, textDecoration: "none" }}>Journal →</Link>}
           {msg.ledgerAccountIds?.map((a, i) => (
             <Link key={a.id + i} href={`/finance/ledger?account=${a.id}`} style={{ fontSize: "0.75rem", color: MUTED, textDecoration: "none" }}>{a.name} ledger →</Link>
           ))}

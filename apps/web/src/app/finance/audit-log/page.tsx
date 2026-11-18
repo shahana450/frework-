@@ -98,7 +98,7 @@ export default function AuditLogPage() {
                     <td style={{ padding: "0.5rem 0.8rem", whiteSpace: "nowrap", color: a.color, fontWeight: 700 }}>{a.label}</td>
                     <td style={{ padding: "0.5rem 0.8rem", whiteSpace: "nowrap", color: MUTED }}>{SOURCES[r.source ?? ""] ?? r.source ?? "—"}</td>
                     <td style={{ padding: "0.5rem 0.8rem", maxWidth: 380, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {r.journal_id ? <Link href={`/finance/journals?id=${r.journal_id}`} style={{ color: BLUE, textDecoration: "none" }}>{describe(r)}</Link> : describe(r)}
+                      {r.journal_id ? <Link href={`/finance/entry/${r.journal_id}`} style={{ color: BLUE, textDecoration: "none" }}>{describe(r)}</Link> : describe(r)}
                     </td>
                     <td style={{ padding: "0.5rem 0.8rem", color: MUTED, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.reason ?? ""}>{r.reason ?? "—"}</td>
                   </tr>

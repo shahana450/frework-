@@ -119,7 +119,7 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
         setError(e instanceof Error ? e.message : "Correction failed"); setSaving(false); return;
       }
       setSaving(false);
-      router.push("/finance/journals");
+      if (window.history.length > 1) router.back(); else router.push("/finance/journals");   // back where the correction started
       return;
     }
 
@@ -160,7 +160,7 @@ export default function EditJournalPage({ params }: { params: Promise<{ id: stri
       </nav>
 
       <div style={{ maxWidth: 860, margin: "0 auto", padding: "2rem" }}>
-        <h2 style={{ margin: "0 0 1.5rem", fontSize: "1.2rem", fontWeight: 800 }}>Edit Journal Entry</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 1.5rem" }}><button type="button" onClick={() => { if (window.history.length > 1) router.back(); else router.push("/finance/journals"); }} style={{ height: 34, padding: "0 14px", borderRadius: 999, border: "1px solid #E6DFD0", background: "#FFFFFF", color: "#12352D", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>← Back</button><h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800 }}>Edit Journal Entry</h2></div>
 
         {/* Header fields */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>

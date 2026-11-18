@@ -128,7 +128,7 @@ export default function OpeningBalancesPage() {
           </label>
           <button onClick={() => setRows(r => [...r, { ledger: "", head: "", debit: 0, credit: 0 }])} disabled={!!already} style={{ height: 42, padding: "0 16px", borderRadius: 11, border: "1px solid #D9CDB4", background: C.tile, color: C.ink, fontWeight: 700, cursor: "pointer" }}>＋ Type rows instead</button>
           {file && <span style={{ fontSize: 13, color: C.muted }}>{file}</span>}
-          {already && <div style={{ width: "100%", background: C.posSoft, color: C.pos, borderRadius: 10, padding: "10px 14px", fontWeight: 600, fontSize: 14 }}>✓ Opening balances for FY {fy?.label} are posted as <Link href={`/finance/journals?id=${already.id}`} style={{ color: C.pos }}>{already.entry_no}</Link> ({inr(already.total)}). Change any ledger&apos;s balance in the list below and press Save.</div>}
+          {already && <div style={{ width: "100%", background: C.posSoft, color: C.pos, borderRadius: 10, padding: "10px 14px", fontWeight: 600, fontSize: 14 }}>✓ Opening balances for FY {fy?.label} are posted as <Link href={`/finance/entry/${already.id}`} style={{ color: C.pos }}>{already.entry_no}</Link> ({inr(already.total)}). Change any ledger&apos;s balance in the list below and press Save.</div>}
         </section>
 
         {msg && <div role="status" style={{ background: msg.ok ? C.posSoft : C.negSoft, color: msg.ok ? C.pos : C.neg, borderRadius: 12, padding: "12px 16px", fontWeight: 600 }}>{msg.t}</div>}

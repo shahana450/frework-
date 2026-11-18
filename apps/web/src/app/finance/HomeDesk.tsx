@@ -316,7 +316,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
           {!dash ? <div style={{ padding: "4px 20px 18px", fontSize: 13.5, color: C.muted }}>Loading…</div>
             : dash.recent.length === 0 ? <div style={{ padding: "4px 20px 18px", fontSize: 13.5, color: C.muted }}>No posted entries yet. <Link href="/finance/chat-book" style={{ color: C.green, fontWeight: 700 }}>Record one →</Link></div>
             : dash.recent.slice(0, 6).map(t => (
-              <Link key={t.id} href={`/finance/journals?id=${t.id}`} style={{ display: "flex", gap: 12, padding: "10px 20px", borderTop: `1px solid ${C.line}`, textDecoration: "none", color: C.ink, fontSize: 13, alignItems: "center" }}>
+              <Link key={t.id} href={`/finance/entry/${t.id}`} style={{ display: "flex", gap: 12, padding: "10px 20px", borderTop: `1px solid ${C.line}`, textDecoration: "none", color: C.ink, fontSize: 13, alignItems: "center" }}>
                 <span style={{ color: C.muted, whiteSpace: "nowrap", minWidth: 50, fontFamily: MONO, fontSize: 12 }}>{new Date(t.date + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</span>
                 <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.narration || t.entry_no}</span>
                 <span style={{ fontFamily: MONO, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{num(t.amount)}</span>

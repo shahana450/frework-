@@ -198,7 +198,7 @@ export function ReviewList({ data, call, reload }: { data: ConnData; call: (p: R
                 <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 7px", borderRadius: 6, background: C.grey, color: C.navy, flexShrink: 0 }}>{NAME[i.provider]} · {i.kind}</span>
                 <button onClick={() => setOpen(open === i.id ? null : i.id)} style={{ flex: 1, minWidth: 0, textAlign: "left", border: "none", background: "none", cursor: "pointer", color: C.ink, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: 0 }} title="Show the entry">{i.description}</button>
                 <span style={{ fontFamily: MONO, fontWeight: 600 }}>{fmt(i.amount, i.currency)}</span>
-                {i.journal_id && <Link href={`/finance/journals?id=${i.journal_id}`} style={{ fontSize: 12, color: C.navy, fontWeight: 700 }}>Entry →</Link>}
+                {i.journal_id && <Link href={`/finance/entry/${i.journal_id}`} style={{ fontSize: 12, color: C.navy, fontWeight: 700 }}>Entry →</Link>}
               </div>
               {open === i.id && (
                 <table style={{ marginTop: 8, width: "100%", fontSize: 12.5, borderCollapse: "collapse" }}>

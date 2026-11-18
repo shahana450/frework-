@@ -48,7 +48,7 @@ export function cellNum(v: unknown): number {
 const ROLE: [keyof Cols, RegExp][] = [
   ["date", /^(txn |tran |transaction |posting |post |value )?(date|dt)$|^date\b|\btxn date\b|\btransaction date\b|\bpost(ing)? date\b/],
   ["valueDate", /\bvalue (date|dt)\b/],
-  ["desc", /\b(description|narration|particulars?|details?|remarks?|transaction remarks|transaction details|narrative)\b/],
+  ["desc", /\b(description|narration|particulars?|details?|remarks?|transaction remarks|transaction details|narrative|transaction|txn|memo|info|information|purpose|beneficiary|payee|towards)\b/],
   ["debit", /\b(debit|debits|withdrawal|withdrawals|withdrawal amt|dr amount|debit amount|paid out|money out|dr)\b/],
   ["credit", /\b(credit|credits|deposit|deposits|deposit amt|cr amount|credit amount|paid in|money in|cr)\b/],
   ["amount", /^(transaction )?amount( inr| rs)?$|\bamount\b/],
@@ -65,7 +65,7 @@ function columnsOf(header: unknown[]): Cols {
   const taken = new Set<number>();
   for (const role of order) {
     const re = ROLE.find(r => r[0] === role)![1];
-    const i = h.findIndex((x, k) => !taken.has(k) && x && re.test(x));
+    const i = h.findIndex((x, k) => !taken.has(k) && x && re.test(x) && !(role === "desc" && /\b(id|no|number|type|amount|date|code)\b/.test(x)));
     if (i >= 0) { c[role] = i; taken.add(i); }
   }
   if (c.date < 0 && c.valueDate >= 0) { c.date = c.valueDate; }
@@ -87,7 +87,10 @@ export function parseStatementGrid(grid: unknown[][]): GridResult {
   let lastDated: StmtLine | null = null;
   for (const r of grid.slice(best.row + 1)) {
     const date = cellDate(r[c.date]);
-    const desc = c.desc >= 0 ? String(r[c.desc] ?? "").replace(/\s+/g, " ").trim() : "";
+    const used = new Set([c.date, c.valueDate, c.debit, c.credit, c.amount, c.drcr, c.balance]);
+    const textOf = (v: unknown) => String(v ?? "").replace(/\s+/g, " ").trim();
+    let desc = c.desc >= 0 ? textOf(r[c.desc]) : "";
+    if (!desc) desc = r.map((v, k) => used.has(k) || k === c.desc ? "" : textOf(v)).filter(t => t && !/^[\d.,\s₹-]+$/.test(t) && !cellDate(t)).join(" / ");
     if (!date) {
       // Narration that wraps onto the next row (common in HDFC / SBI exports)
       if (lastDated && desc && r.every((v, k) => k === c.desc || v === "" || v == null)) lastDated.description = `${lastDated.description} ${desc}`.trim();

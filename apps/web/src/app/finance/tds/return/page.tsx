@@ -121,7 +121,7 @@ export default function TdsReturnPage() {
                 <thead><tr style={{ background: "#F7F8FC" }}>{["Deductee", "PAN", "Nature", "Section", "Date", "Paid", "TDS", "Rate"].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
                 <tbody>{data.deductions.map((d: Deduction) => (
                   <tr key={d.journalId}>
-                    <td style={{ ...td, fontWeight: 700 }}><Link href={`/finance/journals?id=${d.journalId}`} style={{ color: C.ink }}>{d.party}</Link></td>
+                    <td style={{ ...td, fontWeight: 700 }}><Link href={`/finance/entry/${d.journalId}`} style={{ color: C.ink }}>{d.party}</Link></td>
                     <td style={{ ...td, fontFamily: MONO, color: d.pan ? C.ink : C.neg }}>{d.pan ?? "missing"}</td>
                     <td style={td}>{d.nature.label}</td>
                     <td style={td}>{d.nature.ref} <span style={{ color: C.muted }}>({d.nature.old})</span></td>

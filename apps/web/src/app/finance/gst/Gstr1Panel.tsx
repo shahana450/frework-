@@ -142,7 +142,7 @@ export default function Gstr1Panel({ bizId, month, monthLabel }: { bizId: string
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {needCustomer && <Link href={`/finance/contacts${party ? `?q=${encodeURIComponent(party)}` : ""}`} style={{ ...linkBtn, background: bad ? C.primary : "#FFFFFF", color: bad ? "#FFFFFF" : C.primary, borderColor: bad ? C.primary : C.line }}>Fix customer →</Link>}
-                    {(needInvoice || !needCustomer) && ref && <Link href={`/finance/journals?id=${ref}`} style={linkBtn}>Open invoice →</Link>}
+                    {(needInvoice || !needCustomer) && ref && <Link href={`/finance/entry/${ref}`} style={linkBtn}>Open invoice →</Link>}
                   </div>
                 </div>
               );

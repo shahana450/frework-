@@ -150,3 +150,11 @@ test("LLP / non-corporate / NPO formats regroup the same figures the ICAI way", 
   assert.equal(bs.equityLiabilities[0].heads[0].label, "NPO Funds"); assert.equal(bs.sides[0], "Sources of funds");
   assert.equal(formatForBusinessType("partnership"), "nce"); assert.equal(formatForBusinessType("trust"), "npo"); assert.equal(formatForBusinessType("private_limited"), "company");
 });
+
+import { parseStatementGrid } from "../../src/lib/bankExcel";
+test("Statement narration is read from a 'Transaction' column, never left as 'Bank transaction'", () => {
+  const g = parseStatementGrid([["Txn Date", "Transaction ID", "Transaction", "Debit", "Credit", "Balance"], ["01-10-2026", "S123", "UPI/RASI KV/Payment", "", "848", "159113.25"]]);
+  assert.equal(g.rows[0].description, "UPI/RASI KV/Payment");
+  const h = parseStatementGrid([["Date", "Ref", "Withdrawal", "Deposit", "Balance"], ["03-10-2026", "NEFT SURYA SPARES", "1", "", "159112.25"]]);
+  assert.equal(h.rows[0].description, "NEFT SURYA SPARES");
+});

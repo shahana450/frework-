@@ -64,7 +64,7 @@ export default function AnswerCard({ answer }: { answer: Answer & { tool: string
           {showTx && (
             <div style={{ maxHeight: 320, overflowY: "auto" }}>
               {tx.map(t => (
-                <Link key={t.id} href={`/finance/journals?id=${t.id}`} style={{ display: "flex", gap: 10, alignItems: "baseline", padding: "0.45rem 1rem", borderTop: `1px solid rgba(20,26,58,0.10)`, textDecoration: "none", color: TEXT, fontSize: "0.78rem" }}>
+                <Link key={t.id} href={`/finance/entry/${t.id}`} style={{ display: "flex", gap: 10, alignItems: "baseline", padding: "0.45rem 1rem", borderTop: `1px solid rgba(20,26,58,0.10)`, textDecoration: "none", color: TEXT, fontSize: "0.78rem" }}>
                   <span style={{ color: MUTED, whiteSpace: "nowrap", minWidth: 78 }}>{t.date}</span>
                   <span style={{ fontFamily: MONO, color: GOLD, fontSize: "0.7rem", whiteSpace: "nowrap" }}>{t.entry_no}</span>
                   <span style={{ flex: 1, minWidth: 0 }}>
