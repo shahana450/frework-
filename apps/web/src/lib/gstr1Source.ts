@@ -59,7 +59,7 @@ export function docsFromJournals(journals: SrcJournal[], contacts: SrcContact[])
     docs.push({
       kind, no, date: j.date, party: j.party_name ?? c?.name ?? null,
       gstin: saved?.customer_gstin ?? c?.gstin ?? null, partyState: saved?.customer_state ?? c?.state ?? null, pos: saved?.pos ?? null,
-      value: r2(j.total), items, derived,
+      value: r2(j.total), items, derived, ref: j.id, contactId: j.contact_id ?? c?.id ?? null,
     });
   }
   return docs;

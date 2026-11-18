@@ -29,7 +29,7 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "customer" | "vendor">("all");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("q") ?? "" : "");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(blank());
   const [msme, setMsme] = useState<Msme>(noMsme);

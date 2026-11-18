@@ -28,9 +28,10 @@ export type Doc = {
   items: Item[];
   derived: boolean;                         // items worked out from ledger amounts (no item detail saved)
   origNo?: string | null; origDate?: string | null;
+  ref?: string | null; contactId?: string | null;   // the FreBook entry and customer behind it
 };
 export type SectionDoc = { no: string; date: string; party: string | null; gstin: string | null; kind: Doc["kind"]; rate: number | null; taxable: number; igst: number; cgst: number; sgst: number; value: number };
-export type Issue = { level: "error" | "warn"; doc?: string; text: string };
+export type Issue = { level: "error" | "warn"; doc?: string; text: string; ref?: string | null; party?: string | null; fix?: "customer" | "invoice" | "business" };
 export type Gstr1 = {
   json: Record<string, unknown>;
   issues: Issue[];
@@ -192,5 +193,12 @@ export function buildGstr1(gstin: string, homeState: string | null, period: stri
   even(json);
   // The on-screen summary matches the file: CGST and SGST shown as the same equal halves
   const totals = [...tot.values()].map(t => Math.abs(t.cgst - t.sgst) <= 1 && t.cgst !== t.sgst ? { ...t, cgst: Math.round(((t.cgst + t.sgst) / 2) * 100) / 100, sgst: Math.round(((t.cgst + t.sgst) / 2) * 100) / 100 } : t);
+  // Where to fix each problem: the customer (GSTIN / state), the invoice itself, or your Business Details
+  const byNo = new Map(docs.map(d => [d.no, d]));
+  for (const i of issues) {
+    const d = i.doc ? byNo.get(i.doc) : undefined;
+    if (d) { i.ref = d.ref ?? null; i.party = d.party; }
+    i.fix = !i.doc ? "business" : /GSTIN|place of supply|state/i.test(i.text) ? "customer" : "invoice";
+  }
   return { json, issues, totals };
 }

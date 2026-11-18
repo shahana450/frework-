@@ -36,7 +36,6 @@ export default function Gstr1Panel({ bizId, month, monthLabel }: { bizId: string
 
   const errors = data.issues.filter(i => i.level === "error"), warns = data.issues.filter(i => i.level === "warn");
   const sum = data.totals.reduce((s, t) => ({ taxable: s.taxable + t.taxable, igst: s.igst + t.igst, cgst: s.cgst + t.cgst, sgst: s.sgst + t.sgst }), { taxable: 0, igst: 0, cgst: 0, sgst: 0 });
-  const shown = showAll ? data.issues : data.issues.slice(0, 8);
   const download = () => downloadApiFile(`/api/finance/gst?business_id=${bizId}&month=${month}&report=gstr1_json${hsnQ}`, `GSTR1_${month}.json`).catch(e => alert(e.message));
 
   return (
@@ -106,19 +105,52 @@ export default function Gstr1Panel({ bizId, month, monthLabel }: { bizId: string
         </div>
       </section>
 
-      {data.issues.length > 0 && (
-        <section style={{ background: "#FFFDF8", border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", color: C.muted }}>CHECK BEFORE FILING</div>
-          {shown.map((i, k) => (
-            <div key={k} style={{ display: "flex", gap: 10, fontSize: 13.5, lineHeight: 1.5 }}>
-              <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, background: i.level === "error" ? C.negSoft : C.warnSoft, color: i.level === "error" ? C.neg : C.warn, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12 }}>!</span>
-              <span>{i.text}</span>
+      {data.issues.length > 0 && (() => {
+        // Problems grouped by invoice, in plain words, each with the place to fix it
+        const plain = (t: string) => t.replace(/^[^:]+:\s*/, "")
+          .replace(/place of supply unknown \(IGST charged but the customer's state isn't saved\)\./, "The customer's state is missing — needed because IGST was charged.")
+          .replace(/no item detail saved, so HSN and quantity are missing — worked out from the ledger amounts\./, "No HSN / quantity on this invoice — FreBook used the ledger amounts. You can still file using the HSN box above.");
+        const general = data.issues.filter(i => !i.doc);
+        const byDoc = new Map<string, typeof data.issues>();
+        for (const i of data.issues.filter(x => x.doc)) byDoc.set(i.doc!, [...(byDoc.get(i.doc!) ?? []), i]);
+        const docs = [...byDoc.entries()].sort((x, y) => Number(y[1].some(i => i.level === "error")) - Number(x[1].some(i => i.level === "error")));
+        const shownDocs = showAll ? docs : docs.slice(0, 6);
+        const must = docs.filter(([, l]) => l.some(i => i.level === "error")).length;
+        const linkBtn: React.CSSProperties = { display: "inline-flex", alignItems: "center", height: 30, padding: "0 12px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#FFFFFF", color: C.primary, fontSize: 12.5, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" };
+        return (
+          <section style={{ background: "#FFFDF8", border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+              <b style={{ fontSize: 15 }}>Check before filing</b>
+              <span style={{ fontSize: 13, color: C.muted }}>{docs.length} invoice{docs.length === 1 ? "" : "s"} to look at{must ? <> · <b style={{ color: C.neg }}>{must} must be fixed</b> before uploading</> : " · nothing blocks the upload"}</span>
             </div>
-          ))}
-          {data.issues.length > 8 && <button onClick={() => setShowAll(s => !s)} style={{ alignSelf: "flex-start", border: "none", background: "none", color: C.primary, fontWeight: 700, cursor: "pointer", padding: 0 }}>{showAll ? "Show fewer" : `Show all ${data.issues.length}`}</button>}
-          <div style={{ fontSize: 12.5, color: C.muted }}>Fix customer GSTIN and state in <Link href="/finance/contacts" style={{ color: C.primary }}>Customers &amp; Suppliers</Link>, and your own in <Link href="/finance/settings/business" style={{ color: C.primary }}>Business Details</Link>. New invoices from the sales form save HSN and rates automatically.</div>
-        </section>
-      )}
+            {general.map((i, k) => (
+              <div key={"g" + k} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "10px 12px", borderRadius: 10, background: i.level === "error" ? C.negSoft : C.warnSoft, fontSize: 13.5 }}>
+                <span style={{ flex: 1, minWidth: 220 }}>{i.text}</span>
+                <Link href="/finance/settings/business" style={linkBtn}>Open Business Details →</Link>
+              </div>
+            ))}
+            {shownDocs.map(([no, list]) => {
+              const bad = list.some(i => i.level === "error"), ref = list.find(i => i.ref)?.ref, party = list.find(i => i.party)?.party;
+              const needCustomer = list.some(i => i.fix === "customer"), needInvoice = list.some(i => i.fix === "invoice");
+              return (
+                <div key={no} style={{ border: `1px solid ${bad ? "#EFC3B8" : C.line}`, borderLeft: `4px solid ${bad ? C.neg : C.warn}`, borderRadius: 10, padding: "10px 14px", display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 240 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>Invoice {no}{party ? <span style={{ fontWeight: 400, color: C.muted }}> · {party}</span> : null}</div>
+                    <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: 13.5, lineHeight: 1.55 }}>
+                      {list.map((i, k) => <li key={k} style={{ color: i.level === "error" ? C.neg : C.ink }}>{plain(i.text)}</li>)}
+                    </ul>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {needCustomer && <Link href={`/finance/contacts${party ? `?q=${encodeURIComponent(party)}` : ""}`} style={{ ...linkBtn, background: bad ? C.primary : "#FFFFFF", color: bad ? "#FFFFFF" : C.primary, borderColor: bad ? C.primary : C.line }}>Fix customer →</Link>}
+                    {(needInvoice || !needCustomer) && ref && <Link href={`/finance/journals?id=${ref}`} style={linkBtn}>Open invoice →</Link>}
+                  </div>
+                </div>
+              );
+            })}
+            {docs.length > 6 && <button onClick={() => setShowAll(s => !s)} style={{ alignSelf: "flex-start", border: "none", background: "none", color: C.primary, fontWeight: 700, cursor: "pointer", padding: 0 }}>{showAll ? "Show fewer" : `Show all ${docs.length} invoices`}</button>}
+          </section>
+        );
+      })()}
 
       <Gstr1FilePanel bizId={bizId} month={month} monthLabel={monthLabel} ours={data.totals} blocked={errors.length} />
 
