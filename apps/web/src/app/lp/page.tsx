@@ -311,7 +311,7 @@ function LandingInner() {
         {/* ── Footer strip ── */}
         <footer className="border-t border-white/6 py-6 px-4 text-center">
           <p className="text-xs text-white/20">
-            © 2026 FreWork · Frenode (OPC) Private Limited · <a href="/privacy" className="hover:text-white/40 transition-colors">Privacy Policy</a> · <a href="/terms" className="hover:text-white/40 transition-colors">Terms</a> · <a href="/refund-policy" className="hover:text-white/40 transition-colors">Refund Policy</a> · <a href="/contact" className="hover:text-white/40 transition-colors">Contact</a>
+            © 2026 FreWork — India’s Business Platform · FreBook is a product of FRENODE (OPC) PRIVATE LIMITED · CIN U62011KL2026OPC108016 · <a href="/privacy" className="hover:text-white/40 transition-colors">Privacy Policy</a> · <a href="/terms" className="hover:text-white/40 transition-colors">Terms</a> · <a href="/refund-policy" className="hover:text-white/40 transition-colors">Refund Policy</a> · <a href="/contact" className="hover:text-white/40 transition-colors">Contact</a>
           </p>
         </footer>
 

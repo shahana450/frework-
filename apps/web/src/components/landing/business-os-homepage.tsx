@@ -1247,7 +1247,7 @@ export function BusinessOSHomepage() {
       </section>
 
       <div className="py-6 text-center text-xs border-t" style={{ borderColor: "rgba(35,42,99,0.12)", background: "#232A63", color: "#C8D2F2" }}>
-        &copy; {new Date().getFullYear()} FreWork — India&apos;s Business Platform, a product of Frenode (OPC) Private Limited · CIN U62011KL2026OPC108016 &nbsp;·&nbsp; <Link href="/terms" className="hover:opacity-70 transition-opacity" style={{ color: "#FFB08A" }}>Terms</Link> &nbsp;·&nbsp; <Link href="/privacy" className="hover:opacity-70 transition-opacity" style={{ color: "#FFB08A" }}>Privacy</Link> &nbsp;·&nbsp; <Link href="/refund-policy" className="hover:opacity-70 transition-opacity" style={{ color: "#FFB08A" }}>Refund Policy</Link> &nbsp;·&nbsp; <Link href="/contact" className="hover:opacity-70 transition-opacity" style={{ color: "#FFB08A" }}>Contact</Link>
+        © {new Date().getFullYear()} FreWork — India’s Business Platform · FreBook is a product of FRENODE (OPC) PRIVATE LIMITED · CIN U62011KL2026OPC108016 &nbsp;·&nbsp; <Link href="/terms" className="hover:opacity-70 transition-opacity" style={{ color: "#FFB08A" }}>Terms</Link> &nbsp;·&nbsp; <Link href="/privacy" className="hover:opacity-70 transition-opacity" style={{ color: "#FFB08A" }}>Privacy</Link> &nbsp;·&nbsp; <Link href="/refund-policy" className="hover:opacity-70 transition-opacity" style={{ color: "#FFB08A" }}>Refund Policy</Link> &nbsp;·&nbsp; <Link href="/contact" className="hover:opacity-70 transition-opacity" style={{ color: "#FFB08A" }}>Contact</Link>
       </div>
 
       <style jsx global>{`

@@ -159,7 +159,7 @@ export function Footer() {
         <div className="mt-14 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4"
           style={{ borderTop: "1px solid rgba(184,144,58,0.12)" }}>
           <p className="text-xs" style={{ color: "#C4B49A" }}>
-            © {new Date().getFullYear()} FreWork, a product of Frenode (OPC) Private Limited · CIN U62011KL2026OPC108016. All rights reserved. · Made with ❤️ in India
+            © {new Date().getFullYear()} FreWork — India’s Business Platform · FreBook is a product of FRENODE (OPC) PRIVATE LIMITED · CIN U62011KL2026OPC108016
           </p>
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
