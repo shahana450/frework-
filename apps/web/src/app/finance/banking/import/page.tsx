@@ -81,6 +81,8 @@ export default function BankingPage() {
   // Push state
   const [pushing, setPushing] = useState(false);
   const [pushResult, setPushResult] = useState<{ created: number } | null>(null);
+  // Rows the server didn't post: possible duplicates wait for a confirmation, the rest show why
+  const [failed, setFailed] = useState<{ id: string; code?: string; error: string }[]>([]);
 
   // Add new ledger inline
   const [addLedgerRow, setAddLedgerRow] = useState<string | null>(null); // row id
@@ -413,10 +415,10 @@ export default function BankingPage() {
   }
 
   /* ── Push to journals ── */
-  async function pushToJournals() {
+  async function pushToJournals(only?: string[], confirmDup = false) {
     if (!bizId) return;
     if (!bankAccountId) { alert("Choose the bank account this statement belongs to (top of the page). If it isn't listed, add it in Chart of Accounts under Bank Accounts."); return; }
-    const toPush = rows.filter(r => r.ledger_id && !r.pushed);
+    const toPush = rows.filter(r => r.ledger_id && !r.pushed && (!only || only.includes(r.id)));
     if (!toPush.length) return;
     setPushing(true);
     try {
@@ -428,18 +430,19 @@ export default function BankingPage() {
           bank_account_id: bankAccountId,
           transactions: toPush.map(r => ({
             id: r.id, date: r.date, description: r.description,
-            debit: r.debit, credit: r.credit, ledger_id: r.ledger_id,
+            debit: r.debit, credit: r.credit, ledger_id: r.ledger_id, ...(confirmDup ? { confirm_duplicate: true } : {}),
           })),
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      setPushResult({ created: json.created });
+      setPushResult(prev => ({ created: (only && prev ? prev.created : 0) + json.created }));
       // Only rows the server actually posted are marked; the rest stay so they can be fixed and posted again
       const fails = new Map(((json.failures ?? []) as { id: string; error: string }[]).map(f => [f.id, f.error]));
       const pushedIds = new Set(toPush.map(r => r.id).filter(id => !fails.has(id)));
       setRows(r => r.map(x => pushedIds.has(x.id) ? { ...x, pushed: true } : x));
-      if (fails.size) alert(`${json.created} posted, ${fails.size} not posted:\n\n` + [...new Set(fails.values())].slice(0, 5).map(e => "• " + e).join("\n"));
+      const tried = new Set(toPush.map(r => r.id));
+      setFailed(prev => [...prev.filter(f => !tried.has(f.id)), ...((json.failures ?? []) as { id: string; code?: string; error: string }[])]);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : String(e));
     } finally {
@@ -451,6 +454,8 @@ export default function BankingPage() {
   const bulkCoa = useMemo(() =>
     coa.filter(a => !bulkSearch || a.name.toLowerCase().includes(bulkSearch.toLowerCase())).slice(0, 40),
     [coa, bulkSearch]);
+
+  const decode = (n: string) => n.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"');
 
   /* ── Summaries ── */
   const totalDebit = rows.reduce((s, r) => s + r.debit, 0);
@@ -719,6 +724,42 @@ export default function BankingPage() {
 
               {/* Table */}
               <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, overflow: "hidden" }}>
+        {failed.length > 0 && (() => {
+          const byId = new Map(rows.map(r => [r.id, r]));
+          const dups = failed.filter(f => f.code === "POSSIBLE_DUPLICATE" && byId.get(f.id) && !byId.get(f.id)!.pushed);
+          const other = failed.filter(f => f.code !== "POSSIBLE_DUPLICATE" && byId.get(f.id) && !byId.get(f.id)!.pushed);
+          const amt = (r: { debit: number; credit: number }) => `${r.debit ? "−" : "+"}₹${Math.round(r.debit || r.credit).toLocaleString("en-IN")}`;
+          const line = (f: { id: string; error: string }, act?: React.ReactNode) => { const r = byId.get(f.id)!; return (
+            <div key={f.id} style={{ display: "grid", gridTemplateColumns: "90px minmax(0,1fr) 110px auto", gap: 10, alignItems: "center", padding: "8px 0", borderTop: "1px solid #EFE6D3", fontSize: 13 }}>
+              <span style={{ color: "#6B7570" }}>{r.date}</span>
+              <span style={{ minWidth: 0 }}><span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.description}</span><span style={{ fontSize: 12, color: "#8A5A00" }}>{f.error.replace(/^Possible duplicate — not posted\.\s*/, "Looks like ")}</span></span>
+              <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: r.debit ? "#B4321F" : "#0B7A55" }}>{amt(r)}</span>
+              {act ?? <span />}
+            </div>); };
+          if (!dups.length && !other.length) return null;
+          return (
+            <div style={{ display: "grid", gap: 12, marginBottom: 14 }}>
+              {dups.length > 0 && (
+                <div style={{ background: "#FFF8E8", border: "1px solid #F2D29B", borderRadius: 14, padding: "12px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <b style={{ color: "#5A3A00" }}>⚠ {dups.length} possible duplicate{dups.length === 1 ? "" : "s"} — not posted</b>
+                    <span style={{ fontSize: 13, color: "#6B5A2E", flex: 1 }}>An entry with the same amount and ledgers is already in the books. Post only if this is a separate transaction (e.g. a monthly EMI or rent).</span>
+                    <button onClick={() => { if (window.confirm(`Post all ${dups.length} anyway? Only do this if each is a separate transaction.`)) void pushToJournals(dups.map(d => d.id), true); }} disabled={pushing}
+                      style={{ height: 32, padding: "0 14px", borderRadius: 999, border: "none", background: "#12352D", color: "#FFFFFF", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Post all anyway</button>
+                  </div>
+                  {dups.map(f => line(f, <button onClick={() => { if (window.confirm("Post this one anyway?")) void pushToJournals([f.id], true); }} disabled={pushing} style={{ height: 28, padding: "0 12px", borderRadius: 999, border: "1px solid #E6DFD0", background: "#FFFFFF", cursor: "pointer", fontWeight: 700, fontFamily: "inherit", fontSize: 12 }}>Post anyway</button>))}
+                </div>
+              )}
+              {other.length > 0 && (
+                <div style={{ background: "#FDECEA", border: "1px solid #F3C2BA", borderRadius: 14, padding: "12px 16px" }}>
+                  <b style={{ color: "#8A2A1A" }}>✕ {other.length} not posted</b> <span style={{ fontSize: 13, color: "#7A3A2E" }}>— fix the reason below (usually the ledger or the date), then press Push again.</span>
+                  {other.map(f => line(f))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+        <datalist id="bs-ledgers">{coa.map(a => <option key={a.id} value={`${decode(a.name)} · ${a.type}`} />)}</datalist>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
                     <thead>
@@ -785,21 +826,14 @@ export default function BankingPage() {
                                   </button>
                                 </div>
                               ) : (
-                                <select
-                                  value={row.ledger_id ?? ""}
-                                  onChange={e => {
-                                    if (e.target.value === "__add__") { setAddLedgerRow(row.id); setNewLedgerName(""); setGroupTouched(false); setNewLedgerType(row.debit ? "indirect_expense" : "indirect_income"); return; }
-                                    assignLedger(row.id, e.target.value);
-                                  }}
-                                  className="ledger-sel"
-                                  style={{ borderColor: row.ledger_id ? "rgba(11,122,85,0.3)" : "#FFFFFF", color: row.ledger_id ? "#0B7A55" : "#6B7570" }}
-                                >
-                                  <option value="">— select ledger —</option>
-                                  <option value="__add__">＋ Add new ledger…</option>
-                                  {coa.map(a => (
-                                    <option key={a.id} value={a.id}>{a.name} ({a.type})</option>
-                                  ))}
-                                </select>
+                                <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+                                  <input list="bs-ledgers" key={row.ledger_id ?? "none"} defaultValue={row.ledger_id ? decode(coa.find(a => a.id === row.ledger_id)?.name ?? "") : ""}
+                                    placeholder="Type to find a ledger…" title={row.ledger_id ? decode(coa.find(a => a.id === row.ledger_id)?.name ?? "") : "Type a few letters, then pick"}
+                                    onChange={e => { const v = e.target.value.trim().toLowerCase(); const hit = coa.find(a => decode(a.name).toLowerCase() === v || `${decode(a.name)} · ${a.type}`.toLowerCase() === v); if (hit) assignLedger(row.id, hit.id); }}
+                                    className="ledger-sel" style={{ borderColor: row.ledger_id ? "rgba(11,122,85,0.35)" : "#E6DFD0", color: row.ledger_id ? "#0B7A55" : "#10241F", minWidth: 190 }} />
+                                  <button type="button" title="Add a new ledger" onClick={() => { setAddLedgerRow(row.id); setNewLedgerName(""); setGroupTouched(false); setNewLedgerType(row.debit ? "indirect_expense" : "indirect_income"); }}
+                                    style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #E6DFD0", background: "#FFFFFF", color: "#12352D", cursor: "pointer", fontWeight: 800 }}>＋</button>
+                                </span>
                               )}
                             </td>
                             <td style={{ padding: "0.5rem 0.5rem", textAlign: "center" }}>
@@ -885,7 +919,7 @@ export default function BankingPage() {
 
               {/* Push button */}
               <button
-                onClick={pushToJournals}
+                onClick={() => void pushToJournals()}
                 disabled={pushing || unpushedAssigned === 0 || !bankAccountId}
                 className="bs-btn"
                 style={{ width: "100%", padding: "14px 0", fontSize: "0.92rem", fontWeight: 800, background: unpushedAssigned > 0 && bankAccountId ? "#12352D" : "#FFFFFF", color: unpushedAssigned > 0 && bankAccountId ? "#fff" : "#E6DFD0", borderRadius: 10, justifyContent: "center", marginBottom: "0.5rem" }}
