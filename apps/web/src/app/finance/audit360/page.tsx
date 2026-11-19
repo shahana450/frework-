@@ -27,6 +27,7 @@ const TONE: Record<AuditStatus, { label: string; bg: string; fg: string; dot: st
 };
 const SECTIONS: { key: AuditCheck["section"]; title: string; note: string }[] = [
   { key: "books", title: "Books integrity", note: "Do the books hold together — balanced, complete, nothing parked in suspense." },
+  { key: "ca", title: "CA review — accounts and records", note: "What an auditor checks beyond the tax law: balances, depreciation, provisions, capital items, personal expenses and supporting records." },
   { key: "cash_law", title: "Cash and tax-law limits", note: "Cash transactions the Income-tax Act penalises or disallows." },
   { key: "gstr1", title: "GSTR-1 — sales", note: "Sales and output GST in the books against what was reported in GSTR-1." },
   { key: "gstr3b", title: "GSTR-3B — tax paid and ITC claimed", note: "What was declared and claimed in GSTR-3B against the books." },

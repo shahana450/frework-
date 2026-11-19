@@ -19,6 +19,14 @@ export function fixFor(c: Pick<AuditCheck, "id" | "section" | "status" | "diff">
     case "cash_negative": return { text: "Cash can't go below zero. Usually a cash withdrawal from the bank, or cash sales, wasn't recorded — record them on the date shown (or correct a payment that was made by bank).", href: "/finance/chat-book", cta: "Record the missing receipt" };
     case "cash_expense_10k": return { text: "Expenses paid in cash above ₹10,000 to one person in a day are disallowed. No entry to change: add them back in the tax computation, and pay by bank / UPI in future." };
     case "cash_receipt_2l": return { text: "Receiving ₹2 lakh or more in cash attracts a penalty equal to the amount. Nothing to post — note it for the tax audit and take such receipts by bank in future." };
+    case "wrong_side": return { text: "Open each ledger. A customer in credit is usually an advance (move it to Advances from customers) or a sale not recorded; a supplier in debit is an advance paid or a bill not entered; an expense / income on the wrong side is usually a posting to the wrong ledger — reverse and re-post it." };
+    case "depreciation": return { text: "Post the year's depreciation (Dr Depreciation, Cr each asset) at Schedule II / Income-tax rates — half rate for assets used under 180 days. FreBook's Journal → Depreciation helps work it out.", href: "/finance/journals/new", cta: "Post depreciation" };
+    case "provisions": return { text: "Provide for expenses of the year still unpaid: audit fee, March salary, rent, electricity, interest. Dr the expense, Cr Outstanding Expenses / Provision for Audit Fee, dated the last day of the year.", href: "/finance/journals/new", cta: "Post provisions" };
+    case "capital_expensed": return { text: "Move each asset purchase out of expenses into the right fixed-asset ledger (rectification: Dr Furniture / Computers…, Cr the expense), then charge depreciation." };
+    case "personal_exp": return { text: "Transfer personal expenses to the owner's / partner's Drawings (Dr Drawings, Cr the expense). They're not allowed as a business expense." };
+    case "round_sums": return { text: "Attach the bill or agreement for each (Shelf), and add the bill number as the reference. Unsupported round-sum payments are questioned in a tax audit." };
+    case "narration": return { text: "Add a short narration to each entry — who, what for, bill no. Auditors and the tax officer read these first." };
+    case "sales_no_invoice": return { text: "Issue a tax invoice for each sale and put its number as the reference (or raise them from New Invoice going forward)." };
     case "cash_loan_20k": return { text: "Loans / deposits of ₹20,000 or more must be by bank. Nothing to post — report it in the tax audit and repay / accept by bank in future." };
   }
   if (c.section === "gstr1" || c.section === "gstr3b") return { text: (c.diff ?? 0) > 0 ? "The return shows more than the books: a sale or its tax isn't in the books — record it (or check if the return was overstated)." : "The books show more than the return: a sale wasn't reported — include it in the next GSTR-1 / 3B (amendment), with interest if tax is short.", ...gstLink };
@@ -31,6 +39,8 @@ export function fixFor(c: Pick<AuditCheck, "id" | "section" | "status" | "diff">
 export function itemFix(checkId: string, it: AuditItem): ItemFix {
   if (checkId === "suspense_nil" && it.account_id) return "reclass";
   if (checkId === "duplicates" && it.journal_id) return "reverse";
+  if (checkId === "wrong_side" || checkId === "depreciation") return null;
+  if (it.journal_id && ["capital_expensed", "personal_exp", "round_sums", "narration", "sales_no_invoice"].includes(checkId)) return "open";
   if (it.journal_id && ["future_dated", "empty_entries", "entries_balance", "drafts"].includes(checkId)) return checkId === "future_dated" ? "reverse" : "open";
   return null;
 }

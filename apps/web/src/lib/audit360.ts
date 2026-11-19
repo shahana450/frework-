@@ -7,7 +7,7 @@ export type AuditAccount = { id: string; name: string; type: string; sub_type: s
 export type AuditStatus = "ok" | "warn" | "fail" | "na";
 export type AuditItem = { journal_id?: string; entry_no?: string; date?: string; amount?: number; note: string; account_id?: string; account?: string; side?: "dr" | "cr" };
 export type AuditCheck = {
-  id: string; section: "books" | "cash_law" | "gstr1" | "gstr3b" | "gstr2b" | "tds_received" | "tds_deducted"; title: string; law?: string;
+  id: string; section: "books" | "ca" | "cash_law" | "gstr1" | "gstr3b" | "gstr2b" | "tds_received" | "tds_deducted"; title: string; law?: string;
   status: AuditStatus; summary: string; books?: number | null; portal?: number | null; diff?: number | null; items: AuditItem[];
 };
 export type AuditReport = { period: { from: string; to: string }; checks: AuditCheck[]; score: number; counts: Record<AuditStatus, number> };
@@ -144,6 +144,74 @@ export function runAudit360(accounts: AuditAccount[], journals: QJournal[], peri
   }
   add({ id: "cash_loan_20k", section: "cash_law", title: "Loans taken or repaid in cash (₹20,000+)", law: "Loans / deposits of ₹20,000 or more only by bank (was s.269SS / 269T) — penalty equal to the amount",
     status: cashLoan.length ? "fail" : "ok", summary: cashLoan.length ? `${cashLoan.length} entr${cashLoan.length === 1 ? "y" : "ies"} — penalty risk equal to the amount.` : "None.", items: top(cashLoan) });
+
+  // ── CA review: what an auditor looks at beyond the tax law ──────────────────
+  const caBal = new Map<string, number>();
+  for (const j of upTo) for (const l of j.lines) caBal.set(l.account_id, r2((caBal.get(l.account_id) ?? 0) + l.dr - l.cr));
+  const plBal = new Map<string, number>();
+  for (const j of inYear) for (const l of j.lines) plBal.set(l.account_id, r2((plBal.get(l.account_id) ?? 0) + l.dr - l.cr));
+  // Balances on the wrong side (customers in credit, suppliers in debit, expenses in credit, income in debit, cash below zero)
+  const wrong: AuditItem[] = [];
+  for (const a of accounts) {
+    const pl = a.type === "income" || a.type === "expense";
+    const b = (pl ? plBal : caBal).get(a.id) ?? 0;
+    if (Math.abs(b) < 1) continue;
+    const why = a.sub_type === "trade_receivables" && b < 0 ? "Customer in credit — an advance or an unrecorded sale"
+      : a.sub_type === "trade_payables" && b > 0 ? "Supplier in debit — an advance or an unrecorded bill"
+      : a.type === "expense" && b < 0 && !/discount|rebate|written back/i.test(a.name) ? "Expense shows a credit balance — likely misposted"
+      : a.type === "income" && b > 0 ? "Income shows a debit balance — likely misposted"
+      : (isCash(a) || (a.type === "asset" && !isBank(a) && a.sub_type !== "trade_receivables" && !/depreciation|provision/i.test(a.name))) && b < 0 ? "Asset with a credit balance — a missing receipt or a wrong ledger" : "";
+    if (why) wrong.push({ amount: Math.abs(b), note: `${a.name}: ${inr(b)} ${b > 0 ? "Dr" : "Cr"} — ${why}`, account_id: a.id, account: a.name });
+  }
+  add({ id: "wrong_side", section: "ca", title: "Balances on the right side", status: wrong.length ? "warn" : "ok",
+    summary: wrong.length ? `${wrong.length} ledger${wrong.length === 1 ? "" : "s"} with a balance on the unusual side.` : "Every ledger's balance is on its normal side.", items: top(wrong) });
+  // Fixed assets without depreciation for the year
+  const fixed = accounts.filter(a => a.sub_type === "fixed_asset" && (caBal.get(a.id) ?? 0) > 1);
+  const deprBooked = inYear.some(j => j.lines.some(l => /depreciation/i.test(acc.get(l.account_id)?.name ?? "") && l.dr > 0));
+  add({ id: "depreciation", section: "ca", title: "Depreciation charged on fixed assets", law: "AS 10 / Schedule II (Companies Act) or Income-tax WDV rates",
+    status: !fixed.length ? "na" : deprBooked ? "ok" : "warn",
+    summary: !fixed.length ? "No fixed assets in the books." : deprBooked ? "Depreciation is booked for the year." : `${fixed.length} fixed asset ledger${fixed.length === 1 ? "" : "s"} (${inr(fixed.reduce((s, a) => s + (caBal.get(a.id) ?? 0), 0))}) but no depreciation entry this year.`,
+    items: deprBooked ? [] : fixed.map(a => ({ amount: caBal.get(a.id) ?? 0, note: `${a.name}: ${inr(caBal.get(a.id) ?? 0)}`, account_id: a.id, account: a.name })) });
+  // Year-end provisions (audit fee, outstanding expenses) — only once the year has ended
+  const yearOver = opts.today > period.to;
+  const yearExpenses = inYear.reduce((s, j) => s + j.lines.filter(l => isExpense(acc.get(l.account_id))).reduce((t, l) => t + l.dr, 0), 0);   // small books seldom carry year-end provisions
+  const lastMonth = period.to.slice(0, 7);
+  const provisions = inYear.filter(j => j.date.slice(0, 7) === lastMonth && j.lines.some(l => /provision|outstanding|payable|audit fee/i.test(acc.get(l.account_id)?.name ?? "") && l.cr > 0));
+  add({ id: "provisions", section: "ca", title: "Year-end provisions made", law: "Accrual basis (AS 1 / AS 29): expenses of the year are provided even if unpaid",
+    status: !yearOver || yearExpenses < 100000 ? "na" : provisions.length ? "ok" : "warn",
+    summary: !yearOver ? "Checked once the year has ended." : provisions.length ? `${provisions.length} provision / outstanding entr${provisions.length === 1 ? "y" : "ies"} in the last month.` : "No provisions for audit fee, salary, rent or other outstanding expenses at the year end.", items: [] });
+  // Capital items booked as expenses
+  const capital: AuditItem[] = [];
+  for (const j of inYear) for (const l of j.lines) {
+    const a = acc.get(l.account_id);
+    if (a?.type === "expense" && l.dr >= 10000 && /\b(laptop|computer|printer|furniture|chair|table|machine|machinery|equipment|air ?condition|\bac\b|vehicle|car|bike|mobile phone|inverter|software licen[cs]e)\b/i.test(`${j.narration} ${a.name}`)) capital.push(item(j, l.dr, `${a.name}: looks like an asset bought — ${j.narration.slice(0, 80)}`));
+  }
+  add({ id: "capital_expensed", section: "ca", title: "Assets not charged to expenses", law: "Capital vs revenue: assets are capitalised and depreciated",
+    status: capital.length ? "warn" : "ok", summary: capital.length ? `${capital.length} expense entr${capital.length === 1 ? "y looks" : "ies look"} like assets bought.` : "No asset purchases found in the expense ledgers.", items: top(capital) });
+  // Personal / non-business expenses
+  const personal: AuditItem[] = [];
+  for (const j of inYear) for (const l of j.lines) {
+    const a = acc.get(l.account_id);
+    if (a?.type === "expense" && l.dr > 0 && /\b(personal|household|home expenses?|school fees?|tuition fees?|family|drawings?|gift to|donation)\b/i.test(`${a.name} ${j.narration}`)) personal.push(item(j, l.dr, `${a.name}: ${j.narration.slice(0, 80)}`));
+  }
+  add({ id: "personal_exp", section: "ca", title: "No personal expenses in the business books", law: "Income-tax s.37: only expenses wholly for the business are allowed",
+    status: personal.length ? "warn" : "ok", summary: personal.length ? `${personal.length} expense${personal.length === 1 ? "" : "s"} look personal (${inr(personal.reduce((s, x) => s + (x.amount ?? 0), 0))}).` : "No personal-looking expenses found.", items: top(personal) });
+  // Large round-sum payments with no reference
+  const round: AuditItem[] = [];
+  for (const j of inYear) {
+    const amt = j.lines.reduce((s, l) => s + l.dr, 0);
+    if (amt >= 50000 && amt % 10000 === 0 && !j.reference_no && j.lines.some(l => isExpense(acc.get(l.account_id)) && l.dr > 0)) round.push(item(j, amt, `Round-sum expense with no bill / reference — ${j.narration.slice(0, 70)}`));
+  }
+  add({ id: "round_sums", section: "ca", title: "Large round-sum expenses are supported", status: round.length ? "warn" : "ok",
+    summary: round.length ? `${round.length} round-sum expense${round.length === 1 ? "" : "s"} of ₹50,000+ with no bill reference.` : "None found.", items: top(round) });
+  // Entries without a narration
+  const bare = inYear.filter(j => !j.narration?.trim() || /^(tly-|jv\/|rct\/|pmt\/)?[\w\/-]*\d+$/i.test(j.narration.trim()));
+  add({ id: "narration", section: "ca", title: "Entries carry a narration", status: bare.length > 20 ? "warn" : "ok",
+    summary: bare.length ? `${bare.length} entr${bare.length === 1 ? "y has" : "ies have"} no real narration (only a number).` : "Every entry explains itself.", items: top(bare.map(j => item(j, j.lines.reduce((s, l) => s + l.dr, 0), "No narration")), 30) });
+  // Sales without an invoice number
+  const noInv = inYear.filter(j => j.type === "sales" && !j.reference_no && !/^INV\//.test(j.entry_no));
+  add({ id: "sales_no_invoice", section: "ca", title: "Every sale has an invoice number", law: "CGST Rule 46: a tax invoice for every taxable supply",
+    status: noInv.length ? "warn" : "ok", summary: noInv.length ? `${noInv.length} sale${noInv.length === 1 ? "" : "s"} without an invoice number.` : "All sales carry an invoice number.", items: top(noInv.map(j => item(j, j.lines.reduce((s, l) => s + l.dr, 0), "Sale without an invoice number"))) });
 
   // Score: ok = full marks, warn = half, fail = none; n/a doesn't count
   const counts: Record<AuditStatus, number> = { ok: 0, warn: 0, fail: 0, na: 0 };

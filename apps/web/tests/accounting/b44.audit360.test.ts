@@ -51,3 +51,18 @@ test("possible duplicates: same date, amount and ledgers", () => {
   const r = run([J("D1", "2025-09-01", [["rent", 500, 0], ["bank", 0, 500]]), J("D2", "2025-09-01", [["rent", 500, 0], ["bank", 0, 500]])]);
   assert.equal(check(r, "duplicates").items[0].entry_no, "D2");
 });
+
+test("CA review: wrong-side balances, assets expensed, missing depreciation", () => {
+  const A2: AuditAccount[] = [...A,
+    { id: "deb", name: "Ravi Traders", type: "asset", sub_type: "trade_receivables" },
+    { id: "furn", name: "Furniture", type: "asset", sub_type: "fixed_asset" },
+    { id: "off", name: "Office Expenses", type: "expense", sub_type: "indirect_expense" }];
+  const r = runAudit360(A2, [
+    J("R1", "2025-05-01", [["bank", 5000, 0], ["deb", 0, 5000]]),
+    J("F1", "2025-05-02", [["furn", 60000, 0], ["bank", 0, 60000]]),
+    { ...J("E1", "2025-05-03", [["off", 45000, 0], ["bank", 0, 45000]]), narration: "Laptop for office" },
+  ], period, { today: "2026-11-02", drafts: 0, openingPosted: true });
+  assert.equal(check(r, "wrong_side").status, "warn");
+  assert.equal(check(r, "capital_expensed").status, "warn");
+  assert.equal(check(r, "depreciation").status, "warn");
+});

@@ -79,7 +79,7 @@ export function createSandboxGstProvider(): PortalProvider {
 type SbErr = { error_cd?: string; error_code?: string; message?: string } | null | undefined;
 type SbBody = { code?: number; message?: string; data?: { status_cd?: string; error?: SbErr; access_token?: string; token_expiry?: number; session_expiry?: number; fc?: number | string; data?: unknown } };
 
-const headers = (authorization: string) => ({ authorization, "x-api-key": process.env.SANDBOX_API_KEY ?? "", "x-api-version": "1.0.0", "Content-Type": "application/json" });
+const headers = (authorization: string) => ({ authorization, "x-api-key": process.env.SANDBOX_API_KEY ?? "", "x-api-version": "1.0.0", "x-source": "primary", "Content-Type": "application/json" });   // x-source: Sandbox now requires it on taxpayer calls
 
 /** Throws a clear PortalError for HTTP failures and GST-portal errors (HTTP 200 with status_cd "0"). Exported for tests. */
 export function checkReply(http: number, body: unknown, when: "otp" | "verify" | "2b" | "ret"): SbBody {
