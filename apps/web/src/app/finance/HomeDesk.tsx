@@ -28,14 +28,6 @@ const SAPPHIRE: typeof LIGHT = {
   gInk: "#22305C", gStrong: "#0D1E52", gMuted: "#6A7696", gHead: "#2F5BD8",
   gRule: "#C9D5F2", gRuleSoft: "#DCE4F7", gNeg: "#C2321F", gPos: "#0B7A55", gBtnLine: "#C3D1F2", gBtnBg: "#FFFFFF",
 };
-// Violet dark ("glow"): the same layout and words, different colours
-const GLOW: typeof LIGHT = {
-  ground: "#0A0912", tile: "#12111B", line: "rgba(255,255,255,0.10)", ink: "#ECEAF6", muted: "#A9A4C4",
-  green: "#7A5CFF", greenSoft: "rgba(155,132,255,0.14)", gold: "#C4B6FF", goldSoft: "rgba(155,132,255,0.16)", goldLine: "rgba(170,150,255,0.45)",
-  pos: "#5FE3A1", posSoft: "rgba(63,217,138,0.14)", neg: "#FF8E7E", negSoft: "rgba(255,107,87,0.14)", warn: "#F2C26B", warnSoft: "rgba(242,194,107,0.14)",
-  gBg: "linear-gradient(160deg,#4326C9 0%,#22125E 55%,#12111B 100%)", gBorder: "1px solid rgba(170,150,255,0.35)", gShadow: "0 24px 60px -30px rgba(110,80,255,0.7)", gInk: "#ECEAF6", gStrong: "#FFFFFF", gMuted: "#C9C5E0", gHead: "#C4B6FF",
-  gRule: "rgba(255,255,255,0.16)", gRuleSoft: "rgba(255,255,255,0.1)", gNeg: "#FF9A8A", gPos: "#7FEBB8", gBtnLine: "rgba(255,255,255,0.3)", gBtnBg: "transparent",
-};
 let C = LIGHT;
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
@@ -51,7 +43,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
   const india = activeCountry() === "IN";
   const b = useBrand();
   const brand = b.name;
-  C = b.key === "cswa" ? SAPPHIRE : b.key === "glow" ? GLOW : LIGHT;
+  C = b.key === "cswa" ? SAPPHIRE : LIGHT;
   const router = useRouter();
   const tally = useTally();
   const [mode, setMode] = useState<"record" | "ask">("record");

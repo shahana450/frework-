@@ -156,9 +156,6 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const [india, setIndia] = useState(true);   // GST / TDS / Income-tax menus only for Indian businesses
   const [bizCount, setBizCount] = useState(0);
   const brand = useBrand();
-  // The violet "glow" colour sheet is large, so it is only fetched when that look is switched on
-  const [glowCss, setGlowCss] = useState("");
-  useEffect(() => { if (brand.key === "glow") import("@/lib/brandGlow").then((m) => setGlowCss(m.GLOW_CSS)).catch(() => {}); }, [brand.key]);
   const [collapsed, setCollapsed] = useState(false);
   // Top icon bar wider than the screen: the mouse wheel scrolls it sideways, and ‹ › show when there's more
   // The bar element itself (set when it mounts), so the listeners attach once per bar — never on every render
@@ -392,9 +389,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
   return (
     <div data-brand={brand.key} data-page={pathname === "/finance" ? "home" : undefined} style={{ display: "flex", minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <title>{brand.key === "frebook" || brand.key === "glow" ? financeTitle(pathname, search, bizName) : financeTitle(pathname, search, bizName).replace(/FreWork|FreBook/g, `${brand.name} ${brand.tagline}`)}</title>
+      <title>{brand.key === "frebook" ? financeTitle(pathname, search, bizName) : financeTitle(pathname, search, bizName).replace(/FreWork|FreBook/g, `${brand.name} ${brand.tagline}`)}</title>
       {BRAND_CSS[brand.key] && <style>{BRAND_CSS[brand.key]}</style>}
-      {brand.key === "glow" && glowCss && <style>{glowCss}</style>}
       <meta name="robots" content="noindex, nofollow" />
       <meta name="description" content="FreBook: chat bookkeeping, GST, reports and Tally sync for your business." />
       <style>{FINANCE_CSS}</style>
