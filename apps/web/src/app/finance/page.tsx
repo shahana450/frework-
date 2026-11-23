@@ -305,6 +305,8 @@ export default function FinanceDashboard() {
       .select("id,type,status,date,total_debit,total_credit").eq("business_id", bizId).neq("status", "voided");
     if (activeFy?.start_date) jq = jq.gte("date", activeFy.start_date);
     if (activeFy?.end_date)   jq = jq.lte("date", activeFy.end_date);
+    // Ledgers are fetched at the same time as the journals
+    const accountsP = supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bizId);
     const { data: jData } = await jq;
     const journals = jData ?? [];
     const posted = journals.filter(j => j.status === "posted");
@@ -314,8 +316,7 @@ export default function FinanceDashboard() {
     //    (covers standard "Sales" AND custom Tally types like "Export Sales", "Local Sales" etc.)
     let salesRev = 0, expTotal = 0;
     if (postedIds.length > 0) {
-      const { data: accounts } = await supabase.from("fw_fin_chart_of_accounts")
-        .select("id,name,type").eq("business_id", bizId);
+      const { data: accounts } = await accountsP;
       const accMap = new Map((accounts ?? []).map(a => [a.id, { type: a.type as string, name: (a.name as string).toLowerCase() }]));
 
       // Income: type="income"/"sales" OR name matches sales/export patterns
@@ -354,9 +355,24 @@ export default function FinanceDashboard() {
                n.includes("advertisement") || n.includes("bank charges") || n.includes("audit fee");
       };
 
-      for (let i = 0; i < postedIds.length; i += 50) {
-        const { data: lines } = await supabase.from("fw_fin_journal_lines")
-          .select("account_id,dr_amount,cr_amount").in("journal_id", postedIds.slice(i, i + 50));
+      // All batches at once (10 at a time), not one after another — large books were dozens of round trips
+      const chunks: string[][] = [];
+      for (let i = 0; i < postedIds.length; i += 150) chunks.push(postedIds.slice(i, i + 150));
+      const all: { account_id: string; dr_amount: number; cr_amount: number }[] = [];
+      for (let c = 0; c < chunks.length; c += 10) {
+        const got = await Promise.all(chunks.slice(c, c + 10).map(async ids => {
+          const out: { account_id: string; dr_amount: number; cr_amount: number }[] = [];
+          for (let from = 0; ; from += 1000) {
+            const { data } = await supabase.from("fw_fin_journal_lines").select("account_id,dr_amount,cr_amount").in("journal_id", ids).order("id").range(from, from + 999);
+            out.push(...((data ?? []) as typeof out));
+            if (!data || data.length < 1000) break;
+          }
+          return out;
+        }));
+        got.forEach(g => all.push(...g));
+      }
+      {
+        const lines = all;
         for (const l of lines ?? []) {
           if (isIncome(l.account_id))  salesRev  += (l.cr_amount || 0) - (l.dr_amount || 0);
           if (isExpense(l.account_id)) expTotal  += (l.dr_amount || 0) - (l.cr_amount || 0);

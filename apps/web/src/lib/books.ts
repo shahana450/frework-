@@ -128,7 +128,17 @@ export function buildBS(tb: TBRow[], netProfit: number): BS {
 export const statementAmount = natural;
 
 // Every posted line up to `end`, with its journal date. Paged so nothing is silently cut off.
-export async function loadBookLines(sb: SupabaseClient, businessId: string, end: string): Promise<{ lines: BookLine[]; accounts: Account[]; error?: string }> {
+// Two parts of one page asking for the same books at the same moment share one download
+const inFlight = new Map<string, Promise<{ lines: BookLine[]; accounts: Account[]; error?: string }>>();
+export function loadBookLines(sb: SupabaseClient, businessId: string, end: string): Promise<{ lines: BookLine[]; accounts: Account[]; error?: string }> {
+  const key = `${businessId}|${end}`;
+  const hit = inFlight.get(key);
+  if (hit) return hit;
+  const p = loadBookLinesNow(sb, businessId, end).finally(() => inFlight.delete(key));
+  inFlight.set(key, p);
+  return p;
+}
+async function loadBookLinesNow(sb: SupabaseClient, businessId: string, end: string): Promise<{ lines: BookLine[]; accounts: Account[]; error?: string }> {
   const accountsP = (async () => {
     const out: Account[] = [];
     for (let from = 0; ; from += 1000) {
