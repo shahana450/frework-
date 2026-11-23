@@ -3,6 +3,7 @@ import { readBankStatement } from "@/lib/readStatement";
 import { PdfPasswordError } from "@/lib/pdfUnlock";
 import { useAutoDraft } from "@/lib/importDraft";
 import { isCashBankAccount } from "@/lib/journalRules";
+import { isLoanAccount, looksLikeLoanStatement, normaliseLoanRows, suggestLoanLedger } from "@/lib/bankImport";
 import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
@@ -38,6 +39,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
   const [rows, setRows] = useState<Row[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [bankLedger, setBankLedger] = useState("");
+  const [loan, setLoan] = useState(false);
   const [heads, setHeads] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // The summary cards fold into one line once the list is scrolled, giving the rows the room
@@ -90,7 +92,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
         return;
       }
 
-      let data: { transactions: { date: string; description: string; debit: number; credit: number }[]; balanceBreaks?: number };
+      let data: { transactions: { date: string; description: string; debit: number; credit: number; balance?: number }[]; balanceBreaks?: number };
       try { data = await readBankStatement(file, { bizId, password: password || undefined, onProgress: p => { if (!cancelled) setProgress(p.label); } }); }
       catch (e) {
         if (cancelled) return;
@@ -102,10 +104,25 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
       if (cancelled) return;
       // Rows that don't add up to the bank's printed balance: say so before anything is posted
       setProgress(data.balanceBreaks ? `⚠ ${data.balanceBreaks} row${data.balanceBreaks === 1 ? "" : "s"} don't add up to the bank's running balance — compare with the PDF before posting (a line may be missing or on the wrong side).` : "");
-      const parsed: Row[] = (data.transactions as { date: string; description: string; debit: number; credit: number }[])
+      const isLoan = looksLikeLoanStatement(file.name, data.transactions.map(t => ({ description: String(t.description ?? "") })));
+      const src = isLoan ? normaliseLoanRows(data.transactions.map(t => ({ ...t, description: String(t.description ?? ""), debit: Number(t.debit) || 0, credit: Number(t.credit) || 0 }))) : data.transactions;
+      const parsed: Row[] = (src as { date: string; description: string; debit: number; credit: number }[])
         .filter(t => (Number(t.debit) || 0) > 0 || (Number(t.credit) || 0) > 0)
         .map((t, i) => ({ id: `r${i}`, date: String(t.date ?? "").slice(0, 10), description: String(t.description ?? ""), debit: Number(t.debit) || 0, credit: Number(t.credit) || 0, ledger: "", aiLedger: "", aiType: "", confidence: 0, state: "open" }));
       if (!parsed.length) { setError("No transactions found in this statement."); setPhase("error"); return; }
+      if (isLoan) {
+        // Loan statement: the loan ledger is the "bank" side; every line's ledger comes from its description and direction
+        setLoan(true); setProgress("Loan statement: lines that raise the loan post Dr expense/bank, Cr loan; EMIs and recoveries post Dr loan, Cr bank. Posted as Journal vouchers.");
+        const loanAcc = list.find(a => isLoanAccount(a as never));
+        const bankHint = ["federal", "sbi", "hdfc", "icici", "axis", "kotak", "canara", "union", "baroda", "pnb", "idfc", "indusind", "yes"].find(b => file.name.toLowerCase().includes(b));
+        const loanName = loanAcc?.name ?? (bankHint ? `${bankHint[0].toUpperCase()}${bankHint.slice(1)} Bank Loan A/c` : "Term Loan A/c");
+        setBankLedger(loanName);
+        const payBank = banks[0]?.name ?? "Bank Account";
+        const names = list.map(a => a.name);
+        setRows(parsed.map(p => { const l = suggestLoanLedger(p.description, p.debit > 0, payBank, names, loanName); return { ...p, ledger: l, aiLedger: l, aiType: "", confidence: 1 }; }));
+        setPhase("ready");
+        return;
+      }
       setRows(parsed); setPhase("suggesting");
 
       for (let i = 0; i < parsed.length; i += 25) {
@@ -145,7 +162,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
       const side = used.length ? (used.filter(r => r.credit > 0).length >= used.length / 2 ? "in" : "out") : null;
       m.set(n, heads[n] ?? inferHead(n)?.key ?? (aiType === "debtors" || aiType === "creditors" ? aiType : null) ?? guessGroup(n, side) ?? headFromType(aiType).key);
     };
-    if (bankLedger && isNew(bankLedger)) m.set(bankLedger.trim(), heads[bankLedger.trim()] ?? "bank");
+    if (bankLedger && isNew(bankLedger)) m.set(bankLedger.trim(), heads[bankLedger.trim()] ?? (loan ? "loan" : "bank"));
     rows.filter(r => r.state !== "posted" && selected.has(r.id) && r.ledger).forEach(r => consider(r.ledger, r.aiType));
     return m;
   }, [rows, selected, bankLedger, heads, existing]);
@@ -224,7 +241,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
       const amount = r.debit || r.credit;
       const isOut = r.debit > 0;
       const tx = {
-        status: "complete", transaction_date: r.date, transaction_type: isOut ? "bank_payment" : "bank_receipt",
+        status: "complete", transaction_date: r.date, transaction_type: loan ? "journal" : isOut ? "bank_payment" : "bank_receipt",
         narrative: r.description.slice(0, 200), amount, party_name: null, party_type: null, invoice_number: null,
         payment_mode: "bank", bank_account_name: bankLedger,
         gst: { applicable: false, rate: 0, taxable_value: 0, cgst: 0, sgst: 0, igst: 0, transaction_type: null },
@@ -249,7 +266,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
       try {
         const res = await fetch("/api/finance/chat-book/confirm-batch", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: chunk.map(build), business_id: bizId, user_id: userId, account_heads: accountHeads, source: "statement", bank_account_name: bankLedger.trim(), file_name: file.name }),
+          body: JSON.stringify({ items: chunk.map(build), business_id: bizId, user_id: userId, account_heads: accountHeads, source: "statement", bank_account_name: bankLedger.trim(), loan, file_name: file.name }),
         });
         const data = await res.json();
         if (!res.ok || data.needs_heads) throw new Error(data.error ?? `Choose a group for ${data.needs_heads?.map((h: { account: string }) => h.account).join(", ")}`);
@@ -296,7 +313,7 @@ export default function StatementModal({ file, bizId, userId, onClose, onPosted,
           </div>
           <div style={{ flex: 1 }} />
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: "0.62rem", letterSpacing: "0.18em", color: T.gold }}>BANK LEDGER</span>
+            <span style={{ fontSize: "0.62rem", letterSpacing: "0.18em", color: T.gold }}>{loan ? "LOAN LEDGER" : "BANK LEDGER"}</span>
             <input list="sm-banks" value={bankLedger} onChange={e => setBankLedger(e.target.value)} placeholder="Your bank ledger" style={{ height: 38, width: 230, borderRadius: 999, border: `1px solid ${bankLedger ? "rgba(255,255,255,0.25)" : T.gold}`, background: "rgba(255,255,255,0.06)", color: "#FFFFFF", padding: "0 16px", fontSize: "0.92rem", fontFamily: SERIF, outline: "none" }} />
             <datalist id="sm-banks">{accounts.filter(a => isCashBankAccount(a as never)).map(a => <option key={a.id} value={a.name} />)}</datalist>
           </label>

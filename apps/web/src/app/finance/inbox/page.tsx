@@ -1,5 +1,5 @@
 "use client";
-import { loanLedger, isDisbursement } from "@/lib/bankImport";
+import { looksLikeLoanStatement, normaliseLoanRows, suggestLoanLedger, LOAN_FILE } from "@/lib/bankImport";
 import { isCashBankAccount } from "@/lib/journalRules";
 import { readBankStatement } from "@/lib/readStatement";
 import { PdfPasswordError } from "@/lib/pdfUnlock";
@@ -38,7 +38,7 @@ const inr = (n: number) => cur() + (n || 0).toLocaleString(activeMoney().locale,
 const isCashBank = (s: string) => /\b(cash|bank|hdfc|icici|sbi|axis|kotak|federal|canara|pnb|idfc|indusind|yes bank|credit card|card)\b/i.test(s);
 const STATEMENT_NAME = /statement|stmt|passbook|e-?statement|account\s*summary/i;
 const CARD_NAME = /credit\s*card|card\s*statement|\bcc\b|amex|visa|mastercard|rupay/i;
-const LOAN_NAME = /\bloans?\b|\bemi\b|repayment|amorti[sz]ation|overdraft|term\s*loan|\blan\b/i;
+const LOAN_NAME = LOAN_FILE;
 let seq = 0;
 const uid = (p: string) => `${p}${Date.now().toString(36)}${(seq++).toString(36)}`;
 
@@ -136,10 +136,11 @@ export default function SmartInbox() {
         password = pw;
       }
     }
-    const rows = (data.transactions as { date: string; description: string; debit: number; credit: number }[])
+    let rows = (data.transactions as { date: string; description: string; debit: number; credit: number; balance?: number }[])
       .filter(t => (Number(t.debit) || 0) > 0 || (Number(t.credit) || 0) > 0)
-      .map((t, i) => ({ id: `${job.id}-${i}`, date: String(t.date ?? "").slice(0, 10), description: String(t.description ?? ""), debit: Number(t.debit) || 0, credit: Number(t.credit) || 0 }));
-    const loan = !card && (loanIn || rows.slice(0, 15).filter(r => /\b(emi|disburs\w*|loan|instal?l?ment|principal)\b/i.test(r.description)).length >= Math.max(2, Math.min(4, Math.ceil(rows.length / 2))));
+      .map((t, i) => ({ id: `${job.id}-${i}`, date: String(t.date ?? "").slice(0, 10), description: String(t.description ?? ""), debit: Number(t.debit) || 0, credit: Number(t.credit) || 0, balance: t.balance }));
+    const loan = !card && (loanIn || looksLikeLoanStatement(file.name, rows));
+    if (loan) rows = normaliseLoanRows(rows);
     const sugg = new Map<string, { account: string; confidence: number }>();
     for (let i = 0; i < rows.length; i += 25) {
       setJob(job.id, { note: `Matching ledgers ${Math.min(i + 25, rows.length)}/${rows.length}…` });
@@ -165,9 +166,9 @@ export default function SmartInbox() {
     addItems(rows.map(r => {
       const s = sugg.get(r.id); const amount = r.debit || r.credit;
       let other = s?.account ?? "";
-      const out = r.debit > 0 || (loan && isDisbursement(r.description));
+      const out = r.debit > 0;
       let sure = !!other && (s?.confidence ?? 0) >= 0.75;
-      if (loan) { const l = loanLedger(r.description, payBank); if (l) { other = l; sure = true; } else if (other.trim().toLowerCase() === bank.toLowerCase()) { other = ""; sure = false; } }
+      if (loan) { other = suggestLoanLedger(r.description, out, payBank, accounts.map(a => a.name), bank); sure = true; }
       let reason: string | undefined = sure ? undefined : other ? "Not sure about the ledger" : "Choose a ledger";
       let matchedTo: string | undefined, matchedId: string | undefined;
       // Money in/out against an unpaid sale or purchase → post to that customer / supplier

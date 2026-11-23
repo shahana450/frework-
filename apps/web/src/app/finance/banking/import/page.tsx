@@ -1,5 +1,5 @@
 "use client";
-import { isLoanAccount, loanLedger, isDisbursement } from "@/lib/bankImport";
+import { isLoanAccount, looksLikeLoanStatement, normaliseLoanRows, suggestLoanLedger } from "@/lib/bankImport";
 import { readBankStatement } from "@/lib/readStatement";
 import { PdfPasswordError } from "@/lib/pdfUnlock";
 import { loadDraft, saveDraft, clearDraft as clearIdb } from "@/lib/importDraft";
@@ -314,14 +314,25 @@ export default function BankingPage() {
     try {
       const want = new Map<string, string>();               // ledger name → group key
       const pick: Record<string, string> = {};              // row id → ledger name
-      for (const r of rows) {
+      // A loan statement: the loan ledger is the statement account, amounts follow the running balance
+      const acct0 = coa.find(a => a.id === bankAccountId);
+      let loanAcct = !!acct0 && !bankAccounts.some(b => b.id === acct0.id && !isLoanAccount(b as never));
+      let statementAcct = acct0;
+      let work = rows;
+      if (!loanAcct && looksLikeLoanStatement("", rows)) {
+        const ln = bankAccounts.find(a => isLoanAccount(a as never));
+        if (ln) { setBankAccountId(ln.id); statementAcct = ln; loanAcct = true; }
+        else { setSuggestMsg("This looks like a loan statement. Add your loan ledger in Statement account (e.g. \"Federal Bank Term Loan\"), choose it, then Suggest again."); return; }
+      }
+      if (loanAcct) { work = normaliseLoanRows(rows); setRows(work); }
+      for (const r of work) {
         if (r.pushed || r.ledger_id) continue;
         const out = r.debit > 0;
-        const acct = coa.find(a => a.id === bankAccountId);
-        if (acct && !bankAccounts.some(b => b.id === acct.id && !isLoanAccount(b as never))) {
+        if (loanAcct) {
           const payBank = bankAccounts.find(a => !isLoanAccount(a as never) && !/cash/i.test(a.name))?.name ?? "Bank Account";
-          const ln = loanLedger(r.description, payBank);
-          if (ln) { const ex = coa.find(a => a.name.trim().toLowerCase() === ln.toLowerCase()); pick[r.id] = ex?.name ?? ln; if (!ex && !want.has(ln)) want.set(ln, ln === "Bank Account" ? "bank" : ln === "Input GST" ? "duties" : "indirect_expense"); }
+          const ln = suggestLoanLedger(r.description, out, payBank, coa.map(a => a.name), statementAcct?.name ?? "");
+          const ex = coa.find(a => a.name.trim().toLowerCase() === ln.toLowerCase()); pick[r.id] = ex?.name ?? ln;
+          if (!ex && !want.has(ln)) want.set(ln, ln === "Bank Account" ? "bank" : "indirect_expense");
           continue;
         }
         const g = groupKeyOf(r.description);
@@ -344,11 +355,8 @@ export default function BankingPage() {
       }
       const byName = new Map(all.map(a => [a.name.toLowerCase(), a]));
       let n = 0;
-      const acctNow = coa.find(a => a.id === bankAccountId);
-      const loanAcct = !!acctNow && !bankAccounts.some(b => b.id === acctNow.id && !isLoanAccount(b as never));
-      if (loanAcct) setRows(rs => rs.map(x => !x.pushed && isDisbursement(x.description) && x.credit > 0 && !x.debit ? { ...x, debit: x.credit, credit: 0 } : x));
       setRows(rs => rs.map(x => { const nm = pick[x.id]; const a = nm ? byName.get(nm.toLowerCase()) : undefined; if (!a || x.ledger_id || x.pushed) return x; n++; return { ...x, ledger_id: a.id, ledger_name: a.name, suggested: true }; }));
-      const left = rows.filter(r => !r.pushed && !r.ledger_id && !pick[r.id]).length;
+      const left = work.filter(r => !r.pushed && !r.ledger_id && !pick[r.id]).length;
       setSuggestMsg(`✨ ${Object.keys(pick).length} suggested${want.size ? ` · ${want.size} new ledger${want.size > 1 ? "s" : ""} created (${[...want.keys()].join(", ")})` : ""}${left ? ` · ${left} need you to choose` : ""}. Check the ✨ rows, then push.`);
     } catch (e) {
       setSuggestMsg(`Couldn't suggest: ${(e as { message?: string })?.message ?? String(e)}`);

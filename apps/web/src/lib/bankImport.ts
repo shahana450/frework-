@@ -43,8 +43,6 @@ export function findDuplicates(rows: BankRow[], existing: ImportedBankEntry[]): 
 
 /** The import's bank account — must be one of this business's cash/bank ledgers. */
 /** A loan / overdraft ledger (a liability, not its interest or charges): the account side of a loan statement */
-/** Disbursement lines always increase the loan: treat them as money out of the loan account */
-export const isDisbursement = (desc: string) => /disburs|loan\s*(amount\s*)?(credited|released)/i.test(desc);
 export const isLoanAccount = (a?: RuleAccount | null) => !!a && a.type === "liability" && /loan|\bod\b|overdraft|borrow/i.test(a.name) && !/interest|charges?|fees?|processing/i.test(a.name);
 export const isCardAccount = (a?: RuleAccount | null) => !!a && /credit\s*card/i.test(a.name) && !/charges?|interest|fees?/i.test(a.name);
 export async function loadBankAccount(sb: SupabaseClient, businessId: string, accountId: string, opts: { card?: boolean; loan?: boolean; any?: boolean } = {}): Promise<RuleAccount> {
@@ -74,16 +72,52 @@ export async function createBatch(sb: SupabaseClient, b: { businessId: string; b
   return error ? null : (data as { id: string }).id;
 }
 
-// Loan statements: the description tells the other ledger (the loan account itself is the "bank" side)
-export function loanLedger(desc: string, bankName: string): string | null {
+// ── Loan statements ──
+// The loan account itself is the "bank" side. A line that raises the loan (disbursement, interest, charges) is posted
+// Dr <other> / Cr Loan; a line that lowers it (EMI, recovery, part payment) is Dr Loan / Cr <bank>.
+export const LOAN_FILE = /\bloans?\b|\bemi\b|repayment|amorti[sz]ation|overdraft|term\s*loan|\blan\b/i;
+const LOAN_WORDS = /\b(emi|disburs\w*|loan|instal?l?ments?|principal)\b|int\.?\s*coll|loan\s*recovery/i;
+
+/** Looks like a loan statement: by file name, or several of the first lines speak of EMI, disbursement, recovery… */
+export function looksLikeLoanStatement(fileName: string, rows: { description: string }[]): boolean {
+  if (LOAN_FILE.test(fileName)) return true;
+  const n = rows.slice(0, 20).filter(r => LOAN_WORDS.test(r.description)).length;
+  return n >= Math.max(2, Math.min(4, Math.ceil(rows.length / 3)));
+}
+
+/** Disbursement lines always raise the loan */
+export const isDisbursement = (desc: string) => /disburs|loan\s*(amount\s*)?(credited|released)/i.test(desc);
+
+/**
+ * Readers often put a loan statement's amounts in the wrong column (they assume a bank account). The running balance
+ * settles it: a line that raises the balance raises the loan. Returns rows with debit = raises the loan, credit = lowers it.
+ */
+export function normaliseLoanRows<T extends { description: string; debit: number; credit: number; balance?: number | null }>(rows: T[]): T[] {
+  let prev: number | undefined;
+  return rows.map(r => {
+    const amt = Number(r.debit) || Number(r.credit) || 0;
+    const raw = r.balance == null ? NaN : Number(r.balance);
+    const b = Number.isFinite(raw) && raw !== 0 ? Math.abs(raw) : undefined;
+    let up: boolean | null = null;
+    if (b !== undefined && prev !== undefined && Math.abs(Math.abs(b - prev) - amt) < 1) up = b > prev;
+    else if (b !== undefined && prev === undefined && Math.abs(b - amt) < 1) up = true;
+    if (isDisbursement(r.description)) up = true;
+    if (b !== undefined) prev = b;
+    if (up === null) return r;
+    return { ...r, debit: up ? amt : 0, credit: up ? 0 : amt };
+  });
+}
+
+/** The other ledger for a loan line. ledgerNames: the business's ledgers (existing names are preferred). */
+export function suggestLoanLedger(desc: string, raises: boolean, payBank: string, ledgerNames: string[], loanName = ""): string {
   const d = desc.toLowerCase();
-  if (/penal|overdue\s*charge|late\s*(payment)?\s*(fee|charge)|bounce|dishonou?r|return\s*charge/.test(d)) return "Penal Interest & Charges";
-  if (/disburs|loan\s*(amount|credited|released)|sanction/.test(d)) return bankName;
-  const charged = /interest\s*(applied|charged|debited|debit|due|for\s*the)|int\.?\s*(app|applied|dr|debit|charged|chrg|due)\b|\bint\s*on\b|\binterest\b(?!.*(coll|recover|recd|received|paid|transfer|trf))/;
-  if (charged.test(d) && !/int\.?\s*coll/.test(d)) return "Interest on Loan";
-  if (/process|documentation|stamp|login\s*fee|admin(istrative)?\s*(fee|charge)|foreclos|pre-?closure|prepayment\s*charge/.test(d)) return "Loan Processing Charges";
-  if (/insurance|premium|\blic\b|policy/.test(d)) return "Insurance";
-  if (/\b(gst|igst|cgst|sgst)\b/.test(d)) return "Input GST";
-  if (/disburs|sanction|loan\s*(amount|credited|released)|\bemi\b|repay|instal?l?ment|nach|ecs|\bsi\b|standing|auto\s*debit|mandate|neft|rtgs|imps|upi|cheque|chq|clearing|transfer|received|payment|part\s*pay/.test(d)) return bankName;
-  return null;
+  const find = (re: RegExp, fallback: string) => ledgerNames.find(n => re.test(n) && n.toLowerCase() !== loanName.toLowerCase()) ?? fallback;
+  // An account number in the line that is one of your ledgers (e.g. the current account the EMI came from)
+  const acct = (desc.match(/\d{8,}/g) ?? []).map(n => ledgerNames.find(l => l.replace(/\s/g, "").includes(n) && l.toLowerCase() !== loanName.toLowerCase())).find(Boolean);
+  if (isDisbursement(desc)) return acct ?? payBank;
+  if (/penal|overdue\s*charge|late\s*(payment)?\s*(fee|charge)|bounce|dishonou?r|return\s*charge/.test(d)) return find(/penal/i, "Penal Interest & Charges");
+  if (/process|documentation|stamp|login\s*fee|admin(istrative)?\s*(fee|charge)|foreclos|pre-?closure|prepayment\s*charge/.test(d)) return find(/processing|loan\s*charges/i, "Loan Processing Charges");
+  if (/insurance|premium|\blic\b|policy/.test(d)) return find(/insurance/i, "Insurance");
+  if (raises) return find(/interest.*(loan|term|od|overdraft)|(loan|term).*interest/i, "Interest on Loan");
+  return acct ?? payBank;
 }
