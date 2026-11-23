@@ -90,6 +90,17 @@ export function ConnectPanel({ provider, data, call, reload }: { provider: strin
           <span style={{ fontSize: 12, color: C.muted }}>Read-only access. You approve it on {NAME[provider]}&apos;s own sign-in page.</span>
         </div>
       ) : (
+        provider === "bank_feed" && data.bank_feed_demo ? (
+        // Until the Account Aggregator partner is live: no sample data that could be posted by mistake — the working way in is a statement
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ fontSize: 13, color: C.warn, background: C.warnSoft, padding: "8px 12px", borderRadius: 8, lineHeight: 1.5 }}>Coming soon — live feeds start once FreWork&apos;s Account Aggregator partner is approved. Until then, upload your bank or loan statement (PDF or Excel): FreBook reads every line and suggests the ledger.</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <a href="/finance/banking/import" style={{ ...btn(true, false), textDecoration: "none", display: "inline-flex", alignItems: "center" }}>↑ Upload bank statement</a>
+            <a href="/finance/banking/import?loan=1" style={{ ...btn(false, false), textDecoration: "none", display: "inline-flex", alignItems: "center" }}>↑ Upload loan statement</a>
+            <a href="/finance/inbox" style={{ ...btn(false, false), textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Smart Inbox</a>
+          </div>
+        </div>
+        ) : (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {provider === "bank_feed" ? (<>
             {data.bank_feed_demo && <div style={{ width: "100%", fontSize: 12.5, color: C.warn, background: C.warnSoft, padding: "6px 10px", borderRadius: 8 }}>Demo mode — sample bank lines, not from your bank. Real feeds start once FreWork&apos;s Account Aggregator partner is live.</div>}
@@ -107,6 +118,7 @@ export function ConnectPanel({ provider, data, call, reload }: { provider: strin
             {provider === "bank_feed" ? "You approve access in your Account Aggregator app (OneMoney, Finvu, Anumati …) — read-only, for 12 months, revocable any time there. FreWork never sees your net-banking password." : provider === "razorpay" ? "Razorpay Dashboard → Account & Settings → API Keys. Keys are encrypted; FreWork only reads payments, refunds and settlements." : "Shopify admin → Settings → Apps → Develop apps → create an app with read_orders → install → copy the Admin API access token. Stored encrypted."}
           </div>
         </div>
+        )
       )}
       {provider === "quickbooks" && (
         // No Intuit sign-in needed: a Journal report exported from QuickBooks Online or Desktop
