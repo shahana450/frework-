@@ -28,6 +28,14 @@ const SAPPHIRE: typeof LIGHT = {
   gInk: "#22305C", gStrong: "#0D1E52", gMuted: "#6A7696", gHead: "#2F5BD8",
   gRule: "#C9D5F2", gRuleSoft: "#DCE4F7", gNeg: "#C2321F", gPos: "#0B7A55", gBtnLine: "#C3D1F2", gBtnBg: "#FFFFFF",
 };
+// Violet dark ("glow"): the same layout and words, different colours
+const GLOW: typeof LIGHT = {
+  ground: "#0A0912", tile: "#12111B", line: "rgba(255,255,255,0.10)", ink: "#ECEAF6", muted: "#A9A4C4",
+  green: "#7A5CFF", greenSoft: "rgba(155,132,255,0.14)", gold: "#C4B6FF", goldSoft: "rgba(155,132,255,0.16)", goldLine: "rgba(170,150,255,0.45)",
+  pos: "#5FE3A1", posSoft: "rgba(63,217,138,0.14)", neg: "#FF8E7E", negSoft: "rgba(255,107,87,0.14)", warn: "#F2C26B", warnSoft: "rgba(242,194,107,0.14)",
+  gBg: "linear-gradient(160deg,#4326C9 0%,#22125E 55%,#12111B 100%)", gBorder: "1px solid rgba(170,150,255,0.35)", gShadow: "0 24px 60px -30px rgba(110,80,255,0.7)", gInk: "#ECEAF6", gStrong: "#FFFFFF", gMuted: "#C9C5E0", gHead: "#C4B6FF",
+  gRule: "rgba(255,255,255,0.16)", gRuleSoft: "rgba(255,255,255,0.1)", gNeg: "#FF9A8A", gPos: "#7FEBB8", gBtnLine: "rgba(255,255,255,0.3)", gBtnBg: "transparent",
+};
 let C = LIGHT;
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
@@ -43,7 +51,7 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
   const india = activeCountry() === "IN";
   const b = useBrand();
   const brand = b.name;
-  C = b.key === "cswa" ? SAPPHIRE : LIGHT;
+  C = b.key === "cswa" ? SAPPHIRE : b.key === "glow" ? GLOW : LIGHT;
   const router = useRouter();
   const tally = useTally();
   const [mode, setMode] = useState<"record" | "ask">("record");
@@ -101,6 +109,13 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
           .hd-main { grid-template-columns: minmax(0, 1fr) !important; } .hd-main > :last-child { grid-column: auto; } .hd-entry textarea { min-height: 70px !important; font-size: 17px !important; } .hd-tip, .hd-sugg { display: none; }
           .hd-h1 { font-size: 26px !important; }
         }
+        .hd-pulse { border-radius: 28px; padding: clamp(18px, 2.4vw, 28px); background: radial-gradient(700px 300px at 100% 0%, rgba(233,194,122,0.14), rgba(233,194,122,0) 60%), linear-gradient(160deg, #0A1F1B 0%, #0C2622 60%, #0F2E28 100%); color: #FFFFFF; display: flex; flex-direction: column; gap: 18px; box-shadow: 0 30px 60px -34px rgba(6,26,22,0.75); }
+        .hd-glass { min-width: 0; border-radius: 22px; padding: 22px 24px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10); display: flex; flex-direction: column; gap: 4px; color: #FFFFFF; }
+        .hd-pill-ic { width: 44px; height: 44px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04); color: #DCE9E3; display: flex; align-items: center; justify-content: center; }
+        .hd-pill-ic:hover { background: rgba(255,255,255,0.1); }
+        .hd-hero::after { content: ""; position: absolute; right: -40px; top: -20px; width: 62%; height: 120%; pointer-events: none; background-image: radial-gradient(rgba(233,194,122,0.55) 1.2px, transparent 1.6px); background-size: 14px 14px; -webkit-mask-image: radial-gradient(ellipse 60% 45% at 65% 55%, #000 10%, transparent 70%); mask-image: radial-gradient(ellipse 60% 45% at 65% 55%, #000 10%, transparent 70%); transform: skewY(-8deg); opacity: .85; }
+        .hd-hero > * { position: relative; z-index: 1; }
+        @media (max-width: 640px) { .hd-hero::after { display: none; } }
         .hd a.lift, .hd button.lift { transition: transform .15s, box-shadow .15s, border-color .15s; }
         .hd a.lift:hover, .hd button.lift:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(18,53,45,0.45); }
         .hd .chip:hover { border-color: ${C.green}; color: ${C.green}; }
@@ -161,109 +176,148 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
 
       {dashErr && <div style={{ ...tile, flexDirection: "row", alignItems: "center", color: C.warn, background: C.warnSoft, borderColor: "#FFE2A8" }}>{dashErr}{onRetry && <button onClick={onRetry} style={{ marginLeft: "auto", border: `1px solid ${C.warn}`, background: "transparent", color: C.warn, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontWeight: 700 }}>Try again</button>}</div>}
 
-      {/* Profit & Loss · Position today · Needs you today */}
-      <div className="hd-main">
-        <section aria-labelledby="pl" style={{ ...tile, padding: 24, gap: 14 }}>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-            <h2 id="pl" style={{ ...h2, fontWeight: 400, fontSize: 23 }}>Profit &amp; Loss</h2>
-            <span style={{ ...eyebrow, fontSize: 10.5 }}>{dash?.period.label ?? "This year"}</span>
+      {/* Business pulse — one deep panel: KPIs, position, P&L split, what needs you, what's coming */}
+      <section aria-labelledby="pulse" className="hd-pulse">
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <h2 id="pulse" style={{ margin: 0, fontFamily: SERIF, fontSize: 28, fontWeight: 700, color: "#FFFFFF" }}>Business pulse</h2>
+            <span style={{ fontSize: 13, color: "#9DB8AE" }}>{dash?.period.label ?? "This year"} · figures in brackets are negative</span>
           </div>
-          <Link href="/finance/reports?tab=profit_loss" style={{ background: C.goldSoft, borderRadius: 16, padding: "18px 14px", textAlign: "center", textDecoration: "none", color: C.ink, display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", color: C.muted }}>{profit < 0 ? "NET LOSS" : "NET PROFIT"}</span>
-            <span style={{ fontFamily: SERIF, fontSize: "clamp(34px,3.4vw,48px)", lineHeight: 1.1, color: profit < 0 ? C.neg : C.ink, fontVariantNumeric: "tabular-nums" }}>{profit < 0 ? `(${cur()}${Math.round(Math.abs(profit)).toLocaleString(locale)})` : `${cur()}${Math.round(profit).toLocaleString(locale)}`}</span>
-            <span style={{ fontSize: 12.5, color: C.muted }}>{income === 0 && spent === 0 ? "No income or expenses posted yet" : ratioNote}</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link href="/finance/journals" aria-label="Search entries" className="hd-pill-ic"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM16.5 16.5 21 21" /></svg></Link>
+            <Link href="/finance/reminders" aria-label="Reminders" className="hd-pill-ic" style={{ position: "relative" }}><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20h4" /></svg>{needs.length > 0 && <span style={{ position: "absolute", top: 10, right: 11, width: 8, height: 8, borderRadius: 999, background: "#E9C27A", boxShadow: "0 0 8px #E9C27A" }} />}</Link>
+          </div>
+        </div>
+
+        {/* KPI row */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+          <Link href="/finance/reports?tab=profit_loss" className="lift" style={{ borderRadius: 20, padding: "18px 20px", background: "linear-gradient(145deg, #FFFBF1, #F3E3BF)", color: "#0B2C25", display: "flex", flexDirection: "column", gap: 10, boxShadow: "0 16px 34px -20px rgba(233,194,122,0.7)", textDecoration: "none" }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "#5B4A2A" }}>Net result</span>
+            <span style={{ fontFamily: SERIF, fontSize: 34, fontWeight: 700, color: profit < 0 ? "#B3261E" : "#0B5E42", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{dash ? num(profit) : "—"}</span>
+            <span style={{ alignSelf: "flex-start", height: 24, padding: "0 10px", borderRadius: 999, background: profit < 0 ? "rgba(179,38,30,0.12)" : "rgba(11,94,66,0.12)", color: profit < 0 ? "#9A1F18" : "#0B5E42", fontSize: 12, fontWeight: 600, display: "inline-flex", alignItems: "center" }}>{profit < 0 ? "Net loss" : "Net profit"}</span>
+            <span style={{ fontSize: 12, color: "#5B4A2A" }}>{income === 0 && spent === 0 ? "No income or expenses posted yet" : ratioNote}</span>
           </Link>
-          {([["Income", income], ["Expenses", spent]] as [string, number][]).map(([k, v]) => (
-            <Link key={k} href="/finance/reports?tab=profit_loss" style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: `1px solid ${C.line}`, color: C.ink, textDecoration: "none", fontSize: 14.5 }}>
-              <span>{k}</span><span style={{ fontFamily: SERIF, fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{num(v)}</span>
+          {([
+            ["Income", income, "Year to date", "/finance/reports?tab=profit_loss", 1, "linear-gradient(90deg,#3FD3A6,#7FE6C4)"],
+            ["Expenses", spent, income > 0 ? `${spent > income ? "About " + (spent / income).toFixed(1).replace(/\.0$/, "") + "×" : Math.round((spent / income) * 100) + "% of"} income` : "This year", "/finance/reports?tab=profit_loss", income > 0 ? Math.min(1, spent / Math.max(income, spent)) : 1, "linear-gradient(90deg,#E9C27A,#F3D9A2)"],
+            ["Cash & bank", dash?.cash ?? 0, "Position today", "/finance/banking", 1, "linear-gradient(90deg,#3FD3A6,#E9C27A)"],
+          ] as [string, number, string, string, number, string][]).map(([label, v, chip, href, frac, bar]) => (
+            <Link key={label} href={href} className="lift" style={{ borderRadius: 20, padding: "18px 20px", background: "linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02))", border: "1px solid rgba(255,255,255,0.10)", display: "flex", flexDirection: "column", gap: 10, textDecoration: "none" }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "#B9D0C7" }}>{label}</span>
+              <span style={{ fontFamily: SERIF, fontSize: 32, fontWeight: 700, lineHeight: 1, color: v < 0 ? "#FF9A8B" : "#FFFFFF", fontVariantNumeric: "tabular-nums" }}>{dash ? num(v) : "—"}</span>
+              <span style={{ alignSelf: "flex-start", height: 24, padding: "0 10px", borderRadius: 999, background: "rgba(63,211,166,0.12)", color: "#9FE6CC", fontSize: 12, fontWeight: 600, display: "inline-flex", alignItems: "center" }}>{chip}</span>
+              <span style={{ display: "block", height: 6, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}><span style={{ display: "block", height: "100%", width: `${Math.max(6, frac * 100)}%`, background: bar, borderRadius: 999 }} /></span>
             </Link>
           ))}
-        </section>
+        </div>
 
-        <section aria-labelledby="pos" style={{ ...tile, padding: 24, gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap", paddingBottom: 12, borderBottom: `1px solid ${C.line}` }}>
-            <h2 id="pos" style={{ ...h2, fontWeight: 400, fontSize: 23 }}>Position today</h2>
-            <span style={{ fontSize: 11.5, color: C.muted }}>(brackets) = negative</span>
-          </div>
-          {(() => {
-            const rows = [
-              { k: "Cash & bank", v: dash?.cash, href: "/finance/banking", tag: (dash?.cash ?? 0) < 0 ? "Overdrawn" : "" },
-              { k: "Receivables", v: dash?.receivables, href: "/finance/receivables", tag: (dash?.receivables ?? 0) < 0 ? "Customers in credit" : "" },
-              { k: "Payables", v: dash?.payables, href: "/finance/payables", tag: (dash?.payables ?? 0) < 0 ? "Suppliers in debit" : "" },
-            ];
-            const max = Math.max(1, ...rows.map(r => Math.max(0, r.v ?? 0)));
-            return rows.map((r, i) => (
-              <Link key={r.k} href={r.href} style={{ display: "flex", flexDirection: "column", gap: 10, padding: "16px 0", borderTop: i ? `1px solid ${C.line}` : "none", color: C.ink, textDecoration: "none" }}>
-                <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ fontSize: 14.5 }}>{r.k}</span>
-                  {r.tag && <span style={{ fontSize: 10.5, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: C.negSoft, color: C.neg }}>{r.tag}</span>}
-                  <span style={{ marginLeft: "auto", fontFamily: SERIF, fontSize: 24, fontVariantNumeric: "tabular-nums", color: (r.v ?? 0) < 0 ? C.neg : C.ink }}>{num(r.v)}</span>
+        {/* Position today + P&L split */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
+          <div className="hd-glass" style={{ flex: "2 1 520px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, paddingBottom: 10 }}>
+              <h3 style={{ margin: 0, fontFamily: SERIF, fontSize: 22, fontWeight: 700, color: "#FFFFFF" }}>Position today</h3>
+              <span style={{ fontSize: 12, color: "#9DB8AE" }}>(brackets) = negative</span>
+            </div>
+            {([
+              { k: "Cash & bank", v: dash?.cash, href: "/finance/banking", chip: (dash?.cash ?? 0) < 0 ? "Overdrawn" : "", note: "the bank / cash ledgers are overdrawn; check missing receipts" },
+              { k: "Receivables", v: dash?.receivables, href: "/finance/receivables", chip: (dash?.receivables ?? 0) < 0 ? "Customers in credit" : "", note: "customers paid more than invoiced; check advances and missing invoices" },
+              { k: "Payables", v: dash?.payables, href: "/finance/payables", chip: (dash?.payables ?? 0) < 0 ? "Suppliers in debit" : "", note: "more paid to suppliers than billed; check advances and missing bills" },
+            ]).map(r => (
+              <Link key={r.k} href={r.href} style={{ display: "flex", flexDirection: "column", gap: 8, padding: "14px 0", borderTop: "1px solid rgba(255,255,255,0.08)", textDecoration: "none" }}>
+                <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 15, color: "#DCE9E3" }}>{r.k}{r.chip && <span style={{ height: 22, padding: "0 10px", borderRadius: 999, background: "rgba(255,138,122,0.14)", border: "1px solid rgba(255,138,122,0.35)", color: "#FFB4A8", fontSize: 11.5, fontWeight: 600, display: "inline-flex", alignItems: "center" }}>{r.chip}</span>}</span>
+                  <span style={{ fontFamily: SERIF, fontSize: r.k === "Cash & bank" ? 28 : 24, fontWeight: 700, color: (r.v ?? 0) < 0 ? "#FF9A8B" : "#FFFFFF", fontVariantNumeric: "tabular-nums" }}>{dash ? num(r.v) : "—"}</span>
                 </span>
                 {(r.v ?? 0) < 0
-                  ? <span style={{ fontSize: 12.5, color: C.neg }}>⚠ Balance on the wrong side — {r.k === "Payables" ? "more paid to suppliers than billed; check advances and missing bills" : r.k === "Receivables" ? "customers paid more than invoiced; check advances and missing invoices" : "the bank / cash ledgers are overdrawn; check missing receipts"}.</span>
-                  : <span aria-hidden="true" style={{ height: 6, borderRadius: 999, background: C.goldSoft, overflow: "hidden" }}>
-                      <span style={{ display: "block", height: "100%", width: `${Math.max(4, ((r.v ?? 0) / max) * 100)}%`, background: C.green, borderRadius: 999 }} />
-                    </span>}
+                  ? <span style={{ display: "flex", gap: 8, fontSize: 13, lineHeight: 1.5, color: "#FFC7BE" }}><span aria-hidden="true">⚠</span>Balance on the wrong side — {r.note}.</span>
+                  : r.k === "Cash & bank" && <span aria-hidden="true" style={{ display: "block", height: 6, borderRadius: 999, background: "linear-gradient(90deg, #3FD3A6, #E9C27A)", boxShadow: "0 0 14px rgba(233,194,122,0.5)" }} />}
               </Link>
-            ));
-          })()}
-        </section>
-
-        <section aria-labelledby="needs" style={{ ...tile, background: C.green, border: "none", color: "#F4EFE4", padding: 24, gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <h2 id="needs" style={{ ...h2, color: "#FFFDF8", fontWeight: 400, fontSize: 23 }}>Needs you today</h2>
-            {needs.length > 0 && <span style={{ width: 32, height: 32, borderRadius: 999, border: "1px solid #D9B56F", color: "#D9B56F", fontFamily: SERIF, fontSize: 15, display: "grid", placeItems: "center" }}>{needs.length}</span>}
-          </div>
-          {!dash ? <span style={{ fontSize: 13, color: "#B9C7C1" }}>Checking your books…</span>
-            : needs.length === 0 ? <span style={{ fontSize: 14, color: "#A8F0CF", fontWeight: 700 }}>✓ Nothing needs you right now.</span>
-            : (allNeeds ? needs : needs.slice(0, 2)).map((n, i) => (
-              <div key={i} style={{ display: "flex", gap: 12, padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <span aria-hidden="true" style={{ fontFamily: SERIF, color: "#D9B56F", fontSize: 16, minWidth: 18 }}>{["I", "II", "III", "IV", "V", "VI"][i] ?? i + 1}</span>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#FFFDF8", lineHeight: 1.4 }}>{n.title}</span>
-                  {n.sub && <span style={{ fontSize: 12.5, color: "#B9C7C1" }}>{n.sub}</span>}
-                  <Link href={n.href} style={{ fontSize: 13, fontWeight: 800, color: "#D9B56F", textDecoration: "none" }}>{n.action} →</Link>
-                </div>
-              </div>
             ))}
-          {needs.length > 2 && <button onClick={() => setAllNeeds(v => !v)} style={{ marginTop: "auto", height: 40, borderRadius: 999, border: "1px solid rgba(255,255,255,0.25)", background: "transparent", color: "#FFFDF8", fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>{allNeeds ? "Show fewer" : `View all ${needs.length} items`}</button>}
-        </section>
-      </div>
-
-      {/* Coming up */}
-      <section aria-labelledby="coming" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-          <h2 id="coming" style={h2}>Coming up</h2>
-          {dues.length > 5 && <button onClick={() => setAllDues(s => !s)} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: C.gold, textDecoration: "underline" }}>{allDues ? "Show fewer" : `All ${dues.length} due dates →`}</button>}
-        </div>
-        {!dash ? <span style={{ fontSize: 13, color: C.muted }}>Checking…</span>
-          : dues.length === 0 ? <span style={{ fontSize: 13, color: C.pos, fontWeight: 600 }}>✓ Nothing due in the next few weeks.</span>
-          : <div className="hd-dues">
-            {(allDues ? dues : dues.slice(0, 5)).map(d => {
-              const unknown = d.daysLeft < 0 && !d.filed && /GSTR/i.test(d.title) && !(dash as unknown as { portalKnown?: boolean })?.portalKnown;
-              const late = d.daysLeft < 0 && !d.filed && !unknown;
-              const tone = d.filed ? C.pos : late ? C.neg : d.daysLeft <= 10 ? C.goldLine : C.line;
-              const chip = d.filed ? ["Filed ✓", C.posSoft, C.pos] : unknown ? ["Status unknown", C.goldSoft, C.gold] : late ? ["Overdue", C.negSoft, C.neg] : d.daysLeft <= 3 ? [dueChip(d.daysLeft), C.negSoft, C.neg] : [`${d.daysLeft} days`, d.daysLeft <= 10 ? C.goldSoft : C.ground, d.daysLeft <= 10 ? C.gold : C.muted];
-              const dt = new Date(d.due + "T00:00:00");
-              return (
-                <Link key={d.key} href={d.href} title={d.note} className="lift" style={{ ...tile, padding: 14, gap: 6, borderTop: `3px solid ${tone}`, textDecoration: "none", color: C.ink, opacity: d.filed ? 0.75 : 1 }}>
-                  <span style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 6 }}>
-                    <span><span style={{ fontFamily: MONO, fontSize: 22, fontWeight: 600 }}>{String(dt.getDate()).padStart(2, "0")}</span> <span style={{ fontSize: 11, fontWeight: 800, color: C.gold, textTransform: "uppercase" }}>{dt.toLocaleDateString("en-IN", { month: "short" })}</span></span>
-                    <span style={{ fontSize: 10.5, fontWeight: 800, padding: "2px 7px", borderRadius: 999, background: chip[1], color: chip[2], whiteSpace: "nowrap" }}>{chip[0]}</span>
-                  </span>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>{d.title}</span>
-                  <span style={{ fontSize: 11.5, color: C.muted }}>{d.period}{d.amount ? ` · ${money(d.amount)}` : ""}</span>
-                </Link>
-              );
-            })}
-          </div>}
-        {dash?.complianceSetup?.country === "IN" && (!dash.complianceSetup.gst || !dash.complianceSetup.tds) && (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {!dash.complianceSetup.gst && <Link href="/finance/settings/business" style={{ ...ghostBtn, borderStyle: "dashed" }}>＋ Add GSTIN for GSTR-1 / 3B reminders</Link>}
-            {!dash.complianceSetup.tds && <Link href="/finance/settings/business" style={{ ...ghostBtn, borderStyle: "dashed" }}>＋ Add TAN for TDS reminders</Link>}
           </div>
-        )}
+          <Link href="/finance/reports?tab=profit_loss" className="hd-glass" style={{ flex: "1 1 300px", textDecoration: "none", gap: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <h3 style={{ margin: 0, fontFamily: SERIF, fontSize: 22, fontWeight: 700, color: "#FFFFFF" }}>Profit &amp; Loss</h3>
+              <span style={{ fontSize: 12, color: "#E9C27A" }}>{dash?.period.label ?? ""}</span>
+            </div>
+            {(() => {
+              const tot = Math.max(1, income + spent), inc = income / tot, R = 54, L = 2 * Math.PI * R;
+              return (
+                <div style={{ display: "grid", placeItems: "center", position: "relative", margin: "6px 0" }}>
+                  <svg width="150" height="150" viewBox="0 0 140 140" aria-hidden="true">
+                    <circle cx="70" cy="70" r={R} fill="none" stroke="#E9C27A" strokeWidth="14" />
+                    <circle cx="70" cy="70" r={R} fill="none" stroke="#3FD3A6" strokeWidth="14" strokeDasharray={`${inc * L} ${L}`} transform="rotate(-90 70 70)" strokeLinecap="round" />
+                  </svg>
+                  <span style={{ position: "absolute", textAlign: "center" }}>
+                    <span style={{ display: "block", fontSize: 10.5, letterSpacing: "0.16em", color: "#9DB8AE" }}>{profit < 0 ? "NET LOSS" : "NET PROFIT"}</span>
+                    <span style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: profit < 0 ? "#FF9A8B" : "#FFFFFF" }}>{dash ? num(profit) : "—"}</span>
+                  </span>
+                </div>
+              );
+            })()}
+            {([["Income", income, "#3FD3A6"], ["Expenses", spent, "#E9C27A"]] as [string, number, string][]).map(([k, v, c]) => (
+              <span key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#DCE9E3" }}><span style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 9, height: 9, borderRadius: 999, background: c }} />{k}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{num(v)}</span></span>
+            ))}
+          </Link>
+        </div>
+
+        {/* Needs you today + Coming up */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
+          <div className="hd-glass" style={{ flex: "2 1 520px", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h3 id="needs" style={{ margin: 0, fontFamily: SERIF, fontSize: 22, fontWeight: 700, color: "#FFFFFF" }}>Needs you today</h3>
+              {needs.length > 0 && <span style={{ width: 32, height: 32, borderRadius: 999, border: "1px solid #E9C27A", color: "#E9C27A", fontFamily: SERIF, fontSize: 15, display: "grid", placeItems: "center" }}>{needs.length}</span>}
+            </div>
+            {!dash ? <span style={{ fontSize: 13, color: "#9DB8AE" }}>Checking your books…</span>
+              : needs.length === 0 ? <span style={{ fontSize: 14, color: "#A8F0CF", fontWeight: 700 }}>✓ Nothing needs you right now.</span>
+              : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>
+                {(allNeeds ? needs : needs.slice(0, 2)).map((n, i) => (
+                  <div key={i} style={{ display: "flex", gap: 12, padding: 14, borderRadius: 14, background: "rgba(0,0,0,0.18)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span aria-hidden="true" style={{ fontFamily: SERIF, color: "#E9C27A", fontSize: 16, minWidth: 18 }}>{["I", "II", "III", "IV", "V", "VI"][i] ?? i + 1}</span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", lineHeight: 1.4 }}>{n.title}</span>
+                      {n.sub && <span style={{ fontSize: 12.5, color: "#B9D0C7" }}>{n.sub}</span>}
+                      <Link href={n.href} style={{ fontSize: 13, fontWeight: 800, color: "#E9C27A", textDecoration: "none" }}>{n.action} →</Link>
+                    </div>
+                  </div>
+                ))}
+              </div>}
+            {needs.length > 2 && <button onClick={() => setAllNeeds(v => !v)} style={{ height: 40, borderRadius: 999, border: "1px solid rgba(255,255,255,0.18)", background: "transparent", color: "#FFFFFF", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit" }}>{allNeeds ? "Show fewer" : `View all ${needs.length} items`}</button>}
+          </div>
+          <div className="hd-glass" style={{ flex: "1 1 300px", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+              <h3 id="coming" style={{ margin: 0, fontFamily: SERIF, fontSize: 22, fontWeight: 700, color: "#FFFFFF" }}>Coming up</h3>
+              {dues.length > 3 && <button onClick={() => setAllDues(s => !s)} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#E9C27A", fontFamily: "inherit" }}>{allDues ? "Fewer" : `All ${dues.length} →`}</button>}
+            </div>
+            {!dash ? <span style={{ fontSize: 13, color: "#9DB8AE" }}>Checking…</span>
+              : dues.length === 0 ? <span style={{ fontSize: 13, color: "#A8F0CF", fontWeight: 600 }}>✓ Nothing due in the next few weeks.</span>
+              : (allDues ? dues : dues.slice(0, 3)).map(d => {
+                const unknown = d.daysLeft < 0 && !d.filed && /GSTR/i.test(d.title) && !(dash as unknown as { portalKnown?: boolean })?.portalKnown;
+                const late = d.daysLeft < 0 && !d.filed && !unknown;
+                const chip = d.filed ? "Filed ✓" : unknown ? "Status unknown" : late ? "Overdue" : d.daysLeft <= 3 ? dueChip(d.daysLeft) : `${d.daysLeft} days`;
+                const dt = new Date(d.due + "T00:00:00");
+                return (
+                  <Link key={d.key} href={d.href} title={d.note} className="lift" style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 16, background: "linear-gradient(145deg, #FFFBF1, #F3E3BF)", color: "#0B2C25", textDecoration: "none", opacity: d.filed ? 0.8 : 1 }}>
+                    <span style={{ width: 48, height: 48, borderRadius: 12, background: "#0B2C25", color: "#FFFFFF", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                      <span style={{ fontFamily: SERIF, fontSize: 19, fontWeight: 700, lineHeight: 1 }}>{String(dt.getDate()).padStart(2, "0")}</span>
+                      <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.1em", color: "#E9C27A" }}>{dt.toLocaleDateString("en-IN", { month: "short" }).toUpperCase()}</span>
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "block", fontWeight: 700, fontSize: 14 }}>{d.title}</span>
+                      <span style={{ display: "block", fontSize: 11.5, color: "#5B4A2A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.period}{d.amount ? ` · ${money(d.amount)}` : ""}</span>
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 999, background: late ? "#B3261E" : "#0B2C25", color: "#FFFFFF", whiteSpace: "nowrap" }}>{chip}</span>
+                  </Link>
+                );
+              })}
+          </div>
+        </div>
       </section>
+      {dash?.complianceSetup?.country === "IN" && (!dash.complianceSetup.gst || !dash.complianceSetup.tds) && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {!dash.complianceSetup.gst && <Link href="/finance/settings/business" style={{ ...ghostBtn, borderStyle: "dashed" }}>＋ Add GSTIN for GSTR-1 / 3B reminders</Link>}
+          {!dash.complianceSetup.tds && <Link href="/finance/settings/business" style={{ ...ghostBtn, borderStyle: "dashed" }}>＋ Add TAN for TDS reminders</Link>}
+        </div>
+      )}
 
       {/* Quick add · Smart Inbox · Tax desk */}
       <div className="hd-bottom">

@@ -156,6 +156,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const [india, setIndia] = useState(true);   // GST / TDS / Income-tax menus only for Indian businesses
   const [bizCount, setBizCount] = useState(0);
   const brand = useBrand();
+  // The violet "glow" colour sheet is large, so it is only fetched when that look is switched on
+  const [glowCss, setGlowCss] = useState("");
+  useEffect(() => { if (brand.key === "glow") import("@/lib/brandGlow").then((m) => setGlowCss(m.GLOW_CSS)).catch(() => {}); }, [brand.key]);
   const [collapsed, setCollapsed] = useState(false);
   // Top icon bar wider than the screen: the mouse wheel scrolls it sideways, and ‹ › show when there's more
   // The bar element itself (set when it mounts), so the listeners attach once per bar — never on every render
@@ -389,8 +392,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
   return (
     <div data-brand={brand.key} data-page={pathname === "/finance" ? "home" : undefined} style={{ display: "flex", minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <title>{brand.key === "frebook" ? financeTitle(pathname, search, bizName) : financeTitle(pathname, search, bizName).replace(/FreWork|FreBook/g, `${brand.name} ${brand.tagline}`)}</title>
+      <title>{brand.key === "frebook" || brand.key === "glow" ? financeTitle(pathname, search, bizName) : financeTitle(pathname, search, bizName).replace(/FreWork|FreBook/g, `${brand.name} ${brand.tagline}`)}</title>
       {BRAND_CSS[brand.key] && <style>{BRAND_CSS[brand.key]}</style>}
+      {brand.key === "glow" && glowCss && <style>{glowCss}</style>}
       <meta name="robots" content="noindex, nofollow" />
       <meta name="description" content="FreBook: chat bookkeeping, GST, reports and Tally sync for your business." />
       <style>{FINANCE_CSS}</style>
@@ -574,58 +578,82 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       <main key={active.businessId ?? "none"} className="fw-main" style={{ flex: 1, marginLeft: sidebarW, minWidth: 0, transition: "margin-left 0.2s" }}>
         {/* Main icons along the top (FreBook has its own top bar) */}
         {!pathname.startsWith("/finance/chat-book") && (<>
-          {bizName && !/^\/finance\/(portfolio|gst\/desk|ca-dashboard|select-business)/.test(pathname) && <div className="fw-bizbar" title={bizName} style={{ textAlign: "center", padding: "10px 16px 0", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: "1.2rem", fontWeight: 700, color: "#12352D", letterSpacing: "0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bizName}</div>}
+          {bizName && pathname !== "/finance" && !/^\/finance\/(portfolio|gst\/desk|ca-dashboard|select-business)/.test(pathname) && <div className="fw-bizbar" title={bizName} style={{ textAlign: "center", padding: "10px 16px 0", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: "1.2rem", fontWeight: 700, color: "#12352D", letterSpacing: "0.02em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bizName}</div>}
           <div style={{ position: "relative" }}>
           {topMore.l && pathname !== "/finance" && <button type="button" className="fw-topnudge" aria-label="Scroll the menu left" onClick={() => nudgeTop(-1)} style={{ left: 22 }}>‹</button>}
           {topMore.r && pathname !== "/finance" && <button type="button" className="fw-topnudge" aria-label="Scroll the menu right" onClick={() => nudgeTop(1)} style={{ right: 22 }}>›</button>}
           {/* Home: the sections grouped into panels (other pages keep the one-line strip) */}
           {pathname === "/finance" && !viewOnly ? (
             <>
-            {/* Quick actions: the two things done most, then the special features one tap away */}
-            <div className="fw-quick" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "10px 16px 0" }}>
-              <Link href="/finance/sales/new" className="fw-qbig" style={{ background: "#12352D", color: "#FFFFFF" }}>
-                <span aria-hidden="true" className="fw-qic" style={{ background: "#D9B56F", color: "#12352D" }}>＋</span>Create invoice
-              </Link>
-              <Link href="/finance/chat-book" className="fw-qbig" style={{ background: "#D9B56F", color: "#12352D" }}>
-                <span aria-hidden="true" className="fw-qic" style={{ background: "#12352D", color: "#D9B56F" }}>✎</span>Book an entry
-              </Link>
-              <span style={{ width: 1, height: 28, background: "#E6DFD0", margin: "0 4px" }} aria-hidden="true" />
+            {/* Home header: title + the two main actions, Workspace and Settings cards, then the special features */}
+            <div className="fw-hhead">
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.22em", color: "#5E6B66" }}>DASHBOARD</div>
+                <h1 title={bizName} style={{ margin: "2px 0 0", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: "clamp(26px,3vw,38px)", fontWeight: 700, color: "#0B2C25", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bizName || "Dashboard"}</h1>
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Link href="/finance/sales/new" className="fw-qbig" style={{ background: "#0B2C25", color: "#FFFFFF" }}><span aria-hidden="true" className="fw-qic" style={{ background: "#E9C27A", color: "#0B2C25" }}>＋</span>Create invoice</Link>
+                <Link href="/finance/chat-book" className="fw-qbig" style={{ background: "linear-gradient(135deg,#F3D9A2,#E9C27A)", color: "#0B2C25" }}><span aria-hidden="true" className="fw-qic" style={{ background: "#0B2C25", color: "#E9C27A" }}>✎</span>Book an entry</Link>
+              </div>
+            </div>
+            <div className="fw-hrow">
+              <div className="fw-work">
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", paddingRight: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.2em", color: "#9A6B22" }}>START HERE</span>
+                  <span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: 22, fontWeight: 700, color: "#0B2C25" }}>Workspace</span>
+                </div>
+                {([["/finance", "Home", "Today at a glance"], ["/finance/portfolio", "All businesses", "Switch or compare"], ["/finance/chat-book", "FreBook AI", "Ask your books"], ["/finance/inbox", "Smart Inbox", "Drop bills, statements"]] as const).map(([href, label, sub]) => (
+                  <Link key={href} href={href} className={"fw-wtile" + (href === "/finance" ? " on" : "")}>
+                    <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(href)} /></svg></span>
+                    <span style={{ minWidth: 0 }}><b>{label}</b><small>{sub}</small></span>
+                  </Link>
+                ))}
+              </div>
+              <div className="fw-sett">
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                  <span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: 20, fontWeight: 700 }}>Settings</span>
+                  <span style={{ fontSize: 12.5, color: tallyConnected ? "#7FE0B4" : "#E9C27A" }}>● Tally {tallyStatusWord(tallyState).toLowerCase()}</span>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {([["/finance/tally", "Tally"], ["/finance/settings", "Settings"], ["/finance/help", "Help"], ["#signout", "Sign out"]] as const).map(([href, label]) => (
+                    <Link key={href} href={href === "#signout" ? "/login" : href} className="fw-sbtn" onClick={async e => { if (href !== "#signout") return; e.preventDefault(); if (!window.confirm("Sign out of FreBook on this device?")) return; await supabase.auth.signOut(); window.location.href = "/login"; }}>
+                      <span className="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(href)} /></svg></span>{label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="fw-quick">
               {[
-                ["📥", "Smart Inbox", "/finance/inbox"], ["⚖", "Bank Recon", "/finance/banking/reconcile"], ["🧾", "GSTR vs Books", "/finance/gst/reconcile"],
-                ["🔁", "ITC vs 2B", "/finance/gst/itc"], ["🔍", "360° Audit", "/finance/audit360"], ["📈", "CFO Analysis", "/finance/cfo"],
-                ["📊", "Financial Statements", "/finance/reports?tab=balance_sheet"], ["📑", "MIS", "/finance/mis"], ["🗄", "Shelf", "/finance/shelf"], ["🕘", "History", "/finance/history"],
-              ].filter(([, , h]) => india || !h.startsWith("/finance/gst")).map(([ic, label, href]) => (
-                <Link key={href} href={href} className="fw-qchip"><span aria-hidden="true">{ic}</span>{label}</Link>
+                ["Smart Inbox", "/finance/inbox"], ["Bank Recon", "/finance/banking/reconcile"], ["GSTR vs Books", "/finance/gst/reconcile"],
+                ["ITC vs 2B", "/finance/gst/itc"], ["360° Audit", "/finance/audit360"], ["CFO Analysis", "/finance/cfo"],
+                ["Financial Statements", "/finance/reports?tab=balance_sheet"], ["MIS", "/finance/mis"], ["Shelf", "/finance/shelf"], ["History", "/finance/history"],
+              ].filter(([, h]) => india || !h.startsWith("/finance/gst")).map(([label, href]) => (
+                <Link key={href} href={href} className="fw-qchip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(href.split("?")[0])} /></svg>{label}</Link>
               ))}
-              <style>{`
-                .fw-qbig{display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 20px 0 8px;border-radius:999px;font-weight:800;font-size:15px;text-decoration:none;box-shadow:0 10px 22px -16px rgba(15,43,37,.7);transition:transform .15s}
-                .fw-qbig:hover{transform:translateY(-2px)}
-                .fw-qic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:800}
-                .fw-qchip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:1px solid #E6DFD0;background:#FFFFFF;color:#12352D;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}
-                .fw-qchip:hover{border-color:#D9B56F;background:#FBF7EE}
-              `}</style>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", margin: "10px 16px 0" }}>
-              <button type="button" onClick={toggleModules} aria-expanded={showModules} style={{ height: 34, padding: "0 16px", borderRadius: 999, border: "1px solid #E6DFD0", background: "#FFFFFF", color: "#12352D", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>{showModules ? "✕ Hide modules" : "☰ All modules"}</button>
-            </div>
-            {showModules && <nav className="fw-groups" aria-label="Main sections">
-              {HOME_GROUPS.map(g => ({ ...g, items: g.items.filter(h => india || !h.startsWith("/finance/gst")).map(h => [...TOP_ICONS, ...HOME_EXTRA].find(t => t.href === h)!).filter(Boolean) })).filter(g => g.items.length).map(g => (
-                <section key={g.label} className="fw-grp" style={{ gridColumn: `span ${g.span}` }}>
-                  <div className="fw-grp-h">{g.label}</div>
-                  <div className="fw-grp-row">
-                    {g.items.map(t => {
-                      const on = t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
-                      return (
-                        <Link key={t.href} href={t.href === "#signout" ? "/login" : t.href} prefetch={t.href === "#signout" ? false : undefined} onClick={async e => { if (t.href === "#signout") { e.preventDefault(); if (!window.confirm("Sign out of FreBook on this device?")) return; await supabase.auth.signOut(); window.location.href = "/login"; return; } if (e.shiftKey) { e.preventDefault(); openInWindow(t.href, t.label); } }} className={on ? "on" : undefined} aria-current={on ? "page" : undefined}>
-                          <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(t.href)} /></svg></span>
-                          <span>{t.href === "/finance/chat-book" ? "FreBook AI" : t.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
-            </nav>}
+            <style>{`
+              .fw-hhead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:18px 22px 0}
+              .fw-hrow{display:flex;gap:14px;flex-wrap:wrap;margin:16px 22px 0}
+              .fw-work{flex:3 1 640px;display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;padding:14px 16px;border-radius:22px;background:linear-gradient(145deg,#FFFBF1,#F6EAD0);border:1px solid #EFE2C4;box-shadow:0 14px 30px -24px rgba(154,107,34,.6)}
+              .fw-wtile{flex:1 1 170px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:#FFFFFF;border:1px solid #EFE2C4;text-decoration:none;color:#0B2C25;min-width:0}
+              .fw-wtile b{display:block;font-size:14.5px}.fw-wtile small{display:block;font-size:12px;color:#5E6B66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+              .fw-wtile .ic{width:40px;height:40px;border-radius:12px;background:#0B2C25;color:#E9C27A;display:grid;place-items:center;flex:none}
+              .fw-wtile.on{background:#0B2C25;color:#FFFFFF;border-color:#0B2C25}.fw-wtile.on small{color:#B9D0C7}.fw-wtile.on .ic{background:#E9C27A;color:#0B2C25}
+              .fw-wtile:hover{border-color:#E9C27A}
+              .fw-sett{flex:1 1 300px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 18px;border-radius:22px;background:linear-gradient(160deg,#0A1F1B,#0F2E28);color:#FFFFFF;box-shadow:0 20px 40px -28px rgba(6,26,22,.8)}
+              .fw-sbtn{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11.5px;color:#DCE9E3;text-decoration:none}
+              .fw-sbtn .ic{width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);display:grid;place-items:center;color:#E9C27A}
+              .fw-sbtn:hover .ic{background:rgba(233,194,122,.18)}
+              .fw-quick{display:flex;gap:10px;flex-wrap:wrap;margin:16px 22px 0}
+              .fw-qbig{display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 20px 0 8px;border-radius:999px;font-weight:800;font-size:15px;text-decoration:none;box-shadow:0 10px 22px -16px rgba(15,43,37,.7);transition:transform .15s}
+              .fw-qbig:hover{transform:translateY(-2px)}
+              .fw-qic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:800}
+              .fw-qchip{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:999px;border:1px solid #E6DFD0;background:#FFFFFF;color:#0B2C25;font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap}
+              .fw-qchip svg{color:#9A6B22}.fw-qchip:hover{border-color:#E9C27A;background:#FFFBF1}
+              @media (max-width:760px){.fw-hhead,.fw-hrow,.fw-quick{margin-left:14px;margin-right:14px}.fw-work{padding:10px}.fw-wtile{flex-basis:140px}}
+            `}</style>
+
             </>
           ) : (
           <nav ref={setTopEl} className="fw-topicons" aria-label="Main sections">
@@ -657,6 +685,32 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
           </div>
         )}
         <ActiveBusinessProvider>{children}</ActiveBusinessProvider>
+        {pathname === "/finance" && !viewOnly && (
+          <section aria-label="Modules" style={{ margin: "8px 0 28px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 22px" }}>
+              <h2 style={{ margin: 0, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: 24, fontWeight: 700, color: "#0B2C25" }}>Modules</h2>
+              <button type="button" onClick={toggleModules} aria-expanded={showModules} style={{ height: 34, padding: "0 16px", borderRadius: 999, border: "1px solid #E6DFD0", background: "#FFFFFF", color: "#12352D", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>{showModules ? "Hide modules" : "Show modules"}</button>
+            </div>
+            {showModules && <nav className="fw-groups" aria-label="Main sections">
+              {HOME_GROUPS.map(g => ({ ...g, items: g.items.filter(h => india || !h.startsWith("/finance/gst")).map(h => [...TOP_ICONS, ...HOME_EXTRA].find(t => t.href === h)!).filter(Boolean) })).filter(g => g.items.length).map(g => (
+                <section key={g.label} className="fw-grp" style={{ gridColumn: `span ${g.span}` }}>
+                  <div className="fw-grp-h">{g.label}</div>
+                  <div className="fw-grp-row">
+                    {g.items.map(t => {
+                      const on = t.href === "/finance" ? pathname === "/finance" : pathname.startsWith(t.href);
+                      return (
+                        <Link key={t.href} href={t.href === "#signout" ? "/login" : t.href} prefetch={t.href === "#signout" ? false : undefined} onClick={async e => { if (t.href === "#signout") { e.preventDefault(); if (!window.confirm("Sign out of FreBook on this device?")) return; await supabase.auth.signOut(); window.location.href = "/login"; return; } if (e.shiftKey) { e.preventDefault(); openInWindow(t.href, t.label); } }} className={on ? "on" : undefined} aria-current={on ? "page" : undefined}>
+                          <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(t.href)} /></svg></span>
+                          <span>{t.href === "/finance/chat-book" ? "FreBook AI" : t.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </nav>}
+          </section>
+        )}
         <WindowDock />
         <InstallApp />
         <FreBookBuddy />
