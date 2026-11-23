@@ -298,99 +298,11 @@ export default function FinanceDashboard() {
         ?? allFys[0];
     const curStartYear = +curFyStart.slice(0, 4);
     setMissingFy(allFys.some(f => f.start_date <= todayIso && f.end_date >= todayIso) ? null : { label: `${curStartYear}-${String(curStartYear + 1).slice(2)}`, start: curFyStart, end: `${curStartYear + 1}-03-31` });
+    // The year picked from today's date is what the dashboard picks by itself: no need to ask it again with the id
+    autoFyRef.current = !selectedFyId && !sharedFy && activeFy && activeFy.start_date <= todayIso && activeFy.end_date >= todayIso ? activeFy.id : "";
     if (activeFy) { setFyLabel(activeFy.label); setFyId(activeFy.id); }
 
-    // 2. Count journals by date range (for counts + drafts)
-    let jq = supabase.from("fw_fin_journals")
-      .select("id,type,status,date,total_debit,total_credit").eq("business_id", bizId).neq("status", "voided");
-    if (activeFy?.start_date) jq = jq.gte("date", activeFy.start_date);
-    if (activeFy?.end_date)   jq = jq.lte("date", activeFy.end_date);
-    // Ledgers are fetched at the same time as the journals
-    const accountsP = supabase.from("fw_fin_chart_of_accounts").select("id,name,type").eq("business_id", bizId);
-    const { data: jData } = await jq;
-    const journals = jData ?? [];
-    const posted = journals.filter(j => j.status === "posted");
-    const postedIds = posted.map(j => j.id);
-
-    // 3. Revenue & Net Profit via journal_lines across ALL voucher types
-    //    (covers standard "Sales" AND custom Tally types like "Export Sales", "Local Sales" etc.)
-    let salesRev = 0, expTotal = 0;
-    if (postedIds.length > 0) {
-      const { data: accounts } = await accountsP;
-      const accMap = new Map((accounts ?? []).map(a => [a.id, { type: a.type as string, name: (a.name as string).toLowerCase() }]));
-
-      // Income: type="income"/"sales" OR name matches sales/export patterns
-      const isIncome = (id: string) => {
-        const a = accMap.get(id);
-        if (!a) return false;
-        if (a.type === "income" || a.type === "sales") return true;
-        const n = a.name;
-        // Explicit BS account exclusions (even if wrongly typed as income)
-        if (n.includes("payable") || n.includes("receivable") || n.includes("debtor") ||
-            n.includes("creditor") || n.includes("bank") || n.includes("cash") ||
-            n.includes("stock") || n.includes("capital") || n.includes("loan")) return false;
-        return n.includes("sales") || n.includes("export") || n.includes("revenue") ||
-               n.includes("income") || n.includes("service") || n.includes("drawback") ||
-               n.includes("discount received") || n.includes("commission received") ||
-               (n.includes("interest") && n.includes("received"));
-      };
-
-      // Expense: type="expense" OR name matches expense patterns — exclude BS accounts
-      const isExpense = (id: string) => {
-        const a = accMap.get(id);
-        if (!a) return false;
-        const n = a.name;
-        if (n.includes("stock") || n.includes("asset") || n.includes("bank") ||
-            n.includes("cash") || n.includes("deposit") || n.includes("loan") ||
-            n.includes("payable") || n.includes("gst") || n.includes("tds payable") ||
-            n.includes("creditor") || n.includes("debtor") || n.includes("capital") ||
-            n.includes("export") || n.includes("sales") || n.includes("income") ||
-            n.includes("revenue")) return false;
-        if (a.type === "expense") return true;
-        return n.includes("purchase") || n.includes("direct exp") || n.includes("indirect exp") ||
-               n.includes("expense") || n.includes("salary") || n.includes("wages") ||
-               n.includes("rent") || n.includes("freight") || n.includes("transport") ||
-               n.includes("duties") || n.includes("depreciation") || n.includes("cost of") ||
-               n.includes("power") || n.includes("telephone") || n.includes("printing") ||
-               n.includes("advertisement") || n.includes("bank charges") || n.includes("audit fee");
-      };
-
-      // All batches at once (10 at a time), not one after another — large books were dozens of round trips
-      const chunks: string[][] = [];
-      for (let i = 0; i < postedIds.length; i += 150) chunks.push(postedIds.slice(i, i + 150));
-      const all: { account_id: string; dr_amount: number; cr_amount: number }[] = [];
-      for (let c = 0; c < chunks.length; c += 10) {
-        const got = await Promise.all(chunks.slice(c, c + 10).map(async ids => {
-          const out: { account_id: string; dr_amount: number; cr_amount: number }[] = [];
-          for (let from = 0; ; from += 1000) {
-            const { data } = await supabase.from("fw_fin_journal_lines").select("account_id,dr_amount,cr_amount").in("journal_id", ids).order("id").range(from, from + 999);
-            out.push(...((data ?? []) as typeof out));
-            if (!data || data.length < 1000) break;
-          }
-          return out;
-        }));
-        got.forEach(g => all.push(...g));
-      }
-      {
-        const lines = all;
-        for (const l of lines ?? []) {
-          if (isIncome(l.account_id))  salesRev  += (l.cr_amount || 0) - (l.dr_amount || 0);
-          if (isExpense(l.account_id)) expTotal  += (l.dr_amount || 0) - (l.cr_amount || 0);
-        }
-      }
-    }
-
-    setStats(prev => ({
-      ...prev,
-      sales: posted.filter(j => j.type === "sales").length,
-      expenses: posted.filter(j => j.type === "purchase" || j.type === "expense").length,
-      drafts: journals.filter(j => j.status === "draft").length,
-      pendingTds: 0,
-      revenue: salesRev,
-      profit: salesRev - expTotal,
-      tallyLive: false,
-      totalPosted: posted.length,
-    }));
+    // The Home figures come from /api/finance/dashboard — no second download of every entry here
     setLoading(false);
   }
 
@@ -613,24 +525,27 @@ export default function FinanceDashboard() {
   const hour = now.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
+  const autoFyRef = useRef("");
+  const lastDashUrl = useRef(""), lastDashTick = useRef(-1);
   // Live figures from posted entries (same engine as the reports)
   useEffect(() => {
     if (!activeBiz) return;
-    let cancelled = false;
     setDashErr("");
     const pr = periodRange(periodKey, custom);
     if (periodKey === "custom" && !pr) return;
-    const url = `/api/finance/dashboard?business_id=${activeBiz.id}${fyId ? `&fy_id=${fyId}` : ""}${pr ? `&from=${pr.from}&to=${pr.to}&label=${encodeURIComponent(pr.label)}` : ""}`;
+    const fySend = fyId ? (fyId === autoFyRef.current ? "" : fyId) : (readSelectedFy(activeBiz.id) ?? "");
+    const url = `/api/finance/dashboard?business_id=${activeBiz.id}${fySend ? `&fy_id=${fySend}` : ""}${pr ? `&from=${pr.from}&to=${pr.to}&label=${encodeURIComponent(pr.label)}` : ""}`;
     // Show the last figures for this view at once; fresh ones replace them when they arrive
+    if (url === lastDashUrl.current && dashTick === lastDashTick.current) return;
+    lastDashUrl.current = url; lastDashTick.current = dashTick;
     const cacheKey = `fw_dash_${url}`;
     let cached: unknown = null;
     try { cached = JSON.parse(localStorage.getItem(cacheKey) ?? "null"); } catch { /* */ }
     setDash(cached as typeof dash);
     fetch(url)
       .then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error ?? "We couldn't load your dashboard right now."); return d; })
-      .then(d => { if (cancelled) return; setDash(d); try { localStorage.setItem(cacheKey, JSON.stringify(d)); } catch { /* full */ } })
-      .catch(e => { if (!cancelled && !cached) setDashErr(e instanceof Error ? e.message : "We couldn't load your dashboard right now."); });
-    return () => { cancelled = true; };
+      .then(d => { if (lastDashUrl.current !== url) return; setDash(d); try { localStorage.setItem(cacheKey, JSON.stringify(d)); } catch { /* full */ } })
+      .catch(e => { if (lastDashUrl.current === url && !cached) setDashErr(e instanceof Error ? e.message : "We couldn't load your dashboard right now."); });
   }, [activeBiz, fyId, dashTick, periodKey, custom]);
   const fmt = (n: number) => cur() + Math.abs(n).toLocaleString(activeMoney().locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
