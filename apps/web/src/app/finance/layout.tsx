@@ -598,7 +598,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                   <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.2em", color: "#9A6B22" }}>START HERE</span>
                   <span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: 22, fontWeight: 700, color: "#0B2C25" }}>Workspace</span>
                 </div>
-                {([["/finance", "Home", "Today at a glance"], ["/finance/portfolio", "All businesses", "Switch or compare"], ["/finance/chat-book", "FreBook AI", "Ask your books"], ["/finance/inbox", "Smart Inbox", "Drop bills, statements"]] as const).map(([href, label, sub]) => (
+                {([["/finance", "Home", "Today at a glance"], ["/finance/portfolio", "All businesses", "Switch or compare"], ["/finance/chat-book", "FreBook AI", "Ask your books"], ["/finance/inbox", "Smart Inbox", "Drop bills, statements"], ["/finance/banking", "Banking", "Bank & loan statements"]] as const).map(([href, label, sub]) => (
                   <Link key={href} href={href} className={"fw-wtile" + (href === "/finance" ? " on" : "")}>
                     <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(href)} /></svg></span>
                     <span style={{ minWidth: 0 }}><b>{label}</b><small>{sub}</small></span>

@@ -69,7 +69,10 @@ export default function BankingDashboard() {
             <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor" }} />
             {daysSince == null ? "No statement uploaded yet" : `Updated from statement ${daysSince === 0 ? "today" : `${daysSince} day${daysSince > 1 ? "s" : ""} ago`}`}
           </span>
-          <Link href="/finance/banking/import" style={{ height: 44, padding: "0 22px", borderRadius: 999, background: T.green, color: "#FFFFFF", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>↑ Upload statement</Link>
+          <span style={{ display: "inline-flex", gap: 10, flexWrap: "wrap" }}>
+            <Link href="/finance/banking/import?loan=1" style={{ height: 44, padding: "0 22px", borderRadius: 999, border: `1px solid ${T.green}`, color: T.green, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>↑ Upload loan statement</Link>
+            <Link href="/finance/banking/import" style={{ height: 44, padding: "0 22px", borderRadius: 999, background: T.green, color: "#FFFFFF", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>↑ Upload statement</Link>
+          </span>
         </header>
 
         {err && <div style={{ background: "#FFF4DB", color: T.goldInk, borderRadius: 12, padding: "12px 16px" }}>{err}</div>}

@@ -1,5 +1,5 @@
 "use client";
-import { loanLedger } from "@/lib/bankImport";
+import { loanLedger, isDisbursement } from "@/lib/bankImport";
 import { isCashBankAccount } from "@/lib/journalRules";
 import { readBankStatement } from "@/lib/readStatement";
 import { PdfPasswordError } from "@/lib/pdfUnlock";
@@ -165,7 +165,7 @@ export default function SmartInbox() {
     addItems(rows.map(r => {
       const s = sugg.get(r.id); const amount = r.debit || r.credit;
       let other = s?.account ?? "";
-      const out = r.debit > 0;
+      const out = r.debit > 0 || (loan && isDisbursement(r.description));
       let sure = !!other && (s?.confidence ?? 0) >= 0.75;
       if (loan) { const l = loanLedger(r.description, payBank); if (l) { other = l; sure = true; } else if (other.trim().toLowerCase() === bank.toLowerCase()) { other = ""; sure = false; } }
       let reason: string | undefined = sure ? undefined : other ? "Not sure about the ledger" : "Choose a ledger";
@@ -317,7 +317,7 @@ export default function SmartInbox() {
       const payload = chunk.map(it => ({
         ref: it.id, confirm_duplicate: !!it.dupOk, against_invoice_id: it.matchedId ?? null, party_name: it.party ?? null, client_key: `inbox:${fileKey.get(it.fileId)}:${it.narration.slice(0, 40)}:${it.date}:${it.amount}`.slice(0, 160),
         original_message: `Smart Inbox: ${it.narration}`,
-        transaction: { status: "complete", transaction_date: it.date, transaction_type: it.kind === "statement" && !it.card ? (it.lines[0]?.account === it.bank ? "receipt" : "payment") : it.lines.some(l => isCashBank(l.account) && l.credit > 0) ? "payment" : it.lines.some(l => isCashBank(l.account) && l.debit > 0) ? "receipt" : "journal",
+        transaction: { status: "complete", transaction_date: it.date, transaction_type: it.kind === "statement" && it.loan ? "journal" : it.kind === "statement" && !it.card ? (it.lines[0]?.account === it.bank ? "receipt" : "payment") : it.lines.some(l => isCashBank(l.account) && l.credit > 0) ? "payment" : it.lines.some(l => isCashBank(l.account) && l.debit > 0) ? "receipt" : "journal",
           narrative: it.narration.slice(0, 200), amount: it.amount, party_name: null, party_type: null, invoice_number: null, payment_mode: null, bank_account_name: null,
           lines: it.lines.map(l => ({ account: l.account.trim(), debit: l.debit, credit: l.credit, confidence: 1, is_new_account: isNew(l.account), suggested_type: null })),
           needs_clarification: [], warnings: [], confidence: 1 },
@@ -464,12 +464,23 @@ export default function SmartInbox() {
                 <button onClick={retryFailed} style={{ marginLeft: 12, height: 30, padding: "0 14px", borderRadius: 999, border: "none", background: "#0F2B25", color: "#FFFFFF", fontWeight: 800, fontSize: 12.5, cursor: "pointer" }}>↻ Retry {n} failed</button>
               ); })()}
             </div>
+            <datalist id="ib-acc-list">{accounts.map(a => <option key={a.name} value={a.name} />)}</datalist>
             <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflowY: "auto" }}>
               {files.map(f => (
                 <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, padding: "5px 0", borderTop: `1px solid ${C.line}` }}>
                   <span style={pill("#EFE8D9", C.ink)}>{f.kind}</span>
                   <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
                   <span style={{ color: f.status === "error" ? C.neg : C.muted, fontSize: 12.5 }}>{f.status === "queued" ? "Waiting…" : f.note}</span>
+                  {f.status === "done" && f.bank && items.some(it => it.fileId === f.id && it.kind === "statement") && (
+                    <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12 }} title="The account this statement belongs to: a bank, a loan, or any other ledger">
+                      <span style={{ color: C.muted }}>Account</span>
+                      <input list="ib-acc-list" defaultValue={f.bank} key={f.bank} aria-label={`Statement account for ${f.name}`}
+                        onBlur={e => { const v = e.target.value.trim(); if (!v || v === f.bank) return; const old = f.bank!;
+                          setJob(f.id, { bank: v });
+                          setItems(prev => prev.map(it => it.fileId === f.id && it.kind === "statement" && it.state !== "posted" ? { ...it, bank: v, lines: it.lines.map(l => l.account === old ? { ...l, account: v } : l) } : it)); }}
+                        style={{ height: 28, borderRadius: 8, border: `1px solid ${C.line}`, padding: "0 8px", fontSize: 12, minWidth: 170, fontFamily: "inherit" }} />
+                    </label>
+                  )}
                   {f.status === "done" && <span style={pill(C.posSoft, C.pos)}>Read</span>}
                   {f.status === "error" && <span style={pill(C.negSoft, C.neg)}>Couldn&apos;t read</span>}
                   {(f.status === "reading" || f.status === "queued") && <span className="ib-spin" aria-label="Reading" />}

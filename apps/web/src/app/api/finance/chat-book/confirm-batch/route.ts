@@ -4,6 +4,7 @@ import type { ParsedTransaction } from "../route";
 import { requireBusiness, serverError } from "@/lib/apiAuth";
 import { resolveLedgers } from "@/lib/ledgerResolve";
 import { postJournal, validateEntry, voucherTypeFor, postingErrorMessage } from "@/lib/posting";
+import { isCashBankAccount } from "@/lib/journalRules";
 import { extractBankRef, findDuplicates, loadBankAccount, importedOnAccount, createBatch } from "@/lib/bankImport";
 
 // Runs at the edge nearest the user (Mumbai for India) — next to the database, not across the world
@@ -41,7 +42,8 @@ export async function POST(req: NextRequest) {
         if (r.ok) bank_account_id = r.ids.get(name)?.id;
       }
       if (!bank_account_id) return NextResponse.json({ error: "Choose the bank account this statement belongs to." }, { status: 400 });
-      try { const a = await loadBankAccount(supabase, business_id, bank_account_id, { card: !!card, loan: !!loan }); bank = { id: a.id, name: a.name }; }
+      let bankIsCash = true;
+      try { const a = await loadBankAccount(supabase, business_id, bank_account_id, { card: !!card, loan: !!loan, any: true }); bank = { id: a.id, name: a.name }; bankIsCash = isCashBankAccount(a); }
       catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Choose a bank ledger." }, { status: 400 }); }
       const bankKey = bank.name.trim().toLowerCase();
       for (const it of items) {
@@ -55,7 +57,7 @@ export async function POST(req: NextRequest) {
         t.lines = out
           ? [{ ...counter, debit: amount, credit: 0 }, { account: bank.name, debit: 0, credit: amount, confidence: 1, is_new_account: false, suggested_type: loan ? "liability" : "asset" }]
           : [{ account: bank.name, debit: amount, credit: 0, confidence: 1, is_new_account: false, suggested_type: loan ? "liability" : "asset" }, { ...counter, debit: 0, credit: amount }];
-        t.transaction_type = card ? "journal" : out ? "payment" : "receipt";
+        t.transaction_type = card || loan || !bankIsCash ? "journal" : out ? "payment" : "receipt";
       }
       const live = items.filter(it => !(it as Item & { skip?: boolean }).skip);
       const rows = live.map(it => ({ key: it.ref, date: it.transaction.transaction_date, amount: it.transaction.lines[0].debit ?? 0, ref: extractBankRef(`${it.transaction.narrative ?? ""} ${it.original_message ?? ""}`) }));

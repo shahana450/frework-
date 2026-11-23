@@ -43,12 +43,14 @@ export function findDuplicates(rows: BankRow[], existing: ImportedBankEntry[]): 
 
 /** The import's bank account — must be one of this business's cash/bank ledgers. */
 /** A loan / overdraft ledger (a liability, not its interest or charges): the account side of a loan statement */
+/** Disbursement lines always increase the loan: treat them as money out of the loan account */
+export const isDisbursement = (desc: string) => /disburs|loan\s*(amount\s*)?(credited|released)/i.test(desc);
 export const isLoanAccount = (a?: RuleAccount | null) => !!a && a.type === "liability" && /loan|\bod\b|overdraft|borrow/i.test(a.name) && !/interest|charges?|fees?|processing/i.test(a.name);
 export const isCardAccount = (a?: RuleAccount | null) => !!a && /credit\s*card/i.test(a.name) && !/charges?|interest|fees?/i.test(a.name);
-export async function loadBankAccount(sb: SupabaseClient, businessId: string, accountId: string, opts: { card?: boolean; loan?: boolean } = {}): Promise<RuleAccount> {
+export async function loadBankAccount(sb: SupabaseClient, businessId: string, accountId: string, opts: { card?: boolean; loan?: boolean; any?: boolean } = {}): Promise<RuleAccount> {
   const { data } = await sb.from("fw_fin_chart_of_accounts").select("id,name,type,sub_type,is_group").eq("business_id", businessId).eq("id", accountId).maybeSingle();
   const a = data as RuleAccount | null;
-  const ok = !!a && !a.is_group && (isCashBankAccount(a) || (opts.card && isCardAccount(a)) || (opts.loan && isLoanAccount(a)));
+  const ok = !!a && !a.is_group && (isCashBankAccount(a) || (opts.card && isCardAccount(a)) || (opts.loan && isLoanAccount(a)) || !!opts.any);
   if (!ok) throw new Error(`Choose a ${opts.card ? "credit card" : opts.loan ? "loan" : "bank or cash"} ledger for this statement${a ? ` — "${a.name}" is not one` : ""}.`);
   return a!;
 }
@@ -76,7 +78,9 @@ export async function createBatch(sb: SupabaseClient, b: { businessId: string; b
 export function loanLedger(desc: string, bankName: string): string | null {
   const d = desc.toLowerCase();
   if (/penal|overdue\s*charge|late\s*(payment)?\s*(fee|charge)|bounce|dishonou?r|return\s*charge/.test(d)) return "Penal Interest & Charges";
-  if (/interest|\bint\b|\bint\./.test(d)) return "Interest on Loan";
+  if (/disburs|loan\s*(amount|credited|released)|sanction/.test(d)) return bankName;
+  const charged = /interest\s*(applied|charged|debited|debit|due|for\s*the)|int\.?\s*(app|applied|dr|debit|charged|chrg|due)\b|\bint\s*on\b|\binterest\b(?!.*(coll|recover|recd|received|paid|transfer|trf))/;
+  if (charged.test(d) && !/int\.?\s*coll/.test(d)) return "Interest on Loan";
   if (/process|documentation|stamp|login\s*fee|admin(istrative)?\s*(fee|charge)|foreclos|pre-?closure|prepayment\s*charge/.test(d)) return "Loan Processing Charges";
   if (/insurance|premium|\blic\b|policy/.test(d)) return "Insurance";
   if (/\b(gst|igst|cgst|sgst)\b/.test(d)) return "Input GST";

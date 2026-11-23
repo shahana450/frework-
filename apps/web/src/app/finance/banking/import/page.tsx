@@ -1,5 +1,5 @@
 "use client";
-import { isLoanAccount, loanLedger } from "@/lib/bankImport";
+import { isLoanAccount, loanLedger, isDisbursement } from "@/lib/bankImport";
 import { readBankStatement } from "@/lib/readStatement";
 import { PdfPasswordError } from "@/lib/pdfUnlock";
 import { loadDraft, saveDraft, clearDraft as clearIdb } from "@/lib/importDraft";
@@ -64,6 +64,7 @@ export default function BankingPage() {
 
   // Selected bank account for this statement
   const [bankAccountId, setBankAccountId] = useState<string>("");
+  const [loanMode, setLoanMode] = useState(false);
 
   // Selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -111,9 +112,13 @@ export default function BankingPage() {
       const all = (accounts ?? []) as CoaAccount[];
       setCoa(all);
       // Bank and cash ledgers are stored as assets with a bank/cash sub-type (older ones may carry the type itself)
-      const banks = all.filter(a => ["bank", "cash"].includes(a.type) || ["bank", "cash"].includes((a as { sub_type?: string | null }).sub_type ?? ""));
+      const banks = all.filter(a => ["bank", "cash"].includes(a.type) || ["bank", "cash"].includes((a as { sub_type?: string | null }).sub_type ?? "") || isLoanAccount(a as never));
       setBankAccounts(banks);
-      if (banks.length) setBankAccountId(banks[0].id);
+      const wantLoan = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("loan") === "1";
+      setLoanMode(wantLoan);
+      const loans = banks.filter(a => isLoanAccount(a as never));
+      if (wantLoan && loans.length) setBankAccountId(loans[0].id);
+      else if (banks.length) setBankAccountId(banks[0].id);
     });
   }, []);
 
@@ -312,6 +317,13 @@ export default function BankingPage() {
       for (const r of rows) {
         if (r.pushed || r.ledger_id) continue;
         const out = r.debit > 0;
+        const acct = coa.find(a => a.id === bankAccountId);
+        if (acct && !bankAccounts.some(b => b.id === acct.id && !isLoanAccount(b as never))) {
+          const payBank = bankAccounts.find(a => !isLoanAccount(a as never) && !/cash/i.test(a.name))?.name ?? "Bank Account";
+          const ln = loanLedger(r.description, payBank);
+          if (ln) { const ex = coa.find(a => a.name.trim().toLowerCase() === ln.toLowerCase()); pick[r.id] = ex?.name ?? ln; if (!ex && !want.has(ln)) want.set(ln, ln === "Bank Account" ? "bank" : ln === "Input GST" ? "duties" : "indirect_expense"); }
+          continue;
+        }
         const g = groupKeyOf(r.description);
         const name = g.rule ? (out ? g.rule[2] : g.rule[3]) : g.label !== "Other" ? g.label : null;
         if (!name) continue;
@@ -332,6 +344,9 @@ export default function BankingPage() {
       }
       const byName = new Map(all.map(a => [a.name.toLowerCase(), a]));
       let n = 0;
+      const acctNow = coa.find(a => a.id === bankAccountId);
+      const loanAcct = !!acctNow && !bankAccounts.some(b => b.id === acctNow.id && !isLoanAccount(b as never));
+      if (loanAcct) setRows(rs => rs.map(x => !x.pushed && isDisbursement(x.description) && x.credit > 0 && !x.debit ? { ...x, debit: x.credit, credit: 0 } : x));
       setRows(rs => rs.map(x => { const nm = pick[x.id]; const a = nm ? byName.get(nm.toLowerCase()) : undefined; if (!a || x.ledger_id || x.pushed) return x; n++; return { ...x, ledger_id: a.id, ledger_name: a.name, suggested: true }; }));
       const left = rows.filter(r => !r.pushed && !r.ledger_id && !pick[r.id]).length;
       setSuggestMsg(`✨ ${Object.keys(pick).length} suggested${want.size ? ` · ${want.size} new ledger${want.size > 1 ? "s" : ""} created (${[...want.keys()].join(", ")})` : ""}${left ? ` · ${left} need you to choose` : ""}. Check the ✨ rows, then push.`);
@@ -879,12 +894,15 @@ export default function BankingPage() {
 
               {/* Bank account selector */}
               <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
-                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#6B7570", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Bank / Cash Account</div>
+                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#6B7570", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Statement account</div>
                 <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} style={{ ...inp, width: "100%", cursor: "pointer", fontSize: "0.8rem" }}>
                   <option value="">— select account —</option>
-                  {bankAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  <optgroup label="Bank & cash">{bankAccounts.filter(a => !isLoanAccount(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
+                  <optgroup label="Loans">{bankAccounts.filter(a => isLoanAccount(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
+                  <optgroup label="Any other ledger">{coa.filter(a => !bankAccounts.some(b => b.id === a.id)).map(a => <option key={a.id} value={a.id}>{decode(a.name)}</option>)}</optgroup>
                 </select>
-                <div style={{ fontSize: "0.68rem", color: "#6B7570", marginTop: "0.4rem" }}>All transactions in this statement belong to this account</div>
+                <div style={{ fontSize: "0.68rem", color: "#6B7570", marginTop: "0.4rem" }}>{(() => { const a = coa.find(x => x.id === bankAccountId); const viaBank = !!a && bankAccounts.some(b => b.id === a.id && !isLoanAccount(b as never)); return a && !viaBank ? "Loan / other ledger: lines post as Journal vouchers. Suggest ledgers reads EMI, interest, charges and disbursement." : "Bank / cash: lines post as Payment and Receipt vouchers."; })()}</div>
+                {loanMode && !bankAccounts.some(a => isLoanAccount(a as never)) && <div style={{ fontSize: "0.7rem", color: "#9A6B22", marginTop: 6 }}>No loan ledger yet. Add one below, e.g. "Federal Bank Term Loan".</div>}
                 <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                   <input value={newBank} onChange={e => setNewBank(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addBank(); }} placeholder={bankAccounts.length ? "＋ Another bank…" : "＋ Add your bank, e.g. IDFC First Bank"} aria-label="Add a bank account"
                     style={{ ...inp, flex: 1, minWidth: 0, fontSize: "0.76rem", padding: "6px 8px" }} />

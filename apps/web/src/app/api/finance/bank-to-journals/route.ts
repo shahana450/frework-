@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireBusiness, serverError } from "@/lib/apiAuth";
 import { postJournal, postingErrorMessage } from "@/lib/posting";
+import { isCashBankAccount } from "@/lib/journalRules";
 import { extractBankRef, findDuplicates, loadBankAccount, importedOnAccount, createBatch } from "@/lib/bankImport";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -18,7 +19,8 @@ export async function POST(req: NextRequest) {
     if (!bank_account_id || !transactions?.length) {
       return NextResponse.json({ error: "Choose the bank account and at least one transaction." }, { status: 400 });
     }
-    try { await loadBankAccount(supabase, business_id, bank_account_id, { loan: true }); }
+    let viaBank = true;
+    try { const a = await loadBankAccount(supabase, business_id, bank_account_id, { loan: true, any: true }); viaBank = isCashBankAccount(a); }
     catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Choose a bank ledger." }, { status: 400 }); }
 
     const rows = transactions.map(t => ({ key: t.id, date: String(t.date).slice(0, 10), amount: (t.debit || 0) > 0 ? t.debit : t.credit, ref: extractBankRef(t.description) }));
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
       try {
         const r = await postJournal(supabase, {
           businessId: business_id, actorId: gate.user.id, date: String(tx.date).slice(0, 10),
-          type: out ? "payment" : "receipt", narration: (tx.description ?? "").slice(0, 200), source: "bank_import",
+          type: !viaBank ? "journal" : out ? "payment" : "receipt", narration: (tx.description ?? "").slice(0, 200), source: "bank_import",
           lines: out
             ? [{ accountId: tx.ledger_id, dr: amount, cr: 0 }, { accountId: bank_account_id, dr: 0, cr: amount }]
             : [{ accountId: bank_account_id, dr: amount, cr: 0 }, { accountId: tx.ledger_id, dr: 0, cr: amount }],
