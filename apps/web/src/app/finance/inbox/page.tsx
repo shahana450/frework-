@@ -1,4 +1,5 @@
 "use client";
+import { loanLedger } from "@/lib/bankImport";
 import { isCashBankAccount } from "@/lib/journalRules";
 import { readBankStatement } from "@/lib/readStatement";
 import { PdfPasswordError } from "@/lib/pdfUnlock";
@@ -25,7 +26,7 @@ type Item = {
   id: string; fileId: string; date: string; narration: string; amount: number; lines: Line[];
   state: ItemState; reason?: string; matched?: string; matchedId?: string; party?: string; entryNo?: string; journalId?: string; tally?: "pushed" | "failed"; tallyError?: string;
   kind: "template" | "statement" | "bill";
-  bank?: string; card?: boolean;      // statements: the bank / card ledger of the file — the server posts against it
+  bank?: string; card?: boolean; loan?: boolean;      // statements: the bank / card ledger of the file — the server posts against it
   dupOk?: boolean;                    // the user checked a possible duplicate and chose to post it anyway
 };
 type FileJob = { id: string; name: string; size: number; kind: string; status: "queued" | "reading" | "done" | "error"; note?: string; key: string; bank?: string };
@@ -37,6 +38,7 @@ const inr = (n: number) => cur() + (n || 0).toLocaleString(activeMoney().locale,
 const isCashBank = (s: string) => /\b(cash|bank|hdfc|icici|sbi|axis|kotak|federal|canara|pnb|idfc|indusind|yes bank|credit card|card)\b/i.test(s);
 const STATEMENT_NAME = /statement|stmt|passbook|e-?statement|account\s*summary/i;
 const CARD_NAME = /credit\s*card|card\s*statement|\bcc\b|amex|visa|mastercard|rupay/i;
+const LOAN_NAME = /\bloans?\b|\bemi\b|repayment|amorti[sz]ation|overdraft|term\s*loan|\blan\b/i;
 let seq = 0;
 const uid = (p: string) => `${p}${Date.now().toString(36)}${(seq++).toString(36)}`;
 
@@ -122,7 +124,7 @@ export default function SmartInbox() {
       state: e.error ? "check" : "ready", reason: e.error ?? undefined, kind: "template",
     }));
 
-  async function readStatement(job: FileJob, file: File, card = CARD_NAME.test(file.name)) {
+  async function readStatement(job: FileJob, file: File, card = CARD_NAME.test(file.name) && !LOAN_NAME.test(file.name), loanIn = LOAN_NAME.test(file.name)) {
     let data: Awaited<ReturnType<typeof readBankStatement>> | null = null, password: string | undefined;
     for (let tries = 0; !data; tries++) {
       try { data = await readBankStatement(file, { bizId, password, onProgress: p => { if (p.total > 1) setJob(job.id, { note: p.label }); } }); }
@@ -137,6 +139,7 @@ export default function SmartInbox() {
     const rows = (data.transactions as { date: string; description: string; debit: number; credit: number }[])
       .filter(t => (Number(t.debit) || 0) > 0 || (Number(t.credit) || 0) > 0)
       .map((t, i) => ({ id: `${job.id}-${i}`, date: String(t.date ?? "").slice(0, 10), description: String(t.description ?? ""), debit: Number(t.debit) || 0, credit: Number(t.credit) || 0 }));
+    const loan = !card && (loanIn || rows.slice(0, 15).filter(r => /\b(emi|disburs\w*|loan|instal?l?ment|principal)\b/i.test(r.description)).length >= Math.max(2, Math.min(4, Math.ceil(rows.length / 2))));
     const sugg = new Map<string, { account: string; confidence: number }>();
     for (let i = 0; i < rows.length; i += 25) {
       setJob(job.id, { note: `Matching ledgers ${Math.min(i + 25, rows.length)}/${rows.length}…` });
@@ -150,8 +153,13 @@ export default function SmartInbox() {
     const BANKS = ["sbi", "state bank", "hdfc", "icici", "axis", "kotak", "federal", "canara", "union", "bob", "baroda", "pnb", "punjab", "indian bank", "idbi", "yes", "indusind", "south indian", "sib", "csb", "catholic", "dhanlaxmi", "idfc", "au ", "rbl", "bandhan", "esaf", "kerala gramin", "iob", "overseas"];
     const hint = (file.name + " " + rows.slice(0, 3).map(r => r.description).join(" ")).toLowerCase();
     const named = BANKS.find(b => hint.includes(b.trim()));
-    const pick = named ? accounts.filter(a => (card ? /card/i.test(a.name) : isCashBankAccount(a as never) && !/card/i.test(a.name)) && a.name.toLowerCase().includes(named.trim())).map(a => a.name)[0] : undefined;
-    const bank = pick ?? (card ? (cardLedger || "Credit Card") : (bankLedger || "Bank Account"));
+    const pick = loan
+      ? accounts.filter(a => /loan|\bod\b|overdraft/i.test(a.name) && !/interest|charge|processing/i.test(a.name) && (!named || a.name.toLowerCase().includes(named.trim()))).map(a => a.name)[0]
+      : named ? accounts.filter(a => (card ? /card/i.test(a.name) : isCashBankAccount(a as never) && !/card/i.test(a.name)) && a.name.toLowerCase().includes(named.trim())).map(a => a.name)[0] : undefined;
+    const loanName = named ? `${named.trim().replace(/\b\w/g, c => c.toUpperCase())} Loan A/c` : "Term Loan A/c";
+    const bank = pick ?? (loan ? loanName : card ? (cardLedger || "Credit Card") : (bankLedger || "Bank Account"));
+    // Where the loan's EMIs are paid from / disbursements land: the business's main bank ledger
+    const payBank = bankLedger || accounts.filter(a => isCashBankAccount(a as never) && !/cash|card/i.test(a.name)).map(a => a.name)[0] || "Bank Account";
     setJob(job.id, { bank });
     let matched = 0;
     addItems(rows.map(r => {
@@ -159,22 +167,23 @@ export default function SmartInbox() {
       let other = s?.account ?? "";
       const out = r.debit > 0;
       let sure = !!other && (s?.confidence ?? 0) >= 0.75;
+      if (loan) { const l = loanLedger(r.description, payBank); if (l) { other = l; sure = true; } else if (other.trim().toLowerCase() === bank.toLowerCase()) { other = ""; sure = false; } }
       let reason: string | undefined = sure ? undefined : other ? "Not sure about the ledger" : "Choose a ledger";
       let matchedTo: string | undefined, matchedId: string | undefined;
       // Money in/out against an unpaid sale or purchase → post to that customer / supplier
-      const m = card ? null : matchLine(r, docsRef.current, usedDocs.current);
+      const m = card || loan ? null : matchLine(r, docsRef.current, usedDocs.current);
       if (m) {
         other = m.doc.ledger; matchedTo = `${m.doc.kind === "sale" ? "Sale" : "Bill"} ${m.doc.entryNo} · ${m.doc.date}`;
         if (m.sure) { usedDocs.current.add(m.doc.id); sure = true; reason = undefined; matched++; matchedId = m.doc.id; }
         else { sure = false; reason = `Possible match: ${m.doc.ledger} — ${matchedTo} (open ${cur()}${m.doc.open.toLocaleString(activeMoney().locale)})`; }
       }
       return {
-        id: uid("s"), fileId: job.id, date: r.date, narration: r.description.slice(0, 200), amount, kind: "statement" as const, matched: matchedTo, matchedId, party: matchedId ? other : undefined, bank, card,
+        id: uid("s"), fileId: job.id, date: r.date, narration: r.description.slice(0, 200), amount, kind: "statement" as const, matched: matchedTo, matchedId, party: matchedId ? other : undefined, bank, card, loan,
         lines: out ? [{ account: other, debit: amount, credit: 0 }, { account: bank, debit: 0, credit: amount }] : [{ account: bank, debit: amount, credit: 0 }, { account: other, debit: 0, credit: amount }],
         state: sure ? "ready" as const : "check" as const, reason,
       };
     }));
-    return `${rows.length} ${card ? "card " : ""}transactions → ${bank}${matched ? ` · ${matched} matched to bills` : ""}`;
+    return `${rows.length} ${card ? "card " : loan ? "loan " : ""}transactions → ${bank}${matched ? ` · ${matched} matched to bills` : ""}`;
   }
 
   async function readDocument(job: FileJob, file: File) {
@@ -185,7 +194,7 @@ export default function SmartInbox() {
     const res = await fetch("/api/finance/chat-book", { method: "POST", body: fd });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error ?? "Couldn't read this file.");
-    if (data.parsed?.document_kind === "bank_statement") return readStatement(job, file);
+    if (data.parsed?.document_kind === "bank_statement" || /loan/i.test(String(data.parsed?.document_kind ?? ""))) return readStatement(job, file, false, LOAN_NAME.test(file.name) || /loan/i.test(String(data.parsed?.document_kind ?? "")));
     if (data.multi?.sentences?.length) {
       // Several invoices in one PDF: split them and draft each one on its own
       const sentences = data.multi.sentences as string[];
@@ -234,10 +243,10 @@ export default function SmartInbox() {
         const tpl = parseCashBankGrid(grid) ?? parseSimpleGrid(grid);
         if (tpl && tpl.length) { addItems(fromSimple(job, tpl)); note = `${tpl.length} entries (template)`; }
         else note = await readStatement(job, file);
-      } else if (STATEMENT_NAME.test(file.name) || CARD_NAME.test(file.name)) note = await readStatement(job, file);
+      } else if (STATEMENT_NAME.test(file.name) || CARD_NAME.test(file.name) || LOAN_NAME.test(file.name)) note = await readStatement(job, file);
       else note = await readDocument(job, file);   // bills are kept on the Shelf by FreBook itself
       setJob(job.id, { status: "done", note });
-      if (/\.(xlsx|xls|csv)$/i.test(file.name) || STATEMENT_NAME.test(file.name) || CARD_NAME.test(file.name)) keepOnShelf(file, "bank");
+      if (/\.(xlsx|xls|csv)$/i.test(file.name) || STATEMENT_NAME.test(file.name) || CARD_NAME.test(file.name) || LOAN_NAME.test(file.name)) keepOnShelf(file, "bank");
     } catch (e) {
       failedFiles.current.set(job.id, file);   // kept so "Retry failed" can read it again
       setJob(job.id, { status: "error", note: e instanceof Error ? e.message : "Couldn't read this file" });
@@ -298,7 +307,7 @@ export default function SmartInbox() {
     const fileKey = new Map(files.map(f => [f.id, f.key]));
     let ok = 0;
     const groups = new Map<string, Item[]>();
-    for (const it of todo) { const g = it.kind === "statement" ? `s|${it.card ? "card" : "bank"}|${it.bank}` : "doc"; groups.set(g, [...(groups.get(g) ?? []), it]); }
+    for (const it of todo) { const g = it.kind === "statement" ? `s|${it.card ? "card" : it.loan ? "loan" : "bank"}|${it.bank}` : "doc"; groups.set(g, [...(groups.get(g) ?? []), it]); }
     for (const group of groups.values())
     for (let i = 0; i < group.length; i += 100) {
       const chunk = group.slice(i, i + 100);
@@ -308,12 +317,12 @@ export default function SmartInbox() {
       const payload = chunk.map(it => ({
         ref: it.id, confirm_duplicate: !!it.dupOk, against_invoice_id: it.matchedId ?? null, party_name: it.party ?? null, client_key: `inbox:${fileKey.get(it.fileId)}:${it.narration.slice(0, 40)}:${it.date}:${it.amount}`.slice(0, 160),
         original_message: `Smart Inbox: ${it.narration}`,
-        transaction: { status: "complete", transaction_date: it.date, transaction_type: it.lines.some(l => isCashBank(l.account) && l.credit > 0) ? "payment" : it.lines.some(l => isCashBank(l.account) && l.debit > 0) ? "receipt" : "journal",
+        transaction: { status: "complete", transaction_date: it.date, transaction_type: it.kind === "statement" && !it.card ? (it.lines[0]?.account === it.bank ? "receipt" : "payment") : it.lines.some(l => isCashBank(l.account) && l.credit > 0) ? "payment" : it.lines.some(l => isCashBank(l.account) && l.debit > 0) ? "receipt" : "journal",
           narrative: it.narration.slice(0, 200), amount: it.amount, party_name: null, party_type: null, invoice_number: null, payment_mode: null, bank_account_name: null,
           lines: it.lines.map(l => ({ account: l.account.trim(), debit: l.debit, credit: l.credit, confidence: 1, is_new_account: isNew(l.account), suggested_type: null })),
           needs_clarification: [], warnings: [], confidence: 1 },
       }));
-      const r = await fetch("/api/finance/chat-book/confirm-batch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: payload, business_id: bizId, account_heads: heads, source: stmt ? "statement" : "template", ...(stmt ? { bank_account_name: chunk[0].bank, card: !!chunk[0].card, file_name: files.find(x => x.id === chunk[0].fileId)?.name ?? null } : {}) }) });
+      const r = await fetch("/api/finance/chat-book/confirm-batch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: payload, business_id: bizId, account_heads: heads, source: stmt ? "statement" : "template", ...(stmt ? { bank_account_name: chunk[0].bank, card: !!chunk[0].card, loan: !!chunk[0].loan, file_name: files.find(x => x.id === chunk[0].fileId)?.name ?? null } : {}) }) });
       const d = await r.json().catch(() => ({}));
       if (d.needs_heads?.length) {
         setHeads(h => ({ ...Object.fromEntries((d.needs_heads as { account: string; suggested: string }[]).map(n => [n.account, guessGroup(n.account)])), ...h }));

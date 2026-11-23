@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     if (!bank_account_id || !transactions?.length) {
       return NextResponse.json({ error: "Choose the bank account and at least one transaction." }, { status: 400 });
     }
-    try { await loadBankAccount(supabase, business_id, bank_account_id); }
+    try { await loadBankAccount(supabase, business_id, bank_account_id, { loan: true }); }
     catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "Choose a bank ledger." }, { status: 400 }); }
 
     const rows = transactions.map(t => ({ key: t.id, date: String(t.date).slice(0, 10), amount: (t.debit || 0) > 0 ? t.debit : t.credit, ref: extractBankRef(t.description) }));

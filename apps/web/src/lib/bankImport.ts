@@ -42,12 +42,14 @@ export function findDuplicates(rows: BankRow[], existing: ImportedBankEntry[]): 
 }
 
 /** The import's bank account — must be one of this business's cash/bank ledgers. */
+/** A loan / overdraft ledger (a liability, not its interest or charges): the account side of a loan statement */
+export const isLoanAccount = (a?: RuleAccount | null) => !!a && a.type === "liability" && /loan|\bod\b|overdraft|borrow/i.test(a.name) && !/interest|charges?|fees?|processing/i.test(a.name);
 export const isCardAccount = (a?: RuleAccount | null) => !!a && /credit\s*card/i.test(a.name) && !/charges?|interest|fees?/i.test(a.name);
-export async function loadBankAccount(sb: SupabaseClient, businessId: string, accountId: string, opts: { card?: boolean } = {}): Promise<RuleAccount> {
+export async function loadBankAccount(sb: SupabaseClient, businessId: string, accountId: string, opts: { card?: boolean; loan?: boolean } = {}): Promise<RuleAccount> {
   const { data } = await sb.from("fw_fin_chart_of_accounts").select("id,name,type,sub_type,is_group").eq("business_id", businessId).eq("id", accountId).maybeSingle();
   const a = data as RuleAccount | null;
-  const ok = !!a && !a.is_group && (isCashBankAccount(a) || (opts.card && isCardAccount(a)));
-  if (!ok) throw new Error(`Choose a ${opts.card ? "credit card" : "bank or cash"} ledger for this statement${a ? ` — "${a.name}" is not one` : ""}.`);
+  const ok = !!a && !a.is_group && (isCashBankAccount(a) || (opts.card && isCardAccount(a)) || (opts.loan && isLoanAccount(a)));
+  if (!ok) throw new Error(`Choose a ${opts.card ? "credit card" : opts.loan ? "loan" : "bank or cash"} ledger for this statement${a ? ` — "${a.name}" is not one` : ""}.`);
   return a!;
 }
 
@@ -68,4 +70,16 @@ export async function importedOnAccount(sb: SupabaseClient, businessId: string, 
 export async function createBatch(sb: SupabaseClient, b: { businessId: string; bankAccountId: string; fileName: string | null; rows: number; actorId: string }): Promise<string | null> {
   const { data, error } = await sb.from("fw_fin_bank_import_batches").insert({ business_id: b.businessId, bank_account_id: b.bankAccountId, file_name: b.fileName, row_count: b.rows, created_by: b.actorId }).select("id").single();
   return error ? null : (data as { id: string }).id;
+}
+
+// Loan statements: the description tells the other ledger (the loan account itself is the "bank" side)
+export function loanLedger(desc: string, bankName: string): string | null {
+  const d = desc.toLowerCase();
+  if (/penal|overdue\s*charge|late\s*(payment)?\s*(fee|charge)|bounce|dishonou?r|return\s*charge/.test(d)) return "Penal Interest & Charges";
+  if (/interest|\bint\b|\bint\./.test(d)) return "Interest on Loan";
+  if (/process|documentation|stamp|login\s*fee|admin(istrative)?\s*(fee|charge)|foreclos|pre-?closure|prepayment\s*charge/.test(d)) return "Loan Processing Charges";
+  if (/insurance|premium|\blic\b|policy/.test(d)) return "Insurance";
+  if (/\b(gst|igst|cgst|sgst)\b/.test(d)) return "Input GST";
+  if (/disburs|sanction|loan\s*(amount|credited|released)|\bemi\b|repay|instal?l?ment|nach|ecs|\bsi\b|standing|auto\s*debit|mandate|neft|rtgs|imps|upi|cheque|chq|clearing|transfer|received|payment|part\s*pay/.test(d)) return bankName;
+  return null;
 }
