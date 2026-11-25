@@ -617,6 +617,24 @@ export default function FreBookPage() {
 
   // ── File upload: FreWork template → row queue, anything else → AI reads it ──
   async function handleFile(file: File) {
+    // A GSTR-2B / 2A from the GST portal is not an entry: it goes on the Shelf (GST rack) for ITC matching
+    const ret = file.name.match(/gstr[-_ ]?(2b|2a)/i);
+    if (ret && bizId) {
+      const kind = `GSTR-${ret[1].toUpperCase()}`;
+      const pm = file.name.match(/(?:^|[^0-9])(0[1-9]|1[0-2])(20\d{2})(?![0-9])/);
+      const period = pm ? `${pm[2]}-${pm[1]}` : "";
+      const label = period ? new Date(`${period}-01`).toLocaleString("en-IN", { month: "short", year: "numeric" }) : "";
+      setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: "user", text: `📎 ${file.name}`, timestamp: Date.now() }]);
+      const fd = new FormData();
+      fd.append("business_id", bizId); fd.append("file", file); fd.append("rack", "gst"); fd.append("source", "chat-book");
+      fd.append("title", `${kind}${label ? ` ${label}` : ""}`); if (period) fd.append("period", period);
+      const r = await fetch("/api/finance/shelf", { method: "POST", body: fd }).catch(() => null);
+      setMessages(prev => [...prev, { id: `s-${Date.now()}`, role: "system", timestamp: Date.now(),
+        text: r?.ok
+          ? `📚 ${kind}${label ? ` for ${label}` : ""} saved on the Shelf (GST rack) — it isn't a voucher, so nothing was booked. Open ITC vs 2B (/finance/gst/itc) and press “2B from the Shelf” to match it with your purchase bills.`
+          : `⚠ Couldn't save ${file.name} to the Shelf. Upload it in ITC vs 2B (/finance/gst/itc) instead.` }]);
+      return;
+    }
     if (/statement|stmt|passbook|e-?statement/i.test(file.name)) {
       setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: "user", text: `📎 ${file.name}`, timestamp: Date.now() }]);
       setStatementFile(file);

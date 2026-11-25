@@ -11,7 +11,7 @@ const MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct
 function ymOf(t: string): string {
   const s = t.toLowerCase();
   const iso = s.match(/\b(20\d{2})-(0[1-9]|1[0-2])\b/); if (iso) return `${iso[1]}-${iso[2]}`;
-  const mm = s.match(/\b(0[1-9]|1[0-2])(20\d{2})\b/); if (mm) return `${mm[2]}-${mm[1]}`;
+  const mm = s.match(/(?:^|[^0-9])(0[1-9]|1[0-2])(20\d{2})(?![0-9])/);   // "102026_GSTIN_GSTR2B" too (underscore is a word character) if (mm) return `${mm[2]}-${mm[1]}`;
   const nm = s.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s\-'.,]*(\d{4}|\d{2})\b/);
   return nm ? `${nm[2].length === 2 ? "20" + nm[2] : nm[2]}-${String(MON.indexOf(nm[1]) + 1).padStart(2, "0")}` : "";
 }
