@@ -1,6 +1,7 @@
 "use client";
 import { shelfFile, type ShelfFile } from "@/lib/shelfFile";
 import { takePendingFiles } from "@/lib/pendingFile";
+import { parse2BGrid, parse2BJson, normDoc, type TwoBDoc } from "@/lib/itcMatch";
 import { looksLikeLoanStatement, normaliseLoanRows, suggestLoanLedger, LOAN_FILE } from "@/lib/bankImport";
 import { isCashBankAccount } from "@/lib/journalRules";
 import { readBankStatement } from "@/lib/readStatement";
@@ -30,6 +31,7 @@ type Item = {
   kind: "template" | "statement" | "bill";
   bank?: string; card?: boolean; loan?: boolean;      // statements: the bank / card ledger of the file — the server posts against it
   dupOk?: boolean;                    // the user checked a possible duplicate and chose to post it anyway
+  vtype?: string; ref?: string;      // GSTR-2B bills: purchase / debit note, with the supplier's invoice number
 };
 type FileJob = { id: string; name: string; size: number; kind: string; status: "queued" | "reading" | "done" | "error"; note?: string; key: string; bank?: string };
 type InboxDraft = { items: Item[]; heads: Record<string, string>; files: FileJob[]; bankLedger: string; cardLedger: string };
@@ -125,6 +127,48 @@ export default function SmartInbox() {
       lines: e.lines.map((l: SimpleLine) => ({ account: l.ledger, debit: l.debit, credit: l.credit })),
       state: e.error ? "check" : "ready", reason: e.error ?? undefined, kind: "template",
     }));
+
+  // GSTR-2B bill details (B2B, B2BA amendments, B2B-CDNR / CDNRA notes) → purchase entries to review.
+  // Bills already in your books (same supplier invoice number) are left out.
+  async function from2B(job: FileJob, file: File): Promise<string> {
+    let docs: TwoBDoc[] = [];
+    if (/\.json$/i.test(file.name)) docs = parse2BJson(JSON.parse(await file.text()));
+    else {
+      const XLSX = await import("xlsx");
+      const wb = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+      for (const name of wb.SheetNames.filter(n => /b2b/i.test(n))) docs.push(...parse2BGrid(XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "", raw: true }) as unknown[][]));
+    }
+    if (!docs.length) return "";
+    const dates = docs.map(d => d.date).filter(Boolean).sort();
+    const { data: had } = await supabase.from("fw_fin_journals").select("reference_no").eq("business_id", bizId).neq("status", "voided")
+      .in("type", ["purchase", "debit_note", "journal"]).not("reference_no", "is", null).gte("date", dates[0] ?? "2000-01-01").limit(10000);
+    const booked = new Set(((had ?? []) as { reference_no: string | null }[]).map(j => normDoc(j.reference_no ?? "")).filter(Boolean));
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    let skipped = 0;
+    const out: Item[] = [];
+    const heads: Record<string, string> = {};
+    for (const d of docs) {
+      if (booked.has(normDoc(d.docNo))) { skipped++; continue; }
+      const back = d.value < 0 || d.taxable < 0;        // supplier's credit note: a purchase return
+      const tx = { igst: Math.abs(d.igst), cgst: Math.abs(d.cgst), sgst: Math.abs(d.sgst), cess: Math.abs(d.cess) };
+      const taxable = Math.abs(d.taxable), total = r2(taxable + tx.igst + tx.cgst + tx.sgst + tx.cess);
+      const supplier = (d.supplier || d.gstin || "Supplier").trim();
+      heads[supplier] = "creditors";
+      const dr: Line[] = [{ account: "Purchases", debit: taxable, credit: 0 },
+        ...(tx.igst ? [{ account: "Input IGST", debit: tx.igst, credit: 0 }] : []), ...(tx.cgst ? [{ account: "Input CGST", debit: tx.cgst, credit: 0 }] : []),
+        ...(tx.sgst ? [{ account: "Input SGST", debit: tx.sgst, credit: 0 }] : []), ...(tx.cess ? [{ account: "Input Cess", debit: tx.cess, credit: 0 }] : [])];
+      const lines: Line[] = back
+        ? [{ account: supplier, debit: total, credit: 0 }, ...dr.map(l => ({ account: l.account, debit: 0, credit: l.debit }))]
+        : [...dr, { account: supplier, debit: 0, credit: total }];
+      const why = d.rcm ? "Reverse charge — the tax is payable by you; check the tax lines" : !d.itcAvailable ? "ITC not available on this bill — the tax may belong in the cost" : undefined;
+      out.push({ id: uid("g"), fileId: job.id, date: d.date, amount: total, lines, kind: "bill", vtype: back ? "debit_note" : "purchase", ref: d.docNo,
+        narration: `${back ? "Credit note" : d.note ? "Debit note" : "Purchase"} ${d.docNo} · ${supplier}${d.gstin ? ` (${d.gstin})` : ""} · from GSTR-2B`.slice(0, 200),
+        state: why ? "check" : "ready", reason: why });
+    }
+    setHeads(h => ({ ...heads, ...h }));
+    addItems(out);
+    return ` · ${out.length} bill${out.length === 1 ? "" : "s"} to review${skipped ? ` (${skipped} already in your books)` : ""}`;
+  }
 
   async function readStatement(job: FileJob, file: File, card = CARD_NAME.test(file.name) && !LOAN_NAME.test(file.name), loanIn = LOAN_NAME.test(file.name)) {
     let data: Awaited<ReturnType<typeof readBankStatement>> | null = null, password: string | undefined;
@@ -251,7 +295,9 @@ export default function SmartInbox() {
           const r = await fetch("/api/finance/shelf", { method: "POST", body: fd }).catch(() => null);
           if (!r?.ok) throw new Error(`Couldn't save this ${kind} to the Shelf — upload it in GST → ITC vs 2B instead.`);
         }
-        setJob(job.id, { status: "done", note: `${kind}${label ? ` ${label}` : ""} → Shelf (GST). Not entries — match it in GST → ITC vs 2B` });
+        let bills = "";
+        if (kind === "GSTR-2B") { try { bills = await from2B(job, file); } catch { bills = " · couldn't read its bill details"; } }
+        setJob(job.id, { status: "done", note: `${kind}${label ? ` ${label}` : ""} → Shelf (GST)${bills || " · match it in GST → ITC vs 2B"}` });
         return;
       }
       if (/26\s?as|form[\s_-]?(16|130|168)/i.test(file.name) && /\.pdf$/i.test(file.name)) {
@@ -363,8 +409,8 @@ export default function SmartInbox() {
       const payload = chunk.map(it => ({
         ref: it.id, confirm_duplicate: !!it.dupOk, against_invoice_id: it.matchedId ?? null, party_name: it.party ?? null, client_key: `inbox:${fileKey.get(it.fileId)}:${it.narration.slice(0, 40)}:${it.date}:${it.amount}`.slice(0, 160),
         original_message: `Smart Inbox: ${it.narration}`,
-        transaction: { status: "complete", transaction_date: it.date, transaction_type: it.kind === "statement" && it.loan ? "journal" : it.kind === "statement" && !it.card ? (it.lines[0]?.account === it.bank ? "receipt" : "payment") : it.lines.some(l => isCashBank(l.account) && l.credit > 0) ? "payment" : it.lines.some(l => isCashBank(l.account) && l.debit > 0) ? "receipt" : "journal",
-          narrative: it.narration.slice(0, 200), amount: it.amount, party_name: null, party_type: null, invoice_number: null, payment_mode: null, bank_account_name: null,
+        transaction: { status: "complete", transaction_date: it.date, transaction_type: it.vtype ? it.vtype : it.kind === "statement" && it.loan ? "journal" : it.kind === "statement" && !it.card ? (it.lines[0]?.account === it.bank ? "receipt" : "payment") : it.lines.some(l => isCashBank(l.account) && l.credit > 0) ? "payment" : it.lines.some(l => isCashBank(l.account) && l.debit > 0) ? "receipt" : "journal",
+          narrative: it.narration.slice(0, 200), amount: it.amount, party_name: null, party_type: null, invoice_number: it.ref ?? null, payment_mode: null, bank_account_name: null,
           lines: it.lines.map(l => ({ account: l.account.trim(), debit: l.debit, credit: l.credit, confidence: 1, is_new_account: isNew(l.account), suggested_type: null })),
           needs_clarification: [], warnings: [], confidence: 1 },
       }));
