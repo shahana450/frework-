@@ -113,7 +113,8 @@ export function suggestLoanLedger(desc: string, raises: boolean, payBank: string
   const d = desc.toLowerCase();
   const find = (re: RegExp, fallback: string) => ledgerNames.find(n => re.test(n) && n.toLowerCase() !== loanName.toLowerCase()) ?? fallback;
   // An account number in the line that is one of your ledgers (e.g. the current account the EMI came from)
-  const acct = (desc.match(/\d{8,}/g) ?? []).map(n => ledgerNames.find(l => l.replace(/\s/g, "").includes(n) && l.toLowerCase() !== loanName.toLowerCase())).find(Boolean);
+  // Only the number the money came from / went to ("Recovery From -11115500003937") — the loan's own number is in every line
+  const acct = [...desc.matchAll(/(?:from|to|by|a\/c)\s*[-:#]?\s*(\d{8,})/gi)].map(m => m[1]).map(n =>ledgerNames.find(l => l.replace(/\s/g, "").includes(n) && l.toLowerCase() !== loanName.toLowerCase())).find(Boolean);
   if (isDisbursement(desc)) return acct ?? payBank;
   if (/penal|overdue\s*charge|late\s*(payment)?\s*(fee|charge)|bounce|dishonou?r|return\s*charge/.test(d)) return find(/penal/i, "Penal Interest & Charges");
   if (/process|documentation|stamp|login\s*fee|admin(istrative)?\s*(fee|charge)|foreclos|pre-?closure|prepayment\s*charge/.test(d)) return find(/processing|loan\s*charges/i, "Loan Processing Charges");
