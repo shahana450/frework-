@@ -237,6 +237,23 @@ export default function SmartInbox() {
     setJob(job.id, { status: "reading", note: "Reading…" });
     try {
       let note = "";
+      // GSTR-2B / 2A from the GST portal: not entries — filed on the Shelf (GST rack, its month) for ITC matching
+      const ret = file.name.match(/gstr[-_ ]?(2b|2a)/i);
+      if (ret) {
+        const kind = `GSTR-${ret[1].toUpperCase()}`;
+        const pm = file.name.match(/(?:^|[^0-9])(0[1-9]|1[0-2])(20\d{2})(?![0-9])/);
+        const period = pm ? `${pm[2]}-${pm[1]}` : "";
+        const label = period ? new Date(`${period}-01`).toLocaleString("en-IN", { month: "short", year: "numeric" }) : "";
+        if (!(file as ShelfFile).fromShelf) {
+          const fd = new FormData();
+          fd.append("business_id", bizId); fd.append("file", file); fd.append("rack", "gst"); fd.append("source", "inbox");
+          fd.append("title", `${kind}${label ? ` ${label}` : ""}`); if (period) fd.append("period", period);
+          const r = await fetch("/api/finance/shelf", { method: "POST", body: fd }).catch(() => null);
+          if (!r?.ok) throw new Error(`Couldn't save this ${kind} to the Shelf — upload it in GST → ITC vs 2B instead.`);
+        }
+        setJob(job.id, { status: "done", note: `${kind}${label ? ` ${label}` : ""} → Shelf (GST). Not entries — match it in GST → ITC vs 2B` });
+        return;
+      }
       if (/26\s?as|form[\s_-]?(16|130|168)/i.test(file.name) && /\.pdf$/i.test(file.name)) {
         setJob(job.id, { status: "done", note: "Tax document — open Reports → Form 168 / 130 to read it" });
         return;
