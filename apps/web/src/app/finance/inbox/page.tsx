@@ -298,15 +298,17 @@ export default function SmartInbox() {
 
   // From the Shelf: pick stored bills / statements and read them like dropped files
   const [shelfOpen, setShelfOpen] = useState(false);
-  const [shelfItems, setShelfItems] = useState<{ id: string; rack: string; title: string; file_name: string | null; mime: string | null; created_at: string }[] | null>(null);
+  const [shelfItems, setShelfItems] = useState<{ id: string; rack: string; title: string; file_name: string | null; mime: string | null; size_bytes: number | null; created_at: string }[] | null>(null);
   const [shelfPick, setShelfPick] = useState<Set<string>>(new Set());
   const [shelfBusy, setShelfBusy] = useState(false);
+  const [shelfQ, setShelfQ] = useState("");
+  const [shelfRack, setShelfRack] = useState<string>("all");
   async function openShelf() {
     setShelfOpen(o => !o);
     if (shelfItems || !bizId) return;
     const r = await fetch(`/api/finance/shelf?business_id=${bizId}`).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
-    setShelfItems(((d.items ?? []) as { id: string; rack: string; title: string; file_name: string | null; mime: string | null; created_at: string }[])
+    setShelfItems(((d.items ?? []) as { id: string; rack: string; title: string; file_name: string | null; mime: string | null; size_bytes: number | null; created_at: string }[])
       .filter(i => /pdf|image|sheet|excel|csv/i.test(`${i.mime ?? ""} ${i.file_name ?? ""}`) && ["bills", "bank", "others", "payroll", "gst"].includes(i.rack)));
   }
   async function readFromShelf() {
@@ -500,28 +502,93 @@ export default function SmartInbox() {
           </div>
         </div>
 
-        {/* Documents already on the Shelf: tick and read them */}
-        {shelfOpen && (
-          <div style={{ background: "#FFFDF8", border: `1px solid ${C.line}`, borderRadius: 18, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <b style={{ fontSize: 14 }}>From the Shelf</b>
-              <span style={{ fontSize: 12.5, color: C.muted, flex: 1 }}>Bills, statements and Excel files you kept. Tick them and FreBook reads them like new uploads.</span>
-              <button onClick={readFromShelf} disabled={!shelfPick.size || shelfBusy} style={{ ...btn(true), opacity: !shelfPick.size || shelfBusy ? 0.5 : 1 }}>{shelfBusy ? "Fetching…" : `Read ${shelfPick.size || ""} file${shelfPick.size === 1 ? "" : "s"}`}</button>
+        {/* From the Shelf: one row per file, search, rack filter, select all */}
+        {shelfOpen && (() => {
+          const RK: Record<string, string> = { bills: "Bills", bank: "Bank", gst: "GST", payroll: "Payroll", others: "Other" };
+          // The same file kept more than once shows once (the GST copy wins)
+          const seen = new Map<string, (typeof all)[number]>();
+          const all = shelfItems ?? [];
+          for (const i of all) { const k = `${i.file_name ?? i.title}|${i.size_bytes ?? ""}`; const had = seen.get(k); if (!had || (i.rack === "gst" && had.rack !== "gst")) seen.set(k, i); }
+          const uniq = [...seen.values()].sort((x, y) => y.created_at.localeCompare(x.created_at));
+          const q = shelfQ.trim().toLowerCase();
+          const list = uniq.filter(i => (shelfRack === "all" || i.rack === shelfRack) && (!q || `${i.title} ${i.file_name ?? ""}`.toLowerCase().includes(q)));
+          const counts = uniq.reduce<Record<string, number>>((m, i) => { m[i.rack] = (m[i.rack] ?? 0) + 1; return m; }, {});
+          const allOn = list.length > 0 && list.every(i => shelfPick.has(i.id));
+          const icon = (i: (typeof all)[number]) => /sheet|excel|csv|\.xlsx?$|\.csv$/i.test(`${i.mime ?? ""} ${i.file_name ?? ""}`) ? "XLS" : /pdf/i.test(`${i.mime ?? ""} ${i.file_name ?? ""}`) ? "PDF" : "IMG";
+          return (
+          <section className="ib-shelf" aria-label="From the Shelf">
+            <div className="ib-shelf-head">
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", color: "#9A6B22" }}>FROM THE SHELF</div>
+                <div style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: 22, fontWeight: 700, color: C.ink }}>Read documents you already kept</div>
+              </div>
+              <button onClick={() => setShelfOpen(false)} aria-label="Close" className="ib-x">×</button>
             </div>
-            {!shelfItems ? <span style={{ fontSize: 13, color: C.muted }}>Loading the Shelf…</span>
-              : !shelfItems.length ? <span style={{ fontSize: 13, color: C.muted }}>No bills or statements on the Shelf yet.</span>
-              : <div style={{ display: "flex", flexDirection: "column", maxHeight: 280, overflowY: "auto" }}>
-                  {shelfItems.map(i => (
-                    <label key={i.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 4px", borderTop: `1px solid ${C.line}`, fontSize: 13, cursor: "pointer" }}>
+            <div className="ib-shelf-bar">
+              <input value={shelfQ} onChange={e => setShelfQ(e.target.value)} placeholder="Search the Shelf…" aria-label="Search the Shelf" className="ib-shelf-q" />
+              {(["all", "bills", "bank", "gst", "payroll", "others"] as const).filter(k => k === "all" || counts[k]).map(k => (
+                <button key={k} onClick={() => setShelfRack(k)} className={"ib-chip" + (shelfRack === k ? " on" : "")} aria-pressed={shelfRack === k}>
+                  {k === "all" ? "All" : RK[k]}<span>{k === "all" ? uniq.length : counts[k]}</span>
+                </button>
+              ))}
+            </div>
+            {!shelfItems ? <div className="ib-shelf-empty">Loading the Shelf…</div>
+              : !uniq.length ? <div className="ib-shelf-empty">Nothing on the Shelf yet. Files you read here are kept there automatically.</div>
+              : <>
+                <label className="ib-row ib-row-all">
+                  <input type="checkbox" checked={allOn} onChange={() => setShelfPick(p => { const n = new Set(p); if (allOn) list.forEach(i => n.delete(i.id)); else list.forEach(i => n.add(i.id)); return n; })} />
+                  <span>{allOn ? "Clear selection" : `Select all ${list.length}`}</span>
+                  {all.length > uniq.length && <span style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{all.length - uniq.length} duplicate cop{all.length - uniq.length === 1 ? "y" : "ies"} hidden</span>}
+                </label>
+                <div className="ib-shelf-list">
+                  {list.map(i => (
+                    <label key={i.id} className={"ib-row" + (shelfPick.has(i.id) ? " on" : "")}>
                       <input type="checkbox" checked={shelfPick.has(i.id)} onChange={() => setShelfPick(p => { const n = new Set(p); if (n.has(i.id)) n.delete(i.id); else n.add(i.id); return n; })} />
-                      <span style={pill("#EFE8D9", C.ink)}>{i.rack === "bank" ? "Bank" : i.rack === "gst" ? "GST" : i.rack === "bills" ? "Bill" : i.rack === "payroll" ? "Payroll" : "Other"}</span>
-                      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{i.title}</span>
-                      <span style={{ color: C.muted, fontSize: 12 }}>{new Date(i.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                      <span className={"ib-ft ib-ft-" + icon(i)}>{icon(i)}</span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <b style={{ display: "block", fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{i.title}</b>
+                        {i.file_name && i.file_name !== i.title && <small style={{ display: "block", fontSize: 11.5, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{i.file_name}</small>}
+                      </span>
+                      <span className={"ib-rk ib-rk-" + i.rack}>{RK[i.rack] ?? "Other"}</span>
+                      <span style={{ color: C.muted, fontSize: 12, width: 52, textAlign: "right" }}>{new Date(i.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                     </label>
                   ))}
-                </div>}
-          </div>
-        )}
+                  {!list.length && <div className="ib-shelf-empty">No match. Try another word or rack.</div>}
+                </div>
+              </>}
+            <div className="ib-shelf-foot">
+              <span style={{ fontSize: 12.5, color: C.muted }}>GSTR-2B files are filed for ITC matching, not posted. Bills and statements become entries you approve.</span>
+              <button onClick={readFromShelf} disabled={!shelfPick.size || shelfBusy} className="ib-read">{shelfBusy ? "Fetching…" : shelfPick.size ? `Read ${shelfPick.size} file${shelfPick.size === 1 ? "" : "s"} →` : "Tick files to read"}</button>
+            </div>
+            <style>{`
+              .ib-shelf{background:#FFFDF8;border:1px solid #EFE2C4;border-radius:24px;padding:20px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 40px -30px rgba(154,107,34,.55)}
+              .ib-shelf-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+              .ib-x{width:34px;height:34px;border-radius:999px;border:1px solid #E6DFD0;background:#fff;font-size:18px;cursor:pointer;color:#0B2C25}
+              .ib-shelf-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+              .ib-shelf-q{flex:1 1 220px;height:40px;border-radius:999px;border:1px solid #E6DFD0;background:#fff;padding:0 16px;font:inherit;font-size:13.5px;outline:none}
+              .ib-shelf-q:focus{border-color:#E9C27A;box-shadow:0 0 0 3px rgba(233,194,122,.25)}
+              .ib-chip{height:34px;padding:0 12px;border-radius:999px;border:1px solid #E6DFD0;background:#fff;color:#0B2C25;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+              .ib-chip span{font-size:11px;background:#F4EEDF;border-radius:999px;padding:1px 7px}
+              .ib-chip.on{background:#0B2C25;color:#fff;border-color:#0B2C25}.ib-chip.on span{background:#E9C27A;color:#0B2C25}
+              .ib-shelf-list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;padding-right:2px}
+              .ib-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;border:1px solid #F1E8D6;background:#fff;cursor:pointer}
+              .ib-row:hover{border-color:#E9C27A}.ib-row.on{border-color:#0B2C25;background:#F2FAF6}
+              .ib-row-all{background:transparent;border:none;padding:2px 12px;font-size:13px;font-weight:700;color:#0B2C25}
+              .ib-row input{width:17px;height:17px;accent-color:#0B2C25;flex:none}
+              .ib-ft{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:10.5px;font-weight:800;letter-spacing:.04em;flex:none}
+              .ib-ft-XLS{background:#E3F6EE;color:#0B7A55}.ib-ft-PDF{background:#FDECEA;color:#B4321F}.ib-ft-IMG{background:#F1EBFE;color:#7C3AED}
+              .ib-rk{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;background:#F4EEDF;color:#9A6B22;flex:none}
+              .ib-rk-gst{background:#E3F6EE;color:#0B7A55}.ib-rk-bank{background:#E0F5F9;color:#0E7490}.ib-rk-bills{background:#F1EBFE;color:#7C3AED}
+              .ib-shelf-empty{padding:18px;text-align:center;font-size:13px;color:#5E6B66}
+              .ib-shelf-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid #F1E8D6;padding-top:12px}
+              .ib-shelf-foot span{flex:1 1 260px}
+              .ib-read{height:42px;padding:0 20px;border-radius:999px;border:none;background:#0B2C25;color:#fff;font:inherit;font-weight:800;font-size:14px;cursor:pointer}
+              .ib-read:disabled{background:#C9CFC9;cursor:default}
+              .ib-chip:focus-visible,.ib-read:focus-visible,.ib-x:focus-visible{outline:2px solid #E9C27A;outline-offset:2px}
+            `}</style>
+          </section>
+          );
+        })()}
 
         {/* Files being read */}
         {files.length > 0 && (

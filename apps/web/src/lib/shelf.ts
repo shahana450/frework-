@@ -34,6 +34,16 @@ const safeName = (s: string) => s.replace(/[^\w.\-() ]+/g, "_").slice(0, 120) ||
 /** Stores the file in the private bucket and records it. Never throws — filing must not break the caller. */
 export async function fileToShelf(sb: SupabaseClient, f: ShelfFile): Promise<{ id: string } | null> {
   try {
+    // The same file (name + size) is kept once. Filing it again into a more specific rack (e.g. a GSTR-2B first
+    // taken for a bank statement) moves the one copy there instead of adding another.
+    const { data: same } = await sb.from("fw_fin_shelf_items").select("id,rack").eq("business_id", f.businessId)
+      .eq("file_name", f.fileName.slice(0, 200)).eq("size_bytes", f.bytes.byteLength).is("deleted_at", null).limit(1).maybeSingle();
+    if (same) {
+      const specific = ["gst", "income_tax", "tds", "notices", "payroll", "registrations"];
+      if (same.rack !== f.rack && specific.includes(f.rack) && !specific.includes(same.rack))
+        await sb.from("fw_fin_shelf_items").update({ rack: f.rack, title: f.title.slice(0, 200), period: f.period ?? null, doc_type: f.docType ?? null }).eq("id", same.id);
+      return { id: same.id as string };
+    }
     const path = `${f.businessId}/${f.rack}/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${safeName(f.fileName)}`;
     const up = await sb.storage.from("shelf").upload(path, f.bytes, { contentType: f.mime || "application/octet-stream", upsert: false });
     if (up.error) { console.error("shelf upload", up.error.message); return null; }
