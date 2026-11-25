@@ -911,7 +911,7 @@ export default function BankingPage() {
               {/* Bank account selector */}
               <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
                 <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#6B7570", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Statement account</div>
-                <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} style={{ ...inp, width: "100%", cursor: "pointer", fontSize: "0.8rem" }}>
+                <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} aria-label="Statement account" title="Click to choose the bank, loan or other ledger this statement belongs to" style={{ ...inp, width: "100%", cursor: "pointer", height: 42, padding: "0 36px 0 14px", borderRadius: 12, border: "1.5px solid #12352D", background: "#FFFFFF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2312352D' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center", appearance: "none", WebkitAppearance: "none", fontSize: "0.92rem", fontWeight: 700, color: "#12352D" }}>
                   <option value="">— select account —</option>
                   <optgroup label="Bank & cash">{bankAccounts.filter(a => !isLoanAccount(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
                   <optgroup label="Loans">{bankAccounts.filter(a => isLoanAccount(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
