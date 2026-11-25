@@ -526,8 +526,39 @@ export default function BankingPage() {
         .bs-filter-btn.active { background: rgba(18,53,45,0.12); border-color: rgba(18,53,45,0.4); color: #12352D; }
         .ledger-sel { background: #FFFFFF; border: 1px solid #E6DFD0; color: #10241F; padding: 0 10px; height: 34px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; outline: none; width: 100%; cursor: text; min-width: 230px; max-width: 320px; font-family: inherit; }
         .bi-review { display: flex; flex-direction: column; gap: 14px; }
+        .bi-card { background: #FFFDF8; border: 1px solid #EFE2C4; border-radius: 18px; box-shadow: 0 14px 30px -26px rgba(154,107,34,.55); }
+        .bi-main > div:last-child { border-radius: 18px; }
+        .bi-hero { display: grid; grid-template-columns: minmax(240px, 1.1fr) minmax(280px, 1.6fr) minmax(220px, 0.9fr); gap: 22px; padding: 22px 24px; border-radius: 26px; color: #FFFFFF;
+          background: radial-gradient(700px 260px at 100% 0%, rgba(233,194,122,.16), transparent 60%), linear-gradient(160deg, #0A1F1B, #0C2622 60%, #0F2E28); box-shadow: 0 30px 60px -36px rgba(6,26,22,.8); }
+        .bi-h-lbl { font-size: 10.5px; font-weight: 800; letter-spacing: .16em; color: #B9D0C7; }
+        .bi-h-acct, .bi-h-push { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+        .bi-h-sel { height: 46px; border-radius: 14px; border: 1px solid rgba(233,194,122,.6); background: #FFFDF8; color: #0B2C25; font: inherit; font-size: 15px; font-weight: 800; padding: 0 12px; cursor: pointer; }
+        .bi-h-note { font-size: 12px; color: #B9D0C7; line-height: 1.4; }
+        .bi-h-add { flex: 1; min-width: 0; height: 34px; border-radius: 10px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.06); color: #FFFFFF; padding: 0 10px; font: inherit; font-size: 12.5px; outline: none; }
+        .bi-h-add::placeholder { color: #8FA8A0; }
+        .bi-h-addbtn { border: none; border-radius: 10px; background: #E9C27A; color: #0B2C25; font-weight: 800; font-size: 12.5px; padding: 0 12px; cursor: pointer; }
+        .bi-h-mid { display: grid; grid-template-rows: auto auto; gap: 14px; min-width: 0; }
+        .bi-h-prog { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+        .bi-h-big { font-family: 'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif; font-size: 28px; font-weight: 700; }
+        .bi-h-big small { font-size: 15px; color: #B9D0C7; }
+        .bi-h-bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; }
+        .bi-h-bar span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #E9C27A, #F3D9A2); transition: width .4s ease; }
+        .bi-h-tags { display: flex; gap: 8px; flex-wrap: wrap; font-size: 11.5px; }
+        .bi-h-tags span { padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.08); color: #DCE9E3; }
+        .bi-h-tot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .bi-h-tot > div { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .bi-h-tot b { font-family: 'IBM Plex Mono', monospace; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bi-h-tot small { font-size: 11.5px; color: #B9D0C7; }
+        .bi-h-push { justify-content: center; }
+        .bi-h-go { height: 56px; border-radius: 16px; border: none; background: linear-gradient(135deg, #F3D9A2, #E9C27A); color: #10241F; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 14px 28px -16px rgba(233,194,122,.9); }
+        .bi-h-go:disabled { background: rgba(255,255,255,.1); color: #8FA8A0; box-shadow: none; cursor: default; }
+        .bi-h-again { background: none; border: 1px dashed rgba(255,255,255,.25); border-radius: 12px; color: #DCE9E3; font: inherit; font-size: 12.5px; font-weight: 700; padding: 9px 0; cursor: pointer; }
+        .bi-done { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 16px; border-radius: 16px; background: #E3F6EE; border: 1px solid rgba(11,122,85,.25); font-size: 13px; color: #0B4F38; }
+        .bi-done b { font-size: 14px; } .bi-done a { color: #0B7A55; font-weight: 800; text-decoration: none; }
+        .bi-hero select:focus-visible, .bi-h-go:focus-visible, .bi-h-again:focus-visible { outline: 2px solid #E9C27A; outline-offset: 2px; }
+        @media (max-width: 980px) { .bi-hero { grid-template-columns: 1fr; } }
         .bi-main { min-width: 0; }
-        .bi-side { order: -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-items: stretch; }
+        .bi-side { order: -1; display: flex; flex-direction: column; gap: 10px; }
         .bi-side > div { margin-bottom: 0 !important; }
         .bi-desc { min-width: 220px; max-width: 420px; line-height: 1.35; display: table-cell; }
         .bi-desc { white-space: normal; word-break: break-word; }
@@ -712,7 +743,7 @@ export default function BankingPage() {
             <div className="bi-main">
 
               {/* Filters row */}
-              <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, padding: "0.8rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
+              <div className="bi-card" style={{ padding: "12px 14px", marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                 {/* Search */}
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search description…" style={{ ...inp, flex: "1 1 180px", minWidth: 140 }} />
 
@@ -739,9 +770,9 @@ export default function BankingPage() {
               </div>
 
               {/* Suggest + saved */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "0 0 0.75rem", padding: "10px 12px", borderRadius: 12, background: "linear-gradient(90deg,#FFFFFF,#FBF7EE)", border: "1px solid rgba(201,162,74,0.35)" }}>
+              <div className="bi-card bi-suggest" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12, padding: "10px 14px" }}>
                 <button onClick={() => suggestLedgers(true)} disabled={suggesting || !rows.some(r => !r.pushed && !r.ledger_id)}
-                  style={{ height: 36, padding: "0 16px", borderRadius: 10, border: "none", background: rows.some(r => !r.pushed && !r.ledger_id) ? "#12352D" : "#B9BDD6", color: "#FFFFFF", fontWeight: 800, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>
+                  style={{ height: 38, padding: "0 18px", borderRadius: 999, border: "none", background: rows.some(r => !r.pushed && !r.ledger_id) ? "linear-gradient(135deg,#F3D9A2,#E9C27A)" : "#E6E2D8", color: "#10241F", fontWeight: 800, fontSize: "0.84rem", cursor: "pointer", fontFamily: "inherit" }}>
                   {suggesting ? "Suggesting…" : `✨ Suggest ledgers${rows.some(r => !r.pushed && !r.ledger_id) ? ` for ${rows.filter(r => !r.pushed && !r.ledger_id).length}` : ""}`}
                 </button>
                 <span style={{ fontSize: "0.76rem", color: "#6B7570", flex: 1, minWidth: 200 }}>{suggestMsg || "Reads each description (rent, salary, electricity, bank charges, party names…) and creates any missing ledger under the right group."}</span>
@@ -946,98 +977,64 @@ export default function BankingPage() {
               )}
             </div>
 
-            {/* ── Right: action panel ── */}
+            {/* ── Statement header: account · progress · totals · Push ── */}
             <div className="bi-side">
-
-              {/* Bank account selector */}
-              <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
-                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#6B7570", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Statement account</div>
-                <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} aria-label="Statement account" title="Click to choose the bank, loan or other ledger this statement belongs to"
-                  style={{ ...inp, width: "100%", cursor: "pointer", height: 42, padding: "0 12px", borderRadius: 12, border: "1.5px solid #12352D", background: "#FFFFFF", fontSize: "0.92rem", fontWeight: 700, color: "#12352D" }}>
-                  <option value="">— select account —</option>
-                  <optgroup label="Bank & cash">{bankAccounts.filter(a => !isLoanAccount(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
-                  <optgroup label="Loans">{bankAccounts.filter(a => isLoanAccount(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
-                  <optgroup label="Any other ledger">{coa.filter(a => !bankAccounts.some(b => b.id === a.id)).map(a => <option key={a.id} value={a.id}>{decode(a.name)}</option>)}</optgroup>
-                </select>
-                <div style={{ fontSize: "0.68rem", color: "#6B7570", marginTop: "0.4rem" }}>{(() => { const a = coa.find(x => x.id === bankAccountId); const viaBank = !!a && bankAccounts.some(b => b.id === a.id && !isLoanAccount(b as never)); return a && !viaBank ? "Loan / other ledger: lines post as Journal vouchers. Suggest ledgers reads EMI, interest, charges and disbursement." : "Bank / cash: lines post as Payment and Receipt vouchers."; })()}</div>
-                {loanMode && !bankAccounts.some(a => isLoanAccount(a as never)) && <div style={{ fontSize: "0.7rem", color: "#9A6B22", marginTop: 6 }}>No loan ledger yet. Add one below, e.g. "Federal Bank Term Loan".</div>}
-                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                  <input value={newBank} onChange={e => setNewBank(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addBank(); }} placeholder={bankAccounts.length ? "＋ Another bank…" : "＋ Add your bank, e.g. IDFC First Bank"} aria-label="Add a bank account"
-                    style={{ ...inp, flex: 1, minWidth: 0, fontSize: "0.76rem", padding: "6px 8px" }} />
-                  {newBank.trim() && <button onClick={addBank} style={{ border: "none", borderRadius: 8, background: "#12352D", color: "#FFFFFF", fontWeight: 800, fontSize: "0.74rem", padding: "0 10px", cursor: "pointer" }}>Add</button>}
-                </div>
-              </div>
-
-              {/* Summary */}
-              <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
-                <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#6B7570", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>Summary</div>
-                {[
-                  ["Total Transactions", rows.length, "#10241F"],
-                  ["Assigned", assignedCount, "#0B7A55"],
-                  ["Unassigned", rows.length - assignedCount - rows.filter(r => r.pushed).length, "#9A6B22"],
-                  ["Already Pushed", rows.filter(r => r.pushed).length, "#12352D"],
-                  ["Ready to Push", unpushedAssigned, "#5B4BC4"],
-                ].map(([label, val, color]) => (
-                  <div key={String(label)} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
-                    <span style={{ fontSize: "0.76rem", color: "#6B7570" }}>{label}</span>
-                    <span style={{ fontSize: "0.78rem", fontWeight: 700, color: String(color) }}>{val}</span>
-                  </div>
-                ))}
-                <div style={{ height: 1, background: "#FFFDF8", margin: "0.6rem 0" }} />
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.3rem" }}>
-                  <span style={{ fontSize: "0.76rem", color: "#6B7570" }}>Total Payments</span>
-                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#B4321F", fontFamily: "'IBM Plex Mono',monospace" }}>{cur()}{fmt(totalDebit)}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.76rem", color: "#6B7570" }}>Total Receipts</span>
-                  <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#0B7A55", fontFamily: "'IBM Plex Mono',monospace" }}>{cur()}{fmt(totalCredit)}</span>
-                </div>
-              </div>
-
-              {/* Push button */}
-              <button
-                onClick={() => void pushToJournals()}
-                disabled={pushing || unpushedAssigned === 0 || !bankAccountId}
-                className="bs-btn"
-                style={{ width: "100%", padding: "14px 0", fontSize: "0.92rem", fontWeight: 800, background: unpushedAssigned > 0 && bankAccountId ? "#12352D" : "#FFFFFF", color: unpushedAssigned > 0 && bankAccountId ? "#fff" : "#E6DFD0", borderRadius: 10, justifyContent: "center", marginBottom: "0.5rem" }}
-              >
-                {pushing ? (
-                  <><span className="spin" style={{ width: 16, height: 16, border: "2px solid rgba(16,36,31,0.20)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block" }} /> Pushing…</>
-                ) : (
-                  `🚀 Push ${unpushedAssigned} to Journals`
-                )}
-              </button>
-
-              {!bankAccountId && (
-                <div style={{ fontSize: "0.72rem", color: "#9A6B22", textAlign: "center", marginBottom: "0.5rem" }}>Select a bank account above first</div>
-              )}
-
-              {pushResult && (
-                <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", borderRadius: 10, padding: "0.85rem 1rem", textAlign: "center" }}>
-                  <div style={{ fontSize: "1.4rem", marginBottom: "0.25rem" }}>✅</div>
-                  <div style={{ fontWeight: 700, color: "#0B7A55", fontSize: "0.88rem", marginBottom: "0.2rem" }}>{pushResult.created} entries created</div>
-                  <div style={{ fontSize: "0.72rem", color: "#6B7570", marginBottom: "0.75rem" }}>Journals → Ledger → TB → FS updated</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                    <Link href="/finance/journals" style={{ display: "block", background: "rgba(18,53,45,0.1)", border: "1px solid rgba(18,53,45,0.25)", color: "#12352D", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
-                      📋 View Journals →
-                    </Link>
-                    <Link href="/finance/ledger" style={{ display: "block", background: "#FFFDF8", border: "1px solid #FFFFFF", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
-                      📒 Ledger →
-                    </Link>
-                    <Link href="/finance/reports" style={{ display: "block", background: "#FFFDF8", border: "1px solid #FFFFFF", color: "#6E88A8", padding: "7px 0", borderRadius: 7, textDecoration: "none", fontWeight: 600, fontSize: "0.78rem", textAlign: "center" }}>
-                      📈 Financial Statements →
-                    </Link>
+              <section className="bi-hero" aria-label="Statement">
+                <div className="bi-h-acct">
+                  <span className="bi-h-lbl">STATEMENT ACCOUNT</span>
+                  <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} aria-label="Statement account" title="Click to choose the bank, loan or other ledger this statement belongs to" className="bi-h-sel">
+                    <option value="">— choose the account —</option>
+                    <optgroup label="Bank & cash">{bankAccounts.filter(a => !isLoanAccount(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
+                    <optgroup label="Loans">{bankAccounts.filter(a => isLoanAccount(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
+                    <optgroup label="Any other ledger">{coa.filter(a => !bankAccounts.some(b => b.id === a.id)).map(a => <option key={a.id} value={a.id}>{decode(a.name)}</option>)}</optgroup>
+                  </select>
+                  <span className="bi-h-note">{(() => { const a = coa.find(x => x.id === bankAccountId); const viaBank = !!a && bankAccounts.some(b => b.id === a.id && !isLoanAccount(b as never)); return !a ? "Choose the bank, loan or ledger this statement belongs to." : viaBank ? "Bank / cash · posts as Payment and Receipt vouchers" : "Loan / other ledger · posts as Journal vouchers"; })()}</span>
+                  {loanMode && !bankAccounts.some(a => isLoanAccount(a as never)) && <span className="bi-h-note" style={{ color: "#E9C27A" }}>No loan ledger yet — add one below, e.g. “Federal Bank Term Loan”.</span>}
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input value={newBank} onChange={e => setNewBank(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addBank(); }} placeholder={bankAccounts.length ? "＋ Add another bank or loan…" : "＋ Add your bank, e.g. IDFC First Bank"} aria-label="Add a bank account" className="bi-h-add" />
+                    {newBank.trim() && <button onClick={addBank} className="bi-h-addbtn">Add</button>}
                   </div>
                 </div>
-              )}
 
-              {/* Upload another */}
-              <div style={{ marginTop: "0.75rem", textAlign: "center" }}>
-                <button onClick={() => fileRef.current?.click()} style={{ background: "none", border: "1px dashed #FFFFFF", color: "#6B7570", padding: "7px 16px", borderRadius: 8, cursor: "pointer", fontSize: "0.76rem", fontFamily: "inherit", fontWeight: 600, width: "100%" }}>
-                  ⬆ Upload Another Statement
-                </button>
+                <div className="bi-h-mid">
+                  {(() => { const pushed = rows.filter(r => r.pushed).length, pct = rows.length ? Math.round(((assignedCount) / rows.length) * 100) : 0; return (<>
+                    <div className="bi-h-prog">
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                        <span className="bi-h-lbl">LEDGERS SET</span>
+                        <span className="bi-h-big">{assignedCount}<small> / {rows.length}</small></span>
+                      </div>
+                      <div className="bi-h-bar"><span style={{ width: `${pct}%` }} /></div>
+                      <div className="bi-h-tags">
+                        <span>{rows.length - assignedCount - pushed} need a ledger</span>
+                        <span>{unpushedAssigned} ready</span>
+                        <span>{pushed} posted</span>
+                      </div>
+                    </div>
+                    <div className="bi-h-tot">
+                      <div><span className="bi-h-lbl">MONEY OUT · DR</span><b style={{ color: "#FFB4A8" }}>{cur()}{fmt(totalDebit)}</b><small>{rows.filter(r => r.debit > 0).length} lines</small></div>
+                      <div><span className="bi-h-lbl">MONEY IN · CR</span><b style={{ color: "#7FE0B4" }}>{cur()}{fmt(totalCredit)}</b><small>{rows.filter(r => r.credit > 0).length} lines</small></div>
+                    </div>
+                  </>); })()}
+                </div>
+
+                <div className="bi-h-push">
+                  <button onClick={() => void pushToJournals()} disabled={pushing || unpushedAssigned === 0 || !bankAccountId} className="bi-h-go">
+                    {pushing ? <><span className="spin" style={{ width: 16, height: 16, border: "2px solid rgba(16,36,31,0.25)", borderTopColor: "#10241F", borderRadius: "50%", display: "inline-block" }} /> Posting…</> : <>Post {unpushedAssigned || ""} entr{unpushedAssigned === 1 ? "y" : "ies"} →</>}
+                  </button>
+                  <span className="bi-h-note" style={{ textAlign: "center" }}>{!bankAccountId ? "Choose the statement account first" : unpushedAssigned ? "Nothing posts until you press this" : "Set a ledger on the lines to post them"}</span>
+                  <button onClick={() => fileRef.current?.click()} className="bi-h-again">⬆ Upload another statement</button>
                 <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={onFileInput} style={{ display: "none" }} />
-              </div>
+                </div>
+              </section>
+              {pushResult && (
+                <div className="bi-done">
+                  <b>✓ {pushResult.created} entr{pushResult.created === 1 ? "y" : "ies"} posted</b>
+                  <span>Journal → Ledger → Trial Balance → Financial Statements are updated.</span>
+                  <Link href="/finance/journals">View in Journal →</Link>
+                  <Link href="/finance/ledger">Ledger →</Link>
+                  <Link href="/finance/reports?tab=balance_sheet">Financial Statements →</Link>
+                </div>
+              )}
             </div>
           </div>
         )}
