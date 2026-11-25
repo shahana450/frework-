@@ -916,6 +916,17 @@ export default function FreBookPage() {
                 </details>
               </div>
 
+              {/* Your books, one tap away */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", margin: "10px 0" }}>
+                <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.12em", color: "#8A6420", marginRight: 2 }}>OPEN</span>
+                {([["/finance/books", "Books", "M4 5a2 2 0 012-2h5v18H6a2 2 0 01-2-2zM13 3h5a2 2 0 012 2v14a2 2 0 01-2 2h-5z"], ["/finance/journals", "Journal", "M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"], ["/finance/reports?tab=balance_sheet", "Financial Statements", "M4 20V10M10 20V4M16 20v-7M22 20H2"]] as const).map(([href, label, d]) => (
+                  <Link key={href} href={href} className="fb-qchip"
+                    style={{ height: 34, padding: "0 14px", borderRadius: 999, border: "1px solid #0F2B25", background: "#0F2B25", color: "#FFFFFF", fontSize: "0.8rem", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 7 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9C27A" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>{label}
+                  </Link>
+                ))}
+              </div>
+
               {/* Books at a glance */}
               <div style={{ maxWidth: 1180, margin: "clamp(40px, 6vw, 72px) auto 0", display: "flex", flexDirection: "column", gap: 22 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 18 }}>

@@ -598,9 +598,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                   <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.2em", color: "#9A6B22" }}>START HERE</span>
                   <span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontSize: 22, fontWeight: 700, color: "#0B2C25" }}>Workspace</span>
                 </div>
-                {([["/finance", "Home", "Today at a glance"], ["/finance/portfolio", "All businesses", "Switch or compare"], ["/finance/chat-book", "FreBook AI", "Ask your books"], ["/finance/inbox", "Smart Inbox", "Drop bills, statements"], ["/finance/banking", "Banking", "Bank & loan statements"]] as const).map(([href, label, sub]) => (
+                {([["/finance", "Home", "Today at a glance"], ["/finance/portfolio", "All businesses", "Switch or compare"], ["/finance/chat-book", "FreBook AI", "Ask your books"], ["/finance/inbox", "Smart Inbox", "Drop bills, statements"], ["/finance/banking", "Banking", "Bank & loan statements"], ["/finance/books", "Books", "Every entry, Tally push"], ["/finance/journals", "Journal", "Vouchers & new entry"], ["/finance/reports?tab=balance_sheet", "Financial Statements", "P&L, Balance Sheet"]] as const).map(([href, label, sub]) => (
                   <Link key={href} href={href} className={"fw-wtile" + (href === "/finance" ? " on" : "")}>
-                    <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(href)} /></svg></span>
+                    <span className="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={navIconPath(href.split("?")[0])} /></svg></span>
                     <span style={{ minWidth: 0 }}><b>{label}</b><small>{sub}</small></span>
                   </Link>
                 ))}
@@ -631,7 +631,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             <style>{`
               .fw-hhead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:18px 22px 0}
               .fw-hrow{display:flex;gap:14px;flex-wrap:wrap;margin:16px 22px 0}
-              .fw-work{flex:3 1 640px;display:grid;grid-template-columns:auto repeat(5,minmax(0,1fr));align-items:stretch;gap:10px;padding:14px 16px;border-radius:22px;background:linear-gradient(145deg,#FFFBF1,#F6EAD0);border:1px solid #EFE2C4;box-shadow:0 14px 30px -24px rgba(154,107,34,.6)}
+              .fw-work{flex:3 1 640px;display:grid;grid-template-columns:auto repeat(4,minmax(0,1fr));align-items:stretch;gap:10px;padding:14px 16px;border-radius:22px;background:linear-gradient(145deg,#FFFBF1,#F6EAD0);border:1px solid #EFE2C4;box-shadow:0 14px 30px -24px rgba(154,107,34,.6)}
               .fw-wtile{display:flex;align-items:center;gap:10px;padding:10px 12px;transition:transform .15s,border-color .15s;border-radius:16px;background:#FFFFFF;border:1px solid #EFE2C4;text-decoration:none;color:#0B2C25;min-width:0}
               .fw-wtile b{display:block;font-size:14.5px}.fw-wtile small{display:block;font-size:12px;color:#5E6B66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
               .fw-wtile .ic{width:40px;height:40px;border-radius:12px;background:#0B2C25;color:#E9C27A;display:grid;place-items:center;flex:none}
@@ -648,7 +648,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
               .fw-qchip{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:999px;border:1px solid #E6DFD0;background:#FFFFFF;color:#0B2C25;font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap}
               .fw-qchip svg{color:#9A6B22}.fw-qchip:hover{border-color:#E9C27A;background:#FFFBF1}
               .fw-wtile:hover{transform:translateY(-2px)}
-              @media (max-width:1380px){.fw-work{grid-template-columns:repeat(5,minmax(0,1fr))}.fw-work>div:first-child{grid-column:1/-1;flex-direction:row!important;align-items:baseline;gap:12px}}
+              .fw-work>div:first-child{grid-row:span 2}
+              @media (max-width:1380px){.fw-work{grid-template-columns:repeat(4,minmax(0,1fr))}.fw-work>div:first-child{grid-row:auto;grid-column:1/-1;flex-direction:row!important;align-items:baseline;gap:12px}}
               @media (max-width:1000px){.fw-work{grid-template-columns:repeat(3,minmax(0,1fr))}}
               @media (max-width:760px){.fw-hhead,.fw-hrow,.fw-quick{margin-left:14px;margin-right:14px}.fw-work{padding:10px;grid-template-columns:repeat(2,minmax(0,1fr))}}
             `}</style>
