@@ -643,7 +643,7 @@ export default function BankingPage() {
 
       {rows.length === 0 && <PageHero eyebrow="Banking · import statement" title="Bring in your bank"
         sub="Upload a bank statement in PDF or Excel. FreBook reads every line, suggests the ledger and drafts the journal entry. Nothing posts until you approve it."
-        tabs={[{ label: "Upload", active: true }, { label: "Bank dashboard", href: "/finance/banking" }, { label: "Statement history", href: "/finance/banking/history" }]} />}
+        tabs={[{ label: "Upload", active: true, onClick: () => fileRef.current?.click() }, { label: "Bank dashboard", href: "/finance/banking" }, { label: "Statement history", href: "/finance/banking/history" }]} />}
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "1.5rem 28px" }}>
 
         {/* ── Upload area (shown when no rows) ── */}
@@ -912,8 +912,8 @@ export default function BankingPage() {
                   <div className="bi-bulk">
                     <div className="bi-bulk-row">
                       <span className="bi-bulk-lbl">SELECT</span>
-                      <button className={"bi-pick dr" + (same(drs) ? " on" : "")} onClick={() => pick(drs)} disabled={!drs.length}>All Dr <b>{drs.length}</b><small>{cur()}{fmt(sum(drs, "debit"))}</small></button>
-                      <button className={"bi-pick cr" + (same(crs) ? " on" : "")} onClick={() => pick(crs)} disabled={!crs.length}>All Cr <b>{crs.length}</b><small>{cur()}{fmt(sum(crs, "credit"))}</small></button>
+                      <button className={"bi-pick dr" + (same(drs) ? " on" : "")} onClick={() => pick(drs)} disabled={!drs.length}>All Dr <b>{drs.length}</b><small>{cur()}{fmt(sum(drs, "debit")) || "0.00"}</small></button>
+                      <button className={"bi-pick cr" + (same(crs) ? " on" : "")} onClick={() => pick(crs)} disabled={!crs.length}>All Cr <b>{crs.length}</b><small>{cur()}{fmt(sum(crs, "credit")) || "0.00"}</small></button>
                       <button className={"bi-pick" + (same(un) ? " on" : "")} onClick={() => pick(un)} disabled={!un.length}>No ledger <b>{un.length}</b></button>
                       {sel.length > 0 && <button className="bi-clear" onClick={() => setSelected(new Set())}>Clear</button>}
                     </div>

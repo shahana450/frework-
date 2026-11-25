@@ -722,7 +722,7 @@ export default function SmartInbox() {
               const st = it.state;
               const chip = st === "posted" ? (it.tally === "pushed" ? pill(C.posSoft, C.pos) : pill("#E8F0FF", "#1F5EFF")) : st === "ready" ? pill(C.posSoft, C.pos) : st === "posting" ? pill("#EFE8D9", C.ink) : pill(C.amberSoft, C.amber);
               const label = st === "posted" ? (it.tally === "pushed" ? "In Tally" : it.tally === "failed" ? "Tally failed" : `Posted ${it.entryNo ?? ""}`) : st === "ready" ? "Ready" : st === "posting" ? "Posting…" : st === "failed" ? "Failed" : "Needs a look";
-              const editable = st === "check" || st === "failed";
+              const editable = st === "check" || st === "failed" || st === "ready";
               return (
                 <article key={it.id} style={{ background: C.card, border: `1px solid ${editable ? "#EBCB8B" : C.line}`, borderRadius: 16, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>

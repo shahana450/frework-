@@ -157,6 +157,10 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
               Attach file
               <input type="file" multiple accept="image/*,.pdf,.xlsx,.xls,.csv,.json,.doc,.docx,.txt" style={{ display: "none" }} onChange={e => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; if (!fs.length) return; setPendingFiles(fs); router.push("/finance/chat-book?attach=1"); }} />
             </label>}
+            {!fromWa && <Link href="/finance/chat-book?templates=1" title="Many entries at once: download the Excel template, fill it, attach it" className="chip" style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${C.goldLine}`, background: "#FFF6E3", display: "inline-flex", alignItems: "center", gap: 7, color: C.ink, textDecoration: "none", fontSize: 13, fontWeight: 700 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 4h16v16H4zM4 10h16M10 4v16" /></svg>
+              Bulk entries · Excel template
+            </Link>}
             {!fromWa && <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Take a photo of a bill" className="chip" style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#FFFFFF", display: "inline-flex", alignItems: "center", gap: 7, color: C.ink, textDecoration: "none", fontSize: 13, fontWeight: 600 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
               Snap a bill

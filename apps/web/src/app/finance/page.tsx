@@ -606,12 +606,15 @@ export default function FinanceDashboard() {
               )}
               <HomeDesk dash={dash} bizName={activeBiz.name} greeting={greeting} dashErr={dashErr} onRetry={() => setDashTick(t => t + 1)}
                 controls={<>
-                  <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} title="Financial year"
-                    style={{ height: 36, background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: 10, padding: "0 10px", fontSize: 12.5, color: "#10241F" }}>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 6px 0 14px", borderRadius: 999, background: "linear-gradient(135deg,#F3D9A2,#E9C27A)", color: "#10241F", fontSize: 12, fontWeight: 800, letterSpacing: "0.08em" }}>
+                  FINANCIAL YEAR
+                  <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} aria-label="Financial year"
+                    style={{ height: 30, background: "#FFFDF8", border: "none", borderRadius: 999, padding: "0 10px", fontSize: 14, fontWeight: 800, color: "#10241F", cursor: "pointer", fontFamily: "inherit", letterSpacing: 0 }}>
                     {financialYears.map(f => <option key={f.id} value={f.id}>FY {f.label.replace(/^FY\s*/i, "")}</option>)}
                     {financialYears.length === 0 && <option value="">FY {fyLabel}</option>}
                     {missingFy && <option value="__create">＋ FY {missingFy.label} — create</option>}
                   </select>
+                  </label>
                   <select value={periodKey} onChange={e => setPeriodKey(e.target.value)} title="Period"
                     style={{ height: 36, background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: 10, padding: "0 10px", fontSize: 12.5, color: "#10241F" }}>
                     {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}

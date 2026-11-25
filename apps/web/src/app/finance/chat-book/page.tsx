@@ -219,6 +219,7 @@ export default function FreBookPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [bizId, setBizId] = useState<string | null>(null);
+  const [tplOpen, setTplOpen] = useState(false);
   const [bizName, setBizName] = useState("");
   // Start screen figures (Books at a glance, Needs you today)
   const [deskDash, setDeskDash] = useState<Dashboard | null>(null);
@@ -409,6 +410,7 @@ export default function FreBookPage() {
     handoffDone.current = true;
     const sp = new URLSearchParams(window.location.search);
     const q = sp.get("q")?.trim(), prefill = sp.get("prefill");
+    if (sp.get("templates")) { window.history.replaceState(null, "", "/finance/chat-book"); setTplOpen(true); setTimeout(() => document.querySelector(".fb-many")?.scrollIntoView({ behavior: "smooth", block: "center" }), 300); return; }
     if (sp.get("snap")) { window.history.replaceState(null, "", "/finance/chat-book"); setSnapHint(true); return; }
     if (!q && prefill == null) return;
     window.history.replaceState(null, "", "/finance/chat-book");
@@ -894,7 +896,7 @@ export default function FreBookPage() {
                   ))}
                 </div>
 
-                <details className="fb-many" style={{ width: "min(940px, 100%)", textAlign: "left", marginTop: 4 }}>
+                <details className="fb-many" open={tplOpen || undefined} style={{ width: "min(940px, 100%)", textAlign: "left", marginTop: 4 }}>
                   <summary style={{ cursor: "pointer", color: "#D9B56F", fontSize: "0.82rem", fontWeight: 700, listStyle: "none", textAlign: "center" }}>＋ Many entries at once — Excel templates, bank statement, Smart Inbox{pendingDrafts.length ? ` · ${pendingDrafts.length} unfinished import${pendingDrafts.length > 1 ? "s" : ""}` : ""}</summary>
                   <div style={{ marginTop: 12, background: "#F6F1E7", borderRadius: 18, color: "#10241F" }}>
                   {/* Quick start: many entries at once (Excel templates) and the other ways in */}
