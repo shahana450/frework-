@@ -1,4 +1,6 @@
 "use client";
+import { shelfFile, type ShelfFile } from "@/lib/shelfFile";
+import { takePendingFiles } from "@/lib/pendingFile";
 import { looksLikeLoanStatement, normaliseLoanRows, suggestLoanLedger, LOAN_FILE } from "@/lib/bankImport";
 import { isCashBankAccount } from "@/lib/journalRules";
 import { readBankStatement } from "@/lib/readStatement";
@@ -191,7 +193,7 @@ export default function SmartInbox() {
     const { data: { user } } = await supabase.auth.getUser();
     const fd = new FormData();
     // bulk: read only — no chat session per bill, so a folder of bills doesn't hit the hourly chat limit
-    fd.append("message", "Book this document"); fd.append("business_id", bizId); fd.append("user_id", user?.id ?? ""); fd.append("history", "[]"); fd.append("bulk", "1"); fd.append("file", file);
+    fd.append("message", "Book this document"); fd.append("business_id", bizId); fd.append("user_id", user?.id ?? ""); fd.append("history", "[]"); fd.append("bulk", "1"); fd.append("file", file); if ((file as ShelfFile).fromShelf) fd.append("from_shelf", "1");
     const res = await fetch("/api/finance/chat-book", { method: "POST", body: fd });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error ?? "Couldn't read this file.");
@@ -255,6 +257,7 @@ export default function SmartInbox() {
   }
   // A copy of every statement / Excel goes to the Shelf (source "inbox") so History can show it later
   function keepOnShelf(file: File, rack: string) {
+    if ((file as ShelfFile).fromShelf) return;   // it came from the Shelf: don't file it twice
     const fd = new FormData();
     fd.append("business_id", bizId); fd.append("file", file); fd.append("rack", rack); fd.append("source", "inbox"); fd.append("title", file.name);
     void fetch("/api/finance/shelf", { method: "POST", body: fd }).catch(() => {});
@@ -275,6 +278,29 @@ export default function SmartInbox() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bizId, bankLedger]);
+
+  // From the Shelf: pick stored bills / statements and read them like dropped files
+  const [shelfOpen, setShelfOpen] = useState(false);
+  const [shelfItems, setShelfItems] = useState<{ id: string; rack: string; title: string; file_name: string | null; mime: string | null; created_at: string }[] | null>(null);
+  const [shelfPick, setShelfPick] = useState<Set<string>>(new Set());
+  const [shelfBusy, setShelfBusy] = useState(false);
+  async function openShelf() {
+    setShelfOpen(o => !o);
+    if (shelfItems || !bizId) return;
+    const r = await fetch(`/api/finance/shelf?business_id=${bizId}`).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setShelfItems(((d.items ?? []) as { id: string; rack: string; title: string; file_name: string | null; mime: string | null; created_at: string }[])
+      .filter(i => /pdf|image|sheet|excel|csv/i.test(`${i.mime ?? ""} ${i.file_name ?? ""}`) && ["bills", "bank", "others", "payroll", "gst"].includes(i.rack)));
+  }
+  async function readFromShelf() {
+    if (!shelfItems || !shelfPick.size) return;
+    setShelfBusy(true);
+    const got: File[] = [];
+    for (const it of shelfItems.filter(i => shelfPick.has(i.id))) { try { got.push(await shelfFile(bizId, it)); } catch { /* skipped */ } }
+    setShelfBusy(false); setShelfPick(new Set()); setShelfOpen(false);
+    if (got.length) addFiles(got);
+  }
+  useEffect(() => { if (!bizId) return; const f = takePendingFiles(); if (f.length) { window.history.replaceState(null, "", "/finance/inbox"); addFiles(f); } }, [bizId]);
 
   function addFiles(list: FileList | File[]) {
     const accepted = Array.from(list).filter(f => /\.(pdf|png|jpe?g|webp|heic|xlsx|xls|csv)$/i.test(f.name));
@@ -453,8 +479,32 @@ export default function SmartInbox() {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
             <button onClick={() => fileInput.current?.click()} style={btn(true)}>Choose files</button>
             <button onClick={() => folderInput.current?.click()} style={btn(false)}>Choose a folder</button>
+            <button onClick={openShelf} style={btn(false)} aria-expanded={shelfOpen}>📚 From the Shelf</button>
           </div>
         </div>
+
+        {/* Documents already on the Shelf: tick and read them */}
+        {shelfOpen && (
+          <div style={{ background: "#FFFDF8", border: `1px solid ${C.line}`, borderRadius: 18, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <b style={{ fontSize: 14 }}>From the Shelf</b>
+              <span style={{ fontSize: 12.5, color: C.muted, flex: 1 }}>Bills, statements and Excel files you kept. Tick them and FreBook reads them like new uploads.</span>
+              <button onClick={readFromShelf} disabled={!shelfPick.size || shelfBusy} style={{ ...btn(true), opacity: !shelfPick.size || shelfBusy ? 0.5 : 1 }}>{shelfBusy ? "Fetching…" : `Read ${shelfPick.size || ""} file${shelfPick.size === 1 ? "" : "s"}`}</button>
+            </div>
+            {!shelfItems ? <span style={{ fontSize: 13, color: C.muted }}>Loading the Shelf…</span>
+              : !shelfItems.length ? <span style={{ fontSize: 13, color: C.muted }}>No bills or statements on the Shelf yet.</span>
+              : <div style={{ display: "flex", flexDirection: "column", maxHeight: 280, overflowY: "auto" }}>
+                  {shelfItems.map(i => (
+                    <label key={i.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 4px", borderTop: `1px solid ${C.line}`, fontSize: 13, cursor: "pointer" }}>
+                      <input type="checkbox" checked={shelfPick.has(i.id)} onChange={() => setShelfPick(p => { const n = new Set(p); if (n.has(i.id)) n.delete(i.id); else n.add(i.id); return n; })} />
+                      <span style={pill("#EFE8D9", C.ink)}>{i.rack === "bank" ? "Bank" : i.rack === "gst" ? "GST" : i.rack === "bills" ? "Bill" : i.rack === "payroll" ? "Payroll" : "Other"}</span>
+                      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{i.title}</span>
+                      <span style={{ color: C.muted, fontSize: 12 }}>{new Date(i.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                    </label>
+                  ))}
+                </div>}
+          </div>
+        )}
 
         {/* Files being read */}
         {files.length > 0 && (

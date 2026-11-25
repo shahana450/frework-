@@ -264,7 +264,15 @@ export default function FreBookPage() {
   // The box grows as you type; back to its normal size once the message is sent
   useEffect(() => { if (!input && inputRef.current) inputRef.current.style.height = ""; }, [input]);
   // Files attached on Home arrive here and are read as if dropped into this chat
-  useEffect(() => { if (!bizId) return; const files = takePendingFiles(); if (!files.length) return; window.history.replaceState(null, "", "/finance/chat-book"); for (const f of files) void handleFile(f); }, [bizId]);
+  const chatReady = !!bizId && messages.some(m => m.id === "welcome");
+  useEffect(() => {
+    if (!chatReady) return;
+    const files = takePendingFiles(); if (!files.length) return;
+    window.history.replaceState(null, "", "/finance/chat-book");
+    // One after another, a moment after the page settles, so each is read with the chat fully set up
+    const t = setTimeout(() => { void (async () => { for (const f of files) await handleFile(f); })(); }, 400);
+    return () => clearTimeout(t);
+  }, [chatReady]);
   const recognitionRef = useRef<unknown>(null);
   const voiceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [voiceInterim, setVoiceInterim] = useState("");

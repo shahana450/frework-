@@ -24,7 +24,7 @@ import { validateDraft, looksLikeInjection, INJECTION_REPLY } from "@/lib/freboo
 export async function handleChatBook(req: NextRequest, deps: { readAttachment?: (f: File) => Promise<Attachment> } = {}) {
   try {
     let message = "", business_id = "", user_id = "", session_id: string | null = null;
-    let bulk = false; // template bulk review: read the row only, don't save a chat session
+    let bulk = false, fromShelf = false; // template bulk review: read the row only, don't save a chat session
     let splitOnly = false; // one page of a big bill PDF: just list its vouchers (even one) for the page's bulk review
     let attachment: Attachment | null = null;
     let uploaded: File | null = null;
@@ -39,7 +39,8 @@ export async function handleChatBook(req: NextRequest, deps: { readAttachment?: 
       session_id = (form.get("session_id") as string) || null;
       try { clientHistory = JSON.parse((form.get("history") as string) || "null"); } catch { /* ignore */ }
       splitOnly = form.get("split_only") === "1";
-      bulk = form.get("bulk") === "1";   // Smart Inbox: many bills in one go — no chat session, not counted as chat messages
+      bulk = form.get("bulk") === "1";
+      fromShelf = form.get("from_shelf") === "1";   // already on the Shelf — don't file it again   // Smart Inbox: many bills in one go — no chat session, not counted as chat messages
       const file = form.get("file") as File | null;
       if (file?.size) {
         if (file.size > 15 * 1024 * 1024) return NextResponse.json({ error: "File too large (max 15 MB)." }, { status: 413 });
@@ -63,7 +64,7 @@ export async function handleChatBook(req: NextRequest, deps: { readAttachment?: 
     if (looksLikeInjection(message)) return NextResponse.json({ error: INJECTION_REPLY, code: "INSTRUCTION_REFUSED" }, { status: 422 });
 
     // Every document given to FreBook is also kept on the Shelf (Bills & Invoices rack) — saved after the reply is sent
-    if (uploaded) {
+    if (uploaded && !fromShelf) {
       const file = uploaded, bytes = new Uint8Array(await uploaded.arrayBuffer()), note = message && !/^book this transaction/i.test(message) ? message.slice(0, 300) : null, actor = user_id;
       after(() => fileToShelf(supabase, { businessId: business_id, actorId: actor, rack: "bills", title: file.name, fileName: file.name, mime: file.type, bytes, source: bulk ? "inbox" : "frebook", fy: fyOfDate(new Date().toISOString().slice(0, 10)), notes: note }));
     }

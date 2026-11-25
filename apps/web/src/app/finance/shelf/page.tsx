@@ -8,6 +8,8 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { RACKS, type RackKey } from "@/lib/shelf";
 import { readActiveBusiness } from "@/lib/activeBusiness";
+import { shelfFile } from "@/lib/shelfFile";
+import { setPendingFiles } from "@/lib/pendingFile";
 
 type Item = {
   id: string; rack: RackKey; fy: string | null; period: string | null; title: string; doc_type: string | null; file_name: string | null; mime: string | null;
@@ -32,6 +34,7 @@ const today = () => new Date().toLocaleDateString("en-CA");
 
 export default function ShelfPage() {
   const router = useRouter();
+  const [posting, setPosting] = useState<string | null>(null);
   const [bizId, setBizId] = useState("");
   const [items, setItems] = useState<Item[] | null>(null);
   const [setup, setSetup] = useState("");
@@ -371,6 +374,11 @@ export default function ShelfPage() {
                         {isStatement(it) && (
                           <Link href={`/finance/banking/import?shelf=${it.id}`} title="Open Banking → Import with this statement loaded, to turn its rows into entries"
                             style={{ ...btn, height: 32, padding: "0 14px", borderRadius: 999, background: "#C9A24A", color: "#10241F", border: "none", fontFamily: SERIF, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Book this statement →</Link>
+                        )}
+                        {it.rack !== "bank" && /pdf|image|sheet|excel|csv/i.test(`${it.mime ?? ""} ${it.file_name ?? ""}`) && (
+                          <button disabled={posting === it.id} title="Read this document in Smart Inbox and post its entries (you check them before anything posts)"
+                            onClick={async () => { setPosting(it.id); try { const f = await shelfFile(bizId, it); setPendingFiles([f]); router.push("/finance/inbox?from=shelf"); } catch (e) { alert(e instanceof Error ? e.message : "Couldn't open the file."); setPosting(null); } }}
+                            style={{ ...btn, height: 32, padding: "0 14px", borderRadius: 999, background: "#C9A24A", color: "#10241F", border: "none", fontFamily: SERIF, fontWeight: 700 }}>{posting === it.id ? "Opening…" : "Post entries →"}</button>
                         )}
                         <button onClick={() => open(it)} style={{ ...btn, height: 32, padding: "0 16px", borderRadius: 999, background: "#12352D", color: "#FFFFFF", border: "none", fontFamily: SERIF }}>Open</button>
                         <button onClick={() => open(it, true)} style={{ ...btn, height: 30 }} aria-label="Download" title="Download">⬇</button>
