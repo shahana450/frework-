@@ -15,7 +15,7 @@ import { headByKey } from "../ledgerHeads";
 import { postJournal, voucherTypeFor, postingErrorMessage } from "../posting";
 import { readAttachmentBuffer, type Attachment } from "../attachments";
 import { fileToShelf, fyOfDate } from "../shelf";
-import { parseCommand, helpText, draftText, answerText, money } from "./format";
+import { parseCommand, helpText, draftText, answerText, money, waDate, entryLines } from "./format";
 import { buildMonthGstr1, fileGstr1, monthLabel } from "../gstr1Export";
 import { monthFromText } from "../monthFromText";
 import { loginToken, loginUrl } from "./loginLink";
@@ -307,7 +307,7 @@ Works once and expires soon. Don't forward this link — it signs in as you. Sha
     if (stuck) return stuck.parsed?.needs_clarification?.length ? `❓ For "${stuck.part}": ${stuck.parsed.needs_clarification[0]}\n\nSend that line again with the detail.` : `🤔 I couldn't read "${stuck.part}". Send it again with a little more detail, e.g. *Sales to ABC 25000 on 30-04-2025*.`;
     const all = drafts.map(d => ({ ...d.parsed!, more: undefined })).sort((a, b) => a.transaction_date.localeCompare(b.transaction_date));
     await save({ pending: { parsed: all[0], key: `wa:${m.id}`, original: message.slice(0, 300), queue: all.slice(1) }, history: [...sess.history, { role: "user" as const, content: message.slice(0, 500) }, { role: "assistant" as const, content: `${all.length} entries drafted, one per date` }] });
-    return [`📅 Your lines are on *${all.length} different dates* — ${all.length} separate entries:`, ...all.map((d, i) => `*${i + 1}.* ` + draftText(d, [], biz.baseCurrency).replace(/\n*Reply \*YES\* to post · \*NO\* to cancel$/, ""))].join("\n\n") + `\n\nReply *YES* to post all ${all.length} · *NO* to cancel`;
+    return [`📅 Your lines are on *${all.length} different dates* — ${all.length} separate entries:`, ...all.map((d, i) => `*${i + 1})* ` + draftText(d, [], biz.baseCurrency).replace(/\n*Reply \*YES\* to post · \*NO\* to cancel$/, ""))].join("\n\n") + `\n\nReply *YES* to post all ${all.length} · *NO* to cancel`;
   }
   // Load the books while the AI reads the message (used for answers and the smart checks)
   const booksToday = loadQueryBooks(sb, link.business_id, today);
@@ -356,7 +356,7 @@ Works once and expires soon. Don't forward this link — it signs in as you. Sha
   if (!queue.length) return draftText(first, bad, biz.baseCurrency);
   // One message per date, one YES for all of them
   const all = [first, ...queue];
-  return [`📅 Your items are on *${all.length} different dates* — ${all.length} entries:`, ...all.map((d, i) => `*${i + 1}.* ` + draftText(d, i === 0 ? bad : [], biz.baseCurrency).replace(/\n*Reply \*YES\* to post · \*NO\* to cancel$/, ""))].join("\n\n") + `\n\nReply *YES* to post all ${all.length} · *NO* to cancel`;
+  return [`📅 Your items are on *${all.length} different dates* — ${all.length} entries:`, ...all.map((d, i) => `*${i + 1})* ` + draftText(d, i === 0 ? bad : [], biz.baseCurrency).replace(/\n*Reply \*YES\* to post · \*NO\* to cancel$/, ""))].join("\n\n") + `\n\nReply *YES* to post all ${all.length} · *NO* to cancel`;
 }
 
 // Words a user can reply with to choose a ledger's group
@@ -419,15 +419,16 @@ async function draftDocumentPages(sb: SupabaseClient, link: Link, ask: DocAsk, s
   const [first, ...queue] = drafts.map(d => ({ ...d.r, narrative: `${d.r.narrative || "Bill"} (page ${d.page})`.slice(0, 200) }));
   await save({ pending: { parsed: first, queue, key: `wa:doc:${ask.shelfId}`, original: `${ask.name} — ${drafts.length} bills` }, history: [...sess.history, { role: "user", content: `[${ask.name}: post entries]` }, { role: "assistant", content: `${drafts.length} drafts from ${ask.name}` }] });
   const total = drafts.reduce((s, d) => s + d.r.lines.reduce((t, l) => t + (l.debit || 0), 0), 0);
-  const lines = drafts.map((d, i) => {
-    const dr = d.r.lines.filter(l => l.debit).map(l => l.account).join(", "), cr = d.r.lines.filter(l => l.credit).map(l => l.account).join(", ");
-    return `*${i + 1}.* ${d.r.transaction_date} · ${d.r.party_name || d.r.narrative.slice(0, 40) || "Bill"} · ${money(d.r.lines.reduce((t, l) => t + (l.debit || 0), 0), biz.baseCurrency)}\n    Dr ${dr} · Cr ${cr}`;
-  });
+  const lines = drafts.map((d, i) => [
+    `*${drafts.length > 1 ? `${i + 1}) ` : ""}${d.r.party_name || d.r.narrative.slice(0, 40) || "Bill"}*`,
+    `📅 ${waDate(d.r.transaction_date)} · ${money(d.r.lines.reduce((t, l) => t + (l.debit || 0), 0), biz.baseCurrency)}`,
+    ...entryLines(d.r.lines, biz.baseCurrency),
+  ].join("\n"));
   return [
-    `📝 *${drafts.length} entr${drafts.length === 1 ? "y" : "ies"}* from ${ask.name} · total ${money(total, biz.baseCurrency)}`, "", ...lines,
+    `📝 *${drafts.length} entr${drafts.length === 1 ? "y" : "ies"} ready* · total *${money(total, biz.baseCurrency)}*`, `📄 ${ask.name}`, "", lines.join("\n\n"),
     missed.length ? `\n⚠️ Page${missed.length > 1 ? "s" : ""} ${missed.join(", ")} couldn't be read — book ${missed.length > 1 ? "them" : "it"} from FreBook → Smart Inbox (the file is on the Shelf).` : "",
     ask.pages > 20 ? `\nℹ️ Only the first 20 pages were read here — use Smart Inbox for the rest.` : "",
-    `\nReply *YES* to post all ${drafts.length} · *NO* to cancel`,
+    `\nReply *YES* to post${drafts.length > 1 ? ` all ${drafts.length}` : ""} · *NO* to cancel`,
   ].filter(Boolean).join("\n");
 }
 

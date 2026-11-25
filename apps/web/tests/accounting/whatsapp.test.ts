@@ -16,7 +16,8 @@ test("WhatsApp commands: link codes, yes/no in English and Hindi, plain text", (
 test("WhatsApp draft shows compliance problems first and asks for YES", () => {
   const txt = draftText({ transaction_date: "2026-10-06", narrative: "Contract work", warnings: [], lines: [{ account: "Contract Charges", debit: 150000, credit: 0 }, { account: "Cash in Hand", debit: 0, credit: 150000 }] } as never,
     [{ title: "Cash payment over ₹10,000", detail: "Not deductible (section 36(4))." }]);
-  assert.ok(txt.startsWith("⚠️ *Compliance"));
-  assert.match(txt, /Dr {2}Contract Charges {2}₹1,50,000/);
+  assert.ok(txt.startsWith("⚠️ *Check before posting*"));
+  assert.match(txt, /Dr \*Contract Charges\* — ₹1,50,000/);
+  assert.match(txt, /📅 6 Oct 2026/);   // not an ISO date (phones turn those into links)
   assert.match(txt, /Reply \*YES\* to post/);
 });

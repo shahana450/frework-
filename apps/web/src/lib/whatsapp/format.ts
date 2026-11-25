@@ -51,26 +51,42 @@ export function helpText(bizName: string): string {
   ].join("\n");
 }
 
+/** 23 Jul 2025 — an ISO date turns into a tappable link on phones, this doesn't. */
+export function waDate(iso: string): string {
+  const d = new Date(`${String(iso).slice(0, 10)}T00:00:00Z`);
+  return isNaN(+d) ? String(iso) : d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
+/** The entry's lines, the same ledger on the same side added together (no "Purchase, Purchase"). */
+export function entryLines(lines: ParsedTransaction["lines"], cur = "INR"): string[] {
+  const side = (k: "debit" | "credit") => {
+    const m = new Map<string, number>();
+    for (const l of lines) { const v = Number(l[k]) || 0; if (v) { const name = `${l.account}${l.item ? ` (${l.item})` : ""}`; m.set(name, (m.get(name) ?? 0) + v); } }
+    return [...m];
+  };
+  const dr = side("debit"), cr = side("credit");
+  return [
+    ...dr.map(([n, v]) => `➕ Dr *${n}* — ${money(v, cur)}`),
+    ...cr.map(([n, v]) => `➖ Cr *${n}* — ${money(v, cur)}`),
+  ];
+}
+
 /** The draft as a WhatsApp message, with any compliance problems first. */
 export function draftText(p: ParsedTransaction, bad: { title: string; detail: string }[], cur = "INR"): string {
   const out: string[] = [];
   if (bad.length) {
-    out.push("⚠️ *Compliance — check before posting*");
-    for (const b of bad) out.push(`• *${b.title}.* ${b.detail}`);
+    out.push("⚠️ *Check before posting*");
+    for (const b of bad) out.push(`• *${b.title}* — ${b.detail}`);
     out.push("");
   }
-  out.push(`📝 *Draft* · ${p.transaction_date}`, p.narrative ? `_${p.narrative.slice(0, 160)}_` : "", "");
-  for (const l of p.lines) {
-    if (l.debit) out.push(`Dr  ${l.account}${l.item ? ` (${l.item})` : ""}  ${money(l.debit, cur)}`);
-  }
-  for (const l of p.lines) {
-    if (l.credit) out.push(`   Cr  ${l.account}  ${money(l.credit, cur)}`);
-  }
+  out.push(`📝 *Draft entry*`, `📅 ${waDate(p.transaction_date)}`);
+  if (p.narrative) out.push(`_${p.narrative.slice(0, 160)}_`);
+  out.push("", ...entryLines(p.lines, cur));
   const notes = p.warnings.filter(w => !/locked/i.test(w)).slice(0, 3);
   if (notes.length) out.push("", ...notes.map(w => `ℹ️ ${w}`));
   if (p.warnings.some(w => /locked/i.test(w))) out.push("", "🔒 This period is locked — post it from the app (owner/admin).");
   else out.push("", "Reply *YES* to post · *NO* to cancel");
-  return out.filter((l, i, a) => !(l === "" && a[i - 1] === "")).join("\n");
+  return out.filter((l, i, arr) => !(l === "" && arr[i - 1] === "")).join("\n");
 }
 
 /** A book answer (from bookQueries) as a short WhatsApp message. */
