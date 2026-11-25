@@ -6,7 +6,7 @@ const r2 = (x: number) => Math.round(x * 100) / 100;
 
 export type DeductorRow = { section: string; date: string; status: string; amount: number; tds: number; deposited: number };
 export type Deductor = { name: string; tan: string; paid: number; tds: number; deposited: number; rows: DeductorRow[] };
-export type Summary26AS = { pan: string; name: string; fy: string; ay: string; deductors: Deductor[]; totals: { paid: number; tds: number; deposited: number }; bySection: { section: string; amount: number; tds: number }[] };
+export type Summary26AS = { pan: string; name: string; fy: string; ay: string; deductors: Deductor[]; collectors: { name: string; tan: string; paid: number; tcs: number }[]; totals: { paid: number; tds: number; deposited: number }; bySection: { section: string; amount: number; tds: number }[] };
 
 export function summarize26AS(body: unknown): Summary26AS {
   const d = ((body as { data?: unknown })?.data ?? body) as Record<string, unknown>;
@@ -20,10 +20,16 @@ export function summarize26AS(body: unknown): Summary26AS {
     }));
     return { name: String(x.name_of_deductor ?? ""), tan: String(x.tan_of_deductor ?? ""), paid: r2(n(x.total_amount_paid_credited)), tds: r2(n(x.total_tax_deducted)), deposited: r2(n(x.total_tds_deposited)), rows };
   });
+  // Part VI: tax collected at source (TCS) by sellers — field names vary a little between statement versions
+  const part6 = (d["Part VI"] ?? d["part_vi"] ?? d["Part_VI"] ?? []) as Record<string, unknown>[];
+  const collectors = (Array.isArray(part6) ? part6 : []).map(x => {
+    const k = (re: RegExp) => { const key = Object.keys(x).find(q => re.test(q)); return key ? x[key] : undefined; };
+    return { name: String(k(/name_of_collector|^name/i) ?? ""), tan: String(k(/tan/i) ?? ""), paid: r2(n(k(/amount_paid|amount_debited|total_amount/i))), tcs: r2(n(k(/tax_collected|total_tcs|tcs/i))) };
+  }).filter(c => c.name && (c.paid || c.tcs));
   const totals = deductors.reduce((s, x) => ({ paid: r2(s.paid + x.paid), tds: r2(s.tds + x.tds), deposited: r2(s.deposited + x.deposited) }), { paid: 0, tds: 0, deposited: 0 });
   const sec = new Map<string, { amount: number; tds: number }>();
   for (const x of deductors) for (const r of x.rows) { const s = sec.get(r.section) ?? { amount: 0, tds: 0 }; s.amount = r2(s.amount + r.amount); s.tds = r2(s.tds + r.tds); sec.set(r.section, s); }
-  return { pan: String(d.pan ?? ""), name: String(d.name ?? ""), fy: String(d.financial_year ?? ""), ay: String(d.assessment_year ?? ""), deductors, totals,
+  return { pan: String(d.pan ?? ""), name: String(d.name ?? ""), fy: String(d.financial_year ?? ""), ay: String(d.assessment_year ?? ""), deductors, collectors, totals,
     bySection: [...sec].map(([section, v]) => ({ section, ...v })).sort((a, b) => b.tds - a.tds) };
 }
 

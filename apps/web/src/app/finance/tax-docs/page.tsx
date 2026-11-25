@@ -1,4 +1,5 @@
 "use client";
+import type { PartyCheck } from "@/lib/taxCreditCheck";
 import PageHero from "@/components/finance/PageHero";
 import { cur } from "@/lib/money";
 // Tax documents — drop Form 26AS or Form 16 (PDF); FreWork reads every figure and checks 26AS TDS against the books.
@@ -13,7 +14,7 @@ const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", ca
 const SERIF = "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif";
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
 const inr = (x: number) => "₹" + (x || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
-type Result = { kind: "26as"; form26as: Summary26AS; compare: { inForm: number; inBooks: number; diff: number; verdict: "match" | "missing_in_books" | "more_in_books" } | null } | { kind: "form16"; form16: SummaryForm16 };
+type Result = { kind: "26as"; form26as: Summary26AS; parties?: PartyCheck[] | null; compare: { inForm: number; inBooks: number; diff: number; verdict: "match" | "missing_in_books" | "more_in_books" } | null } | { kind: "form16"; form16: SummaryForm16 };
 
 export default function TaxDocs() {
   const router = useRouter();
@@ -136,6 +137,37 @@ export default function TaxDocs() {
                 : cmp.verdict === "missing_in_books" ? <>The statement shows {inr(cmp.diff)} more TDS than your books ({inr(cmp.inBooks)}). Book the missing TDS receivable — <Link href="/finance/chat-book" style={{ color: C.amber }}>tell FreBook</Link>, e.g. &ldquo;TDS {inr(cmp.diff)} deducted by customers this year&rdquo;.</>
                 : <>Your books show {inr(-cmp.diff)} more TDS than the statement — a deductor may not have filed, or an entry is wrong. Check the deductor list below.</>}
             </div>}
+            {res.parties && res.parties.length > 0 && (() => { const ps = res.parties; const bad = ps.filter(p => p.status !== "ok"); return (
+              <section style={{ ...card, display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                  <b style={{ fontFamily: SERIF, fontSize: "1.25rem" }}>Party by party — against your books</b>
+                  <span style={{ fontSize: 13, color: bad.length ? C.amber : C.pos, fontWeight: 700 }}>{bad.length ? `${bad.length} of ${ps.length} need attention` : `All ${ps.length} match ✓`}</span>
+                </div>
+                <div style={{ fontSize: 12.5, color: C.muted }}>For each customer who deducted TDS (and each seller who collected TCS): is the party in your ledgers, is the income / purchase booked, and is the TDS / TCS receivable booked? Each gap shows the entry that fixes it.</div>
+                {[...bad, ...ps.filter(p => p.status === "ok")].map(p => (
+                  <div key={p.kind + p.tan + p.party} style={{ border: `1px solid ${p.status === "ok" ? C.line : p.status === "missing" ? "#F3C2BA" : "#F2D29B"}`, borderRadius: 14, padding: "12px 14px", background: p.status === "ok" ? "#FFFFFF" : p.status === "missing" ? "#FFF6F4" : "#FFFBF1", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: p.kind === "TDS" ? "#E0F5F9" : "#F1EBFE", color: p.kind === "TDS" ? "#0E7490" : "#7C3AED" }}>{p.kind}</span>
+                      <b style={{ flex: 1, minWidth: 180 }}>{p.party}</b>
+                      <span style={{ fontSize: 11.5, fontWeight: 800, padding: "2px 9px", borderRadius: 999, background: p.status === "ok" ? C.posSoft : p.status === "missing" ? C.negSoft : C.amberSoft, color: p.status === "ok" ? C.pos : p.status === "missing" ? C.neg : C.amber }}>{p.status === "ok" ? "✓ Matches books" : p.status === "missing" ? "Not in your ledgers" : "Check"}</span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 6, fontSize: 12.5 }}>
+                      <span>Statement: <b style={{ fontFamily: MONO }}>{inr(p.amount)}</b></span>
+                      <span>{p.kind} in statement: <b style={{ fontFamily: MONO }}>{inr(p.tax)}</b></span>
+                      <span>{p.kind === "TDS" ? "Income" : "Purchases"} in books: <b style={{ fontFamily: MONO }}>{p.ledger ? inr(p.booksAmount) : "—"}</b></span>
+                      <span>{p.kind} receivable in books: <b style={{ fontFamily: MONO }}>{p.ledger ? inr(p.booksTax) : "—"}</b></span>
+                    </div>
+                    {p.notes.map((n, i) => <div key={i} style={{ fontSize: 13, color: "#3A2A0A" }}>• {n}</div>)}
+                    {p.fixes.map((f, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "#FFFFFF", border: `1px dashed ${C.line}`, borderRadius: 10, padding: "8px 10px", fontSize: 13 }}>
+                        <span style={{ flex: 1, minWidth: 220 }}>Fix: <b>Dr {f.dr}</b> / <b>Cr {f.cr}</b> · <b style={{ fontFamily: MONO }}>{inr(f.amount)}</b> <span style={{ color: C.muted }}>— {f.why}</span></span>
+                        <Link href={`/finance/chat-book?prefill=${encodeURIComponent(`${f.dr} ${inr(f.amount)} against ${f.cr} — ${f.why}`)}`} style={{ height: 32, lineHeight: "32px", padding: "0 14px", borderRadius: 999, background: C.forest, color: "#FFFFFF", fontWeight: 800, fontSize: 12.5, textDecoration: "none" }}>Book it in FreBook AI →</Link>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </section>
+            ); })()}
             <section style={card}>
               <b style={{ fontFamily: SERIF, fontSize: "1.15rem" }}>By section</b>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>{s.bySection.map(x => <span key={x.section} style={{ fontSize: 13, background: "#EFE8D9", borderRadius: 999, padding: "5px 12px" }}><b>{x.section || "—"}</b> · {inr(x.amount)} · TDS {inr(x.tds)}</span>)}</div>

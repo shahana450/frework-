@@ -300,8 +300,11 @@ export default function SmartInbox() {
         setJob(job.id, { status: "done", note: `${kind}${label ? ` ${label}` : ""} → Shelf (GST)${bills || " · match it in GST → ITC vs 2B"}` });
         return;
       }
-      if (/26\s?as|form[\s_-]?(16|130|168)/i.test(file.name) && /\.pdf$/i.test(file.name)) {
-        setJob(job.id, { status: "done", note: "Tax document — open Reports → Form 168 / 130 to read it" });
+      // Form 26AS / 168 / AIS / TIS (TRACES names them PAN-year.pdf) and Form 16 / 130: tax statements, not entries.
+      // They go on the Shelf, and Tax documents checks each party against the books.
+      if (/\.pdf$/i.test(file.name) && (/26\s?as|form[\s_-]?(16|130|168)|\bais\b|\btis\b/i.test(file.name) || /^[A-Z]{5}\d{4}[A-Z]([-_ ][^.]*)?\.pdf$/i.test(file.name))) {
+        if (!(file as ShelfFile).fromShelf) keepOnShelf(file, "income_tax");
+        setJob(job.id, { status: "done", note: "Tax statement (Form 26AS / 168) — not entries. Open Tax documents (/finance/tax-docs) and upload it there to check each party's income and TDS / TCS against your books" });
         return;
       }
       if (/\.(xlsx|xls|csv)$/i.test(file.name)) {

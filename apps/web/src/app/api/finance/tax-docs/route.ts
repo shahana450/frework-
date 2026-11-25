@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkTaxCredits } from "@/lib/taxCreditCheck";
+import { loadQueryBooks } from "@/lib/intentEngine";
 import { createClient } from "@supabase/supabase-js";
 import { requireBusiness, serverError } from "@/lib/apiAuth";
 import { accessToken, BASE } from "@/lib/portals/sandbox";
@@ -56,7 +58,17 @@ export async function POST(req: NextRequest) {
     if (kind === "form16") return NextResponse.json({ kind, form16: summarizeForm16(d) });
     const s = summarize26AS(d);
     const inBooks = await booksTds(bizId, s.fy).catch(() => null);
-    return NextResponse.json({ kind, form26as: s, compare: inBooks == null ? null : compareTds(s, inBooks) });
+    // Party by party: customers who deducted TDS, sellers who collected TCS — against the ledgers and entries
+    let parties: ReturnType<typeof checkTaxCredits> | null = null;
+    const y = Number((s.fy.match(/(d{4})/) ?? [])[1]);
+    if (y) {
+      const books = await loadQueryBooks(supabase, bizId, `${y + 1}-03-31`).catch(() => null);
+      if (books && !books.error) parties = checkTaxCredits(
+        s.deductors.map(x => ({ name: x.name, tan: x.tan, amount: x.paid, tax: x.tds })),
+        s.collectors.map(x => ({ name: x.name, tan: x.tan, amount: x.paid, tax: x.tcs })),
+        books.accounts, books.journals.filter(j => j.date >= `${y}-04-01` && j.date <= `${y + 1}-03-31`));
+    }
+    return NextResponse.json({ kind, form26as: s, compare: inBooks == null ? null : compareTds(s, inBooks), parties });
   } catch (e) {
     if (e instanceof PortalError) return NextResponse.json({ error: e.message }, { status: e.code === "NOT_CONFIGURED" ? 503 : 502 });
     return serverError("tax-docs", e, "Couldn't read this document. Please try again.");
