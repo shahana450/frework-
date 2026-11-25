@@ -11,6 +11,8 @@ type TxIn = { id: string; date: string; description: string; debit: number; cred
 
 // Money out: Dr chosen ledger / Cr bank. Money in: Dr bank / Cr chosen ledger. One atomic entry per row.
 // The bank side always comes from the batch's bank account (a cash/bank ledger). Possible duplicates aren't posted.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const { business_id, bank_account_id, transactions, file_name } = await req.json() as { business_id: string; bank_account_id: string; transactions: TxIn[]; file_name?: string };
@@ -31,8 +33,9 @@ export async function POST(req: NextRequest) {
 
     const created: string[] = [];
     const failures: { id: string; error: string; code?: string }[] = [];
-    for (const tx of transactions) {
-      if (dupes.has(tx.id) && !tx.confirm_duplicate) { failures.push({ id: tx.id, code: "POSSIBLE_DUPLICATE", error: `Possible duplicate — not posted. ${dupes.get(tx.id)}` }); continue; }
+    // Six entries at a time (each is still atomic on its own) — one after another took ~0.5 s per line
+    const postOne = async (tx: TxIn) => {
+      if (dupes.has(tx.id) && !tx.confirm_duplicate) { failures.push({ id: tx.id, code: "POSSIBLE_DUPLICATE", error: `Possible duplicate — not posted. ${dupes.get(tx.id)}` }); return; }
       const out = (tx.debit || 0) > 0;
       const amount = out ? tx.debit : tx.credit;
       try {
@@ -49,7 +52,8 @@ export async function POST(req: NextRequest) {
         const pe = postingErrorMessage(e);
         failures.push({ id: tx.id, error: pe.message, code: pe.code });
       }
-    }
+    };
+    for (let i = 0; i < transactions.length; i += 6) await Promise.all(transactions.slice(i, i + 6).map(postOne));
     return NextResponse.json({ created: created.length, journal_ids: created, failures, batch_id: batchId });
   } catch (e) {
     return serverError("bank-to-journals", e, "We couldn't post these bank transactions. Please try again.");

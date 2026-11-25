@@ -118,7 +118,7 @@ export default function BankingPage() {
       setLoanMode(wantLoan);
       const loans = banks.filter(a => isLoanAccount(a as never));
       if (wantLoan && loans.length) setBankAccountId(loans[0].id);
-      else if (banks.length) setBankAccountId(banks[0].id);
+      else if (banks.length) setBankAccountId((banks.find(b => !isLoanAccount(b as never) && !/cash/i.test(b.name) && (b.type === "bank" || (b as { sub_type?: string | null }).sub_type === "bank")) ?? banks[0]).id);   // a bank before cash
     });
   }, []);
 
