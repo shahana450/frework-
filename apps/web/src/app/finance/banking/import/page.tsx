@@ -15,6 +15,9 @@ import { headByKey, inferHead } from "@/lib/ledgerHeads";
 import { groupKeyOf } from "@/lib/statementGroups";
 
 /* ─── Types ─────────────────────────────────────────────── */
+// A loan here: a loan-named liability, or any liability ledger chosen as the statement account
+const loanLike = (a?: { name: string; type: string } | null) => !!a && (isLoanAccount(a as never) || a.type === "liability");
+
 type TxRow = {
   id: string;
   date: string;
@@ -66,6 +69,9 @@ export default function BankingPage() {
   const [bankAccountId, setBankAccountId] = useState<string>("");
   const [loanMode, setLoanMode] = useState(false);
   // After a statement is read: which bank / loan ledger is it for? (or create one)
+  const acctChosen = useRef(false);   // picked in "Which account…" — suggestions never switch it
+  const [askPos, setAskPos] = useState({ x: 0, y: 0 });
+  const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
   const [acctAsk, setAcctAsk] = useState<{ kind: "bank" | "loan"; pick: string; newName: string; creating: boolean; hint: string } | null>(null);
 
   // Selection
@@ -114,13 +120,13 @@ export default function BankingPage() {
       const all = (accounts ?? []) as CoaAccount[];
       setCoa(all);
       // Bank and cash ledgers are stored as assets with a bank/cash sub-type (older ones may carry the type itself)
-      const banks = all.filter(a => !/interest|charges?|commission|fees?|gst/i.test(a.name) || isLoanAccount(a as never)).filter(a => ["bank", "cash"].includes(a.type) || ["bank", "cash"].includes((a as { sub_type?: string | null }).sub_type ?? "") || isLoanAccount(a as never));
+      const banks = all.filter(a => !/interest|charges?|commission|fees?|gst/i.test(a.name) || isLoanAccount(a as never)).filter(a => ["bank", "cash"].includes(a.type) || ["bank", "cash"].includes((a as { sub_type?: string | null }).sub_type ?? "") || isLoanAccount(a as never) || (a as { sub_type?: string | null }).sub_type === "long_term_liability");
       setBankAccounts(banks);
       const wantLoan = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("loan") === "1";
       setLoanMode(wantLoan);
-      const loans = banks.filter(a => isLoanAccount(a as never));
+      const loans = banks.filter(a => loanLike(a as never));
       if (wantLoan && loans.length) setBankAccountId(loans[0].id);
-      else if (banks.length) setBankAccountId((banks.find(b => !isLoanAccount(b as never) && !/cash/i.test(b.name) && (b.type === "bank" || (b as { sub_type?: string | null }).sub_type === "bank")) ?? banks[0]).id);   // a bank before cash
+      else if (banks.length) setBankAccountId((banks.find(b => !loanLike(b as never) && !/cash/i.test(b.name) && (b.type === "bank" || (b as { sub_type?: string | null }).sub_type === "bank")) ?? banks[0]).id);   // a bank before cash
     });
   }, []);
 
@@ -214,7 +220,7 @@ export default function BankingPage() {
   /* ── File drop / select ── */
   async function handleFile(file: File) {
     setLocked(null);
-    setParsing(true); setParseError(""); setRows([]); setSelected(new Set()); setPushResult(null);
+    setParsing(true); setParseError(""); setRows([]); setSelected(new Set()); setPushResult(null); acctChosen.current = false; setAskPos({ x: 0, y: 0 });
     setParseProgress(0); setParseStep("Reading file…");
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
     // Animated progress for PDF (AI takes 15-40s)
@@ -255,7 +261,7 @@ export default function BankingPage() {
         const BANKS = ["state bank", "sbi", "hdfc", "icici", "axis", "kotak", "federal", "canara", "union", "baroda", "bob", "pnb", "punjab", "indian bank", "idbi", "yes bank", "indusind", "south indian", "csb", "catholic", "dhanlaxmi", "idfc", "rbl", "bandhan", "esaf", "cnb", "kerala gramin", "iob", "overseas", "au small"];
         const text = `${file.name} ${txs.slice(0, 5).map(t => t.description).join(" ")}`.toLowerCase();
         const named = BANKS.find(b => text.includes(b));
-        const pool = bankAccounts.filter(a => loan ? isLoanAccount(a as never) : !isLoanAccount(a as never));
+        const pool = bankAccounts.filter(a => loan ? loanLike(a as never) : !loanLike(a as never));
         const guess = pool.find(a => named && a.name.toLowerCase().includes(named.split(" ")[0])) ?? (pool.length === 1 ? pool[0] : undefined);
         const title = named ? named.replace(/\b\w/g, ch => ch.toUpperCase()).replace(/^(Sbi|Hdfc|Icici|Idbi|Pnb|Bob|Rbl|Csb|Cnb|Iob|Idfc)\b/, w => w.toUpperCase()) : "";
         setAcctAsk({ kind: loan ? "loan" : "bank", pick: guess?.id ?? (pool.length ? "" : "__new"), newName: title ? (loan ? `${title} Loan A/c` : `${title}${/bank/i.test(title) ? "" : " Bank"}`) : "", creating: false, hint: named ? title : "" });
@@ -330,12 +336,13 @@ export default function BankingPage() {
       const pick: Record<string, string> = {};              // row id → ledger name
       // A loan statement: the loan ledger is the statement account, amounts follow the running balance
       const acct0 = coa.find(a => a.id === bankAccountId);
-      let loanAcct = !!acct0 && !bankAccounts.some(b => b.id === acct0.id && !isLoanAccount(b as never));
+      let loanAcct = !!acct0 && !bankAccounts.some(b => b.id === acct0.id && !loanLike(b as never));
       let statementAcct = acct0;
       let work = rows;
       if (!loanAcct && looksLikeLoanStatement("", rows)) {
-        const ln = bankAccounts.find(a => isLoanAccount(a as never));
-        if (ln) { setBankAccountId(ln.id); statementAcct = ln; loanAcct = true; }
+        const ln = bankAccounts.find(a => loanLike(a as never));
+        if (ln && !acctChosen.current) { setBankAccountId(ln.id); statementAcct = ln; loanAcct = true; }
+        else if (acctChosen.current) { /* the account you picked stays */ }
         else { setSuggestMsg("This looks like a loan statement. Add your loan ledger in Statement account (e.g. \"Federal Bank Term Loan\"), choose it, then Suggest again."); return; }
       }
       if (loanAcct) { work = normaliseLoanRows(rows); setRows(work); }
@@ -343,7 +350,7 @@ export default function BankingPage() {
         if (r.pushed || r.ledger_id) continue;
         const out = r.debit > 0;
         if (loanAcct) {
-          const payBank = bankAccounts.find(a => !isLoanAccount(a as never) && !/cash/i.test(a.name))?.name ?? "Bank Account";
+          const payBank = bankAccounts.find(a => !loanLike(a as never) && !/cash/i.test(a.name))?.name ?? "Bank Account";
           const ln = suggestLoanLedger(r.description, out, payBank, coa.map(a => a.name), statementAcct?.name ?? "");
           const ex = coa.find(a => a.name.trim().toLowerCase() === ln.toLowerCase()); pick[r.id] = ex?.name ?? ln;
           if (!ex && !want.has(ln)) want.set(ln, ln === "Bank Account" ? "bank" : "indirect_expense");
@@ -409,6 +416,7 @@ export default function BankingPage() {
   const [newBank, setNewBank] = useState("");
   async function confirmAcct() {
     if (!acctAsk || !bizId) return;
+    acctChosen.current = true;
     if (acctAsk.pick && acctAsk.pick !== "__new") { setBankAccountId(acctAsk.pick); setLoanMode(acctAsk.kind === "loan"); setAcctAsk(null); return; }
     const name = acctAsk.newName.trim();
     if (!name) return;
@@ -555,6 +563,17 @@ export default function BankingPage() {
         .bs-filter-btn.active { background: rgba(18,53,45,0.12); border-color: rgba(18,53,45,0.4); color: #12352D; }
         .ledger-sel { background: #FFFFFF; border: 1px solid #E6DFD0; color: #10241F; padding: 0 10px; height: 34px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; outline: none; width: 100%; cursor: text; min-width: 230px; max-width: 320px; font-family: inherit; }
         .bi-review { display: flex; flex-direction: column; gap: 14px; }
+        .bi-table { table-layout: fixed; min-width: 980px; }
+        .bi-table th, .bi-table td { vertical-align: middle !important; }
+        .bi-table th:nth-child(1), .bi-table td:nth-child(1) { width: 44px; }
+        .bi-table th:nth-child(2), .bi-table td:nth-child(2) { width: 112px; }
+        .bi-table th:nth-child(4), .bi-table td:nth-child(4), .bi-table th:nth-child(5), .bi-table td:nth-child(5) { width: 128px; text-align: right; }
+        .bi-table th:nth-child(6), .bi-table td:nth-child(6) { width: 132px; text-align: right; }
+        .bi-table th:nth-child(7), .bi-table td:nth-child(7) { width: 330px; }
+        .bi-table th:nth-child(8), .bi-table td:nth-child(8) { width: 48px; }
+        .bi-table td { padding-top: 10px !important; padding-bottom: 10px !important; border-bottom: 1px solid #F1E8D6; }
+        .bi-table td:nth-child(3) { overflow-wrap: anywhere; }
+        .bi-table .ledger-sel { max-width: none; }
         .bi-card { background: #FFFDF8; border: 1px solid #EFE2C4; border-radius: 18px; box-shadow: 0 14px 30px -26px rgba(154,107,34,.55); }
         .bi-main > div:last-child { border-radius: 18px; }
         .bi-hero { display: grid; grid-template-columns: minmax(240px, 1.1fr) minmax(280px, 1.6fr) minmax(220px, 0.9fr); gap: 22px; padding: 22px 24px; border-radius: 26px; color: #FFFFFF;
@@ -589,7 +608,7 @@ export default function BankingPage() {
         .bi-main { min-width: 0; }
         .bi-side { order: -1; display: flex; flex-direction: column; gap: 10px; }
         .bi-side > div { margin-bottom: 0 !important; }
-        .bi-desc { min-width: 220px; max-width: 420px; line-height: 1.35; display: table-cell; }
+        .bi-desc { line-height: 1.35; }
         .bi-desc { white-space: normal; word-break: break-word; }
         .bi-main thead th { position: sticky; top: 0; z-index: 1; background: #FFFDF8; }
         .bi-main tbody tr:hover { background: #FFF9EC !important; }
@@ -766,17 +785,24 @@ export default function BankingPage() {
 
         {/* ── Which account is this statement for? ── */}
         {acctAsk && rows.length > 0 && (() => {
-          const pool = bankAccounts.filter(a => acctAsk.kind === "loan" ? isLoanAccount(a as never) : !isLoanAccount(a as never));
+          const pool = bankAccounts.filter(a => acctAsk.kind === "loan" ? loanLike(a as never) : !loanLike(a as never));
           const busy = acctAsk.creating, isNew = acctAsk.pick === "__new" || !pool.length;
           return (
-            <div className="bi-ask-wrap" role="dialog" aria-modal="true" aria-labelledby="bi-ask-t">
-              <div className="bi-ask">
+            <div className="bi-ask-wrap" role="dialog" aria-modal="true" aria-labelledby="bi-ask-t" onKeyDown={e => { if (e.key === "Escape") { acctChosen.current = !!bankAccountId; setAcctAsk(null); } }}>
+              <div className="bi-ask" style={{ transform: `translate(${askPos.x}px, ${askPos.y}px)` }}>
+                <div className="bi-ask-grip" title="Drag to move"
+                  onPointerDown={e => { (e.target as HTMLElement).setPointerCapture(e.pointerId); drag.current = { x: e.clientX, y: e.clientY, ox: askPos.x, oy: askPos.y }; }}
+                  onPointerMove={e => { const d = drag.current; if (d) setAskPos({ x: d.ox + e.clientX - d.x, y: d.oy + e.clientY - d.y }); }}
+                  onPointerUp={() => { drag.current = null; }}>
+                  <span aria-hidden="true">⠿</span>
+                  <button onClick={() => { acctChosen.current = !!bankAccountId; setAcctAsk(null); }} aria-label="Close" className="bi-ask-x" onPointerDown={e => e.stopPropagation()}>×</button>
+                </div>
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", color: "#9A6B22" }}>{rows.length} LINES READ{acctAsk.hint ? ` · LOOKS LIKE ${acctAsk.hint.toUpperCase()}` : ""}</div>
                 <h2 id="bi-ask-t">Which account is this statement for?</h2>
                 <div className="bi-ask-kind" role="radiogroup" aria-label="Statement type">
                   {(["bank", "loan"] as const).map(k => (
                     <button key={k} role="radio" aria-checked={acctAsk.kind === k} className={acctAsk.kind === k ? "on" : ""}
-                      onClick={() => { const pl = bankAccounts.filter(a => k === "loan" ? isLoanAccount(a as never) : !isLoanAccount(a as never)); setAcctAsk(a => a && { ...a, kind: k, pick: pl.length === 1 ? pl[0].id : pl.length ? "" : "__new", newName: a.hint ? (k === "loan" ? `${a.hint} Loan A/c` : `${a.hint}${/bank/i.test(a.hint) ? "" : " Bank"}`) : "" }); }}>
+                      onClick={() => { const pl = bankAccounts.filter(a => k === "loan" ? loanLike(a as never) : !loanLike(a as never)); setAcctAsk(a => a && { ...a, kind: k, pick: pl.length === 1 ? pl[0].id : pl.length ? "" : "__new", newName: a.hint ? (k === "loan" ? `${a.hint} Loan A/c` : `${a.hint}${/bank/i.test(a.hint) ? "" : " Bank"}`) : "" }); }}>
                       <b>{k === "bank" ? "Bank account" : "Loan account"}</b>
                       <small>{k === "bank" ? "Current / savings / OD — posts Payment & Receipt" : "Term, vehicle, home, gold loan — posts Journal"}</small>
                     </button>
@@ -805,17 +831,21 @@ export default function BankingPage() {
               </div>
               <style>{`
                 .bi-ask-wrap{position:fixed;inset:0;z-index:60;background:rgba(10,31,27,.55);display:grid;place-items:center;padding:16px}
-                .bi-ask{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:#FFFDF8;border-radius:26px;padding:26px 28px;display:flex;flex-direction:column;gap:14px;box-shadow:0 40px 80px -30px rgba(6,26,22,.7)}
+                .bi-ask{width:min(560px,100%);max-height:calc(100vh - 32px);overflow-y:auto;background:#FFFDF8;border-radius:26px;padding:10px 28px 24px;display:flex;flex-direction:column;gap:14px;box-shadow:0 40px 80px -30px rgba(6,26,22,.7)}
                 .bi-ask h2{margin:0;font-family:'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif;font-size:26px;color:#0B2C25}
                 .bi-ask-kind{display:grid;grid-template-columns:1fr 1fr;gap:10px}
                 .bi-ask-kind button{text-align:left;padding:12px 14px;border-radius:16px;border:1.5px solid #E6DFD0;background:#fff;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:3px;color:#0B2C25}
                 .bi-ask-kind button small{font-size:11.5px;color:#5E6B66}
                 .bi-ask-kind button.on{border-color:#0B2C25;background:#0B2C25;color:#fff}.bi-ask-kind button.on small{color:#B9D0C7}
-                .bi-ask-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+                .bi-ask-list{display:flex;flex-direction:column;gap:6px;max-height:min(300px,40vh);overflow-y:auto;padding:2px}
+                .bi-ask-grip{display:flex;align-items:center;justify-content:space-between;cursor:grab;user-select:none;touch-action:none;color:#C9B98F;font-size:18px;padding:6px 0 2px;position:sticky;top:-10px;background:#FFFDF8;z-index:1}
+                .bi-ask-grip:active{cursor:grabbing}
+                .bi-ask-x{width:34px;height:34px;border-radius:999px;border:1px solid #E6DFD0;background:#fff;color:#0B2C25;font-size:18px;cursor:pointer}
+                .bi-ask-opt{flex:none}
                 .bi-ask-opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:14px;border:1px solid #EFE2C4;background:#fff;cursor:pointer;font-size:14px;font-weight:700;color:#0B2C25}
                 .bi-ask-opt.on{border-color:#0B7A55;background:#F2FAF6}
                 .bi-ask-opt input{accent-color:#0B2C25;width:17px;height:17px}
-                .bi-ask-new{height:44px;border-radius:12px;border:1.5px solid #E9C27A;padding:0 14px;font:inherit;font-size:14.5px;font-weight:700;outline:none}
+                .bi-ask-new{flex:none;height:44px;border-radius:12px;border:1.5px solid #E9C27A;padding:0 14px;font:inherit;font-size:14.5px;font-weight:700;outline:none}
                 .bi-ask-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid #F1E8D6;padding-top:14px}
                 .bi-ask-foot span{flex:1 1 200px;font-size:12.5px;color:#5E6B66}
                 .bi-ask-go{height:46px;padding:0 22px;border-radius:999px;border:none;background:linear-gradient(135deg,#F3D9A2,#E9C27A);color:#10241F;font:inherit;font-weight:800;font-size:15px;cursor:pointer}
@@ -956,7 +986,7 @@ export default function BankingPage() {
         })()}
         <datalist id="bs-ledgers">{coa.map(a => <option key={a.id} value={`${decode(a.name)} · ${a.type}`} />)}</datalist>
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+                  <table className="bi-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
                     <thead>
                       <tr style={{ background: "#FFFDF8", borderBottom: "1px solid #FFFFFF" }}>
                         <th style={{ padding: "0.6rem 0.75rem", width: 36, textAlign: "center" }}>
@@ -1075,12 +1105,12 @@ export default function BankingPage() {
                   <span className="bi-h-lbl">STATEMENT ACCOUNT</span>
                   <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} aria-label="Statement account" title="Click to choose the bank, loan or other ledger this statement belongs to" className="bi-h-sel">
                     <option value="">— choose the account —</option>
-                    <optgroup label="Bank & cash">{bankAccounts.filter(a => !isLoanAccount(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
-                    <optgroup label="Loans">{bankAccounts.filter(a => isLoanAccount(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
+                    <optgroup label="Bank & cash">{bankAccounts.filter(a => !loanLike(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
+                    <optgroup label="Loans">{bankAccounts.filter(a => loanLike(a as never)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>
                     <optgroup label="Any other ledger">{coa.filter(a => !bankAccounts.some(b => b.id === a.id)).map(a => <option key={a.id} value={a.id}>{decode(a.name)}</option>)}</optgroup>
                   </select>
-                  <span className="bi-h-note">{(() => { const a = coa.find(x => x.id === bankAccountId); const viaBank = !!a && bankAccounts.some(b => b.id === a.id && !isLoanAccount(b as never)); return !a ? "Choose the bank, loan or ledger this statement belongs to." : viaBank ? "Bank / cash · posts as Payment and Receipt vouchers" : "Loan / other ledger · posts as Journal vouchers"; })()}</span>
-                  {loanMode && !bankAccounts.some(a => isLoanAccount(a as never)) && <span className="bi-h-note" style={{ color: "#E9C27A" }}>No loan ledger yet — add one below, e.g. “Federal Bank Term Loan”.</span>}
+                  <span className="bi-h-note">{(() => { const a = coa.find(x => x.id === bankAccountId); const viaBank = !!a && bankAccounts.some(b => b.id === a.id && !loanLike(b as never)); return !a ? "Choose the bank, loan or ledger this statement belongs to." : viaBank ? "Bank / cash · posts as Payment and Receipt vouchers" : "Loan / other ledger · posts as Journal vouchers"; })()}</span>
+                  {loanMode && !bankAccounts.some(a => loanLike(a as never)) && <span className="bi-h-note" style={{ color: "#E9C27A" }}>No loan ledger yet — add one below, e.g. “Federal Bank Term Loan”.</span>}
                   <div style={{ display: "flex", gap: 6 }}>
                     <input value={newBank} onChange={e => setNewBank(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addBank(); }} placeholder={bankAccounts.length ? "＋ Add another bank or loan…" : "＋ Add your bank, e.g. IDFC First Bank"} aria-label="Add a bank account" className="bi-h-add" />
                     {newBank.trim() && <button onClick={addBank} className="bi-h-addbtn">Add</button>}
