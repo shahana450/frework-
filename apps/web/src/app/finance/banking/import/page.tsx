@@ -112,7 +112,7 @@ export default function BankingPage() {
       const all = (accounts ?? []) as CoaAccount[];
       setCoa(all);
       // Bank and cash ledgers are stored as assets with a bank/cash sub-type (older ones may carry the type itself)
-      const banks = all.filter(a => ["bank", "cash"].includes(a.type) || ["bank", "cash"].includes((a as { sub_type?: string | null }).sub_type ?? "") || isLoanAccount(a as never));
+      const banks = all.filter(a => !/interest|charges?|commission|fees?|gst/i.test(a.name) || isLoanAccount(a as never)).filter(a => ["bank", "cash"].includes(a.type) || ["bank", "cash"].includes((a as { sub_type?: string | null }).sub_type ?? "") || isLoanAccount(a as never));
       setBankAccounts(banks);
       const wantLoan = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("loan") === "1";
       setLoanMode(wantLoan);
@@ -512,7 +512,15 @@ export default function BankingPage() {
         .bs-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
         .bs-filter-btn { background: #FFFFFF; border: 1px solid #FFFFFF; color: #6E88A8; border-radius: 7px; padding: 5px 12px; font-size: 0.76rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
         .bs-filter-btn.active { background: rgba(18,53,45,0.12); border-color: rgba(18,53,45,0.4); color: #12352D; }
-        .ledger-sel { background: #FFFFFF; border: 1px solid #FFFFFF; color: #10241F; padding: 4px 6px; border-radius: 6px; font-size: 0.72rem; outline: none; width: 100%; cursor: pointer; max-width: 200px; }
+        .ledger-sel { background: #FFFFFF; border: 1px solid #E6DFD0; color: #10241F; padding: 0 10px; height: 34px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; outline: none; width: 100%; cursor: text; min-width: 230px; max-width: 320px; font-family: inherit; }
+        .bi-review { display: flex; flex-direction: column; gap: 14px; }
+        .bi-main { min-width: 0; }
+        .bi-side { order: -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-items: stretch; }
+        .bi-side > div { margin-bottom: 0 !important; }
+        .bi-desc { min-width: 220px; max-width: 420px; line-height: 1.35; display: table-cell; }
+        .bi-desc { white-space: normal; word-break: break-word; }
+        .bi-main thead th { position: sticky; top: 0; z-index: 1; background: #FFFDF8; }
+        .bi-main tbody tr:hover { background: #FFF9EC !important; }
         .ledger-sel:focus { border-color: #12352D; }
         select option { background: #FFFFFF; }
         input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
@@ -686,10 +694,10 @@ export default function BankingPage() {
 
         {/* ── Main table view ── */}
         {rows.length > 0 && (
-          <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
+          <div className="bi-review">
 
-            {/* ── Left: table ── */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            {/* ── Table (full width; the account, summary and Push sit in a bar above it) ── */}
+            <div className="bi-main">
 
               {/* Filters row */}
               <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, padding: "0.8rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
@@ -791,12 +799,12 @@ export default function BankingPage() {
                         <th style={{ padding: "0.6rem 0.75rem", width: 36, textAlign: "center" }}>
                           <input type="checkbox" className="bs-sel" checked={allFilteredSelected} onChange={toggleAll} />
                         </th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Date</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Description</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Debit (Dr)</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Credit (Cr)</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Balance</th>
-                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ledger Account</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#6B7570", fontWeight: 800, fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Date</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#6B7570", fontWeight: 800, fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Description</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#6B7570", fontWeight: 800, fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Debit (Dr)</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#6B7570", fontWeight: 800, fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Credit (Cr)</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "right", color: "#6B7570", fontWeight: 800, fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>Balance</th>
+                        <th style={{ padding: "0.6rem 0.75rem", textAlign: "left", color: "#6B7570", fontWeight: 800, fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ledger Account</th>
                         <th style={{ padding: "0.6rem 0.75rem", width: 32 }}></th>
                       </tr>
                     </thead>
@@ -813,7 +821,7 @@ export default function BankingPage() {
                             <td style={{ padding: "0.5rem 0.75rem", whiteSpace: "nowrap", color: "#6E88A8", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem" }}>
                               {fmtDate(row.date)}
                             </td>
-                            <td style={{ padding: "0.5rem 0.75rem", color: "#10241F", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.description}>
+                            <td className="bi-desc" style={{ padding: "0.6rem 0.75rem", color: "#10241F" }} title={row.description}>
                               {row.description || <span style={{ color: "#E6DFD0" }}>—</span>}
                             </td>
                             <td style={{ padding: "0.5rem 0.75rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: row.debit ? "#B4321F" : "#E6DFD0", fontWeight: row.debit ? 600 : 400 }}>
@@ -850,13 +858,13 @@ export default function BankingPage() {
                                   </button>
                                 </div>
                               ) : (
-                                <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+                                <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
                                   <input list="bs-ledgers" key={row.ledger_id ?? "none"} defaultValue={row.ledger_id ? decode(coa.find(a => a.id === row.ledger_id)?.name ?? "") : ""}
                                     placeholder="Type to find a ledger…" title={row.ledger_id ? decode(coa.find(a => a.id === row.ledger_id)?.name ?? "") : "Type a few letters, then pick"}
                                     onChange={e => { const v = e.target.value.trim().toLowerCase(); const hit = coa.find(a => decode(a.name).toLowerCase() === v || `${decode(a.name)} · ${a.type}`.toLowerCase() === v); if (hit) assignLedger(row.id, hit.id); }}
-                                    className="ledger-sel" style={{ borderColor: row.ledger_id ? "rgba(11,122,85,0.35)" : "#E6DFD0", color: row.ledger_id ? "#0B7A55" : "#10241F", minWidth: 190 }} />
+                                    className="ledger-sel" style={{ borderColor: row.ledger_id ? "rgba(11,122,85,0.45)" : "#EBCB8B", color: row.ledger_id ? "#0B7A55" : "#10241F", background: row.ledger_id ? "#F2FAF6" : "#FFFFFF" }} />
                                   <button type="button" title="Add a new ledger" onClick={() => { setAddLedgerRow(row.id); setNewLedgerName(""); setGroupTouched(false); setNewLedgerType(row.debit ? "indirect_expense" : "indirect_income"); }}
-                                    style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #E6DFD0", background: "#FFFFFF", color: "#12352D", cursor: "pointer", fontWeight: 800 }}>＋</button>
+                                    style={{ width: 34, height: 34, flex: "none", borderRadius: 10, border: "1px solid #E6DFD0", background: "#FFFFFF", color: "#12352D", cursor: "pointer", fontWeight: 800 }}>＋</button>
                                 </span>
                               )}
                             </td>
@@ -898,7 +906,7 @@ export default function BankingPage() {
             </div>
 
             {/* ── Right: action panel ── */}
-            <div style={{ width: 260, flexShrink: 0, position: "sticky", top: 68 }}>
+            <div className="bi-side">
 
               {/* Bank account selector */}
               <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1.1rem", marginBottom: "0.75rem" }}>
