@@ -23,10 +23,21 @@ const deny = (status: 401 | 403, message: string) => NextResponse.json({ error: 
 export async function requireUser(req: NextRequest): Promise<User | NextResponse> {
   const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
   if (!token) return deny(401, "Please sign in again.");
+  const hit = userCache.get(token);
+  if (hit && fresh(hit.at)) return hit.user;
   const { data, error } = await admin.auth.getUser(token);
-  if (error || !data.user) return deny(401, "Your session has expired. Please sign in again.");
+  if (error || !data.user) { userCache.delete(token); return deny(401, "Your session has expired. Please sign in again."); }
+  trim(userCache); userCache.set(token, { user: data.user, at: Date.now() });
   return data.user;
 }
+
+// A warm server remembers a checked sign-in and a checked role for a minute, so a page's several API calls
+// don't each repeat the same 2–3 database trips. Sign-out or removal from a team takes effect within 60 seconds.
+const TTL = 60_000;
+const userCache = new Map<string, { user: User; at: number }>();
+const roleCache = new Map<string, { role: Role | null; at: number }>();
+const fresh = (at: number) => Date.now() - at < TTL;
+function trim<K, V>(m: Map<K, V>) { if (m.size > 500) for (const k of [...m.keys()].slice(0, 250)) m.delete(k); }
 
 /**
  * Signed-in user who owns, or is a team member of, the business, and whose role allows `action`
@@ -36,7 +47,10 @@ export async function requireBusiness(req: NextRequest, businessId: string | nul
   const user = await requireUser(req);
   if (user instanceof NextResponse) return user;
   if (!businessId || !/^[0-9a-f-]{36}$/i.test(businessId)) return deny(403, "You don't have access to this business.");
-  const role = await roleOf(user, businessId);
+  const key = `${user.id}|${businessId}`;
+  const cached = roleCache.get(key);
+  const role = cached && fresh(cached.at) ? cached.role : await roleOf(user, businessId);
+  if (role && (!cached || !fresh(cached.at))) { trim(roleCache); roleCache.set(key, { role, at: Date.now() }); }
   if (!role) return deny(403, "You don't have access to this business.");
   const action: Action = opts.action ?? (opts.write ? "post" : "view");
   if (!can(role, action)) return deny(403, `Your role (${ROLE_LABEL[role]}) can't ${ACTION_LABEL[action]}. Ask the business owner for access.`);
