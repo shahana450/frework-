@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/shared/theme-provider";
 import { QueryProvider } from "@/components/shared/query-provider";
 import { Toaster } from "sonner";
 import ApiAuthInstaller from "@/components/ApiAuthInstaller";
+import DatalistEnhancer from "@/components/DatalistEnhancer";
 import "@/styles/globals.css";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
@@ -187,6 +188,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ApiAuthInstaller />
+        <DatalistEnhancer />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <QueryProvider>
             {children}
