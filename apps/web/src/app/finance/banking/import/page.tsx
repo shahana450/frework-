@@ -65,6 +65,8 @@ export default function BankingPage() {
   // Selected bank account for this statement
   const [bankAccountId, setBankAccountId] = useState<string>("");
   const [loanMode, setLoanMode] = useState(false);
+  // After a statement is read: which bank / loan ledger is it for? (or create one)
+  const [acctAsk, setAcctAsk] = useState<{ kind: "bank" | "loan"; pick: string; newName: string; creating: boolean; hint: string } | null>(null);
 
   // Selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -247,6 +249,18 @@ export default function BankingPage() {
       setParseProgress(100); setParseStep(`Found ${txs.length} transactions!`);
       await new Promise(r => setTimeout(r, 400));
       setRows(txs);
+      {
+        // Bank or loan statement, and the ledger it most likely belongs to
+        const loan = looksLikeLoanStatement(file.name, txs);
+        const BANKS = ["state bank", "sbi", "hdfc", "icici", "axis", "kotak", "federal", "canara", "union", "baroda", "bob", "pnb", "punjab", "indian bank", "idbi", "yes bank", "indusind", "south indian", "csb", "catholic", "dhanlaxmi", "idfc", "rbl", "bandhan", "esaf", "cnb", "kerala gramin", "iob", "overseas", "au small"];
+        const text = `${file.name} ${txs.slice(0, 5).map(t => t.description).join(" ")}`.toLowerCase();
+        const named = BANKS.find(b => text.includes(b));
+        const pool = bankAccounts.filter(a => loan ? isLoanAccount(a as never) : !isLoanAccount(a as never));
+        const guess = pool.find(a => named && a.name.toLowerCase().includes(named.split(" ")[0])) ?? (pool.length === 1 ? pool[0] : undefined);
+        const title = named ? named.replace(/\b\w/g, ch => ch.toUpperCase()).replace(/^(Sbi|Hdfc|Icici|Idbi|Pnb|Bob|Rbl|Csb|Cnb|Iob|Idfc)\b/, w => w.toUpperCase()) : "";
+        setAcctAsk({ kind: loan ? "loan" : "bank", pick: guess?.id ?? (pool.length ? "" : "__new"), newName: title ? (loan ? `${title} Loan A/c` : `${title}${/bank/i.test(title) ? "" : " Bank"}`) : "", creating: false, hint: named ? title : "" });
+        if (guess) setBankAccountId(guess.id);
+      }
       // Keep the statement itself on the Shelf (Bank rack), so the original is always there
       if (bizId && !fromShelf.current) { const fd = new FormData(); fd.append("business_id", bizId); fd.append("file", file); fd.append("rack", "bank"); void fetch("/api/finance/shelf", { method: "POST", body: fd }).catch(() => null); }
     } catch (e: unknown) {
@@ -393,6 +407,21 @@ export default function BankingPage() {
 
   /* ── Add the bank account itself, right here ── */
   const [newBank, setNewBank] = useState("");
+  async function confirmAcct() {
+    if (!acctAsk || !bizId) return;
+    if (acctAsk.pick && acctAsk.pick !== "__new") { setBankAccountId(acctAsk.pick); setLoanMode(acctAsk.kind === "loan"); setAcctAsk(null); return; }
+    const name = acctAsk.newName.trim();
+    if (!name) return;
+    const exists = coa.find(a => a.name.trim().toLowerCase() === name.toLowerCase());
+    if (exists) { setBankAccountId(exists.id); if (!bankAccounts.some(b => b.id === exists.id)) setBankAccounts(b => [...b, exists]); setAcctAsk(null); return; }
+    setAcctAsk(a => a && { ...a, creating: true });
+    const h = headByKey(acctAsk.kind === "loan" ? "loan" : "bank")!;
+    const { data, error } = await supabase.from("fw_fin_chart_of_accounts").insert({ business_id: bizId, name, code: `AUTO-${Date.now().toString().slice(-7)}`, type: h.type, sub_type: h.sub_type, is_group: false, is_system: false, description: `${acctAsk.kind === "loan" ? "Loan" : "Bank"} account added from statement import` }).select("id,name,type,code").single();
+    if (error) { alert(`Couldn't create the ledger: ${error.message}`); setAcctAsk(a => a && { ...a, creating: false }); return; }
+    const a = { ...(data as CoaAccount), sub_type: h.sub_type } as CoaAccount;
+    setCoa(x => [...x, a]); setBankAccounts(b => [...b, a]); setBankAccountId(a.id); setLoanMode(acctAsk.kind === "loan"); setAcctAsk(null);
+  }
+
   async function addBank() {
     if (!bizId || !newBank.trim()) return;
     const h = headByKey("bank")!;
@@ -405,13 +434,13 @@ export default function BankingPage() {
   // Suggestions fill in by themselves when a statement is loaded (existing ledgers only; "Suggest ledgers" also creates missing ones)
   const autoSuggested = useRef("");
   useEffect(() => {
-    if (!bizId || !coa.length || !bankAccountId || suggesting || !rows.length) return;
+    if (!bizId || !coa.length || !bankAccountId || suggesting || !rows.length || acctAsk) return;
     const key = `${rows.length}|${rows[0]?.id}`;
     if (autoSuggested.current === key || !rows.some(r => !r.ledger_id && !r.pushed)) return;
     autoSuggested.current = key;
     void suggestLedgers(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows.length, bizId, coa.length, bankAccountId]);
+  }, [rows.length, bizId, coa.length, bankAccountId, acctAsk]);
 
   /* ── Bulk assign ── */
   function applyBulkAssign() {
@@ -734,6 +763,68 @@ export default function BankingPage() {
             </div>
           </div>
         )}
+
+        {/* ── Which account is this statement for? ── */}
+        {acctAsk && rows.length > 0 && (() => {
+          const pool = bankAccounts.filter(a => acctAsk.kind === "loan" ? isLoanAccount(a as never) : !isLoanAccount(a as never));
+          const busy = acctAsk.creating, isNew = acctAsk.pick === "__new" || !pool.length;
+          return (
+            <div className="bi-ask-wrap" role="dialog" aria-modal="true" aria-labelledby="bi-ask-t">
+              <div className="bi-ask">
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", color: "#9A6B22" }}>{rows.length} LINES READ{acctAsk.hint ? ` · LOOKS LIKE ${acctAsk.hint.toUpperCase()}` : ""}</div>
+                <h2 id="bi-ask-t">Which account is this statement for?</h2>
+                <div className="bi-ask-kind" role="radiogroup" aria-label="Statement type">
+                  {(["bank", "loan"] as const).map(k => (
+                    <button key={k} role="radio" aria-checked={acctAsk.kind === k} className={acctAsk.kind === k ? "on" : ""}
+                      onClick={() => { const pl = bankAccounts.filter(a => k === "loan" ? isLoanAccount(a as never) : !isLoanAccount(a as never)); setAcctAsk(a => a && { ...a, kind: k, pick: pl.length === 1 ? pl[0].id : pl.length ? "" : "__new", newName: a.hint ? (k === "loan" ? `${a.hint} Loan A/c` : `${a.hint}${/bank/i.test(a.hint) ? "" : " Bank"}`) : "" }); }}>
+                      <b>{k === "bank" ? "Bank account" : "Loan account"}</b>
+                      <small>{k === "bank" ? "Current / savings / OD — posts Payment & Receipt" : "Term, vehicle, home, gold loan — posts Journal"}</small>
+                    </button>
+                  ))}
+                </div>
+                <div className="bi-ask-list">
+                  {pool.map(a => (
+                    <label key={a.id} className={"bi-ask-opt" + (acctAsk.pick === a.id ? " on" : "")}>
+                      <input type="radio" name="bi-acct" checked={acctAsk.pick === a.id} onChange={() => setAcctAsk(x => x && { ...x, pick: a.id })} />
+                      <span>{decode(a.name)}</span>
+                    </label>
+                  ))}
+                  <label className={"bi-ask-opt" + (isNew ? " on" : "")}>
+                    <input type="radio" name="bi-acct" checked={isNew} onChange={() => setAcctAsk(x => x && { ...x, pick: "__new" })} />
+                    <span>＋ New {acctAsk.kind === "loan" ? "loan" : "bank"} ledger</span>
+                  </label>
+                  {isNew && (
+                    <input autoFocus value={acctAsk.newName} onChange={e => setAcctAsk(x => x && { ...x, newName: e.target.value })} onKeyDown={e => { if (e.key === "Enter") void confirmAcct(); }}
+                      placeholder={acctAsk.kind === "loan" ? "e.g. Federal Bank Term Loan A/c" : "e.g. Federal Bank Current A/c"} aria-label="New ledger name" className="bi-ask-new" />
+                  )}
+                </div>
+                <div className="bi-ask-foot">
+                  <span>{isNew ? `Created under ${acctAsk.kind === "loan" ? "Loans (Liability)" : "Bank Accounts"}.` : "You can change it later at the top of the page."}</span>
+                  <button onClick={() => void confirmAcct()} disabled={busy || (isNew ? !acctAsk.newName.trim() : !acctAsk.pick)} className="bi-ask-go">{busy ? "Creating…" : isNew ? "Create & continue →" : "Continue →"}</button>
+                </div>
+              </div>
+              <style>{`
+                .bi-ask-wrap{position:fixed;inset:0;z-index:60;background:rgba(10,31,27,.55);display:grid;place-items:center;padding:16px}
+                .bi-ask{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:#FFFDF8;border-radius:26px;padding:26px 28px;display:flex;flex-direction:column;gap:14px;box-shadow:0 40px 80px -30px rgba(6,26,22,.7)}
+                .bi-ask h2{margin:0;font-family:'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif;font-size:26px;color:#0B2C25}
+                .bi-ask-kind{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+                .bi-ask-kind button{text-align:left;padding:12px 14px;border-radius:16px;border:1.5px solid #E6DFD0;background:#fff;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:3px;color:#0B2C25}
+                .bi-ask-kind button small{font-size:11.5px;color:#5E6B66}
+                .bi-ask-kind button.on{border-color:#0B2C25;background:#0B2C25;color:#fff}.bi-ask-kind button.on small{color:#B9D0C7}
+                .bi-ask-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+                .bi-ask-opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:14px;border:1px solid #EFE2C4;background:#fff;cursor:pointer;font-size:14px;font-weight:700;color:#0B2C25}
+                .bi-ask-opt.on{border-color:#0B7A55;background:#F2FAF6}
+                .bi-ask-opt input{accent-color:#0B2C25;width:17px;height:17px}
+                .bi-ask-new{height:44px;border-radius:12px;border:1.5px solid #E9C27A;padding:0 14px;font:inherit;font-size:14.5px;font-weight:700;outline:none}
+                .bi-ask-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid #F1E8D6;padding-top:14px}
+                .bi-ask-foot span{flex:1 1 200px;font-size:12.5px;color:#5E6B66}
+                .bi-ask-go{height:46px;padding:0 22px;border-radius:999px;border:none;background:linear-gradient(135deg,#F3D9A2,#E9C27A);color:#10241F;font:inherit;font-weight:800;font-size:15px;cursor:pointer}
+                .bi-ask-go:disabled{background:#E6E2D8;color:#8A918D;cursor:default}
+                .bi-ask-kind button:focus-visible,.bi-ask-go:focus-visible{outline:2px solid #E9C27A;outline-offset:2px}
+              `}</style>
+            </div>
+          );
+        })()}
 
         {/* ── Main table view ── */}
         {rows.length > 0 && (
