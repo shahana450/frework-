@@ -5,6 +5,7 @@ import { gstReturnLink } from "@/lib/gstIntent";
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { takePendingFiles } from "@/lib/pendingFile";
 import { supabase } from "@/lib/supabase";
 import { currentUser } from "@/lib/currentUser";
 import type { ParsedTransaction } from "@/app/api/finance/chat-book/route";
@@ -262,6 +263,8 @@ export default function FreBookPage() {
   }, [input]);
   // The box grows as you type; back to its normal size once the message is sent
   useEffect(() => { if (!input && inputRef.current) inputRef.current.style.height = ""; }, [input]);
+  // Files attached on Home arrive here and are read as if dropped into this chat
+  useEffect(() => { if (!bizId) return; const files = takePendingFiles(); if (!files.length) return; window.history.replaceState(null, "", "/finance/chat-book"); for (const f of files) void handleFile(f); }, [bizId]);
   const recognitionRef = useRef<unknown>(null);
   const voiceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [voiceInterim, setVoiceInterim] = useState("");

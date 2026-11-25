@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useBrand } from "@/lib/brand";
 import { useRouter } from "next/navigation";
 import { gstReturnLink } from "@/lib/gstIntent";
+import { setPendingFiles } from "@/lib/pendingFile";
 import type { Dashboard } from "@/lib/dashboard";
 
 const LIGHT = {
@@ -151,9 +152,14 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
             placeholder={mode === "record" ? (india ? "e.g. Paid office rent ₹25,000 from the bank for October" : `e.g. Paid office rent ${cur()}2,500 from the bank for October`) : "e.g. Who owes me for more than 60 days?"}
             style={{ width: "100%", minHeight: 70, resize: "vertical", boxSizing: "border-box", border: "none", outline: "none", background: "transparent", padding: "12px 2px", fontSize: 20, lineHeight: 1.5, color: C.ink, fontFamily: SERIF }} />
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", borderTop: `1px solid ${C.line}`, paddingTop: 12 }}>
-            {!fromWa && <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Snap a bill or attach a PDF" className="chip" style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#FFFFFF", display: "inline-flex", alignItems: "center", gap: 7, color: C.ink, textDecoration: "none", fontSize: 13, fontWeight: 600 }}>
+            {!fromWa && <label title="Attach a bill, invoice, bank or loan statement, GSTR-2B or an Excel template — FreBook AI reads it" className="chip" style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${C.ink}`, background: C.ink, color: "#FFFFFF", display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E9C27A" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 11.5l-8.6 8.6a5 5 0 01-7.1-7.1l8.6-8.6a3.3 3.3 0 014.7 4.7l-8.6 8.6a1.7 1.7 0 01-2.4-2.4l7.9-7.9" /></svg>
+              Attach file
+              <input type="file" multiple accept="image/*,.pdf,.xlsx,.xls,.csv,.json,.doc,.docx,.txt" style={{ display: "none" }} onChange={e => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; if (!fs.length) return; setPendingFiles(fs); router.push("/finance/chat-book?attach=1"); }} />
+            </label>}
+            {!fromWa && <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Take a photo of a bill" className="chip" style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#FFFFFF", display: "inline-flex", alignItems: "center", gap: 7, color: C.ink, textDecoration: "none", fontSize: 13, fontWeight: 600 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-              Bill photo / PDF
+              Snap a bill
             </Link>}
             {(mode === "record" ? (india ? ["Received ₹1.2L from a customer", "Paid salaries for last month", "Bought stationery ₹1,800 in cash"] : [`Received ${cur()}12,000 from a customer`, "Paid salaries for last month", `Bought stationery ${cur()}180 in cash`]) : ["Who owes me for more than 60 days?", "Profit this month vs last month", "GST collected last month"]).map(c => (
               <button key={c} className="chip hd-sugg" onClick={() => mode === "ask" ? go(c) : setText(c)} style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px dashed ${C.goldLine}`, background: "transparent", color: C.muted, fontSize: 12.5, cursor: "pointer" }}>{c}</button>
