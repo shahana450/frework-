@@ -308,7 +308,7 @@ export default function BankingPage() {
   /* ── Suggest a ledger for every unassigned row; create the ones that don't exist yet ── */
   const [suggesting, setSuggesting] = useState(false);
   const [suggestMsg, setSuggestMsg] = useState("");
-  async function suggestLedgers() {
+  async function suggestLedgers(createMissing = true) {
     if (!bizId) return;
     setSuggesting(true); setSuggestMsg("");
     try {
@@ -343,6 +343,7 @@ export default function BankingPage() {
         if (!existing && !want.has(name)) want.set(name, g.rule ? (inferHead(name)?.key ?? guessGroup(name, out ? "out" : "in")) : out ? "creditors" : "debtors");
       }
       let all = coa;
+      if (!createMissing) { for (const [id, nm] of Object.entries(pick)) if (!coa.some(a => a.name.trim().toLowerCase() === nm.toLowerCase())) delete pick[id]; want.clear(); }
       if (want.size) {
         const stamp = Date.now().toString().slice(-6);
         const { data, error } = await supabase.from("fw_fin_chart_of_accounts").insert([...want].map(([name, key], i) => {
@@ -400,6 +401,17 @@ export default function BankingPage() {
     const a = data as CoaAccount;
     setCoa(c => [...c, a]); setBankAccounts(b => [...b, a]); setBankAccountId(a.id); setNewBank("");
   }
+
+  // Suggestions fill in by themselves when a statement is loaded (existing ledgers only; "Suggest ledgers" also creates missing ones)
+  const autoSuggested = useRef("");
+  useEffect(() => {
+    if (!bizId || !coa.length || !bankAccountId || suggesting || !rows.length) return;
+    const key = `${rows.length}|${rows[0]?.id}`;
+    if (autoSuggested.current === key || !rows.some(r => !r.ledger_id && !r.pushed)) return;
+    autoSuggested.current = key;
+    void suggestLedgers(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows.length, bizId, coa.length, bankAccountId]);
 
   /* ── Bulk assign ── */
   function applyBulkAssign() {
@@ -728,7 +740,7 @@ export default function BankingPage() {
 
               {/* Suggest + saved */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "0 0 0.75rem", padding: "10px 12px", borderRadius: 12, background: "linear-gradient(90deg,#FFFFFF,#FBF7EE)", border: "1px solid rgba(201,162,74,0.35)" }}>
-                <button onClick={suggestLedgers} disabled={suggesting || !rows.some(r => !r.pushed && !r.ledger_id)}
+                <button onClick={() => suggestLedgers(true)} disabled={suggesting || !rows.some(r => !r.pushed && !r.ledger_id)}
                   style={{ height: 36, padding: "0 16px", borderRadius: 10, border: "none", background: rows.some(r => !r.pushed && !r.ledger_id) ? "#12352D" : "#B9BDD6", color: "#FFFFFF", fontWeight: 800, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit" }}>
                   {suggesting ? "Suggesting…" : `✨ Suggest ledgers${rows.some(r => !r.pushed && !r.ledger_id) ? ` for ${rows.filter(r => !r.pushed && !r.ledger_id).length}` : ""}`}
                 </button>
@@ -736,23 +748,52 @@ export default function BankingPage() {
                 {savedAt && <span title="Saved on this device — come back any time" style={{ fontSize: "0.74rem", fontWeight: 700, color: "#0B7A55" }}>💾 Saved {new Date(savedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>}
               </div>
 
-              {/* Bulk assign bar — visible when rows are selected */}
-              {selected.size > 0 && (
-                <div style={{ background: "rgba(37,99,235,0.08)", border: "1px solid rgba(18,53,45,0.25)", borderRadius: 10, padding: "0.65rem 1rem", marginBottom: "0.75rem", display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#12352D" }}>{selected.size} selected</span>
-                  <input value={bulkSearch} onChange={e => setBulkSearch(e.target.value)} placeholder="Search ledger…" style={{ ...inp, width: 160, padding: "5px 8px", fontSize: "0.78rem" }} />
-                  <select value={bulkLedgerId} onChange={e => setBulkLedgerId(e.target.value)} style={{ ...inp, minWidth: 200, padding: "5px 8px", fontSize: "0.78rem", cursor: "pointer" }}>
-                    <option value="">— select ledger to assign —</option>
-                    {bulkCoa.map(a => <option key={a.id} value={a.id}>{a.name} ({a.type})</option>)}
-                  </select>
-                  <button onClick={applyBulkAssign} disabled={!bulkLedgerId} className="bs-btn" style={{ background: "#12352D", color: "#fff", padding: "6px 16px", fontSize: "0.8rem" }}>
-                    Assign to All
-                  </button>
-                  <button onClick={() => setSelected(new Set())} style={{ background: "none", border: "none", color: "#6B7570", cursor: "pointer", fontSize: "0.78rem", fontFamily: "inherit" }}>
-                    Deselect
-                  </button>
-                </div>
-              )}
+              {/* Select by Dr / Cr, see the totals, assign one ledger to all of them */}
+              {(() => {
+                const open = rows.filter(r => !r.pushed);
+                const drs = open.filter(r => r.debit > 0), crs = open.filter(r => r.credit > 0), un = open.filter(r => !r.ledger_id);
+                const sel = rows.filter(r => selected.has(r.id));
+                const sum = (l: TxRow[], k: "debit" | "credit") => l.reduce((t, r) => t + (r[k] || 0), 0);
+                const pick = (l: TxRow[]) => setSelected(new Set(l.map(r => r.id)));
+                const same = (l: TxRow[]) => l.length > 0 && l.length === sel.length && l.every(r => selected.has(r.id));
+                return (
+                  <div className="bi-bulk">
+                    <div className="bi-bulk-row">
+                      <span className="bi-bulk-lbl">SELECT</span>
+                      <button className={"bi-pick dr" + (same(drs) ? " on" : "")} onClick={() => pick(drs)} disabled={!drs.length}>All Dr <b>{drs.length}</b><small>{cur()}{fmt(sum(drs, "debit"))}</small></button>
+                      <button className={"bi-pick cr" + (same(crs) ? " on" : "")} onClick={() => pick(crs)} disabled={!crs.length}>All Cr <b>{crs.length}</b><small>{cur()}{fmt(sum(crs, "credit"))}</small></button>
+                      <button className={"bi-pick" + (same(un) ? " on" : "")} onClick={() => pick(un)} disabled={!un.length}>No ledger <b>{un.length}</b></button>
+                      {sel.length > 0 && <button className="bi-clear" onClick={() => setSelected(new Set())}>Clear</button>}
+                    </div>
+                    {sel.length > 0 && (
+                      <div className="bi-bulk-row">
+                        <span className="bi-bulk-sel"><b>{sel.length} selected</b>{sum(sel, "debit") > 0 && <span className="bi-amt dr">Dr {cur()}{fmt(sum(sel, "debit"))}</span>}{sum(sel, "credit") > 0 && <span className="bi-amt cr">Cr {cur()}{fmt(sum(sel, "credit"))}</span>}</span>
+                        <input list="bs-ledgers" key={bulkLedgerId || "none"} defaultValue={bulkLedgerId ? decode(coa.find(x => x.id === bulkLedgerId)?.name ?? "") : ""} placeholder="Type to find the ledger for all of them…" aria-label="Ledger for the selected lines"
+                          onChange={e => { const v = e.target.value.trim().toLowerCase(); const hit = coa.find(x => decode(x.name).toLowerCase() === v || `${decode(x.name)} · ${x.type}`.toLowerCase() === v); setBulkLedgerId(hit?.id ?? ""); }}
+                          className="ledger-sel" style={{ flex: "1 1 260px", maxWidth: 380 }} />
+                        <button onClick={applyBulkAssign} disabled={!bulkLedgerId} className="bi-assign">Assign to {sel.length}</button>
+                      </div>
+                    )}
+                    <style>{`
+                      .bi-bulk{background:#FFFDF8;border:1px solid #EFE2C4;border-radius:16px;padding:12px 14px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
+                      .bi-bulk-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+                      .bi-bulk-lbl{font-size:10.5px;font-weight:800;letter-spacing:.16em;color:#9A6B22;margin-right:4px}
+                      .bi-pick{height:36px;padding:0 12px;border-radius:999px;border:1px solid #E6DFD0;background:#fff;color:#12352D;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+                      .bi-pick b{font-size:11px;background:#F4EEDF;border-radius:999px;padding:1px 7px}
+                      .bi-pick small{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#6B7570}
+                      .bi-pick.dr small{color:#B4321F}.bi-pick.cr small{color:#0B7A55}
+                      .bi-pick.on{background:#12352D;color:#fff;border-color:#12352D}.bi-pick.on b{background:#E9C27A;color:#12352D}.bi-pick.on small{color:#E9C27A}
+                      .bi-pick:disabled{opacity:.45;cursor:default}
+                      .bi-clear{background:none;border:none;color:#6B7570;font:inherit;font-size:12.5px;cursor:pointer;text-decoration:underline}
+                      .bi-bulk-sel{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#12352D}
+                      .bi-amt{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px}
+                      .bi-amt.dr{background:#FDECEA;color:#B4321F}.bi-amt.cr{background:#E3F6EE;color:#0B7A55}
+                      .bi-assign{height:36px;padding:0 18px;border-radius:999px;border:none;background:#12352D;color:#fff;font:inherit;font-weight:800;font-size:13px;cursor:pointer}
+                      .bi-assign:disabled{background:#C9CFC9;cursor:default}
+                    `}</style>
+                  </div>
+                );
+              })()}
 
               {/* Table */}
               <div style={{ background: "#FFFDF8", border: "1px solid #FFFFFF", borderRadius: 12, overflow: "hidden" }}>
