@@ -33,7 +33,7 @@ type Item = {
   dupOk?: boolean;                    // the user checked a possible duplicate and chose to post it anyway
   vtype?: string; ref?: string;      // GSTR-2B bills: purchase / debit note, with the supplier's invoice number
 };
-type FileJob = { id: string; name: string; size: number; kind: string; status: "queued" | "reading" | "done" | "error"; note?: string; key: string; bank?: string };
+type FileJob = { id: string; name: string; size: number; kind: string; status: "queued" | "reading" | "done" | "error"; note?: string; key: string; bank?: string; tag?: string; action?: { label: string; href: string } };
 type InboxDraft = { items: Item[]; heads: Record<string, string>; files: FileJob[]; bankLedger: string; cardLedger: string };
 
 const C = { bg: "#F6F1E7", ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", card: "#FFFFFF", forest: "#0F2B25", gold: "#D9B56F", amber: "#8A5A00", amberSoft: "#FFF4DB", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#C2321F", negSoft: "#FDECEA" };
@@ -297,14 +297,14 @@ export default function SmartInbox() {
         }
         let bills = "";
         if (kind === "GSTR-2B") { try { bills = await from2B(job, file); } catch { bills = " · couldn't read its bill details"; } }
-        setJob(job.id, { status: "done", note: `${kind}${label ? ` ${label}` : ""} → Shelf (GST)${bills || " · match it in GST → ITC vs 2B"}` });
+        setJob(job.id, { status: "done", tag: kind, note: `${label ? `${label} · ` : ""}kept on the Shelf (GST)${bills ? bills.replace(/^ · /, " · ") : ""}. Match it with your purchase bills in ITC vs 2B.`, action: { label: "Open ITC vs 2B", href: "/finance/gst/itc" } });
         return;
       }
       // Form 26AS / 168 / AIS / TIS (TRACES names them PAN-year.pdf) and Form 16 / 130: tax statements, not entries.
       // They go on the Shelf, and Tax documents checks each party against the books.
       if (/\.pdf$/i.test(file.name) && (/26\s?as|form[\s_-]?(16|130|168)|\bais\b|\btis\b/i.test(file.name) || /^[A-Z]{5}\d{4}[A-Z]([-_ ][^.]*)?\.pdf$/i.test(file.name))) {
         if (!(file as ShelfFile).fromShelf) keepOnShelf(file, "income_tax");
-        setJob(job.id, { status: "done", note: "Tax statement (Form 26AS / 168) — not entries. Open Tax documents (/finance/tax-docs) and upload it there to check each party's income and TDS / TCS against your books" });
+        setJob(job.id, { status: "done", tag: "Tax statement", note: "Form 26AS / 168 — no entries to post. Kept on the Shelf (Income-tax). Upload it in Tax documents to check each party's income and TDS / TCS against your books.", action: { label: "Open Tax documents", href: "/finance/tax-docs" } });
         return;
       }
       if (/\.(xlsx|xls|csv)$/i.test(file.name)) {
@@ -649,27 +649,52 @@ export default function SmartInbox() {
               ); })()}
             </div>
             <datalist id="ib-acc-list">{accounts.map(a => <option key={a.name} value={a.name} />)}</datalist>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflowY: "auto" }}>
-              {files.map(f => (
-                <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, padding: "5px 0", borderTop: `1px solid ${C.line}` }}>
-                  <span style={pill("#EFE8D9", C.ink)}>{f.kind}</span>
-                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
-                  <span style={{ color: f.status === "error" ? C.neg : C.muted, fontSize: 12.5 }}>{f.status === "queued" ? "Waiting…" : f.note}</span>
-                  {f.status === "done" && f.bank && items.some(it => it.fileId === f.id && it.kind === "statement") && (
-                    <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12 }} title="The account this statement belongs to: a bank, a loan, or any other ledger">
-                      <span style={{ color: C.muted }}>Account</span>
-                      <input list="ib-acc-list" defaultValue={f.bank} key={f.bank} aria-label={`Statement account for ${f.name}`}
-                        onBlur={e => { const v = e.target.value.trim(); if (!v || v === f.bank) return; const old = f.bank!;
-                          setJob(f.id, { bank: v });
-                          setItems(prev => prev.map(it => it.fileId === f.id && it.kind === "statement" && it.state !== "posted" ? { ...it, bank: v, lines: it.lines.map(l => l.account === old ? { ...l, account: v } : l) } : it)); }}
-                        style={{ height: 28, borderRadius: 8, border: `1px solid ${C.line}`, padding: "0 8px", fontSize: 12, minWidth: 170, fontFamily: "inherit" }} />
-                    </label>
-                  )}
-                  {f.status === "done" && <span style={pill(C.posSoft, C.pos)}>Read</span>}
-                  {f.status === "error" && <span style={pill(C.negSoft, C.neg)}>Couldn&apos;t read</span>}
-                  {(f.status === "reading" || f.status === "queued") && <span className="ib-spin" aria-label="Reading" />}
+            <div style={{ display: "flex", flexDirection: "column", gap: 0, maxHeight: 420, overflowY: "auto" }}>
+              {files.map(f => {
+                const st = f.status === "error" ? "err" : f.status === "done" ? (f.action ? "info" : "ok") : "busy";
+                return (
+                <div key={f.id} className={"ib-file ib-file-" + st}>
+                  <span className={"ib-ftype ib-ftype-" + f.kind.toLowerCase()} aria-hidden="true">{f.kind === "Excel" ? "XLS" : f.kind === "PDF" ? "PDF" : "IMG"}</span>
+                  <div className="ib-file-main">
+                    <div className="ib-file-top">
+                      <b title={f.name}>{f.name}</b>
+                      {f.tag && <span className="ib-file-tag">{f.tag}</span>}
+                      {f.status === "done" && !f.action && <span style={pill(C.posSoft, C.pos)}>✓ Read</span>}
+                      {f.status === "done" && f.action && <span style={pill("#FFF4DB", "#8A5A00")}>Next step</span>}
+                      {f.status === "error" && <span style={pill(C.negSoft, C.neg)}>Couldn&apos;t read</span>}
+                      {(f.status === "reading" || f.status === "queued") && <span className="ib-spin" aria-label="Reading" />}
+                    </div>
+                    <div className="ib-file-note">{f.status === "queued" ? "Waiting…" : f.note}</div>
+                    {f.status === "done" && f.bank && items.some(it => it.fileId === f.id && it.kind === "statement") && (
+                      <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, marginTop: 4 }} title="The account this statement belongs to: a bank, a loan, or any other ledger">
+                        <span style={{ color: C.muted }}>Account</span>
+                        <input list="ib-acc-list" defaultValue={f.bank} key={f.bank} aria-label={`Statement account for ${f.name}`}
+                          onBlur={e => { const v = e.target.value.trim(); if (!v || v === f.bank) return; const old = f.bank!;
+                            setJob(f.id, { bank: v });
+                            setItems(prev => prev.map(it => it.fileId === f.id && it.kind === "statement" && it.state !== "posted" ? { ...it, bank: v, lines: it.lines.map(l => l.account === old ? { ...l, account: v } : l) } : it)); }}
+                          style={{ height: 30, borderRadius: 9, border: `1px solid ${C.line}`, padding: "0 10px", fontSize: 12.5, minWidth: 200, fontFamily: "inherit" }} />
+                      </label>
+                    )}
+                  </div>
+                  {f.action && <Link href={f.action.href} className="ib-file-go">{f.action.label} →</Link>}
                 </div>
-              ))}
+                );
+              })}
+              <style>{`
+                .ib-file{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:16px;border:1px solid #EFE6D3;background:#FFFFFF;margin-top:8px}
+                .ib-file-info{background:#FFFBF1;border-color:#F2D29B}.ib-file-err{background:#FFF6F4;border-color:#F3C2BA}
+                .ib-ftype{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:10.5px;font-weight:800;letter-spacing:.04em;flex:none;background:#F1EBFE;color:#7C3AED}
+                .ib-ftype-pdf{background:#FDECEA;color:#B4321F}.ib-ftype-excel{background:#E3F6EE;color:#0B7A55}
+                .ib-file-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+                .ib-file-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+                .ib-file-top b{font-size:14px;color:#0F2B25;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+                .ib-file-tag{font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;background:#0F2B25;color:#E9C27A}
+                .ib-file-note{font-size:12.5px;color:#5E6B66;line-height:1.45}
+                .ib-file-err .ib-file-note{color:#B4321F}
+                .ib-file-go{flex:none;height:38px;line-height:38px;padding:0 18px;border-radius:999px;background:linear-gradient(135deg,#F3D9A2,#E9C27A);color:#10241F;font-weight:800;font-size:13px;text-decoration:none;white-space:nowrap}
+                .ib-file-go:focus-visible{outline:2px solid #0F2B25;outline-offset:2px}
+                @media (max-width:640px){.ib-file{flex-wrap:wrap}.ib-file-go{width:100%;text-align:center}}
+              `}</style>
             </div>
           </section>
         )}
