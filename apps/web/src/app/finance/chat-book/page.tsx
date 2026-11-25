@@ -897,7 +897,16 @@ export default function FreBookPage() {
                 </div>
 
                 <details className="fb-many" open={tplOpen || undefined} style={{ width: "min(940px, 100%)", textAlign: "left", marginTop: 4 }}>
-                  <summary style={{ cursor: "pointer", color: "#D9B56F", fontSize: "0.82rem", fontWeight: 700, listStyle: "none", textAlign: "center" }}>＋ Many entries at once — Excel templates, bank statement, Smart Inbox{pendingDrafts.length ? ` · ${pendingDrafts.length} unfinished import${pendingDrafts.length > 1 ? "s" : ""}` : ""}</summary>
+                  <summary className="fb-many-sum" style={{ cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: 14, margin: "0 auto", width: "fit-content", maxWidth: "100%", padding: "12px 22px 12px 12px", borderRadius: 999, background: "linear-gradient(135deg,#F3D9A2,#E9C27A)", color: "#10241F", boxShadow: "0 16px 32px -18px rgba(233,194,122,0.9)" }}>
+                    <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: "#0F2B25", color: "#E9C27A", display: "grid", placeItems: "center", flex: "none" }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4zM4 10h16M10 4v16" /></svg>
+                    </span>
+                    <span style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
+                      <b style={{ fontSize: "0.98rem" }}>Many entries at once — download the Excel template</b>
+                      <span style={{ fontSize: "0.76rem", opacity: 0.8 }}>Journal · Receipts & payments · bank statement · Smart Inbox{pendingDrafts.length ? ` · ${pendingDrafts.length} unfinished import${pendingDrafts.length > 1 ? "s" : ""}` : ""}</span>
+                    </span>
+                    <span aria-hidden="true" style={{ fontSize: 18, fontWeight: 800 }}>▾</span>
+                  </summary>
                   <div style={{ marginTop: 12, background: "#F6F1E7", borderRadius: 18, color: "#10241F" }}>
                   {/* Quick start: many entries at once (Excel templates) and the other ways in */}
                   <div className="fb-quick" style={{ borderTop: "1px solid #E7DDC8", padding: "14px 14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>

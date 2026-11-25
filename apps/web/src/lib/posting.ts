@@ -129,29 +129,31 @@ async function routeToParty(sb: SupabaseClient, req: PostingRequest): Promise<Po
 }
 
 /**
- * An entry dated after the last financial year (but not in the future) opens the next year(s) automatically,
- * same start day as the existing years — the way a new year simply begins. Earlier/future gaps still need Settings.
+ * An entry dated outside every financial year opens that year automatically — before, between or after the
+ * existing years (up to a year ahead), with the same start day as the existing years (1 April when there are none).
+ * Nothing is created if the new year would overlap one already there.
  */
 async function ensureFinancialYear(sb: SupabaseClient, businessId: string, date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
   const { data } = await sb.from("fw_fin_financial_years").select("start_date,end_date").eq("business_id", businessId).order("end_date", { ascending: false });
   const fys = (data ?? []) as { start_date: string; end_date: string }[];
+  if (fys.some(f => date >= f.start_date && date <= f.end_date)) return;
   const today = new Date().toISOString().slice(0, 10);
-  if (!fys.length || date > today || fys.some(f => date >= f.start_date && date <= f.end_date) || date <= fys[0].end_date) return;
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
-  let start = new Date(fys[0].end_date + "T00:00:00Z"); start.setUTCDate(start.getUTCDate() + 1);
-  for (let i = 0; i < 3; i++) {
-    const end = new Date(start); end.setUTCFullYear(end.getUTCFullYear() + 1); end.setUTCDate(end.getUTCDate() - 1);
-    const s = iso(start), e = iso(end), y = start.getUTCFullYear();
-    const label = s.slice(5) === "01-01" ? String(y) : `${y}-${String(y + 1).slice(2)}`;
-    const current = today >= s && today <= e;
-    // Several entries posted at once can each try to open the same year: open it only once
-    const { data: have } = await sb.from("fw_fin_financial_years").select("id").eq("business_id", businessId).eq("start_date", s).limit(1);
-    if (have?.length) { if (date <= e) return; start = new Date(end); start.setUTCDate(start.getUTCDate() + 1); continue; }
-    const { data: row } = await sb.from("fw_fin_financial_years").insert({ business_id: businessId, label, start_date: s, end_date: e, is_current: current }).select("id").single();
-    if (current && row) await sb.from("fw_fin_financial_years").update({ is_current: false }).eq("business_id", businessId).neq("id", row.id);
-    if (date <= e) return;
-    start = new Date(end); start.setUTCDate(start.getUTCDate() + 1);
-  }
+  const ahead = new Date(); ahead.setUTCFullYear(ahead.getUTCFullYear() + 1);
+  if (date > ahead.toISOString().slice(0, 10)) return;
+  const md = (fys[0]?.start_date ?? "2000-04-01").slice(5);
+  const y = date.slice(5) >= md ? +date.slice(0, 4) : +date.slice(0, 4) - 1;
+  const s = `${y}-${md}`;
+  const endD = new Date(s + "T00:00:00Z"); endD.setUTCFullYear(endD.getUTCFullYear() + 1); endD.setUTCDate(endD.getUTCDate() - 1);
+  const e = endD.toISOString().slice(0, 10);
+  if (fys.some(f => f.start_date <= e && f.end_date >= s)) return;        // would overlap: leave it to Settings
+  const label = md === "01-01" ? String(y) : `${y}-${String(y + 1).slice(2)}`;
+  const current = today >= s && today <= e;
+  // Several entries posted at once can each try to open the same year: open it only once
+  const { data: have } = await sb.from("fw_fin_financial_years").select("id").eq("business_id", businessId).eq("start_date", s).limit(1);
+  if (have?.length) return;
+  const { data: row } = await sb.from("fw_fin_financial_years").insert({ business_id: businessId, label, start_date: s, end_date: e, is_current: current }).select("id").single();
+  if (current && row) await sb.from("fw_fin_financial_years").update({ is_current: false }).eq("business_id", businessId).neq("id", row.id);
 }
 
 /** What validateJournal needs about this business: the ledgers used, the financial years and GST registration. */

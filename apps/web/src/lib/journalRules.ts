@@ -52,8 +52,8 @@ export function validateJournal(input: { type: string; date: string; lines: Post
   // The date must fall in one of the business's financial years, and not a locked one
   if (ctx.fys.length) {
     const fy = ctx.fys.filter(f => date >= f.start_date && date <= f.end_date).sort((a, b) => b.start_date.localeCompare(a.start_date))[0];
-    if (!fy) throw new PostingError("INVALID", `${date} is outside your financial years — add the year under Settings → Financial Years first`);
-    if (fy.is_locked && !ctx.force) throw new PostingError("LOCKED", `The financial year containing ${date} is locked`);
+    if (!fy) throw new PostingError("INVALID", `${date} isn't in any of your financial years, and FreBook couldn't open that year by itself (the date is more than a year ahead, or the year would overlap one you have). Check the date is right; if it is, fix the years in Settings → Financial Years, then post again.`);
+    if (fy.is_locked && !ctx.force) throw new PostingError("LOCKED", `The financial year containing ${date} is locked (its books are closed). To post this, unlock the year in Settings → Financial Years — or change the date to a year that's open.`);
   }
 
   // Not wrong, but worth a look before it reaches the books

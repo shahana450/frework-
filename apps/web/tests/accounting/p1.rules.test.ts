@@ -37,7 +37,7 @@ test("a receipt must debit cash/bank and a payment must credit it — Bank Charg
 });
 
 test("dates outside the financial years, or in a locked year, are refused", () => {
-  assert.match(code(() => validateJournal({ type: "journal", date: "2024-03-31", lines: [{ accountId: "chg", dr: 1, cr: 0 }, { accountId: "bank", dr: 0, cr: 1 }] }, ctx())), /^INVALID:2024-03-31 is outside/);
+  assert.match(code(() => validateJournal({ type: "journal", date: "2024-03-31", lines: [{ accountId: "chg", dr: 1, cr: 0 }, { accountId: "bank", dr: 0, cr: 1 }] }, ctx())), /^INVALID:2024-03-31 isn't in any of your financial years/);
   assert.match(code(() => validateJournal({ type: "journal", date: "2026-03-25", lines: [{ accountId: "chg", dr: 1, cr: 0 }, { accountId: "bank", dr: 0, cr: 1 }] }, ctx())), /^LOCKED/);
   assert.equal(code(() => validateJournal({ type: "journal", date: "2026-03-25", lines: [{ accountId: "chg", dr: 1, cr: 0 }, { accountId: "bank", dr: 0, cr: 1 }] }, ctx({ force: true }))), "ok");
   assert.equal(code(() => validateJournal({ type: "journal", date: "2020-01-01", lines: [{ accountId: "chg", dr: 1, cr: 0 }, { accountId: "bank", dr: 0, cr: 1 }] }, ctx({ fys: [] }))), "ok", "no FYs set up yet");
