@@ -3,6 +3,23 @@ import { useEffect, useState } from "react";
 
 const MINE = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
 const EVERY = 5 * 60 * 1000;
+const OPENED = typeof performance !== "undefined" ? performance.timeOrigin : Date.now();
+
+// An older version left open (the installed app keeps its window) can't follow links into the newer one —
+// the click just hangs. Once we know we're out of date, links load the page fresh instead.
+function freshLinks() {
+  const w = window as Window & { __fwFresh?: boolean };
+  if (w.__fwFresh) return; w.__fwFresh = true;
+  document.addEventListener("click", e => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = (e.target as HTMLElement | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+    if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
+    const url = new URL(a.href, location.href);
+    if (url.origin !== location.origin || (url.pathname === location.pathname && url.hash)) return;
+    e.preventDefault(); e.stopPropagation();
+    location.assign(url.href);
+  }, true);
+}
 
 // Shows "A new version is ready — Update" when we deploy while the app is open.
 // Checks on start, every 5 minutes, and whenever the app comes back to the foreground.
@@ -19,7 +36,12 @@ export default function UpdatePrompt() {
       try {
         const r = await fetch("/api/version", { cache: "no-store" });
         const { build } = await r.json();
-        if (alive && build && build !== "dev" && build !== MINE) setReady(true);
+        if (alive && build && build !== "dev" && build !== MINE) {
+          // Just opened (nothing typed yet): take the new version straight away
+          if (Date.now() - OPENED < 15_000 && !sessionStorage.getItem("fw_upd_" + build)) { sessionStorage.setItem("fw_upd_" + build, "1"); location.reload(); return; }
+          freshLinks();
+          setReady(true);
+        }
       } catch { /* offline — try again later */ }
     };
     check();
