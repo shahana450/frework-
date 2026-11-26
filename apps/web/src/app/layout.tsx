@@ -6,6 +6,7 @@ import { QueryProvider } from "@/components/shared/query-provider";
 import { Toaster } from "sonner";
 import ApiAuthInstaller from "@/components/ApiAuthInstaller";
 import DatalistEnhancer from "@/components/DatalistEnhancer";
+import BootReady from "@/components/BootReady";
 import "@/styles/globals.css";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
@@ -187,6 +188,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
+        {/* Shown only if the page hasn't started within ~1 s; after 10 s it offers Reload — never a blank window */}
+        <div id="fw-boot" role="status" aria-live="polite">
+          <style dangerouslySetInnerHTML={{ __html: "#fw-boot{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;background:#F4EFE4;opacity:0;animation:fwboot .2s ease-out 1.2s forwards;font-family:Georgia,serif}html[data-ready] #fw-boot{display:none}@keyframes fwboot{to{opacity:1}}#fw-boot .c{display:flex;flex-direction:column;align-items:center;gap:14px;color:#0F2B25;text-align:center;padding:24px}#fw-boot .s{width:38px;height:38px;border-radius:50%;border:3px solid #E6DFD0;border-top-color:#C9A24A;animation:fwspin .9s linear infinite}@keyframes fwspin{to{transform:rotate(360deg)}}#fw-boot b{font-size:22px}#fw-boot small{font:13px/1.5 system-ui,sans-serif;color:#5E6B66;max-width:320px}#fw-boot button{display:none;height:42px;padding:0 22px;border-radius:999px;border:none;background:#0F2B25;color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer}#fw-boot.slow button{display:inline-block}#fw-boot.slow .s{display:none}@media (prefers-reduced-motion:reduce){#fw-boot,#fw-boot .s{animation:none;opacity:1}}" }} />
+          <div className="c"><span className="s" aria-hidden="true" /><b>Opening FreBook…</b><small>Getting your books ready.</small><button type="button" onClick={undefined} data-reload="1">Reload</button></div>
+          <script dangerouslySetInnerHTML={{ __html: "setTimeout(function(){var b=document.getElementById('fw-boot');if(b&&!document.documentElement.dataset.ready){b.className='slow';var m=b.querySelector('small');if(m)m.textContent='Taking longer than usual. Your connection or the app window may be stuck — reload to try again.';}},10000);document.addEventListener('click',function(e){var t=e.target;if(t&&t.getAttribute&&t.getAttribute('data-reload'))location.reload();});" }} />
+        </div>
+        <BootReady />
         <ApiAuthInstaller />
         <DatalistEnhancer />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
