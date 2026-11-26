@@ -317,9 +317,11 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
       // Subscription gate \u2014 skip for unguarded pages
       // Businesses the user owns or was invited to; invited team members work under the owner's plan
-      const { data: { session } } = await supabase.auth.getSession();
-      const listed = await fetch("/api/finance/businesses", { headers: { Authorization: `Bearer ${session?.access_token ?? ""}` } })
-        .then(r => r.ok ? r.json() : null).catch(() => null) as { businesses: { id: string; name: string; role?: string }[]; test: { id: string; name: string; role?: string }[] } | null;
+      // Right after opening, the sign-in may still be refreshing: if the list fails, refresh the sign-in and ask again
+      type Listed = { businesses: { id: string; name: string; role?: string }[]; test: { id: string; name: string; role?: string }[] } | null;
+      const ask = async (): Promise<Listed> => { const { data: { session } } = await supabase.auth.getSession(); return fetch("/api/finance/businesses", { headers: { Authorization: `Bearer ${session?.access_token ?? ""}` } }).then(r => r.ok ? r.json() : null).catch(() => null); };
+      let listed = await ask();
+      for (let i = 0; !listed && i < 2; i++) { await supabase.auth.refreshSession().catch(() => null); await new Promise(res => setTimeout(res, 600 * (i + 1))); listed = await ask(); }
       const visible = listed ? [...listed.businesses, ...listed.test] : [];
       const isTeamMember = visible.some(b => b.role && b.role !== "owner");
 

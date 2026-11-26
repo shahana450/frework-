@@ -227,9 +227,16 @@ export default function FinanceDashboard() {
     }
   }, [tally.state, activeBiz]);
 
-  async function loadBusinesses(uid: string) {
-    const { data } = await supabase.from("fw_fin_businesses")
+  async function loadBusinesses(uid: string, attempt = 0): Promise<void> {
+    const { data, error } = await supabase.from("fw_fin_businesses")
       .select("id,name,gstin,gst_registration_type,state").eq("owner_id", uid).eq("is_active", true).order("created_at");
+    // Just after opening the sign-in can still be refreshing, which reads as "no businesses": wait and ask again
+    // before showing "Set up your business" to someone who already has one
+    if ((error || !data?.length) && attempt < 3) {
+      if (attempt === 0) await supabase.auth.refreshSession().catch(() => null);
+      await new Promise(res => setTimeout(res, 700 * (attempt + 1)));
+      return loadBusinesses(uid, attempt + 1);
+    }
     if (!data || data.length === 0) { setLoading(false); return; }
     setBusinesses(data);
     const saved = (readActiveBusiness(uid) ?? "").replace(/﻿/g, "").trim();
