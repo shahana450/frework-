@@ -55,7 +55,7 @@ export default function FreBookBuddy() {
     const d = drag.current; drag.current = null;
     if (!d) return;
     if (d.moved) { setPos(p => { if (p) try { localStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* */ } return p; }); return; }
-    router.push("/finance/chat-book");
+    window.location.assign("/finance/chat-book");
   }
 
   if (hidden || path.startsWith("/finance/chat-book")) return null;
@@ -85,7 +85,7 @@ export default function FreBookBuddy() {
       <div style={{ position: "relative" }}>
         <button className="fbb-btn" aria-label="Open FreBook AI, your AI accountant (drag to move)"
           onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { drag.current = null; }}
-          onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push("/finance/chat-book"); } }}>
+          onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); window.location.assign("/finance/chat-book"); } }}>
           <img src="/frebook-face.jpg" alt="" width={68} height={68} draggable={false} />
         </button>
         <button className="fbb-x" aria-label="Hide FreBook AI for now" onClick={() => { setHidden(true); try { sessionStorage.setItem("fb-buddy-off", "1"); } catch {} }}>×</button>

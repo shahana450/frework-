@@ -151,6 +151,17 @@ const TOP_ICONS = [
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  // In-app page switches could hang on "loading" until a refresh (links already load pages fresh — see UpdatePrompt).
+  // Buttons that move to another page (router.push / replace, e.g. the FreBook AI buddy) do the same here; changes
+  // that stay on the same page (filters, tabs in the address) still switch instantly.
+  useEffect(() => {
+    const r = router as unknown as { push: (h: string, o?: unknown) => void; replace: (h: string, o?: unknown) => void; __fw?: boolean };
+    if (r.__fw) return; r.__fw = true;
+    const push = r.push.bind(r), replace = r.replace.bind(r);
+    const other = (h: string) => { try { const u = new URL(h, location.href); return u.origin === location.origin && u.pathname !== location.pathname ? u.href : null; } catch { return null; } };
+    r.push = (h, o) => { const u = other(h); if (u) { document.documentElement.classList.add("fw-leaving"); location.assign(u); } else push(h, o); };
+    r.replace = (h, o) => { const u = other(h); if (u) { document.documentElement.classList.add("fw-leaving"); location.replace(u); } else replace(h, o); };
+  }, [router]);
   const [bizName, setBizName] = useState("");
   const [bizSwitched, setBizSwitched] = useState<{ from: string; to: string } | null>(null);
   const [india, setIndia] = useState(true);   // GST / TDS / Income-tax menus only for Indian businesses
