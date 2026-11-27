@@ -21,15 +21,19 @@ export async function GET(req: NextRequest) {
     const accounts = (accs ?? []) as { id: string; name: string; sub_type: string }[];
     if (!accounts.length) return NextResponse.json({ accounts: [], months: [], recent: [], lastStatement: null });
 
-    const lines: Line[] = [];
-    for (let from = 0; from < 100000; from += 1000) {
-      const { data, error } = await supabase.from("fw_fin_journal_lines")
-        .select("account_id,dr_amount,cr_amount,fw_fin_journals!inner(id,date,entry_no,narration,source,created_at,status,business_id)")
-        .in("account_id", accounts.map(a => a.id)).eq("fw_fin_journals.business_id", bizId!).eq("fw_fin_journals.status", "posted")
-        .range(from, from + 999);
-      if (error) throw error;
-      lines.push(...((data ?? []) as unknown as Line[]));
-      if (!data || data.length < 1000) break;
+    // Speed: count first, then fetch every 1,000-row page at once (was one page after another). Ordered by id so
+    // pages never skip or repeat a line.
+    const base = () => supabase.from("fw_fin_journal_lines")
+      .select("account_id,dr_amount,cr_amount,fw_fin_journals!inner(id,date,entry_no,narration,source,created_at,status,business_id)", { count: "exact" })
+      .in("account_id", accounts.map(a => a.id)).eq("fw_fin_journals.business_id", bizId!).eq("fw_fin_journals.status", "posted")
+      .order("id");
+    const first = await base().range(0, 999);
+    if (first.error) throw first.error;
+    const lines: Line[] = [...((first.data ?? []) as unknown as Line[])];
+    const total = Math.min(first.count ?? lines.length, 100000);
+    if (total > 1000) {
+      const pages = await Promise.all(Array.from({ length: Math.ceil(total / 1000) - 1 }, (_, i) => base().range((i + 1) * 1000, (i + 2) * 1000 - 1)));
+      for (const p of pages) { if (p.error) throw p.error; lines.push(...((p.data ?? []) as unknown as Line[])); }
     }
 
     const today = new Date().toISOString().slice(0, 10), month = today.slice(0, 7);

@@ -23,7 +23,12 @@ async function post(file: Blob, name: string, bizId?: string, shelf = true): Pro
   fd.append("file", file, name);
   if (bizId) fd.append("business_id", bizId);
   if (!shelf) fd.append("shelf", "0");
-  const res = await fetch("/api/finance/parse-bank-pdf", { method: "POST", body: fd });
+  // A dead connection must not leave the upload "reading" for ever: give up after 4 minutes, a little under the
+  // server's own 5-minute limit (the caller retries)
+  const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 240000);
+  const res = await fetch("/api/finance/parse-bank-pdf", { method: "POST", body: fd, signal: ctrl.signal })
+    .catch(e => { throw Object.assign(new Error(ctrl.signal.aborted ? "the server took too long reading these pages" : "the connection dropped while reading"), { status: 504, cause: e }); })
+    .finally(() => clearTimeout(timer));
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !Array.isArray(data.transactions)) throw Object.assign(new Error(data.error ?? (res.status === 504 ? "the server timed out reading these pages" : `server error ${res.status}`)), { status: res.status });
   return data;

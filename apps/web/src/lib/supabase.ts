@@ -25,28 +25,29 @@ const authLock = async <R,>(name: string, _acquireTimeout: number, fn: () => Pro
 const timedFetch: typeof fetch = (input, init) => {
   if (typeof AbortController === "undefined" || init?.signal) return fetch(input, init);
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 15000);
+  // Long enough for a big page of entries on a slow line; file uploads to storage are never cut off
+  if (/\/storage\/v1\//.test(typeof input === "string" ? input : input instanceof URL ? input.href : input.url)) return fetch(input, init);
+  const t = setTimeout(() => ctrl.abort(), 45000);
   return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(t));
 };
 
 export const supabase = createClient(url, key, { auth: { lock: authLock }, global: { fetch: timedFetch } });
 
-// Reading the sign-in must never hang a page. If it takes over 6 s (a stuck token refresh), reload the page once —
-// exactly what pressing refresh did — instead of leaving the screen loading.
+// Reading the sign-in must never hang a page. If it takes over 6 s (a stuck token refresh), answer from the session
+// saved in this browser instead of waiting — never reload, which would throw away a statement being read or uploaded.
 if (typeof window !== "undefined") {
   const realGetSession = supabase.auth.getSession.bind(supabase.auth);
+  const stored = () => {
+    try {
+      const k = Object.keys(localStorage).find(x => /^sb-.*-auth-token$/.test(x));
+      const s = k ? JSON.parse(localStorage.getItem(k) || "null") : null;
+      return s?.access_token ? s : null;
+    } catch { return null; }
+  };
   supabase.auth.getSession = (() => {
     const p = realGetSession();
-    let done = false;
-    p.finally(() => { done = true; });
-    setTimeout(() => {
-      if (done) return;
-      try {
-        const last = Number(sessionStorage.getItem("fw_sess_reload") || 0);
-        if (Date.now() - last > 30000) { sessionStorage.setItem("fw_sess_reload", String(Date.now())); location.reload(); }
-      } catch { /* */ }
-    }, 6000);
-    return p;
+    const fallback = new Promise<Awaited<typeof p>>(res => setTimeout(() => { const s = stored(); if (s) res({ data: { session: s }, error: null } as Awaited<typeof p>); }, 6000));
+    return Promise.race([p, fallback]);
   }) as typeof supabase.auth.getSession;
 }
 
