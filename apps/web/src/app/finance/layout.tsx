@@ -220,7 +220,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   // First visit to a page was slow: its code downloads on the click. Fetch the main pages' code in the background a
   // few seconds after FreBook opens, one at a time while the browser is idle, so those clicks open at once.
   useEffect(() => {
-    const hrefs = TOP_ICONS.map(t => t.href.split("?")[0]);
+    const hrefs = Array.from(new Set([...TOP_ICONS.map(t => t.href), ...FINANCE_NAV.flatMap(g => g.items.map(it => it.href))].map(h => h.split("?")[0])));
     let i = 0, stop = false;
     const idle = (fn: () => void) => ("requestIdleCallback" in window ? (window as unknown as { requestIdleCallback: (f: () => void, o?: { timeout: number }) => number }).requestIdleCallback(fn, { timeout: 2000 }) : globalThis.setTimeout(fn, 300));
     const step = () => { if (stop || i >= hrefs.length) return; try { router.prefetch(hrefs[i++], { kind: "full" as never }); } catch { /* speed-up only */ } idle(step); };
@@ -522,7 +522,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                   const isBook = item.href === "/finance/chat-book";
                   return (
                     <Link key={item.href} href={item.href} prefetch={false} aria-label={slim ? item.label : undefined} title={item.label} className={`fw-nav${active ? " on" : ""}`}
-                      onMouseEnter={e => { if (slim && shortLabel(item.label) !== item.label) { const r = e.currentTarget.getBoundingClientRect(); setTip({ label: item.label, top: r.top + r.height / 2 }); } }}
+                      onPointerDown={() => { try { router.prefetch(item.href.split("?")[0]); } catch { /* speed-up only */ } }}
+                      onMouseEnter={e => { try { router.prefetch(item.href.split("?")[0]); } catch { /* speed-up only */ } if (slim && shortLabel(item.label) !== item.label) { const r = e.currentTarget.getBoundingClientRect(); setTip({ label: item.label, top: r.top + r.height / 2 }); } }}
                       onFocus={e => { if (slim) { const r = e.currentTarget.getBoundingClientRect(); setTip({ label: item.label, top: r.top + r.height / 2 }); } }}
                       onMouseLeave={() => setTip(null)} onBlur={() => setTip(null)} style={{
                       display: "flex", flexDirection: slim ? "column" : "row", alignItems: "center", gap: slim ? 4 : 10, position: "relative",
