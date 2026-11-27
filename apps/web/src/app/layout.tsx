@@ -12,8 +12,10 @@ import "@/styles/globals.css";
 // Page change: the browser cross-fades one page into the next (the sidebar and top icons hold still while the work
 // area glides in), and a gold bar runs along the top from the moment a link is pressed until the new page shows.
 const PAGE_TURN =
-  ".fw-main>*{animation:fwin .34s cubic-bezier(.2,.8,.2,1) both}" +
-  "@keyframes fwin{from{opacity:0;transform:translateY(10px)}}" +
+  // Fade only, and nothing left applied afterwards: a transform here would make every fixed pop-up (dialogs, the
+  // selection bar) position against the page instead of the screen — the dialog vanished off-screen
+  ".fw-main>*{animation:fwin .3s ease-out backwards}" +
+  "@keyframes fwin{from{opacity:0}}" +
   "html.fw-leaving::before{content:'';position:fixed;top:0;left:0;height:3px;z-index:2147483646;background:linear-gradient(90deg,#C9A24A,#F0D58A,#C9A24A);box-shadow:0 0 10px rgba(201,162,74,.7);border-radius:0 3px 3px 0;animation:fwbar 2.4s cubic-bezier(.1,.7,.2,1) forwards}" +
   "@keyframes fwbar{from{width:0}to{width:88%}}" +
   "html.fw-leaving .fw-main{opacity:.72;transition:opacity .25s}" +
