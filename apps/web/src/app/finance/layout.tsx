@@ -1,4 +1,5 @@
 "use client";
+import { hasPendingFiles } from "@/lib/pendingFile";
 import { setActiveCurrency } from "@/lib/money";
 import { financeTitle } from "@/lib/dueText";
 import { useState, useEffect, useRef, Suspense } from "react";
@@ -158,7 +159,8 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
     const r = router as unknown as { push: (h: string, o?: unknown) => void; replace: (h: string, o?: unknown) => void; __fw?: boolean };
     if (r.__fw) return; r.__fw = true;
     const push = r.push.bind(r), replace = r.replace.bind(r);
-    const other = (h: string) => { try { const u = new URL(h, location.href); return u.origin === location.origin && u.pathname !== location.pathname ? u.href : null; } catch { return null; } };
+    // A file handed to the next page lives in memory only — a fresh load would lose it, so switch in-app then
+    const other = (h: string) => { if (hasPendingFiles()) return null; try { const u = new URL(h, location.href); return u.origin === location.origin && u.pathname !== location.pathname ? u.href : null; } catch { return null; } };
     r.push = (h, o) => { const u = other(h); if (u) { document.documentElement.classList.add("fw-leaving"); location.assign(u); } else push(h, o); };
     r.replace = (h, o) => { const u = other(h); if (u) { document.documentElement.classList.add("fw-leaving"); location.replace(u); } else replace(h, o); };
   }, [router]);
