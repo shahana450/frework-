@@ -17,8 +17,11 @@ function freshLinks() {
     const url = new URL(a.href, location.href);
     if (url.origin !== location.origin || url.pathname === location.pathname) return;
     e.preventDefault(); e.stopPropagation();
+    document.documentElement.classList.add("fw-leaving");
     location.assign(url.href);
   }, true);
+  // Coming back with the Back button shows the page from memory: clear the "leaving" look
+  window.addEventListener("pageshow", () => document.documentElement.classList.remove("fw-leaving"));
 }
 
 // Shows "A new version is ready — Update" when we deploy while the app is open.

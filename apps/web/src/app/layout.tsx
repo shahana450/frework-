@@ -9,6 +9,21 @@ import DatalistEnhancer from "@/components/DatalistEnhancer";
 import BootReady from "@/components/BootReady";
 import "@/styles/globals.css";
 
+// Page change: the browser cross-fades one page into the next (the sidebar and top icons hold still while the work
+// area glides in), and a gold bar runs along the top from the moment a link is pressed until the new page shows.
+const PAGE_TURN =
+  "@view-transition{navigation:auto}" +
+  ".fw-side{view-transition-name:fw-side}.fw-topicons{view-transition-name:fw-top}" +
+  "::view-transition-group(fw-side),::view-transition-group(fw-top){animation:none}" +
+  "::view-transition-old(root){animation:fwout .18s ease-in both}" +
+  "::view-transition-new(root){animation:fwin .32s cubic-bezier(.2,.8,.2,1) both}" +
+  "@keyframes fwout{to{opacity:0;transform:translateY(-6px) scale(.995)}}" +
+  "@keyframes fwin{from{opacity:0;transform:translateY(10px) scale(.995)}}" +
+  "html.fw-leaving::before{content:'';position:fixed;top:0;left:0;height:3px;z-index:2147483646;background:linear-gradient(90deg,#C9A24A,#F0D58A,#C9A24A);box-shadow:0 0 10px rgba(201,162,74,.7);border-radius:0 3px 3px 0;animation:fwbar 2.4s cubic-bezier(.1,.7,.2,1) forwards}" +
+  "@keyframes fwbar{from{width:0}to{width:88%}}" +
+  "html.fw-leaving .fw-main{opacity:.72;transition:opacity .25s}" +
+  "@media (prefers-reduced-motion:reduce){::view-transition-old(root),::view-transition-new(root){animation:none}html.fw-leaving::before{animation:none;width:60%}}";
+
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
 const inter = Inter({
@@ -190,7 +205,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-background font-sans antialiased">
         {/* Shown only if the page hasn't started within ~1 s; after 10 s it offers Reload — never a blank window */}
         <div id="fw-boot" role="status" aria-live="polite">
-          <style dangerouslySetInnerHTML={{ __html: "#fw-boot{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;background:#F4EFE4;opacity:0;animation:fwboot .2s ease-out 1.2s forwards;font-family:Georgia,serif}html[data-ready] #fw-boot{display:none}@keyframes fwboot{to{opacity:1}}#fw-boot .c{display:flex;flex-direction:column;align-items:center;gap:14px;color:#0F2B25;text-align:center;padding:24px}#fw-boot .s{width:38px;height:38px;border-radius:50%;border:3px solid #E6DFD0;border-top-color:#C9A24A;animation:fwspin .9s linear infinite}@keyframes fwspin{to{transform:rotate(360deg)}}#fw-boot b{font-size:22px}#fw-boot small{font:13px/1.5 system-ui,sans-serif;color:#5E6B66;max-width:320px}#fw-boot button{display:none;height:42px;padding:0 22px;border-radius:999px;border:none;background:#0F2B25;color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer}#fw-boot.slow button{display:inline-block}#fw-boot.slow .s{display:none}@media (prefers-reduced-motion:reduce){#fw-boot,#fw-boot .s{animation:none;opacity:1}}" }} />
+          <style dangerouslySetInnerHTML={{ __html: "#fw-boot{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;background:#F4EFE4;opacity:0;animation:fwboot .2s ease-out 1.2s forwards;font-family:Georgia,serif}html[data-ready] #fw-boot{display:none}@keyframes fwboot{to{opacity:1}}#fw-boot .c{display:flex;flex-direction:column;align-items:center;gap:14px;color:#0F2B25;text-align:center;padding:24px}#fw-boot .s{width:38px;height:38px;border-radius:50%;border:3px solid #E6DFD0;border-top-color:#C9A24A;animation:fwspin .9s linear infinite}@keyframes fwspin{to{transform:rotate(360deg)}}#fw-boot b{font-size:22px}#fw-boot small{font:13px/1.5 system-ui,sans-serif;color:#5E6B66;max-width:320px}#fw-boot button{display:none;height:42px;padding:0 22px;border-radius:999px;border:none;background:#0F2B25;color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer}#fw-boot.slow button{display:inline-block}#fw-boot.slow .s{display:none}@media (prefers-reduced-motion:reduce){#fw-boot,#fw-boot .s{animation:none;opacity:1}}" + PAGE_TURN }} />
           <div className="c"><span className="s" aria-hidden="true" /><b>Opening FreBook…</b><small>Getting your books ready.</small><button type="button" onClick={undefined} data-reload="1">Reload</button></div>
           <script dangerouslySetInnerHTML={{ __html: "setTimeout(function(){var b=document.getElementById('fw-boot');if(b&&!document.documentElement.dataset.ready){b.className='slow';var m=b.querySelector('small');if(m)m.textContent='Taking longer than usual. Your connection or the app window may be stuck — reload to try again.';}},10000);document.addEventListener('click',function(e){var t=e.target;if(t&&t.getAttribute&&t.getAttribute('data-reload'))location.reload();});" }} />
         </div>
