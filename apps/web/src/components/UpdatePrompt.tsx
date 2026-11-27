@@ -15,7 +15,7 @@ function freshLinks() {
     const a = (e.target as HTMLElement | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
     if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
     const url = new URL(a.href, location.href);
-    if (url.origin !== location.origin || (url.pathname === location.pathname && url.hash)) return;
+    if (url.origin !== location.origin || url.pathname === location.pathname) return;
     e.preventDefault(); e.stopPropagation();
     location.assign(url.href);
   }, true);
@@ -29,6 +29,9 @@ export default function UpdatePrompt() {
 
   useEffect(() => {
     if (MINE === "dev") return;
+    // In-app page switches could hang on "loading" until a refresh. Every link to another page now loads it fresh —
+    // the same thing a refresh does, which always opens.
+    freshLinks();
     let alive = true, last = 0;
     const check = async () => {
       if (Date.now() - last < 30_000) return;
