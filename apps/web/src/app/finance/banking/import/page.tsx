@@ -309,7 +309,11 @@ export default function BankingPage() {
   }, [rows, filterType, filterStatus, filterDateFrom, filterDateTo, search]);
 
   /* ── Selection ── */
-  const allFilteredSelected = filtered.length > 0 && filtered.every(r => selected.has(r.id));
+  // Big statements (thousands of lines) draw 200 lines at a time — drawing all of them made every click and keystroke slow
+  const PAGE = 200;
+  const [showN, setShowN] = useState(PAGE);
+  useEffect(() => { setShowN(PAGE); }, [search, filterType, filterStatus, filterDateFrom, filterDateTo, rows.length]);
+  const allFilteredSelected =filtered.length > 0 && filtered.every(r => selected.has(r.id));
   function toggleAll() {
     if (allFilteredSelected) {
       setSelected(s => { const n = new Set(s); filtered.forEach(r => n.delete(r.id)); return n; });
@@ -421,11 +425,14 @@ export default function BankingPage() {
 
   /* ── Add the bank account itself, right here ── */
   const [newBank, setNewBank] = useState("");
+  // The new-ledger name is typed without re-drawing the page each key (thousands of rows made typing crawl);
+  // the page only hears when the box goes from empty to filled, to enable the button
+  const newNameRef = useRef<string | null>(null);
   async function confirmAcct() {
     if (!acctAsk || !bizId) return;
     acctChosen.current = true;
     if (acctAsk.pick && acctAsk.pick !== "__new") { setBankAccountId(acctAsk.pick); setLoanMode(acctAsk.kind === "loan"); setAcctAsk(null); return; }
-    const name = acctAsk.newName.trim();
+    const name = (newNameRef.current ?? acctAsk.newName).trim();
     if (!name) return;
     const exists = coa.find(a => a.name.trim().toLowerCase() === name.toLowerCase());
     if (exists) { setBankAccountId(exists.id); if (!bankAccounts.some(b => b.id === exists.id)) setBankAccounts(b => [...b, exists]); setAcctAsk(null); return; }
@@ -864,7 +871,9 @@ export default function BankingPage() {
                     <span>＋ New {acctAsk.kind === "loan" ? "loan" : "bank"} ledger</span>
                   </label>
                   {isNew && (
-                    <input autoFocus value={acctAsk.newName} onChange={e => setAcctAsk(x => x && { ...x, newName: e.target.value })} onKeyDown={e => { if (e.key === "Enter") void confirmAcct(); }}
+                    <input autoFocus key={`${acctAsk.kind}-${acctAsk.hint}`} defaultValue={acctAsk.newName}
+                      ref={el => { newNameRef.current = el ? el.value : null; }}
+                      onChange={e => { newNameRef.current = e.target.value; const filled = !!e.target.value.trim(); if (filled !== !!acctAsk.newName.trim()) setAcctAsk(x => x && { ...x, newName: e.target.value }); }} onKeyDown={e => { if (e.key === "Enter") void confirmAcct(); }}
                       placeholder={acctAsk.kind === "loan" ? "e.g. Federal Bank Term Loan A/c" : "e.g. Federal Bank Current A/c"} aria-label="New ledger name" className="bi-ask-new" />
                   )}
                 </div>
@@ -1160,7 +1169,7 @@ export default function BankingPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map((row, i) => (
+                      {filtered.slice(0, showN).map((row, i) => (
                         <React.Fragment key={row.id}>
                           <tr
                             className={`bs-row${row.pushed ? " pushed" : ""}`}
@@ -1249,6 +1258,13 @@ export default function BankingPage() {
                 </div>
               </div>
 
+              {filtered.length > showN && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, flexWrap: "wrap", padding: "18px 0 6px", fontSize: 15.5, color: "#6B7570" }}>
+                  Showing {showN} of {filtered.length} lines
+                  <button onClick={() => setShowN(n => n + PAGE)} style={{ height: 46, padding: "0 22px", borderRadius: 999, border: "1px solid #D9C79A", background: "#FFFDF8", color: "#10241F", fontFamily: "inherit", fontSize: 16, cursor: "pointer" }}>Show {Math.min(PAGE, filtered.length - showN)} more</button>
+                  <button onClick={() => setShowN(filtered.length)} style={{ height: 46, padding: "0 22px", borderRadius: 999, border: "none", background: "transparent", color: "#10241F", fontFamily: "inherit", fontSize: 16, cursor: "pointer", textDecoration: "underline" }}>Show all {filtered.length} (slower)</button>
+                </div>
+              )}
               {filtered.length === 0 && (
                 <div style={{ padding: "2rem", textAlign: "center", color: "#E6DFD0", fontSize: "0.84rem" }}>
                   No transactions match the current filters.
