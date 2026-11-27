@@ -20,7 +20,35 @@ const authLock = async <R,>(name: string, _acquireTimeout: number, fn: () => Pro
   }
 };
 
-export const supabase = createClient(url, key, { auth: { lock: authLock } });
+// After the app sits idle, a request can hang on a dead connection and never answer — the page then "loads" for ever
+// until a refresh. Give every Supabase request a time limit so it fails (and retries) instead of hanging.
+const timedFetch: typeof fetch = (input, init) => {
+  if (typeof AbortController === "undefined" || init?.signal) return fetch(input, init);
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 15000);
+  return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(t));
+};
+
+export const supabase = createClient(url, key, { auth: { lock: authLock }, global: { fetch: timedFetch } });
+
+// Reading the sign-in must never hang a page. If it takes over 6 s (a stuck token refresh), reload the page once —
+// exactly what pressing refresh did — instead of leaving the screen loading.
+if (typeof window !== "undefined") {
+  const realGetSession = supabase.auth.getSession.bind(supabase.auth);
+  supabase.auth.getSession = (() => {
+    const p = realGetSession();
+    let done = false;
+    p.finally(() => { done = true; });
+    setTimeout(() => {
+      if (done) return;
+      try {
+        const last = Number(sessionStorage.getItem("fw_sess_reload") || 0);
+        if (Date.now() - last > 30000) { sessionStorage.setItem("fw_sess_reload", String(Date.now())); location.reload(); }
+      } catch { /* */ }
+    }, 6000);
+    return p;
+  }) as typeof supabase.auth.getSession;
+}
 
 // Speed: in the browser, getUser() with no token reads the signed-in user from the local session instead of asking
 // Supabase's auth server (a network round trip of ~1–2 s that every page paid before loading anything). Pages only

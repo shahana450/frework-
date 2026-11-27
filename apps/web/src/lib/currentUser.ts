@@ -5,12 +5,13 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 let pending: Promise<User | null> | null = null;
+let listening = false;
 
 export function currentUser(): Promise<User | null> {
   if (!pending) {
-    pending = supabase.auth.getSession().then(({ data }) => data.session?.user ?? null);
-    // A sign-in/out elsewhere resets it so the next caller reads the new session
-    supabase.auth.onAuthStateChange(() => { pending = null; });
+    pending = supabase.auth.getSession().then(({ data }) => data.session?.user ?? null, () => { pending = null; return null; });
+    // A sign-in/out elsewhere resets it so the next caller reads the new session (one listener, not one per reset)
+    if (!listening) { listening = true; supabase.auth.onAuthStateChange(() => { pending = null; }); }
   }
   return pending;
 }
