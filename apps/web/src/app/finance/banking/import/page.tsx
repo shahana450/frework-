@@ -330,6 +330,10 @@ export default function BankingPage() {
   /* ── Suggest a ledger for every unassigned row; create the ones that don't exist yet ── */
   const [suggesting, setSuggesting] = useState(false);
   const [suggestMsg, setSuggestMsg] = useState("");
+  // Ledgers "Suggest" created for this statement — shown grouped (PhonePe / Paytm / bank transfers / heads), with look-alikes to merge
+  const [newLedgers, setNewLedgers] = useState<string[]>([]);
+  const [showAllNew, setShowAllNew] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
   async function suggestLedgers(createMissing = true) {
     if (!bizId) return;
     setSuggesting(true); setSuggestMsg("");
@@ -381,7 +385,8 @@ export default function BankingPage() {
       let n = 0;
       setRows(rs => rs.map(x => { const nm = pick[x.id]; const a = nm ? byName.get(nm.toLowerCase()) : undefined; if (!a || x.ledger_id || x.pushed) return x; n++; return { ...x, ledger_id: a.id, ledger_name: a.name, suggested: true }; }));
       const left = work.filter(r => !r.pushed && !r.ledger_id && !pick[r.id]).length;
-      setSuggestMsg(`✨ ${Object.keys(pick).length} suggested${want.size ? ` · ${want.size} new ledger${want.size > 1 ? "s" : ""} created (${[...want.keys()].join(", ")})` : ""}${left ? ` · ${left} need you to choose` : ""}. Check the ✨ rows, then push.`);
+      if (want.size) setNewLedgers(l => [...new Set([...l, ...want.keys()])]);
+      setSuggestMsg(`✨ ${Object.keys(pick).length} suggested${want.size ? ` · ${want.size} new ledger${want.size > 1 ? "s" : ""} created — grouped above` : ""}${left ? ` · ${left} need you to choose` : ""}. Check the ✨ rows, then push.`);
     } catch (e) {
       setSuggestMsg(`Couldn't suggest: ${(e as { message?: string })?.message ?? String(e)}`);
     } finally {
@@ -896,18 +901,113 @@ export default function BankingPage() {
         })()}
 
         {/* ── Main table view ── */}
-        {rows.length > 0 && (
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 14, flexWrap: "wrap", margin: "18px 0 26px" }}>
-            <div style={{ marginRight: "auto" }}>
-              <div style={{ fontSize: 12.5, letterSpacing: "0.3em", color: HT.goldInk, textTransform: "uppercase" }}>Step 2 of 6</div>
-              <h1 style={{ margin: "8px 0 0", fontWeight: 400, fontSize: "clamp(36px,4.6vw,58px)", lineHeight: 1.05 }}>Assign <i style={{ color: HT.goldInk }}>ledgers</i></h1>
+        {rows.length > 0 && (() => {
+          const acctName = bankAccounts.find(a => a.id === bankAccountId)?.name ?? coa.find(a => a.id === bankAccountId)?.name ?? "";
+          const sug = rows.filter(r => r.suggested && r.ledger_id && !r.pushed).length;
+          const need = rows.filter(r => !r.ledger_id && !r.pushed).length;
+          const other = rows.length - sug - need;
+          const drRows = rows.filter(r => r.debit > 0), crRows = rows.filter(r => r.credit > 0);
+          const drSum = drRows.reduce((s, r) => s + r.debit, 0), crSum = crRows.reduce((s, r) => s + r.credit, 0);
+          const inr2 = (n: number) => "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const toPush = rows.filter(r => !r.pushed).length;
+          const goUnassigned = () => { setFilterStatus("unassigned"); setTimeout(() => document.getElementById("bi-table")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30); };
+          // Group the new ledgers, and find look-alikes (same first word) to merge
+          const used = new Set(rows.map(r => (r.ledger_name ?? "").toLowerCase()));
+          const fresh = newLedgers.filter(n => used.has(n.toLowerCase()));
+          const groups: [string, RegExp | null][] = [["PhonePe payees", /phone ?pe|phonepe|ybl\b/i], ["Paytm payees", /paytm|ptys|paytmqr/i], ["Bank transfers (IMPS / NEFT)", /\b(ibkl|idfb|sibl|fdrl|hdfc|icic|sbin|utib|kkbk|barb|cnrb|ubin|neft|imps|rtgs)\b/i], ["Expense heads & businesses", null]];
+          const byGroup = groups.map(([label, re]) => [label, fresh.filter(n => re ? re.test(n) : !groups.slice(0, 3).some(([, r]) => r!.test(n)))] as const).filter(([, l]) => l.length);
+          const fw = (n: string) => (n.toLowerCase().match(/[a-z]{4,}/) ?? [""])[0];
+          const dupMap = new Map<string, string[]>(); fresh.forEach(n => { const k = fw(n); if (k && !/^(phonepe|paytm|bank|cash|sales|purchase)/.test(k)) dupMap.set(k, [...(dupMap.get(k) ?? []), n]); });
+          const dups = [...dupMap.values()].filter(g => g.length > 1);
+          const chip: React.CSSProperties = { padding: "8px 16px", borderRadius: 999, background: "#F4ECDD", border: "1px solid #EADFC8", fontSize: 16.5, color: HT.ink, whiteSpace: "nowrap" };
+          const steps = [
+            { n: 1, t: fresh.length ? `Review ${fresh.length} new ledger${fresh.length === 1 ? "" : "s"}` : "Check the suggestions", d: fresh.length ? "Merge look-alikes before they reach the books" : "Change any ledger you disagree with", on: true, go: () => document.getElementById("bi-new")?.scrollIntoView({ behavior: "smooth" }) },
+            { n: 2, t: need ? `Choose a ledger for ${need} row${need === 1 ? "" : "s"}` : "Every row has a ledger", d: need ? "No confident suggestion for these" : "Nothing left unassigned", warn: need > 0, go: goUnassigned },
+            { n: 3, t: `Push ${toPush} entr${toPush === 1 ? "y" : "ies"} to books`, d: need ? "Unlocks once nothing is unassigned" : "Ready when you are", go: () => { if (!need && unpushedAssigned) void pushToJournals(); } },
+          ];
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24, margin: "18px 0 26px" }}>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ marginRight: "auto", minWidth: 0 }}>
+                  <div style={{ fontSize: 13, letterSpacing: "0.2em", color: HT.goldInk, textTransform: "uppercase" }}>FreBook · Bank import{acctName ? ` · ${acctName}` : ""}</div>
+                  <h1 style={{ margin: "10px 0 6px", fontWeight: 400, fontStyle: "italic", fontSize: "clamp(40px,5.2vw,66px)", lineHeight: 1.05 }}>Assign ledgers</h1>
+                  <div style={{ fontSize: 18, color: HT.muted }}>{rows.length} transactions read. {sug ? "FreBook suggested most of them; check, fix the rest, then push to books." : "Pick a ledger for each line (or let FreBook suggest), then push to books."}</div>
+                </div>
+                {savedAt && <span style={{ fontSize: 16, color: HT.muted }}>✓ Saved {new Date(savedAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}</span>}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 18 }}>
+                {steps.map(s => (
+                  <button key={s.n} onClick={s.go} style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 18, padding: "24px 26px", borderRadius: 18, background: HT.paper, border: s.on ? `1.5px solid ${HT.green}` : `1px solid ${HT.line}` }}>
+                    <span style={{ width: 46, height: 46, flexShrink: 0, borderRadius: "50%", display: "grid", placeItems: "center", fontSize: 18, background: s.on ? HT.green : s.warn ? "#FBE9E4" : "#F1EADB", color: s.on ? "#FFFFFF" : s.warn ? "#B23A20" : HT.muted, border: s.warn ? "1px solid #F0CFC5" : "none" }}>{s.n}</span>
+                    <span style={{ minWidth: 0 }}><span style={{ display: "block", fontSize: 20, color: HT.ink }}>{s.t}</span><span style={{ fontSize: 15.5, color: HT.muted }}>{s.d}</span></span>
+                  </button>
+                ))}
+              </div>
+              <section style={{ background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 22, padding: "28px 30px" }}>
+                <div role="img" aria-label={`${sug} suggested, ${need} need you, ${other} other`} style={{ display: "flex", height: 14, borderRadius: 999, overflow: "hidden", background: "#EFE8DA" }}>
+                  {sug > 0 && <span style={{ width: `${(sug / rows.length) * 100}%`, background: "#CBA35A" }} />}
+                  {need > 0 && <span style={{ width: `${(need / rows.length) * 100}%`, minWidth: 6, background: "#B23A20" }} />}
+                  {other > 0 && <span style={{ width: `${(other / rows.length) * 100}%`, background: HT.green }} />}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 16, marginTop: 22 }}>
+                  {[["Suggested", String(sug), ""], ["Needs you", String(need), "#B23A20"], ["Other rows", String(other), ""], [`Payments (Dr) · ${drRows.length}`, inr2(drSum), ""], [`Receipts (Cr) · ${crRows.length}`, inr2(crSum), ""]].map(([l, v, c]) => (
+                    <div key={l} style={{ minWidth: 0 }}><div style={{ fontSize: 16, color: c || HT.muted }}>{l}</div><div style={{ fontSize: 26, marginTop: 4, color: c || HT.ink, fontVariantNumeric: "tabular-nums", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v}</div></div>
+                  ))}
+                </div>
+              </section>
+              {fresh.length > 0 && (
+                <section id="bi-new" style={{ background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 22, padding: "30px 34px", display: "flex", flexDirection: "column", gap: 20 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+                    <div style={{ marginRight: "auto" }}><div style={{ fontSize: 36, fontStyle: "italic" }}>{fresh.length} new ledger{fresh.length === 1 ? "" : "s"}</div><div style={{ fontSize: 17, color: HT.muted, marginTop: 4 }}>Grouped by how they were paid, instead of one long paragraph</div></div>
+                    <button onClick={() => setShowAllNew(v => !v)} style={{ all: "unset", cursor: "pointer", color: HT.ink, textDecoration: "underline", fontSize: 17 }}>{showAllNew ? "Show fewer" : `See all ${fresh.length} →`}</button>
+                  </div>
+                  {dups.length > 0 && (
+                    <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap", padding: "22px 24px", borderRadius: 18, background: "#F8EEDA", border: "1px solid #EBD9B0" }}>
+                      <div style={{ flex: "1 1 520px", minWidth: 0 }}>
+                        <div style={{ fontSize: 19, marginBottom: 12 }}>Possible duplicates — same party, different spelling</div>
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>{dups.slice(0, showAllNew ? 99 : 4).map(g => <span key={g.join("|")} style={{ ...chip, background: "#FFFFFF" }}>{g.join(" · ")}</span>)}</div>
+                      </div>
+                      <button onClick={() => setMergeOpen(true)} style={{ height: 54, padding: "0 26px", borderRadius: 999, border: "none", background: HT.green, color: "#FFFFFF", fontFamily: "inherit", fontSize: 17, cursor: "pointer" }}>Review merges</button>
+                    </div>
+                  )}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(420px,100%),1fr))", gap: 18 }}>
+                    {byGroup.map(([label, list]) => (
+                      <div key={label} style={{ border: `1px solid ${HT.line}`, borderRadius: 18, padding: "20px 22px" }}>
+                        <div style={{ fontSize: 13, letterSpacing: "0.2em", textTransform: "uppercase", color: HT.goldInk, marginBottom: 14 }}>{label}</div>
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          {list.slice(0, showAllNew ? list.length : 6).map(n => <span key={n} style={chip}>{n}</span>)}
+                          {!showAllNew && list.length > 6 && <button onClick={() => setShowAllNew(true)} style={{ ...chip, background: "#FFFFFF", cursor: "pointer", fontFamily: "inherit" }}>+ {list.length - 6} more</button>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+              {mergeOpen && (
+                <div role="dialog" aria-modal="true" aria-label="Merge look-alike ledgers" onClick={() => setMergeOpen(false)} onKeyDown={e => { if (e.key === "Escape") setMergeOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(16,36,31,.45)", display: "grid", placeItems: "center", padding: 16 }}>
+                  <div onClick={e => e.stopPropagation()} style={{ width: "min(640px,100%)", maxHeight: "85vh", overflow: "auto", background: HT.paper, borderRadius: 22, padding: "26px 28px", display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ display: "flex", alignItems: "baseline" }}><b style={{ fontSize: 24, fontWeight: 400, fontStyle: "italic", flex: 1 }}>Merge look-alikes</b><button onClick={() => setMergeOpen(false)} aria-label="Close" style={{ border: "none", background: "none", fontSize: 24, cursor: "pointer", color: HT.muted }}>×</button></div>
+                    <span style={{ fontSize: 15.5, color: HT.muted }}>Pick the one ledger each group should use. Its rows move to that ledger; the unused spelling stays in the Chart of Accounts until you delete it.</span>
+                    {dups.map(g => (
+                      <div key={g.join("|")} style={{ border: `1px solid ${HT.line}`, borderRadius: 14, padding: "14px 16px", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                        <span style={{ fontSize: 15, color: HT.muted, marginRight: 6 }}>Use</span>
+                        {g.map(n => <button key={n} onClick={() => {
+                          const target = coa.find(a => a.name.toLowerCase() === n.toLowerCase()); if (!target) return;
+                          const others = new Set(g.filter(x => x !== n).map(x => x.toLowerCase()));
+                          setRows(rs => rs.map(r => !r.pushed && others.has((r.ledger_name ?? "").toLowerCase()) ? { ...r, ledger_id: target.id, ledger_name: target.name } : r));
+                          setNewLedgers(l => l.filter(x => !others.has(x.toLowerCase())));
+                        }} style={{ ...chip, background: "#FFFFFF", cursor: "pointer", fontFamily: "inherit" }}>{n}</button>)}
+                      </div>
+                    ))}
+                    {!dups.length && <span style={{ color: "#0B7A55" }}>✓ No look-alikes left.</span>}
+                  </div>
+                </div>
+              )}
             </div>
-            <button onClick={() => fileRef.current?.click()} style={{ height: 56, padding: "0 26px", borderRadius: 999, border: "1px solid #D9C79A", background: HT.paper, color: HT.ink, fontFamily: "inherit", fontSize: 17, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10 }}><span aria-hidden>↑</span> Upload another statement</button>
-            <button onClick={() => void pushToJournals()} disabled={pushing || unpushedAssigned === 0 || !bankAccountId} style={{ height: 56, padding: "0 28px", borderRadius: 999, border: "none", background: pushing || unpushedAssigned === 0 || !bankAccountId ? "#DDE1DC" : "linear-gradient(160deg,#DDBE78,#C9A24A)", color: pushing || unpushedAssigned === 0 || !bankAccountId ? "#7D8783" : HT.ink, fontFamily: "inherit", fontSize: 17, cursor: pushing || unpushedAssigned === 0 || !bankAccountId ? "default" : "pointer", display: "inline-flex", alignItems: "center", gap: 10 }}>{pushing ? "Posting…" : <>Post {unpushedAssigned || ""} entr{unpushedAssigned === 1 ? "y" : "ies"} <span aria-hidden>→</span></>}</button>
-          </div>
-        )}
+          );
+        })()}
         {rows.length > 0 && (
-          <div className="bi-review">
+          <div id="bi-table" className="bi-review">
 
             {/* ── Table (full width; the account, summary and Push sit in a bar above it) ── */}
             <div className="bi-main">
@@ -967,16 +1067,25 @@ export default function BankingPage() {
                       {sel.length > 0 && <button className="bi-clear" onClick={() => setSelected(new Set())}>Clear</button>}
                     </div>
                     {sel.length > 0 && (
-                      <div className="bi-bulk-row">
-                        <span className="bi-bulk-sel"><b>{sel.length} selected</b>{sum(sel, "debit") > 0 && <span className="bi-amt dr">Dr {cur()}{fmt(sum(sel, "debit"))}</span>}{sum(sel, "credit") > 0 && <span className="bi-amt cr">Cr {cur()}{fmt(sum(sel, "credit"))}</span>}</span>
-                        <input list="bs-ledgers" key={bulkLedgerId || "none"} defaultValue={bulkLedgerId ? decode(coa.find(x => x.id === bulkLedgerId)?.name ?? "") : ""} placeholder="Type to find the ledger for all of them…" aria-label="Ledger for the selected lines"
+                      <div className="bi-dock" role="region" aria-label="Selected lines">
+                        <span className="bi-dock-sel"><b>{sel.length} selected</b>{sum(sel, "debit") > 0 && <span>Dr {cur()}{fmt(sum(sel, "debit"))}</span>}{sum(sel, "credit") > 0 && <span>Cr {cur()}{fmt(sum(sel, "credit"))}</span>}</span>
+                        <input list="bs-ledgers" key={bulkLedgerId || "none"} defaultValue={bulkLedgerId ? decode(coa.find(x => x.id === bulkLedgerId)?.name ?? "") : ""} placeholder="Assign one ledger to all selected…" aria-label="Ledger for the selected lines"
                           onChange={e => { const v = e.target.value.trim().toLowerCase(); const hit = coa.find(x => decode(x.name).toLowerCase() === v || `${decode(x.name)} · ${x.type}`.toLowerCase() === v); setBulkLedgerId(hit?.id ?? ""); }}
-                          className="ledger-sel" style={{ flex: "1 1 260px", maxWidth: 380 }} />
-                        <button onClick={applyBulkAssign} disabled={!bulkLedgerId} className="bi-assign">Assign to {sel.length}</button>
+                          className="bi-dock-in" />
+                        <button onClick={applyBulkAssign} disabled={!bulkLedgerId} className="bi-dock-as">Assign</button>
+                        <button onClick={() => void pushToJournals()} disabled={pushing || !unpushedAssigned || !bankAccountId || un.length > 0} className="bi-dock-push" title={un.length ? "Give every line a ledger first" : undefined}>{pushing ? "Posting…" : `Push to books${un.length ? ` · ${un.length} left` : ""}`}</button>
+                        <button onClick={() => setSelected(new Set())} aria-label="Clear selection" className="bi-dock-x">×</button>
                       </div>
                     )}
                     <style>{`
                       .bi-bulk{background:#FFFDF8;border:1px solid #EFE2C4;border-radius:16px;padding:12px 14px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
+                      .bi-dock{position:fixed;z-index:40;bottom:16px;left:50%;transform:translateX(-50%);width:min(1240px,calc(100vw - 32px));box-sizing:border-box;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 22px;border-radius:18px;background:#16342D;color:#FFFFFF;box-shadow:0 24px 50px -20px rgba(16,36,31,.7)}
+                      .bi-dock-sel{display:flex;gap:18px;align-items:baseline;font-size:17px;white-space:nowrap}.bi-dock-sel span{color:#D3DCD8}
+                      .bi-dock-in{flex:1 1 260px;min-width:0;height:52px;border-radius:12px;border:none;padding:0 16px;font:inherit;font-size:16.5px;background:#FFFFFF;color:#10241F}
+                      .bi-dock-as{height:52px;padding:0 26px;border-radius:999px;border:none;background:#FFFFFF;color:#10241F;font:inherit;font-size:17px;cursor:pointer}
+                      .bi-dock-push{height:52px;padding:0 24px;border-radius:999px;border:none;background:linear-gradient(160deg,#DDBE78,#C9A24A);color:#10241F;font:inherit;font-size:17px;cursor:pointer}
+                      .bi-dock-as:disabled,.bi-dock-push:disabled{opacity:.5;cursor:default}
+                      .bi-dock-x{width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:transparent;color:#FFFFFF;font-size:20px;cursor:pointer}
                       .bi-bulk-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
                       .bi-bulk-lbl{font-size:10.5px;font-weight:800;letter-spacing:.16em;color:#9A6B22;margin-right:4px}
                       .bi-pick{height:36px;padding:0 12px;border-radius:999px;border:1px solid #E6DFD0;background:#fff;color:#12352D;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}

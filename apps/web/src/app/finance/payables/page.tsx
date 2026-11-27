@@ -74,11 +74,12 @@ export default function PayablesPage() {
     setLoading(false);
   }
 
+  const sups = entries.filter(e => e.contact_id).map(e => ({ id: e.contact_id!, name: e.contact_name, outstanding: e.outstanding, count: e.bill_count, since: e.oldest_bill }));
   return (
     <PartyBoard kind="payable" loading={loading} total={totalOutstanding} overdue={overdueAmount} newHref="/finance/purchases/new" cardAction="Record payment"
       cardHref={() => "/finance/journals/new"}
-      cardExtra={r => r.id && r.outstanding > 0.5 ? <button onClick={() => setPayFor(r.id)} style={{ padding: "8px 16px", borderRadius: 999, background: "#D9B56F", color: "#12352D", border: "none", fontSize: "0.88rem", cursor: "pointer", fontFamily: "inherit" }}>Pay now</button> : null}
-      notice={!loading ? <><MsmePanel report={msme.report} setupNeeded={msme.setup} marked={msme.marked} />{bizId && payFor && <PayNow only={payFor} onClose={() => setPayFor(null)} bizId={bizId} accounts={accs} suppliers={entries.filter(e => e.contact_id).map(e => ({ id: e.contact_id!, name: e.contact_name, outstanding: e.outstanding }))} onPaid={() => loadPayables(bizId)} />}{bizId && <div style={{ marginTop: 16 }}><PayNow bizId={bizId} accounts={accs} suppliers={entries.filter(e => e.contact_id).map(e => ({ id: e.contact_id!, name: e.contact_name, outstanding: e.outstanding }))} onPaid={() => loadPayables(bizId)} /></div>}</> : null}
+      cardExtra={r => r.id && r.outstanding > 0.5 ? <button onClick={() => setPayFor(r.id)} className="pb-btn" style={{ height: 50, padding: "0 24px", borderRadius: 999, background: "#CBA35A", color: "#10241F", border: "none", fontSize: 16.5, cursor: "pointer", fontFamily: "inherit" }}>Pay now</button> : null}
+      notice={!loading ? <><MsmePanel report={msme.report} setupNeeded={msme.setup} marked={msme.marked} vendors={entries.length} />{bizId && payFor && <PayNow only={payFor} onClose={() => setPayFor(null)} bizId={bizId} accounts={accs} suppliers={sups} onPaid={() => loadPayables(bizId)} />}{bizId && <PayNow bizId={bizId} accounts={accs} suppliers={sups} onPaid={() => loadPayables(bizId)} />}</> : null}
       rows={entries.map(e => ({ id: e.contact_id, name: e.contact_name, count: e.bill_count, billed: e.total_billed, settled: e.total_paid, outstanding: e.outstanding, oldest: e.oldest_bill, days: e.days_pending }))} />
   );
 }

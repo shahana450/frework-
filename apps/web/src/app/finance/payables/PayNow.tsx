@@ -8,10 +8,10 @@ import QRCode from "qrcode";
 import { supabase } from "@/lib/supabase";
 import { saveEntry } from "@/lib/postEntry";
 
-type Sup = { id: string; name: string; outstanding: number };
+type Sup = { id: string; name: string; outstanding: number; count?: number; since?: string };
 type Acc = { id: string; name: string; type: string; sub_type: string | null };
 type Details = { contactId: string | null; upi: string; bankName: string; account: string; ifsc: string };
-type Row = { amount: string; from: string; ref: string; busy: boolean; done: string; err: string };
+type Row = { amount: string; from: string; ref: string; busy: boolean; done: string; err: string; via?: "upi" | "bank" };
 
 const T = { ink: "#10241F", muted: "#5E6B66", line: "#E6DFD0", paper: "#FFFDF8", green: "#12352D", gold: "#D9B56F", soft: "#F4EEE2" };
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -29,6 +29,8 @@ export default function PayNow({ bizId, suppliers, accounts, onPaid, only, onClo
   const [edit, setEdit] = useState<{ sup: Sup; d: Details } | null>(null);
   const [show, setShow] = useState<{ sup: Sup; kind: "upi" | "bank"; qr?: string } | null>(null);
   const [open, setOpen] = useState(true);
+  const [payFrom, setPayFrom] = useState("");
+  useEffect(() => { if (!payFrom && defBank) setPayFrom(defBank); }, [defBank, payFrom]);
 
   useEffect(() => {
     setRows(r => Object.fromEntries(owed.map(s => [s.id, r[s.id] ?? { amount: String(s.outstanding.toFixed(2)), from: defBank, ref: "", busy: false, done: "", err: "" }])));
@@ -74,11 +76,15 @@ export default function PayNow({ bizId, suppliers, accounts, onPaid, only, onClo
     setShow({ sup: s, kind: "upi", qr: await QRCode.toDataURL(link, { width: 260, margin: 1 }) });
   }
 
-  async function markPaid(s: Sup) {
+  async function markAll() {
+    for (const s of owed) if (!rows[s.id]?.done && amt(s.id) > 0) await markPaid(s, true);
+  }
+
+  async function markPaid(s: Sup, quiet?: boolean) {
     const r = rows[s.id]; const a = amt(s.id);
     if (!(a > 0)) { set(s.id, { err: "Enter the amount paid." }); return; }
     if (!r.from) { set(s.id, { err: "Choose the bank or cash it was paid from." }); return; }
-    if (a > s.outstanding + 0.5 && !window.confirm(`${inr(a)} is more than the ${inr(s.outstanding)} you owe ${s.name}. The extra will show as an advance. Post it?`)) return;
+    if (a > s.outstanding + 0.5 && (quiet || !window.confirm(`${inr(a)} is more than the ${inr(s.outstanding)} you owe ${s.name}. The extra will show as an advance. Post it?`))) return;
     set(s.id, { busy: true, err: "" });
     try {
       const fromName = money.find(m => m.id === r.from)?.name ?? "Bank";
@@ -95,50 +101,64 @@ export default function PayNow({ bizId, suppliers, accounts, onPaid, only, onClo
   const btn = (primary?: boolean): React.CSSProperties => ({ height: 36, padding: "0 14px", borderRadius: 999, border: primary ? "none" : `1px solid ${T.line}`, background: primary ? T.green : "#FFFFFF", color: primary ? "#FFFFFF" : T.ink, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" });
   const field: React.CSSProperties = { height: 36, borderRadius: 10, border: `1px solid ${T.line}`, padding: "0 10px", fontFamily: "inherit", fontSize: 14, background: "#FFFFFF", color: T.ink };
 
+  const sdt = (d?: string) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" }) : "";
+  const setFromAll = (id: string) => { setPayFrom(id); setRows(r => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v.done ? v : { ...v, from: id }]))); };
   const panel = (
-    <section style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 20, overflow: "hidden" }}>
-      <button onClick={() => setOpen(o => !o)} aria-expanded={open} style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", width: "calc(100% - 40px)" }}>
-        <span style={{ fontSize: 22, fontStyle: "italic", color: T.ink }}>Pay now</span>
-        <span style={{ fontSize: 13.5, color: T.muted, flex: 1 }}>{owed.length} supplier{owed.length > 1 ? "s" : ""} · {inr(totalSel)} to pay · UPI or bank transfer, then mark paid</span>
-        <span aria-hidden="true" style={{ color: T.muted }}>{open ? "▾" : "▸"}</span>
-      </button>
+    <section style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 22, overflow: "hidden" }}>
+      <style>{`.pn td{padding:18px 14px;border-top:1px solid ${T.line};vertical-align:middle}.pn th{padding:18px 14px;font-weight:400;font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;color:#8A6A2A;text-align:left;background:#F4EFE5}
+        .pn-seg{display:inline-flex;border:1px solid ${T.line};border-radius:999px;overflow:hidden;background:#FFFFFF}
+        .pn-seg button{height:48px;padding:0 22px;border:none;background:transparent;font:inherit;font-size:17px;color:${T.ink};cursor:pointer}
+        .pn-seg button[aria-pressed=true]{background:${T.green};color:#FFFFFF}
+        .pn-f{height:50px;border-radius:12px;border:1px solid ${T.line};padding:0 16px;font:inherit;font-size:17px;background:#FFFFFF;color:${T.ink};box-sizing:border-box}
+        .pn-b{height:50px;padding:0 24px;border-radius:999px;font:inherit;font-size:17px;cursor:pointer;white-space:nowrap}`}</style>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "28px 34px" }}>
+        <button onClick={() => setOpen(o => !o)} aria-expanded={open} style={{ all: "unset", cursor: "pointer", marginRight: "auto" }}>
+          <span style={{ display: "block", fontSize: 36, fontStyle: "italic", color: T.ink }}>Pay now <span aria-hidden="true" style={{ fontSize: 18, color: T.muted, fontStyle: "normal" }}>{open ? "▾" : "▸"}</span></span>
+          <span style={{ fontSize: 17, color: T.muted }}>{owed.length} supplier{owed.length > 1 ? "s" : ""} · {inr(totalSel)} · pay by UPI or bank transfer, then mark paid</span>
+        </button>
+        {money.length > 0 && <label style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 16.5, color: T.muted }}>Pay from
+          <select value={payFrom} onChange={e => setFromAll(e.target.value)} className="pn-f" style={{ minWidth: 200 }}>{money.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
+        </label>}
+      </div>
       {open && <>
-        {needSql && <div style={{ margin: "0 20px 12px", padding: "10px 14px", borderRadius: 10, background: "#FBF1DA", color: "#7A5300", fontSize: 13.5 }}>To save suppliers&apos; UPI and bank details, run <code>2026-11-11_supplier_payment_details.sql</code> in Supabase once. You can still mark payments as paid.</div>}
+        {needSql && <div style={{ margin: "0 34px 14px", padding: "10px 14px", borderRadius: 10, background: "#FBF1DA", color: "#7A5300", fontSize: 14.5 }}>To save suppliers&apos; UPI and bank details, run <code>2026-11-11_supplier_payment_details.sql</code> in Supabase once. You can still mark payments as paid.</div>}
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900, fontSize: 14 }}>
-            <thead><tr style={{ background: T.soft, color: "#9A7A2E", fontSize: 11.5, letterSpacing: "0.12em", textTransform: "uppercase", textAlign: "left" }}>
-              <th style={{ padding: "10px 20px" }}>Supplier</th><th style={{ padding: 10, textAlign: "right" }}>You owe</th><th style={{ padding: 10 }}>Pay now</th><th style={{ padding: 10 }}>From</th><th style={{ padding: 10 }}>Pay with</th><th style={{ padding: "10px 20px 10px 10px" }}>Then</th>
-            </tr></thead>
+          <table className="pn" style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000, fontSize: 17 }}>
+            <thead><tr><th style={{ paddingLeft: 34 }}>Supplier</th><th style={{ textAlign: "right" }}>You owe</th><th>Pay now</th><th>Pay with</th><th>UTR / Ref</th><th style={{ paddingRight: 34 }} /></tr></thead>
             <tbody>
               {owed.map(s => {
                 const r = rows[s.id]; const d = det[s.id];
                 if (!r) return null;
+                const via = r.via ?? (d?.upi ? "upi" : d?.account ? "bank" : "upi");
+                const blank = { contactId: null, upi: "", bankName: "", account: "", ifsc: "" };
                 return (
-                  <tr key={s.id} style={{ borderTop: `1px solid ${T.line}`, verticalAlign: "top", opacity: r.done ? 0.6 : 1 }}>
-                    <td style={{ padding: "12px 20px" }}><b>{s.name}</b>
-                      <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{d?.upi ? `UPI ${d.upi}` : ""}{d?.upi && d?.account ? " · " : ""}{d?.account ? `A/c …${d.account.slice(-4)} ${d.ifsc}` : ""}{!d?.upi && !d?.account ? "No payment details" : ""}
-                        {" · "}<button onClick={() => setEdit({ sup: s, d: d ?? { contactId: null, upi: "", bankName: "", account: "", ifsc: "" } })} style={{ all: "unset", cursor: "pointer", color: "#8A6420", textDecoration: "underline" }}>{d?.upi || d?.account ? "edit" : "add UPI / bank"}</button></div></td>
-                    <td style={{ padding: 12, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{inr(s.outstanding)}</td>
-                    <td style={{ padding: 10 }}><input aria-label={`Amount to pay ${s.name}`} inputMode="decimal" value={r.amount} disabled={!!r.done} onChange={e => set(s.id, { amount: e.target.value.replace(/[^\d.]/g, "") })} style={{ ...field, width: 130, textAlign: "right", fontVariantNumeric: "tabular-nums" }} /></td>
-                    <td style={{ padding: 10 }}><select aria-label="Pay from" value={r.from} disabled={!!r.done} onChange={e => set(s.id, { from: e.target.value })} style={{ ...field, maxWidth: 200 }}>{money.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></td>
-                    <td style={{ padding: 10 }}><div style={{ display: "flex", gap: 6 }}>
-                      <button style={btn()} disabled={!!r.done} onClick={() => payUpi(s)} title={d?.upi ? "Opens your UPI app with the amount filled in" : "Add the supplier's UPI ID first"}>UPI</button>
-                      <button style={btn()} disabled={!!r.done} onClick={() => d?.account ? setShow({ sup: s, kind: "bank" }) : setEdit({ sup: s, d: d ?? { contactId: null, upi: "", bankName: "", account: "", ifsc: "" } })}>Net banking</button>
+                  <tr key={s.id} style={{ opacity: r.done ? 0.6 : 1 }}>
+                    <td style={{ paddingLeft: 34 }}><span style={{ display: "block", fontSize: 20 }}>{s.name}</span>
+                      <span style={{ fontSize: 14.5, color: T.muted }}>{s.count ? `${s.count} bill${s.count === 1 ? "" : "s"}` : ""}{s.since ? ` · ${sdt(s.since)}` : ""}{d?.upi ? ` · UPI ${d.upi}` : ""}{d?.account ? ` · A/c …${d.account.slice(-4)}` : ""} · <button onClick={() => setEdit({ sup: s, d: d ?? blank })} style={{ all: "unset", cursor: "pointer", color: T.ink, textDecoration: "underline" }}>{d?.upi || d?.account ? "edit" : "add UPI / bank"}</button></span></td>
+                    <td style={{ textAlign: "right", fontSize: 20, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{inr(s.outstanding)}</td>
+                    <td><input aria-label={`Amount to pay ${s.name}`} inputMode="decimal" value={r.amount} disabled={!!r.done} onChange={e => set(s.id, { amount: e.target.value.replace(/[^\d.]/g, "") })} className="pn-f" style={{ width: 170, textAlign: "right", fontVariantNumeric: "tabular-nums" }} /></td>
+                    <td><div className="pn-seg" role="group" aria-label={`Pay ${s.name} with`}>
+                      <button aria-pressed={via === "upi"} disabled={!!r.done} onClick={() => { set(s.id, { via: "upi" }); void payUpi(s); }} title={d?.upi ? "Opens your UPI app with the amount filled in" : "Add the supplier's UPI ID first"}>UPI</button>
+                      <button aria-pressed={via === "bank"} disabled={!!r.done} onClick={() => { set(s.id, { via: "bank" }); if (d?.account) setShow({ sup: s, kind: "bank" }); else setEdit({ sup: s, d: d ?? blank }); }}>Net banking</button>
                     </div></td>
-                    <td style={{ padding: "10px 20px 10px 10px" }}>
-                      {r.done ? <span style={{ color: "#0B7A55", fontWeight: 700 }}>✓ {r.done}</span> : <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <input aria-label="UTR / reference" placeholder="UTR / ref (optional)" value={r.ref} onChange={e => set(s.id, { ref: e.target.value })} style={{ ...field, width: 150 }} />
-                        <button style={btn(true)} disabled={r.busy} onClick={() => markPaid(s)}>{r.busy ? "Posting…" : "Mark paid"}</button>
-                      </div>}
-                      {r.err && <div role="alert" style={{ color: "#B4321F", fontSize: 12.5, marginTop: 4 }}>{r.err}</div>}
+                    <td>{r.done ? null : <input aria-label="UTR / reference" placeholder="Optional" value={r.ref} onChange={e => set(s.id, { ref: e.target.value })} className="pn-f" style={{ width: 200 }} />}</td>
+                    <td style={{ paddingRight: 34, textAlign: "right" }}>
+                      {r.done ? <span style={{ color: "#0B7A55" }}>✓ {r.done}</span> : <button className="pn-b" disabled={r.busy} onClick={() => markPaid(s)} style={{ border: `1px solid ${T.ink}`, background: "#FFFFFF", color: T.ink }}>{r.busy ? "Posting…" : "Mark paid"}</button>}
+                      {r.err && <div role="alert" style={{ color: "#B4321F", fontSize: 13.5, marginTop: 6 }}>{r.err}</div>}
                     </td>
                   </tr>
                 );
               })}
             </tbody>
+            <tfoot><tr style={{ background: "#F4EFE5", borderTop: `2px solid ${T.green}` }}>
+              <td style={{ paddingLeft: 34, fontSize: 19, borderTop: "none" }}>Selected total</td>
+              <td style={{ textAlign: "right", fontSize: 21, fontVariantNumeric: "tabular-nums", borderTop: "none", whiteSpace: "nowrap" }}>{inr(totalSel)}</td>
+              <td colSpan={3} style={{ fontSize: 15, color: T.muted, borderTop: "none" }}>FreBook doesn&apos;t move money. UPI opens your UPI app; Net banking shows the payee details.</td>
+              <td style={{ paddingRight: 34, textAlign: "right", borderTop: "none" }}><button className="pn-b" disabled={!totalSel} onClick={() => void markAll()} style={{ border: "none", background: T.green, color: "#FFFFFF", opacity: totalSel ? 1 : 0.5 }}>Mark all paid</button></td>
+            </tr></tfoot>
           </table>
         </div>
-        <div style={{ padding: "10px 20px 16px", fontSize: 12.5, color: T.muted }}>FreBook doesn&apos;t move money: UPI opens your own UPI app, Net banking shows the details to use in your bank. After paying, press Mark paid — it posts the payment (supplier Dr, bank/cash Cr) with today&apos;s date.</div>
+        <div style={{ padding: "18px 34px 22px", fontSize: 15, color: T.muted }}>Mark paid posts the payment with today&apos;s date: supplier Dr, bank / cash Cr.</div>
       </>}
 
       {(edit || show) && (

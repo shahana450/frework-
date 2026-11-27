@@ -8,16 +8,17 @@ const C = { ink: "#10241F", muted: "#6B7570", line: "#E1E4EE", neg: "#B4321F", n
 const inr = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
 const dt = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 
-export default function MsmePanel({ report, setupNeeded, marked }: { report: MsmeReport | null; setupNeeded: boolean; marked: number }) {
+export default function MsmePanel({ report, setupNeeded, marked, vendors }: { report: MsmeReport | null; setupNeeded: boolean; marked: number; vendors?: number }) {
   if (setupNeeded) return (
     <div style={{ marginBottom: "1.5rem", padding: "0.8rem 1rem", borderRadius: 10, background: C.warnSoft, color: C.warn, fontSize: "0.82rem", fontWeight: 600 }}>
       MSME payment tracking (section 43B(h)) needs a one-time setup: run 2026-11-04_msme.sql in Supabase.
     </div>
   );
   if (!marked) return (
-    <div style={{ marginBottom: "1.5rem", padding: "0.8rem 1rem", borderRadius: 10, border: `1px dashed ${C.line}`, background: "#FFFDF8", color: C.muted, fontSize: "0.82rem", lineHeight: 1.55 }}>
-      <b style={{ color: C.ink }}>MSME suppliers (section 43B(h)):</b> payments to micro and small suppliers must be made within 15 days (or the agreed period, max 45) or the expense isn&apos;t allowed this year.{" "}
-      <Link href="/finance/contacts" style={{ color: "#12352D", fontWeight: 700 }}>Mark your MSME suppliers →</Link>
+    <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", padding: "22px 28px", borderRadius: 22, border: "1px solid #EBD9B0", background: "#F8EEDA", color: C.ink, fontSize: 17, lineHeight: 1.65 }}>
+      <span aria-hidden="true" style={{ width: 56, height: 56, flexShrink: 0, borderRadius: "50%", background: "#16342D", color: "#E2C98A", display: "grid", placeItems: "center", fontSize: 16 }}>43B</span>
+      <span style={{ flex: "1 1 420px" }}><b>MSME suppliers, section 43B(h).</b> Pay micro and small suppliers within 15 days, or the agreed period up to 45 days. Unpaid past that, the expense is disallowed this year.{vendors ? <span style={{ color: C.warn }}> 0 of {vendors} vendors marked so far.</span> : null}</span>
+      <Link href="/finance/contacts" style={{ color: "#16342D", fontSize: 17 }}>Mark MSME suppliers →</Link>
     </div>
   );
   if (!report) return null;
