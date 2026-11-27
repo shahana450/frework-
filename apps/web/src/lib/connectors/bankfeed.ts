@@ -56,14 +56,27 @@ export async function startConsent(c: BankFeedCreds, redirectUrl: string): Promi
   return { ...c, consent_id: d.id, consent_url: d.url, consent_status: d.status ?? "PENDING" };
 }
 
-export async function fetchBankFeed(c: BankFeedCreds, since: Date): Promise<{ items: FeedItem[]; creds: BankFeedCreds }> {
-  if (c.mode === "demo") return { items: demoTxns(new Date()).filter(t => t.date >= isoDay(since)).map(t => toFeedItem({ ...t, narration: `[Demo] ${t.narration}` }, c.bank_ledger, "demo-")), creds: c };
+/** Setu's sandbox returns made-up accounts: everything from it is labelled so it is never taken for real bank data. */
+export const bankFeedSandbox = () => !bankFeedDemo() && /sandbox/i.test(base());
+
+/** The bank lines themselves (for Banking → Import → Assign ledgers), oldest first, with the bank's running balance. */
+export async function fetchBankLines(c: BankFeedCreds, since: Date): Promise<{ lines: { date: string; description: string; debit: number; credit: number; balance?: number }[]; creds: BankFeedCreds }> {
+  if (c.mode === "demo") return { lines: demoTxns(new Date()).filter(t => t.date >= isoDay(since)).map(t => ({ date: t.date, description: `[Demo] ${t.narration}`, debit: t.dir === "out" ? r2(t.amount) : 0, credit: t.dir === "in" ? r2(t.amount) : 0 })).reverse(), creds: c };
+  const { raw, creds } = await fetchRaw(c, since);
+  const tag = bankFeedSandbox() ? "[Sandbox] " : "";
+  const lines = raw.map(t => ({ date: t.date, description: tag + t.narration, debit: t.dir === "out" ? r2(t.amount) : 0, credit: t.dir === "in" ? r2(t.amount) : 0, balance: t.balance }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return { lines, creds };
+}
+
+type RawTxn = Txn & { balance?: number };
+async function fetchRaw(c: BankFeedCreds, since: Date): Promise<{ raw: RawTxn[]; creds: BankFeedCreds }> {
   const consent = await getJson(`${base()}/v2/consents/${c.consent_id}`, { headers: hdr() }, "Account Aggregator");
   const status = String(consent.status ?? "PENDING").toUpperCase();
   const creds = { ...c, consent_status: status };
   if (status !== "ACTIVE") {
     if (["REJECTED", "REVOKED", "EXPIRED", "PAUSED"].includes(status)) throw new ConnectorError("AUTH", `The bank consent is ${status.toLowerCase()}. Connect again to approve a new one.`);
-    return { items: [], creds };
+    return { raw: [], creds };
   }
   const s = await getJson(`${base()}/v2/sessions`, { method: "POST", headers: hdr(), body: JSON.stringify({ consentId: c.consent_id, dataRange: { from: since.toISOString(), to: new Date().toISOString() }, format: "json" }) }, "Account Aggregator");
   let sess: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -73,13 +86,21 @@ export async function fetchBankFeed(c: BankFeedCreds, since: Date): Promise<{ it
     await new Promise(r => setTimeout(r, 2500));
   }
   if (!sess || !["COMPLETED", "PARTIAL"].includes(String(sess.status).toUpperCase())) throw new ConnectorError("PROVIDER", "The bank is still preparing your data — try Fetch now again in a minute.");
-  const items: FeedItem[] = [];
+  const raw: RawTxn[] = [];
   for (const fip of sess.fips ?? []) for (const acc of fip.accounts ?? []) {
     for (const t of acc.data?.account?.transactions?.transaction ?? []) {
       const date = String(t.valueDate ?? t.transactionTimestamp ?? "").slice(0, 10);
       if (!date) continue;
-      items.push(toFeedItem({ id: `${acc.linkRefNumber ?? acc.maskedAccNumber}-${t.txnId ?? t.reference ?? date + t.amount}`, date, narration: String(t.narration ?? t.reference ?? "Bank transaction"), amount: Number(t.amount), dir: String(t.type).toUpperCase() === "DEBIT" ? "out" : "in" }, c.bank_ledger, "aa-"));
+      const bal = Number(t.currentBalance);
+      raw.push({ id: `${acc.linkRefNumber ?? acc.maskedAccNumber}-${t.txnId ?? t.reference ?? date + t.amount}`, date, narration: String(t.narration ?? t.reference ?? "Bank transaction"), amount: Number(t.amount), dir: String(t.type).toUpperCase() === "DEBIT" ? "out" : "in", balance: Number.isFinite(bal) ? bal : undefined });
     }
   }
-  return { items, creds };
+  return { raw, creds };
+}
+
+export async function fetchBankFeed(c: BankFeedCreds, since: Date): Promise<{ items: FeedItem[]; creds: BankFeedCreds }> {
+  if (c.mode === "demo") return { items: demoTxns(new Date()).filter(t => t.date >= isoDay(since)).map(t => toFeedItem({ ...t, narration: `[Demo] ${t.narration}` }, c.bank_ledger, "demo-")), creds: c };
+  const { raw, creds } = await fetchRaw(c, since);
+  const tag = bankFeedSandbox() ? "[Sandbox] " : "";
+  return { items: raw.map(t => toFeedItem({ ...t, narration: tag + t.narration }, c.bank_ledger, "aa-")), creds };
 }

@@ -8,7 +8,7 @@ import { postJournal, PostingError } from "@/lib/posting";
 import { ConnectorError, r2, type ConnectorId, type FeedItem, type ProposedLine } from "@/lib/connectors/types";
 import { verifyRazorpay, fetchRazorpay, type RazorpayCreds } from "@/lib/connectors/razorpay";
 import { verifyShopify, fetchShopify, normShop, type ShopifyCreds } from "@/lib/connectors/shopify";
-import { startConsent, fetchBankFeed, bankFeedDemo, type BankFeedCreds } from "@/lib/connectors/bankfeed";
+import { startConsent, fetchBankFeed, fetchBankLines, bankFeedDemo, bankFeedSandbox, type BankFeedCreds } from "@/lib/connectors/bankfeed";
 import { authUrl, fetchOAuth, oauthConfigured, signState, type OAuthCreds, type OAuthProvider } from "@/lib/connectors/oauth";
 
 export const maxDuration = 60;
@@ -31,14 +31,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       connections: conns.data ?? [], items: items.data ?? [],
       oauth_ready: { zoho_books: oauthConfigured("zoho_books"), quickbooks: oauthConfigured("quickbooks") },
-      key_ready: !!process.env.PORTAL_TOKEN_KEY, bank_feed_demo: bankFeedDemo(),
+      key_ready: !!process.env.PORTAL_TOKEN_KEY, bank_feed_demo: bankFeedDemo(), bank_feed_sandbox: bankFeedSandbox(),
     });
   } catch (e) {
     return serverError("connectors", e, "Couldn't load connections.");
   }
 }
 
-type Body = { business_id?: string; action?: "connect" | "oauth_start" | "sync" | "disconnect" | "post" | "ignore" | "edit" | "file_import"; lines?: { ledger: string }[]; provider?: ConnectorId; creds?: Record<string, string>; ids?: string[]; days?: number;
+type Body = { business_id?: string; action?: "connect" | "oauth_start" | "sync" | "bank_lines" | "disconnect" | "post" | "ignore" | "edit" | "file_import"; lines?: { ledger: string }[]; provider?: ConnectorId; creds?: Record<string, string>; ids?: string[]; days?: number;
   items?: { external_id: string; date: string; description?: string; party?: string | null; lines: { ledger: string; dr: number; cr: number }[] }[];
   heads?: Record<string, string> };
 
@@ -134,6 +134,18 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "sync") return NextResponse.json({ ok: true, fetched: await syncOne(bizId!, provider!, body.days ?? 30) });
+
+    // Bank feed lines for Banking → Import → Assign ledgers (the same review as an uploaded statement); nothing is saved here
+    if (action === "bank_lines" && provider === "bank_feed") {
+      const { data: conn } = await supabase.from("fw_fin_connections").select("*").eq("business_id", bizId!).eq("provider", "bank_feed").maybeSingle();
+      if (!conn) return NextResponse.json({ error: "Connect your bank first." }, { status: 400 });
+      const creds = JSON.parse(open(conn.creds_enc)) as BankFeedCreds;
+      const r = await fetchBankLines(creds, new Date(Date.now() - Math.min(365, Math.max(1, body.days ?? 30)) * 86400000));
+      if (r.creds.consent_status !== creds.consent_status) await supabase.from("fw_fin_connections").update({ creds_enc: seal(JSON.stringify(r.creds), r.creds.mode === "demo"), account_label: `${r.creds.mobile.slice(0, 2)}xxxxxx${r.creds.mobile.slice(-2)} → ${r.creds.bank_ledger}${r.creds.consent_status === "ACTIVE" ? "" : " (awaiting your approval)"}` }).eq("id", conn.id);
+      if (r.creds.mode !== "demo" && r.creds.consent_status !== "ACTIVE") return NextResponse.json({ error: "Your bank consent isn't approved yet — approve it in your Account Aggregator app, then try again." }, { status: 409 });
+      await supabase.from("fw_fin_connections").update({ last_sync_at: new Date().toISOString(), last_error: null, status: "connected" }).eq("id", conn.id);
+      return NextResponse.json({ ok: true, bank_ledger: creds.bank_ledger, lines: r.lines, sandbox: bankFeedSandbox(), demo: r.creds.mode === "demo" });
+    }
 
     if (action === "disconnect") {
       await supabase.from("fw_fin_connections").delete().eq("business_id", bizId!).eq("provider", provider!);

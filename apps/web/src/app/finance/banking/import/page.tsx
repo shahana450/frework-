@@ -281,6 +281,23 @@ export default function BankingPage() {
     }
   }
 
+  // Lines from the live bank feed (Integrations → Open in Assign ledgers): loaded like a statement, for the bank
+  // ledger chosen when the feed was connected
+  const fromFeed = useRef(false);
+  useEffect(() => {
+    if (!bizId || fromFeed.current || !coa.length || new URLSearchParams(window.location.search).get("feed") !== "1") return;
+    let got: { bank_ledger: string; lines: { date: string; description: string; debit: number; credit: number; balance?: number }[]; at: number } | null = null;
+    try { got = JSON.parse(sessionStorage.getItem("fw_feed_rows") || "null"); sessionStorage.removeItem("fw_feed_rows"); } catch { /* */ }
+    fromFeed.current = true;
+    if (!got?.lines?.length || Date.now() - got.at > 30 * 60 * 1000) return;
+    setRows(got.lines.map(l => ({ ...l, id: uid(), ledger_id: null, ledger_name: null, pushed: false })) as TxRow[]);
+    const want = (got.bank_ledger || "").trim().toLowerCase();
+    const hit = bankAccounts.find(a => a.name.trim().toLowerCase() === want) ?? coa.find(a => a.name.trim().toLowerCase() === want);
+    if (hit) { setBankAccountId(hit.id); acctChosen.current = true; }
+    else setAcctAsk({ kind: "bank", pick: bankAccounts.length === 1 ? bankAccounts[0].id : "", newName: got.bank_ledger || "", creating: false, hint: "" });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bizId, coa.length, bankAccounts.length]);
+
   function onFileInput(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (f) handleFile(f);

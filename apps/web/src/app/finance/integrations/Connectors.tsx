@@ -7,7 +7,7 @@ import GroupChips, { guessGroup } from "@/components/GroupChips";
 type Conn = { provider: string; status: string; account_label: string | null; last_sync_at: string | null; last_error: string | null };
 type Line = { ledger: string; head: string; dr: number; cr: number };
 type Item = { id: string; provider: string; external_id: string; kind: string; date: string; description: string; party: string | null; amount: number; currency: string | null; lines: Line[]; status: string; journal_id: string | null };
-export type ConnData = { connections: Conn[]; items: Item[]; oauth_ready?: { zoho_books: boolean; quickbooks: boolean }; key_ready?: boolean; bank_feed_demo?: boolean; setup_needed?: string };
+export type ConnData = { connections: Conn[]; items: Item[]; oauth_ready?: { zoho_books: boolean; quickbooks: boolean }; key_ready?: boolean; bank_feed_demo?: boolean; bank_feed_sandbox?: boolean; setup_needed?: string };
 
 const C = { ink: "#10241F", muted: "#6B7570", line: "#E3E6EE", navy: "#12352D", grey: "#ECEEF3", pos: "#0B7A55", posSoft: "#E3F6EE", neg: "#B4321F", negSoft: "#FDECEA", warn: "#9A6B22", warnSoft: "#FFF4DB" };
 const MONO = "'IBM Plex Mono',ui-monospace,monospace";
@@ -78,7 +78,17 @@ export function ConnectPanel({ provider, data, call, reload }: { provider: strin
           {conn.last_sync_at && <span>· fetched {new Date(conn.last_sync_at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>}
           {waiting > 0 && <a href="#review" style={{ color: C.navy, fontWeight: 800 }}>· {waiting} to review</a>}
           <span style={{ flex: 1 }} />
-          <button disabled={busy} onClick={() => run({ action: "sync", days: 30 }, d => `Fetched ${d.fetched} item${d.fetched === 1 ? "" : "s"} from the last 30 days.`)} style={btn(true, busy)}>{busy ? "Fetching…" : "Fetch now"}</button>
+          {provider === "bank_feed" && <button disabled={busy} title="Bring the last 30 days into Banking → Assign ledgers, with suggestions — the same review as an uploaded statement"
+            onClick={async () => {
+              setBusy(true); setMsg(null);
+              const r = await call({ provider, action: "bank_lines", days: 30 });
+              setBusy(false);
+              if (!r.ok) { setMsg({ ok: false, t: r.d.error ?? "Couldn't fetch from the bank." }); return; }
+              if (!r.d.lines?.length) { setMsg({ ok: true, t: "No new bank lines in the last 30 days." }); return; }
+              try { sessionStorage.setItem("fw_feed_rows", JSON.stringify({ bank_ledger: r.d.bank_ledger, lines: r.d.lines, at: Date.now() })); } catch { /* */ }
+              window.location.assign("/finance/banking/import?feed=1");
+            }} style={btn(true, busy)}>{busy ? "Fetching…" : "Open in Assign ledgers →"}</button>}
+          <button disabled={busy} onClick={() => run({ action: "sync", days: 30 }, d => `Fetched ${d.fetched} item${d.fetched === 1 ? "" : "s"} from the last 30 days.`)} style={btn(provider !== "bank_feed", busy)}>{busy ? "Fetching…" : provider === "bank_feed" ? "Fetch to review list" : "Fetch now"}</button>
           {oauth && conn.status !== "connected" && <button disabled={busy} onClick={() => run({ action: "oauth_start" }, () => "")} style={btn(false, busy)}>Sign in again</button>}
           <button disabled={busy} onClick={() => { if (window.confirm(`Disconnect ${NAME[provider]}? Items not yet posted are removed; posted entries stay in your books.`)) run({ action: "disconnect" }, () => "Disconnected."); }} style={{ ...btn(false, busy), color: C.neg }}>Disconnect</button>
         </div>
@@ -104,6 +114,7 @@ export function ConnectPanel({ provider, data, call, reload }: { provider: strin
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {provider === "bank_feed" ? (<>
             {data.bank_feed_demo && <div style={{ width: "100%", fontSize: 12.5, color: C.warn, background: C.warnSoft, padding: "6px 10px", borderRadius: 8 }}>Demo mode — sample bank lines, not from your bank. Real feeds start once FreWork&apos;s Account Aggregator partner is live.</div>}
+            {data.bank_feed_sandbox && <div style={{ width: "100%", fontSize: 12.5, color: C.warn, background: C.warnSoft, padding: "6px 10px", borderRadius: 8 }}>Sandbox — Setu&apos;s test bank, not a real account. Lines are marked [Sandbox]; don&apos;t post them into real books.</div>}
             <input placeholder="Mobile linked to the bank (10 digits)" inputMode="numeric" value={f.mobile ?? ""} onChange={e => setF({ ...f, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })} style={{ ...inp, fontFamily: MONO }} autoComplete="tel" />
             <input placeholder="Your bank ledger in FreWork" value={f.bank_ledger ?? ""} onChange={e => setF({ ...f, bank_ledger: e.target.value })} style={inp} />
           </>) : provider === "razorpay" ? (<>
