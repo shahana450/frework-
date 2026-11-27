@@ -92,39 +92,124 @@ export default function BankReconPage() {
     XLSX.writeFile(wb, `BRS-${bank.replace(/[^\w]+/g, "-")}-${month}.xlsx`.replace(/[^A-Za-z0-9.-]+/g, "-"));
   }
 
+  // Bank statements already on the Shelf — one click reads them here instead of uploading again
+  type ShelfDoc = { id: string; title: string; file_name: string | null; size_bytes: number | null; created_at: string };
+  const [shelf, setShelf] = useState<ShelfDoc[]>([]);
+  useEffect(() => {
+    if (!bizId) return;
+    fetch(`/api/finance/shelf?business_id=${bizId}`).then(r => r.ok ? r.json() : null).then(d => {
+      const list = ((d?.items ?? []) as (ShelfDoc & { rack: string; doc_type: string | null })[])
+        .filter(i => /\.(pdf|xlsx?|csv)$/i.test(i.file_name ?? "") && (i.rack === "bank" || /statement|passbook|stmt/i.test(`${i.doc_type ?? ""} ${i.title}`)));
+      setShelf(list.slice(0, 4));
+    }).catch(() => null);
+  }, [bizId]);
+  async function fromShelf(d: ShelfDoc) {
+    setBusy("Opening from the Shelf…"); setErr("");
+    try {
+      const { url } = await fetch(`/api/finance/shelf?business_id=${bizId}&download=${encodeURIComponent(d.id)}&inline=1`).then(r => r.json());
+      const blob = await fetch(url).then(r => r.blob());
+      await onFile(new File([blob], d.file_name || d.title, { type: blob.type }));
+    } catch { setErr("Couldn't open that file from the Shelf. Upload it instead."); setBusy(""); }
+  }
+  const kb = (n: number | null) => n == null ? "" : n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+  const day = (s: string) => new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
   const post = (b: BankLine) => router.push(`/finance/chat-book?q=${encodeURIComponent(`${b.credit ? "Received" : "Paid"} ${b.credit || b.debit} ${b.credit ? "in" : "from"} ${banks.find(x => x.id === bankId)?.name ?? "bank"} on ${b.date} — ${b.description}`)}`);
 
   return (
     <div style={{ minHeight: "100vh", background: HT.cream, fontFamily: SERIF, color: HT.ink }}>
       <PageHero eyebrow="Banking · Reconciliation" title="Bank statement" accent="against your books"
         sub="Upload the statement, pick the bank ledger, and see what matches, what's missing in FreBook and what hasn't cleared the bank yet."
-        tiles={res ? [
-          { label: "Matched", value: String(res.matched.length), tone: "good" },
-          { label: "In bank, not in FreBook", value: String(res.bankOnly.length), tone: res.bankOnly.length ? "warn" : "good" },
-          { label: "In FreBook, not in bank", value: String(res.bookOnly.length), tone: res.bookOnly.length ? "warn" : "good" },
-          { label: "Difference", value: res.difference == null ? "—" : inr(res.difference), sub: res.difference == null ? "Statement has no balances" : res.difference === 0 ? "Reconciled" : "Check unmatched items", tone: res.difference === 0 ? "good" : res.difference == null ? "plain" : "bad" },
-        ] : undefined} />
-      <main style={{ maxWidth: 1180, margin: "0 auto", padding: "22px clamp(14px,3vw,28px) 60px", display: "flex", flexDirection: "column", gap: 16 }}>
-        <div style={{ ...card, padding: 16, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-          <label style={{ display: "grid", gap: 4, fontSize: 13, color: HT.muted }}>Bank ledger
-            <select value={bankId} onChange={e => { setBankId(e.target.value); setRes(null); }} style={{ height: 40, borderRadius: 10, border: `1px solid ${HT.line}`, padding: "0 10px", fontSize: 14, fontFamily: "inherit", minWidth: 220, background: "#FFFFFF", color: HT.ink }}>
-              {!banks.length && <option value="">No bank ledgers yet</option>}
-              {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-          </label>
-          <label style={{ display: "grid", gap: 4, fontSize: 13, color: HT.muted }}>Period
-            <PeriodPicker value={month} onChange={k => { setMonth(k); setRes(null); }} />
-          </label>
-          <label style={{ ...btn, display: "inline-flex", alignItems: "center", height: 40, boxSizing: "border-box" }}>
-            {fileName ? `📄 ${fileName}` : "Upload statement (PDF, Excel, CSV)"}
-            <input type="file" accept=".pdf,.xlsx,.xls,.csv" hidden onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
-          </label>
-          <button onClick={run} disabled={!stmt || !bankId || !!busy} style={{ ...btn, height: 40, background: HT.ink, color: HT.paper, borderColor: HT.ink, opacity: !stmt || !bankId ? 0.5 : 1 }}>Reconcile</button>
-          {res && <button onClick={exportXl} style={{ ...btn, height: 40 }}>Download BRS (Excel)</button>}
-          {stmt && !busy && <span style={{ fontSize: 13, color: HT.muted }}>{stmt.length} statement lines read</span>}
+        overlap={64} />
+      <style>{`.rc-bar{display:grid;grid-template-columns:minmax(180px,1.1fr) auto minmax(200px,1.3fr) auto;gap:18px;align-items:end}
+        @media(max-width:980px){.rc-bar{grid-template-columns:1fr 1fr}}@media(max-width:560px){.rc-bar{grid-template-columns:1fr}}
+        .rc-lab{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:${HT.muted};margin-bottom:8px}
+        .rc-field{height:52px;border-radius:14px;border:1px solid ${HT.line};background:#FBF7EE;padding:0 16px;font:inherit;font-size:16px;color:${HT.ink};width:100%;box-sizing:border-box}
+        .rc-up{display:flex;align-items:center;gap:10px;height:52px;border-radius:14px;border:1.5px dashed #D9C79A;background:#FFFBF0;padding:0 16px;cursor:pointer;color:${HT.goldInk};font-size:16px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;transition:background .15s,border-color .15s}
+        .rc-up:hover{background:#FFF5DC;border-color:${HT.gold}}
+        .rc-go{height:52px;padding:0 30px;border:none;border-radius:14px;background:linear-gradient(160deg,#DDBE78,${HT.gold});color:${HT.ink};font:inherit;font-size:17px;cursor:pointer;display:inline-flex;align-items:center;gap:10px;box-shadow:0 12px 24px -12px rgba(201,162,74,.95);transition:transform .14s}
+        .rc-go:hover:not(:disabled){transform:translateY(-2px)}.rc-go:disabled{opacity:.5;cursor:not-allowed}
+        .rc-trays{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}@media(max-width:860px){.rc-trays{grid-template-columns:1fr}}
+        .rc-tray{background:${HT.paper};border:1px solid ${HT.line};border-radius:22px;padding:28px 30px;text-align:left;font:inherit;color:inherit;display:flex;flex-direction:column;gap:10px}
+        button.rc-tray{cursor:pointer;transition:transform .15s,box-shadow .15s}button.rc-tray:hover{transform:translateY(-2px);box-shadow:0 16px 30px -22px rgba(16,36,31,.5)}
+        .rc-tray.on{border-color:${HT.gold};box-shadow:0 0 0 2px rgba(201,162,74,.35)}
+        .rc-ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:20px}
+        .rc-shelf{background:${HT.green};border-radius:24px;padding:26px 30px;display:grid;grid-template-columns:minmax(220px,.9fr) 2fr;gap:20px;align-items:center;color:#fff}
+        @media(max-width:860px){.rc-shelf{grid-template-columns:1fr}}
+        .rc-file{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#fff;font:inherit;text-align:left;cursor:pointer;min-width:0;transition:background .15s,border-color .15s}
+        .rc-file:hover{background:rgba(255,255,255,.09);border-color:rgba(226,201,138,.5)}`}</style>
+      <main style={{ maxWidth: 1240, margin: "0 auto", padding: "0 clamp(14px,3vw,28px) 60px", display: "flex", flexDirection: "column", gap: 22 }}>
+        <div style={{ marginTop: -64, background: HT.paper, borderRadius: 24, padding: "24px 28px", boxShadow: "0 24px 50px -30px rgba(16,36,31,.55)", border: `1px solid ${HT.line}` }}>
+          <div className="rc-bar">
+            <label style={{ minWidth: 0 }}><div className="rc-lab">Bank ledger</div>
+              <select className="rc-field" value={bankId} onChange={e => { setBankId(e.target.value); setRes(null); }}>
+                {!banks.length && <option value="">No bank ledgers yet</option>}
+                {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </label>
+            <div><div className="rc-lab">Period</div>
+              <PeriodPicker value={month} onChange={k => { setMonth(k); setRes(null); }} />
+            </div>
+            <div style={{ minWidth: 0 }}><div className="rc-lab">Statement</div>
+              <label className="rc-up">
+                <span aria-hidden style={{ fontSize: 18 }}>{fileName ? "📄" : "⤒"}</span>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{fileName || "Upload PDF, Excel or CSV"}</span>
+                <input type="file" accept=".pdf,.xlsx,.xls,.csv" hidden onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
+              </label>
+            </div>
+            <button className="rc-go" onClick={run} disabled={!stmt || !bankId || !!busy}>Reconcile <span aria-hidden>⇄</span></button>
+          </div>
+          {(busy || err || (stmt && !busy) || res) && (
+            <div style={{ marginTop: 16, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", fontSize: 14.5 }}>
+              {busy && <span style={{ color: HT.muted }}>{busy}</span>}
+              {err && <span role="alert" style={{ color: "#8A2A1A" }}>{err}</span>}
+              {stmt && !busy && <span style={{ color: HT.muted }}>{stmt.length} statement lines read · {periodLabel(month)}</span>}
+              {res && <button onClick={exportXl} style={{ ...btn, marginLeft: "auto" }}>Download BRS (Excel)</button>}
+            </div>
+          )}
         </div>
-        {busy && <div style={{ color: HT.muted }}>{busy}</div>}
-        {err && <div role="alert" style={{ color: "#8A2A1A" }}>{err}</div>}
+
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
+          <h2 style={{ margin: 0, fontWeight: 400, fontSize: "clamp(26px,3vw,36px)" }}>{res ? "What we " : "What you'll "}<i style={{ color: HT.goldInk }}>{res ? "found" : "see"}</i></h2>
+          <span style={{ color: HT.muted, fontSize: 15.5 }}>{res ? (res.difference == null ? "The statement has no running balance to compare." : res.difference === 0 ? "✓ Reconciled — bank and books agree." : `Difference ${inr(res.difference)} — check the unmatched items.`) : `Results land in three trays once you reconcile ${periodLabel(month)}.`}</span>
+        </div>
+        <div className="rc-trays">
+          {([
+            { k: "matched" as const, ic: "✓", bg: "#E5F3EC", fg: "#2F7A57", t: "Matched", d: "On the statement and in your books, same date window and amount. Nothing to do.", n: res?.matched.length },
+            { k: "bank" as const, ic: "!", bg: "#FBEFD9", fg: "#9A6B22", t: "Missing in FreBook", d: "In the bank, not in your books. Assign a ledger and post in one click.", n: res?.bankOnly.length },
+            { k: "book" as const, ic: "◷", bg: "#E8EEF8", fg: "#3C5A8C", t: "Not yet cleared", d: "In your books, not yet on the statement: cheques issued, deposits in transit.", n: res?.bookOnly.length },
+          ]).map(x => {
+            const body = <>
+              <span className="rc-ic" style={{ background: x.bg, color: x.fg }}>{x.ic}</span>
+              <span style={{ fontSize: 26, marginTop: 8 }}>{x.t}</span>
+              <span style={{ color: HT.muted, fontSize: 15.5, lineHeight: 1.6 }}>{x.d}</span>
+              <span style={{ borderTop: `1px solid ${HT.line}`, marginTop: 8, paddingTop: 16, fontSize: x.n == null ? 22 : 34, color: x.n == null ? "#C9C2B2" : x.fg, fontVariantNumeric: "tabular-nums" }}>{x.n == null ? "—" : x.n}</span>
+            </>;
+            return res
+              ? <button key={x.k} className={`rc-tray${tab === x.k ? " on" : ""}`} onClick={() => setTab(x.k)}>{body}</button>
+              : <div key={x.k} className="rc-tray">{body}</div>;
+          })}
+        </div>
+
+        {!res && shelf.length > 0 && (
+          <div className="rc-shelf">
+            <div>
+              <div style={{ fontSize: 12.5, letterSpacing: ".3em", textTransform: "uppercase", color: HT.gold }}>On your shelf</div>
+              <div style={{ fontSize: "clamp(20px,2vw,26px)", marginTop: 8, lineHeight: 1.3 }}>Skip the upload. <i style={{ color: "#E2C98A" }}>Use a statement you&apos;ve already filed.</i></div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: 14 }}>
+              {shelf.map(d => (
+                <button key={d.id} className="rc-file" onClick={() => fromShelf(d)} disabled={!!busy} title={`Read ${d.file_name ?? d.title}`}>
+                  <span style={{ background: "#FBE9E6", color: "#B0402C", fontSize: 12, letterSpacing: ".08em", padding: "6px 8px", borderRadius: 7, flexShrink: 0 }}>{/\.pdf$/i.test(d.file_name ?? "") ? "PDF" : /\.csv$/i.test(d.file_name ?? "") ? "CSV" : "XLS"}</span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 17, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.file_name ?? d.title}</span>
+                    <span style={{ display: "block", fontSize: 13.5, color: "#AFC0B9", marginTop: 2 }}>{day(d.created_at)}{d.size_bytes ? ` · ${kb(d.size_bytes)}` : ""}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {res && (
           <>
@@ -138,12 +223,8 @@ export default function BankReconPage() {
               </tbody></table>
             </div>
 
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {([["bank", `In bank, not in FreBook · ${res.bankOnly.length}`], ["book", `In FreBook, not in bank · ${res.bookOnly.length}`], ["matched", `Matched · ${res.matched.length}`]] as const).map(([k, l]) => (
-                <button key={k} onClick={() => setTab(k)} style={{ ...btn, background: tab === k ? HT.ink : HT.paper, color: tab === k ? HT.paper : HT.ink }}>{l}</button>
-              ))}
-            </div>
-            <div style={{ ...card, overflowX: "auto" }}>
+            <div style={{ ...card, borderRadius: 22, overflowX: "auto" }}>
+              <div style={{ padding: "16px 18px 6px", fontSize: 20 }}>{tab === "bank" ? "Missing in FreBook" : tab === "book" ? "Not yet cleared" : "Matched"}</div>
               {tab === "bank" && <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead><tr><th style={th}>Date</th><th style={th}>Description</th><th style={{ ...th, textAlign: "right" }}>Withdrawal</th><th style={{ ...th, textAlign: "right" }}>Deposit</th><th style={th}></th></tr></thead>
                 <tbody>{res.bankOnly.length ? res.bankOnly.map(b => <tr key={b.id}><td style={td}>{dt(b.date)}</td><td style={td}>{b.description}</td><td style={num}>{b.debit ? inr(b.debit) : ""}</td><td style={num}>{b.credit ? inr(b.credit) : ""}</td><td style={{ ...td, textAlign: "right" }}><button style={{ ...btn, padding: "4px 12px", fontSize: 12.5 }} onClick={() => post(b)}>Post in FreBook</button></td></tr>)

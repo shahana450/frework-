@@ -207,6 +207,8 @@ export default function BankingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bizId]);
   // Statements waiting on the Shelf (most recent first) — shown while nothing is loaded, each one a click to book
+  const [showShelf, setShowShelf] = useState(false);
+  const [showPw, setShowPw] = useState(false);
   const [shelfStatements, setShelfStatements] = useState<{ id: string; title: string; file_name: string | null; source: string | null; created_at: string; doc_type: string | null }[]>([]);
   useEffect(() => {
     if (!bizId) return;
@@ -622,81 +624,91 @@ export default function BankingPage() {
       `}</style>
 
       {/* ── Top bar ── */}
-      <div style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid #FFFFFF", padding: "0 1.5rem", height: 52, display: "flex", alignItems: "center", gap: "0.75rem", position: "sticky", top: 0, zIndex: 20 }}>
-        <Link href="/finance" style={{ color: "#6B7570", textDecoration: "none", fontSize: "0.82rem" }}>Finance</Link>
-        <span style={{ color: "#E6DFD0" }}>›</span>
-        <Link href="/finance/banking" style={{ color: "#6B7570", textDecoration: "none", fontSize: "0.82rem" }}>Banking</Link>
-        <span style={{ color: "#E6DFD0" }}>›</span>
-        <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Import Statement</span>
-        {rows.length > 0 && (
-          <>
-            <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#6B7570" }}>
-              {rows.length} transactions · {assignedCount} assigned · {rows.filter(r => r.pushed).length} pushed
-            </span>
-            <button onClick={() => { setRows([]); setSelected(new Set()); setPushResult(null); setParseError(""); }}
-              style={{ ...inp, padding: "5px 12px", fontSize: "0.75rem", cursor: "pointer", color: "#6E88A8" }}>
-              Clear ✕
-            </button>
-          </>
-        )}
+      {rows.length > 0 && (
+      <div style={{ background: "#0F2621", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 clamp(14px,3vw,28px)", height: 60, display: "flex", alignItems: "center", gap: 14, position: "sticky", top: 0, zIndex: 20, color: "#FFFFFF" }}>
+        <Link href="/finance/banking" style={{ color: "#C9D3CE", textDecoration: "none", fontSize: 16 }}>Banking</Link>
+        <span style={{ color: "rgba(255,255,255,0.3)" }}>/</span>
+        <button onClick={() => { setRows([]); setSelected(new Set()); setPushResult(null); setParseError(""); }} style={{ background: "none", border: "none", padding: 0, color: "#C9D3CE", font: "inherit", fontSize: 16, cursor: "pointer" }}>Import statement</button>
+        <span style={{ color: "rgba(255,255,255,0.3)" }}>/</span>
+        <span style={{ fontSize: 16 }}>Assign ledgers</span>
+        <span style={{ marginLeft: "auto", fontSize: 15, color: "#C9D3CE", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {rows.length} transactions · {assignedCount} assigned · {rows.filter(r => r.pushed).length} posted
+        </span>
       </div>
+      )}
 
-      {rows.length === 0 && <PageHero eyebrow="Banking · import statement" title="Bring in your bank"
-        sub="Upload a bank statement in PDF or Excel. FreBook reads every line, suggests the ledger and drafts the journal entry. Nothing posts until you approve it."
+      {rows.length === 0 && <PageHero eyebrow="Banking · Import statement" title="Bring in" accent="your bank" overlap={70}
+        sub="Upload a statement in PDF or Excel. FreBook reads every line, suggests the ledger and drafts the journal entry. Nothing posts until you approve it."
+        actions={<div style={{ maxWidth: 420, display: "flex", gap: 12, padding: "20px 24px", borderRadius: 18, border: "1px solid rgba(255,255,255,0.16)", background: "rgba(255,255,255,0.03)", fontSize: 16, lineHeight: 1.6, color: "#D3DCD8" }}><span aria-hidden style={{ color: HT.gold }}>⛉</span><span><span style={{ color: "#FFFFFF" }}>Private by design.</span> Password-protected PDFs open in your browser. The password is never sent or stored.</span></div>}
         tabs={[{ label: "Upload", active: true, onClick: () => fileRef.current?.click() }, { label: "Bank dashboard", href: "/finance/banking" }, { label: "Statement history", href: "/finance/banking/history" }]} />}
-      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "1.5rem 28px" }}>
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: rows.length === 0 ? "0 clamp(14px,3vw,28px) 3rem" : "1.5rem clamp(14px,3vw,28px)" }}>
 
-        {/* ── Upload area (shown when no rows) ── */}
-        {rows.length === 0 && restorable && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "0 0 1rem", padding: "12px 16px", borderRadius: 12, background: "#FFF4DB", border: "1px solid #F2D29B", color: "#5A3A00" }}>
-            <span style={{ fontSize: "0.86rem", flex: 1, minWidth: 220 }}>💾 You have a saved statement — <b>{restorable.rows.length} transactions</b>, {restorable.rows.filter(r => r.ledger_id).length} with ledgers, saved {new Date(restorable.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.</span>
-            <button onClick={() => { setRows(restorable.rows); if (restorable.bank) setBankAccountId(restorable.bank); setRestorable(null); }} style={{ height: 34, padding: "0 14px", borderRadius: 9, border: "none", background: "#12352D", color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Continue where I left off</button>
-            <button onClick={clearDraft} style={{ height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid #F2D29B", background: "#FFFDF8", color: "#9A6B22", fontWeight: 700, cursor: "pointer" }}>Discard</button>
-          </div>
-        )}
-        {rows.length === 0 && !parsing && shelfStatements.length > 0 && (
-          <section aria-label="Statements on your Shelf" style={{ margin: "0 0 1rem", padding: "14px 16px", borderRadius: 14, background: "#FFFDF8", border: "1px solid #E6DFD0" }}>
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-              <b style={{ fontSize: "0.98rem" }}>📥 Statements on your Shelf</b>
-              <Link href="/finance/shelf" style={{ fontSize: "0.8rem", color: "#9A6B22" }}>See all on the Shelf →</Link>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {shelfStatements.map(s => (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: 10, border: "1px solid #EFE8DA", background: "#FFFFFF" }}>
-                  <span aria-hidden="true" style={{ fontSize: 18 }}>{/\.pdf$/i.test(s.file_name ?? "") ? "📄" : "📊"}</span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", fontWeight: 700, fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.file_name || s.title}</span>
-                    <span style={{ fontSize: "0.76rem", color: "#6B7570" }}>Added {new Date(s.created_at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                  </span>
-                  <button onClick={() => void loadFromShelf(s.id, s.file_name)} style={{ height: 32, padding: "0 14px", borderRadius: 999, border: "none", background: "#12352D", color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Book</button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
         {rows.length === 0 && (
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 16, padding: "14px 22px", marginBottom: 20, fontSize: 15 }}>
-              {["Upload", "Assign ledgers", "Journal entries", "Ledger", "Trial balance", "Financial statements"].map((s, i) => (
-                <span key={s} style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-                  {i > 0 && <span aria-hidden="true" style={{ color: HT.gold }}>→</span>}
-                  <span style={{ width: 26, height: 26, borderRadius: 999, display: "grid", placeItems: "center", fontSize: 13, background: i === 0 ? HT.green : "transparent", color: i === 0 ? "#FFFFFF" : HT.muted, border: i === 0 ? "none" : `1px solid ${HT.line}` }}>{i + 1}</span>
-                  <span style={{ color: i === 0 ? HT.ink : HT.muted, fontWeight: i === 0 ? 700 : 400 }}>{s}</span>
-                </span>
-              ))}
+            <style>{`.bi-steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+              @media(max-width:900px){.bi-steps{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:22px}}@media(max-width:520px){.bi-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+              .bi-step{display:flex;flex-direction:column;gap:6px;min-width:0}
+              .bi-dot{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+              .bi-dot b{width:44px;height:44px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font-weight:400;font-size:17px;border:1px solid #D9C79A;color:${HT.ink};background:#FFFFFF}
+              .bi-dot.on b{background:${HT.green};color:#FFFFFF;border-color:${HT.green};box-shadow:0 0 0 6px #F1E6CC}
+              .bi-dot i{flex:1;height:1px;background:#D9D2C2;position:relative}
+              .bi-dot.on i::after{content:"";position:absolute;left:0;top:-0.5px;width:40%;height:2px;background:${HT.gold}}
+              .bi-drop{border:1.5px dashed #D9C79A;border-radius:22px;padding:56px 28px 44px;text-align:center;cursor:pointer;background:radial-gradient(circle, rgba(201,162,74,.10) 1px, transparent 1.4px) 0 0/22px 22px, #FFFBF2;transition:border-color .15s,background-color .15s}
+              .bi-drop:hover{border-color:${HT.gold}}
+              .bi-chip{height:40px;padding:0 18px;border-radius:999px;border:1px solid #E6DFD0;display:inline-flex;align-items:center;font-size:16px;color:${HT.ink};background:#FFFFFF}
+              .bi-btn{height:58px;padding:0 30px;border-radius:999px;font:inherit;font-size:19px;display:inline-flex;align-items:center;gap:12px;cursor:pointer;text-decoration:none;transition:transform .14s}
+              .bi-btn:hover{transform:translateY(-2px)}`}</style>
+            <div style={{ marginTop: -70, position: "relative", background: HT.paper, borderRadius: 24, padding: "28px 34px", marginBottom: 32, border: `1px solid ${HT.line}`, boxShadow: "0 24px 50px -30px rgba(16,36,31,.55)" }}>
+              <div className="bi-steps">
+                {[["Upload", "Drop the statement"], ["Assign ledgers", "Confirm each line"], ["Journal entries", "Drafted for you"], ["Ledger", "Posted on approval"], ["Trial balance", "Always in balance"], ["Financial statements", "Schedule III ready"]].map(([t, d], i) => (
+                  <div key={t} className="bi-step">
+                    <div className={"bi-dot" + (i === 0 ? " on" : "")}><b>{i + 1}</b>{i < 5 && <i />}</div>
+                    <span style={{ fontSize: 19, fontWeight: i === 0 ? 700 : 400, color: HT.ink }}>{t}</span>
+                    <span style={{ fontSize: 15, color: HT.muted }}>{d}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="bi-two" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 420px", gap: 22, alignItems: "start" }}>
+            {/* ── Upload area (shown when no rows) ── */}
+            {rows.length === 0 && restorable && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "0 0 1rem", padding: "12px 16px", borderRadius: 12, background: "#FFF4DB", border: "1px solid #F2D29B", color: "#5A3A00" }}>
+                <span style={{ fontSize: "0.86rem", flex: 1, minWidth: 220 }}>💾 You have a saved statement — <b>{restorable.rows.length} transactions</b>, {restorable.rows.filter(r => r.ledger_id).length} with ledgers, saved {new Date(restorable.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.</span>
+                <button onClick={() => { setRows(restorable.rows); if (restorable.bank) setBankAccountId(restorable.bank); setRestorable(null); }} style={{ height: 34, padding: "0 14px", borderRadius: 9, border: "none", background: "#12352D", color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Continue where I left off</button>
+                <button onClick={clearDraft} style={{ height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid #F2D29B", background: "#FFFDF8", color: "#9A6B22", fontWeight: 700, cursor: "pointer" }}>Discard</button>
+              </div>
+            )}
+            {rows.length === 0 && !parsing && shelfStatements.length > 0 && showShelf && (
+              <section id="bi-shelf" aria-label="Statements on your Shelf" style={{ margin: "0 0 1rem", padding: "14px 16px", borderRadius: 14, background: "#FFFDF8", border: "1px solid #E6DFD0" }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                  <b style={{ fontSize: "0.98rem" }}>📥 Statements on your Shelf</b>
+                  <Link href="/finance/shelf" style={{ fontSize: "0.8rem", color: "#9A6B22" }}>See all on the Shelf →</Link>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {shelfStatements.map(s => (
+                    <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: 10, border: "1px solid #EFE8DA", background: "#FFFFFF" }}>
+                      <span aria-hidden="true" style={{ fontSize: 18 }}>{/\.pdf$/i.test(s.file_name ?? "") ? "📄" : "📊"}</span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: "block", fontWeight: 700, fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.file_name || s.title}</span>
+                        <span style={{ fontSize: "0.76rem", color: "#6B7570" }}>Added {new Date(s.created_at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                      </span>
+                      <button onClick={() => void loadFromShelf(s.id, s.file_name)} style={{ height: 32, padding: "0 14px", borderRadius: 999, border: "none", background: "#12352D", color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>Book</button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+            <div className="bi-two" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 480px", gap: 32, alignItems: "stretch" }}>
             <div>
             <div style={{ display: "none" }}>
               <h1>Bank Statement Import</h1>
               <p style={{ margin: 0, color: "#6B7570", fontSize: "0.88rem" }}>Upload your bank statement (PDF or Excel). Assign ledger accounts and push directly to Journal Entries → Ledger → Trial Balance → Financial Statements.</p>
             </div>
 
+            <div style={{ background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 26, padding: 18 }}>
             <div
-              className="bs-drop"
+              className="bs-drop bi-drop"
               onDrop={onDrop} onDragOver={e => e.preventDefault()}
               onClick={() => fileRef.current?.click()}
-              style={{ border: `1px dashed ${HT.gold}`, borderRadius: 16, padding: "3.2rem 2rem", textAlign: "center", cursor: "pointer", background: HT.paper, outline: `14px solid ${HT.paper}`, margin: 14 }}
             >
               {parsing ? (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", padding: "1rem 0" }}>
@@ -723,30 +735,55 @@ export default function BankingPage() {
                 </div>
               ) : (
                 <>
-                  <svg aria-hidden="true" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={HT.ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10 }}><path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18" /></svg>
-                  <div style={{ fontSize: 26, fontStyle: "italic", marginBottom: 6 }}>Drop your bank statement here</div>
-                  <div style={{ color: HT.muted, fontSize: 15, marginBottom: 18 }}>PDF (read by AI) · XLSX · XLS · CSV</div>
-                  <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-                    <span style={{ height: 48, padding: "0 26px", borderRadius: 999, background: HT.gold, color: HT.ink, fontWeight: 700, fontSize: 16, display: "inline-flex", alignItems: "center" }}>Choose file →</span>
-                    <a href="/finance/whatsapp" onClick={e => e.stopPropagation()} style={{ height: 48, padding: "0 24px", borderRadius: 999, border: `1px solid ${HT.gold}`, color: HT.goldInk, textDecoration: "none", fontSize: 16, display: "inline-flex", alignItems: "center" }}>Send from WhatsApp</a>
+                  <span aria-hidden="true" style={{ width: 104, height: 104, margin: "0 auto 26px", borderRadius: "50%", background: HT.green, display: "grid", placeItems: "center", boxShadow: "0 0 0 12px #F3E7CC" }}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#E2C98A" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18" /></svg>
+                  </span>
+                  <div style={{ fontSize: "clamp(28px,3.4vw,42px)", fontStyle: "italic", marginBottom: 10 }}>Drop your bank statement here</div>
+                  <div style={{ color: HT.muted, fontSize: 18, marginBottom: 22 }}>or choose a file. We&apos;ll read it line by line.</div>
+                  <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginBottom: 30 }}>
+                    <span className="bi-chip" style={{ background: HT.green, color: "#FFFFFF", borderColor: HT.green }}>PDF · read by AI</span>
+                    <span className="bi-chip">XLSX</span><span className="bi-chip">XLS</span><span className="bi-chip">CSV</span>
                   </div>
+                  <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
+                    <span className="bi-btn" style={{ background: "linear-gradient(160deg,#DDBE78,#C9A24A)", color: HT.ink, boxShadow: "0 14px 28px -14px rgba(201,162,74,.95)" }}>Choose file <span aria-hidden>→</span></span>
+                    <a href="/finance/whatsapp" onClick={e => e.stopPropagation()} className="bi-btn" style={{ border: "1px solid #D9C79A", background: "#FFFFFF", color: HT.ink }}><span aria-hidden style={{ fontSize: 18 }}>◌</span> Send from WhatsApp</a>
+                  </div>
+                  {shelfStatements.length > 0 && (
+                    <div style={{ marginTop: 26, fontSize: 17, color: HT.muted }}>Already on your Shelf?{" "}
+                      <button type="button" onClick={e => { e.stopPropagation(); setShowShelf(true); setTimeout(() => document.getElementById("bi-shelf")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50); }} style={{ background: "none", border: "none", padding: 0, font: "inherit", color: HT.goldInk, textDecoration: "underline", cursor: "pointer" }}>Pick from {shelfStatements.length} bank file{shelfStatements.length === 1 ? "" : "s"}</button>
+                    </div>
+                  )}
                 </>
               )}
+            </div>
             </div>
             <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={onFileInput} style={{ display: "none" }} />
 
             {locked && (
               <form onSubmit={e => { e.preventDefault(); if (pdfPassword) void handleFile(locked.file); }}
-                style={{ marginTop: "1rem", background: "#FFFDF8", border: "1px solid rgba(18,53,45,0.2)", borderRadius: 12, padding: "1.1rem 1.2rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                <div style={{ fontWeight: 800, color: "#10241F" }}>🔒 {locked.file.name} is password-protected</div>
-                <div style={{ fontSize: "0.8rem", color: "#6B7570", lineHeight: 1.55 }}>
-                  {locked.wrong ? <b style={{ color: "#B4321F" }}>That password didn&apos;t work. </b> : null}
-                  Enter the statement password. Banks usually use your customer ID, or the first letters of your name with your date of birth — check the bank&apos;s email. It&apos;s used only in this browser to open the file and is never sent or saved.
+                style={{ marginTop: 26, background: HT.paper, border: `1px solid ${HT.line}`, borderRadius: 26, padding: "28px 32px", display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+                  <span aria-hidden="true" style={{ width: 64, height: 64, borderRadius: 12, background: "#FBE9E6", color: "#B0402C", display: "grid", placeItems: "center", fontSize: 15, letterSpacing: ".08em", flexShrink: 0 }}>PDF</span>
+                  <span style={{ flex: 1, minWidth: 200 }}>
+                    <span style={{ display: "block", fontSize: 22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{locked.file.name}</span>
+                    <span style={{ fontSize: 16, color: locked.wrong ? "#B4321F" : HT.muted }}>{locked.wrong ? "That password didn't work. Try again." : "Locked by your bank. Enter the password to read it."}</span>
+                  </span>
+                  <span style={{ padding: "8px 16px", borderRadius: 999, background: "#FBEFD6", color: HT.goldInk, fontSize: 15.5 }}>🔒 Password-protected</span>
                 </div>
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  <input type="password" aria-label="Statement password" autoFocus value={pdfPassword} onChange={e => setPdfPassword(e.target.value)} placeholder="Statement password" autoComplete="off"
-                    style={{ flex: "1 1 220px", height: 42, borderRadius: 10, border: "1px solid rgba(16,36,31,0.2)", padding: "0 12px", fontSize: "0.9rem" }} />
-                  <button type="submit" disabled={!pdfPassword} style={{ height: 42, padding: "0 18px", borderRadius: 10, border: "none", background: "#12352D", color: "#fff", fontWeight: 800, cursor: pdfPassword ? "pointer" : "default", opacity: pdfPassword ? 1 : 0.5 }}>Unlock &amp; read</button>
+                <label htmlFor="bi-pw" style={{ fontSize: 17, marginTop: 6 }}>Statement password</label>
+                <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                  <span style={{ position: "relative", flex: "1 1 260px", display: "flex" }}>
+                    <input id="bi-pw" type={showPw ? "text" : "password"} autoFocus value={pdfPassword} onChange={e => setPdfPassword(e.target.value)} placeholder="e.g. customer ID" autoComplete="off"
+                      style={{ flex: 1, height: 60, borderRadius: 14, border: `1px solid ${HT.line}`, background: "#FBF7EE", padding: "0 54px 0 22px", fontSize: 18, fontFamily: "inherit", color: HT.ink, minWidth: 0 }} />
+                    <button type="button" onClick={() => setShowPw(v => !v)} aria-label={showPw ? "Hide password" : "Show password"} style={{ position: "absolute", right: 10, top: 10, width: 40, height: 40, border: "none", background: "transparent", cursor: "pointer", fontSize: 18, color: HT.muted }}>{showPw ? "◡" : "◉"}</button>
+                  </span>
+                  <button type="submit" disabled={!pdfPassword} style={{ height: 60, padding: "0 34px", borderRadius: 14, border: "none", background: HT.green, color: "#FFFFFF", fontFamily: "inherit", fontSize: 19, cursor: pdfPassword ? "pointer" : "default", opacity: pdfPassword ? 1 : 0.6, display: "inline-flex", alignItems: "center", gap: 10 }}>🔓 Unlock &amp; read</button>
+                </div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 16, color: HT.muted }}>
+                  Banks usually use:
+                  <span style={{ padding: "6px 14px", borderRadius: 8, background: "#F1EADB", color: HT.ink }}>Customer ID</span>
+                  <span style={{ padding: "6px 14px", borderRadius: 8, background: "#F1EADB", color: HT.ink }}>First letters of name + date of birth</span>
+                  <span>· check the bank&apos;s email</span>
                 </div>
               </form>
             )}
@@ -768,16 +805,18 @@ export default function BankingPage() {
               </div>
             )}
             </div>
-            <aside style={{ background: HT.green, color: "#FFFFFF", borderRadius: 18, padding: "24px 26px" }}>
-              <div style={{ fontSize: 12, letterSpacing: "0.24em", color: HT.gold }}>HOW IT WORKS</div>
-              <div style={{ fontSize: 24, fontStyle: "italic", margin: "4px 0 16px" }}>Statement to books, in three steps</div>
+            <aside style={{ position: "relative", overflow: "hidden", background: HT.green, color: "#FFFFFF", borderRadius: 28, padding: "40px 40px 32px", display: "flex", flexDirection: "column" }}>
+              <span aria-hidden="true" style={{ position: "absolute", right: -90, top: -70, width: 260, height: 260, borderRadius: "50%", border: "1px solid rgba(226,201,138,0.18)" }} />
+              <span aria-hidden="true" style={{ position: "absolute", right: -40, top: -20, width: 160, height: 160, borderRadius: "50%", border: "1px solid rgba(226,201,138,0.14)" }} />
+              <div style={{ fontSize: 13, letterSpacing: "0.3em", color: HT.gold }}>HOW IT WORKS</div>
+              <div style={{ fontSize: "clamp(28px,2.6vw,38px)", margin: "14px 0 34px", lineHeight: 1.2 }}>Statement to books, <i style={{ color: "#E2C98A" }}>in three steps</i></div>
               {[["Upload", "Pick the bank ledger and drop the PDF or Excel statement."], ["Assign ledgers", "Check the suggested ledger for each line and change any you disagree with."], ["Approve and post", "Approved lines become journal entries and flow through to the ledger, trial balance and financial statements."]].map(([t, d], i) => (
-                <div key={t} style={{ display: "flex", gap: 14, marginBottom: 16 }}>
-                  <span style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 999, border: `1px solid ${HT.gold}`, color: HT.gold, display: "grid", placeItems: "center", fontSize: 14 }}>{i + 1}</span>
-                  <span><span style={{ display: "block", fontSize: 16.5, fontWeight: 700 }}>{t}</span><span style={{ fontSize: 14.5, color: "#D3DCD8", lineHeight: 1.5 }}>{d}</span></span>
+                <div key={t} style={{ display: "flex", gap: 20, marginBottom: 30 }}>
+                  <span style={{ width: 52, height: 52, flexShrink: 0, borderRadius: 999, border: `1px solid ${HT.gold}`, background: i === 0 ? "linear-gradient(160deg,#DDBE78,#C9A24A)" : "transparent", color: i === 0 ? HT.ink : HT.gold, display: "grid", placeItems: "center", fontSize: 20 }}>{i + 1}</span>
+                  <span><span style={{ display: "block", fontSize: 24, marginBottom: 6 }}>{t}</span><span style={{ fontSize: 17, color: "#C9D3CE", lineHeight: 1.6 }}>{d}</span></span>
                 </div>
               ))}
-              <div style={{ fontSize: 13.5, color: "#C9D3CE", fontStyle: "italic", borderTop: "1px solid rgba(255,255,255,0.12)", paddingTop: 12 }}>Password-protected PDFs open in your browser — the password is never sent or stored.</div>
+              <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 14, padding: "20px 24px", borderRadius: 16, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", fontSize: 17, fontStyle: "italic", color: "#E9EEEC" }}><span aria-hidden style={{ color: HT.gold, fontStyle: "normal" }}>✳</span>Chat in. Books out.</div>
             </aside>
             </div>
           </div>
@@ -857,6 +896,16 @@ export default function BankingPage() {
         })()}
 
         {/* ── Main table view ── */}
+        {rows.length > 0 && (
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 14, flexWrap: "wrap", margin: "18px 0 26px" }}>
+            <div style={{ marginRight: "auto" }}>
+              <div style={{ fontSize: 12.5, letterSpacing: "0.3em", color: HT.goldInk, textTransform: "uppercase" }}>Step 2 of 6</div>
+              <h1 style={{ margin: "8px 0 0", fontWeight: 400, fontSize: "clamp(36px,4.6vw,58px)", lineHeight: 1.05 }}>Assign <i style={{ color: HT.goldInk }}>ledgers</i></h1>
+            </div>
+            <button onClick={() => fileRef.current?.click()} style={{ height: 56, padding: "0 26px", borderRadius: 999, border: "1px solid #D9C79A", background: HT.paper, color: HT.ink, fontFamily: "inherit", fontSize: 17, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10 }}><span aria-hidden>↑</span> Upload another statement</button>
+            <button onClick={() => void pushToJournals()} disabled={pushing || unpushedAssigned === 0 || !bankAccountId} style={{ height: 56, padding: "0 28px", borderRadius: 999, border: "none", background: pushing || unpushedAssigned === 0 || !bankAccountId ? "#DDE1DC" : "linear-gradient(160deg,#DDBE78,#C9A24A)", color: pushing || unpushedAssigned === 0 || !bankAccountId ? "#7D8783" : HT.ink, fontFamily: "inherit", fontSize: 17, cursor: pushing || unpushedAssigned === 0 || !bankAccountId ? "default" : "pointer", display: "inline-flex", alignItems: "center", gap: 10 }}>{pushing ? "Posting…" : <>Post {unpushedAssigned || ""} entr{unpushedAssigned === 1 ? "y" : "ies"} <span aria-hidden>→</span></>}</button>
+          </div>
+        )}
         {rows.length > 0 && (
           <div className="bi-review">
 

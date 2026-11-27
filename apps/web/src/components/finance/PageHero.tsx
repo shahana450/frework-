@@ -51,23 +51,25 @@ export function SettingsHero({ active, eyebrow, title, sub, tiles, actions }: { 
     tabs={SETTINGS_TABS.map(t => ({ label: t.label, href: t.href, active: t.key === active }))} />;
 }
 
-export default function PageHero({ eyebrow, title, accent, sub, actions, tiles, side, tabs }: {
+export default function PageHero({ eyebrow, title, accent, sub, actions, tiles, side, tabs, overlap }: {
   eyebrow: string; title: ReactNode; accent?: ReactNode; sub?: ReactNode; actions?: ReactNode;
   tiles?: HeroTile[]; side?: ReactNode; tabs?: HeroTab[];
+  /** Extra room at the bottom so the first card below can rise into the band (give it marginTop: -overlap). */
+  overlap?: number;
 }) {
   const cols = (tiles?.length ?? 0) + (side ? 1 : 0);
   return (
-    <header style={{ background: HT.green, color: "#FFFFFF", fontFamily: SERIF }}>
+    <header style={{ background: `repeating-linear-gradient(180deg, transparent 0 43px, rgba(255,255,255,0.035) 43px 44px), linear-gradient(180deg, #0F2621, ${HT.green})`, color: "#FFFFFF", fontFamily: SERIF }}>
       <style>{`.ph-tiles{display:grid;gap:14px;grid-template-columns:repeat(${Math.max(cols, 1)},minmax(0,1fr))}
         @media(max-width:900px){.ph-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.ph-tiles{grid-template-columns:1fr}}
         .ph-tab{height:36px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.28);background:transparent;color:#FFFFFF;font-family:${SERIF};font-size:14.5px;text-decoration:none;display:inline-flex;align-items:center;cursor:pointer;white-space:nowrap}
         .ph-tab.on{background:${HT.cream};color:${HT.ink};border-color:${HT.cream}}`}</style>
-      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "30px 28px 30px", display: "flex", flexDirection: "column", gap: 22 }}>
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: `clamp(26px,4vw,44px) clamp(16px,3vw,28px) ${30 + (overlap ?? 0)}px`, display: "flex", flexDirection: "column", gap: 22 }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 260 }}>
-            <div style={{ fontSize: 12, letterSpacing: "0.28em", color: HT.gold, textTransform: "uppercase" }}>{eyebrow}</div>
-            <h1 style={{ margin: "6px 0 0", fontSize: "clamp(30px,4vw,44px)", fontWeight: 400, fontStyle: "italic", lineHeight: 1.12, textWrap: "balance" }}>{title}{accent && <> <span style={{ color: HT.sand }}>{accent}</span></>}</h1>
-            {sub && <div style={{ marginTop: 8, maxWidth: 680, fontSize: 15.5, lineHeight: 1.6, color: "#D3DCD8" }}>{sub}</div>}
+            <div style={{ fontSize: 12.5, letterSpacing: "0.3em", color: HT.gold, textTransform: "uppercase" }}>{eyebrow.split(" · ").map((e, i) => <span key={i}>{i > 0 && <span style={{ margin: "0 0.9em", opacity: 0.7 }}>·</span>}{e}</span>)}</div>
+            <h1 style={{ margin: "12px 0 0", fontSize: accent ? "clamp(34px,5.2vw,64px)" : "clamp(30px,4vw,44px)", fontWeight: 400, fontStyle: accent ? "normal" : "italic", lineHeight: 1.08, letterSpacing: accent ? "-0.01em" : undefined, textWrap: "balance" }}>{title}{accent && <> <span style={{ color: "#E2C98A", fontStyle: "italic" }}>{accent}</span></>}</h1>
+            {sub && <div style={{ marginTop: 14, maxWidth: 640, fontSize: "clamp(15px,1.4vw,17.5px)", lineHeight: 1.65, color: "#D3DCD8" }}>{sub}</div>}
           </div>
           {actions && <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>{actions}</div>}
         </div>

@@ -169,18 +169,34 @@ export default function ShelfPage() {
         .sh-wrap{max-width:1400px;margin:0 auto;padding:32px 28px 90px;display:flex;flex-direction:column;gap:16px}
         .sh-wrap{font-family:'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif}
         .sh-body{display:flex;flex-direction:column;gap:20px}
-        .sh-side{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
-        .sh-nav{display:flex;flex-direction:column;align-items:stretch;gap:18px;padding:16px 18px;border-radius:14px;border:1px solid #E6DFD0;background:#FFFDF8;cursor:pointer;font:inherit;color:#10241F;text-align:left;transition:border-color .12s,background .12s}
-        .sh-nav:hover{border-color:#C9A24A}
+        .sh-side{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:18px}
+        .sh-nav{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:22px 24px 24px;border-radius:20px;border:1px solid #E6DFD0;background:#FFFDF8;cursor:pointer;font:inherit;color:#10241F;text-align:left;transition:border-color .12s,background .12s}
+        .sh-nav:hover{border-color:#C9A24A;transform:translateY(-2px);box-shadow:0 14px 28px -22px rgba(16,36,31,.55)}
+        .sh-nav{transition:border-color .15s,background .15s,transform .15s,box-shadow .15s}
+        .sh-ico{width:46px;height:46px;border-radius:12px;background:#FBEFD6;display:grid;place-items:center}
+        .sh-nav[aria-pressed=true] .sh-ico{background:rgba(255,255,255,.08)}
+        .sh-nav[aria-pressed=true]{box-shadow:0 18px 34px -18px rgba(16,36,31,.75)}
+        .sh-nav[aria-pressed=true] .sh-cnt{color:#E2C98A}
+        .sh-hint{font-size:14.5px;color:#7D8783}.sh-nav[aria-pressed=true] .sh-hint{color:#C9D3CE}
+        .sh-card{background:#FFFDF8;border:1px solid #E6DFD0;border-radius:24px;overflow:hidden}
+        .sh-seg{display:inline-flex;padding:4px;border-radius:14px;background:#F1EADB;gap:2px}
+        .sh-seg button{height:40px;padding:0 16px;border:none;border-radius:10px;background:transparent;color:#5E6B66;font:inherit;font-size:15.5px;cursor:pointer}
+        .sh-seg button[aria-checked=true]{background:#FFFFFF;color:#10241F;box-shadow:0 1px 3px rgba(16,36,31,.12)}
+        .sh-seg.dark button[aria-checked=true]{background:#12352D;color:#FFFFFF}
+        .sh-pill{height:48px;border-radius:14px;border:1px solid #E6DFD0;background:#FFFFFF;color:#10241F;font:inherit;font-size:15.5px;padding:0 14px;cursor:pointer}
+        .sh-ib{width:44px;height:44px;border-radius:12px;border:1px solid #E6DFD0;background:#FFFFFF;color:#10241F;display:grid;place-items:center;cursor:pointer;font-size:16px;font-family:inherit}
+        .sh-ib:hover{border-color:#C9A24A}
+        .sh-sm{height:36px;border:1px solid #E6DFD0;border-radius:10px;font:inherit;font-size:13.5px;color:#5E6B66;background:#FFFFFF;padding:0 6px}
         .sh-nav[aria-pressed=true]{background:#12352D;border-color:#12352D;color:#FFFFFF}
         .sh-nav.empty{color:#7D8783}
         .sh-row{transition:background .12s}
         .sh-row:hover{background:#F8F3E8}
-        .sh-row .sh-acts{opacity:.55;transition:opacity .12s}
+        .sh-row .sh-acts{opacity:1}
         .sh-row:hover .sh-acts,.sh-row:focus-within .sh-acts{opacity:1}
         .sh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
         .sh-grid .sh-row{flex-direction:column;align-items:stretch;border:1px solid ${C.line}!important;border-radius:14px}
         .sh-grid .sh-acts{opacity:1;justify-content:flex-end}
+        @media (max-width:1100px){.sh-side{grid-template-columns:repeat(3,minmax(0,1fr))}}
         @media (max-width:900px){
           .sh-side{grid-template-columns:repeat(2,minmax(0,1fr))}
         }
@@ -205,22 +221,22 @@ export default function ShelfPage() {
         {/* Header: title, search, upload */}
         <header style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <div style={{ marginRight: "auto" }}>
-            <div style={{ fontSize: 12, letterSpacing: "0.3em", color: "#9A6B22" }}>DOCUMENT SHELF</div>
-            <h1 style={{ margin: "2px 0 0", fontFamily: SERIF, fontSize: 44, fontWeight: 400, fontStyle: "italic", lineHeight: 1.1 }}>Shelf</h1>
-            <div style={{ fontSize: 13.5, color: C.muted, marginTop: 4 }}>
+            <div style={{ fontSize: 12.5, letterSpacing: "0.3em", color: "#9A6B22" }}>DOCUMENT SHELF</div>
+            <h1 style={{ margin: "6px 0 0", fontFamily: SERIF, fontSize: "clamp(44px,6vw,72px)", fontWeight: 400, fontStyle: "italic", lineHeight: 1.05 }}>Shelf</h1>
+            <div style={{ fontSize: 16, color: C.muted, marginTop: 8 }}>
               {items === null ? "Loading…" : <>{(items ?? []).length} files · {kb(totalBytes) || "0 KB"} · {thisMonth} added this month{lastAdded ? ` · last ${day(lastAdded)}` : ""}</>}
             </div>
           </div>
-          <div style={{ position: "relative", flex: "0 1 360px", minWidth: 220 }}>
-            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" style={{ position: "absolute", left: 13, top: 12 }}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-            <input id="sh-search" value={q} onChange={e => setQ(e.target.value)} placeholder={india ? "Search title, ARN, DIN, notice no…" : "Search title, reference, notice no…"} aria-label="Search the shelf" style={{ width: "100%", boxSizing: "border-box", height: 42, borderRadius: 999, fontFamily: SERIF, border: `1px solid ${C.line}`, padding: "0 14px 0 38px", fontSize: 14, background: C.surface, color: C.ink }} />
+          <div style={{ position: "relative", flex: "0 1 540px", minWidth: 220 }}>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" style={{ position: "absolute", left: 18, top: 20 }}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input id="sh-search" value={q} onChange={e => setQ(e.target.value)} placeholder={india ? "Search title, ARN, DIN, notice no…" : "Search title, reference, notice no…"} aria-label="Search the shelf" style={{ width: "100%", boxSizing: "border-box", height: 56, borderRadius: 999, fontFamily: SERIF, border: `1px solid ${C.line}`, padding: "0 18px 0 46px", fontSize: 16, background: C.surface, color: C.ink }} />
           </div>
           <div style={{ display: "flex", alignItems: "stretch", borderRadius: 999, overflow: "hidden" }}>
-            <button onClick={() => fileRef.current?.click()} disabled={!bizId || !!setup} style={{ height: 40, padding: "0 16px", border: "none", background: C.primary, color: "#FFFFFF", fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={() => fileRef.current?.click()} disabled={!bizId || !!setup} style={{ height: 56, padding: "0 24px", border: "none", background: "#12352D", color: "#FFFFFF", fontFamily: SERIF, fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
               Upload
             </button>
-            <select id="sh-into" value={uploadRack} onChange={e => setUploadRack(e.target.value as RackKey | "auto")} aria-label="Where to file uploads" title="Where uploads go" style={{ height: 40, border: "none", borderLeft: "1px solid rgba(255,255,255,0.2)", background: "#0D2822", color: "#FFFFFF", fontSize: 13, fontWeight: 700, padding: "0 8px", cursor: "pointer" }}>
+            <select id="sh-into" value={uploadRack} onChange={e => setUploadRack(e.target.value as RackKey | "auto")} aria-label="Where to file uploads" title="Where uploads go" style={{ height: 56, border: "none", borderLeft: "1px solid rgba(255,255,255,0.16)", background: "#12352D", color: "#E2C98A", fontFamily: SERIF, fontSize: 16, padding: "0 18px", cursor: "pointer" }}>
               <option value="auto">✨ AI files it</option>
               {racks.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
             </select>
@@ -259,24 +275,41 @@ export default function ShelfPage() {
               const t = TINT[r.key];
               return (
                 <button key={r.key} className={"sh-nav" + (n ? "" : " empty")} onClick={() => setRack(r.key)} aria-pressed={on} title={r.hint}>
-                  <svg aria-hidden="true" width="30" height="24" viewBox="0 0 30 24" fill="none" stroke="#C9A24A" strokeWidth="1.6" strokeLinejoin="round"><path d="M2 4a2 2 0 012-2h7l3 3h12a2 2 0 012 2v13a2 2 0 01-2 2H4a2 2 0 01-2-2V4z" /><path d="M2 9h26" /></svg>
-                  <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 15.5 }}>{r.label}</span>
-                    <span style={{ fontSize: 19, fontVariantNumeric: "tabular-nums" }}>{n}</span>
+                  <span style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
+                    <span className="sh-ico"><svg aria-hidden="true" width="22" height="18" viewBox="0 0 30 24" fill="none" stroke="#C9A24A" strokeWidth="1.8" strokeLinejoin="round"><path d="M2 4a2 2 0 012-2h7l3 3h12a2 2 0 012 2v13a2 2 0 01-2 2H4a2 2 0 01-2-2V4z" /><path d="M2 9h26" /></svg></span>
+                    <span className="sh-cnt" style={{ fontSize: 38, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{n}</span>
                   </span>
+                  <span style={{ fontSize: 21 }}>{r.label}</span>
+                  <span className="sh-hint">{r.hint}</span>
                 </button>
               );
             })}
           </nav>
 
           {/* Rack content */}
-          <main style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ minWidth: 0 }}>
-                <h2 style={{ margin: 0, fontSize: 24, fontWeight: 400 }}>{current.label}{items ? <span style={{ fontSize: 14, color: C.muted }}> · {shown.length} file{shown.length === 1 ? "" : "s"}</span> : null}</h2>
-                <div style={{ fontSize: 13, color: C.muted }}>{current.hint}</div>
+          <main className="sh-card" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "28px 32px", borderBottom: `1px solid ${C.line}` }}>
+              <div style={{ minWidth: 0, marginRight: "auto" }}>
+                <h2 style={{ margin: 0, fontSize: 40, fontWeight: 400, lineHeight: 1.1 }}>{current.label}{items ? <span style={{ fontSize: 18, color: C.muted }}> · {shown.length} file{shown.length === 1 ? "" : "s"}</span> : null}</h2>
+                <div style={{ fontSize: 16, color: C.muted, marginTop: 6 }}>{current.hint}</div>
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <select id="sh-fy" value={fy} onChange={e => setFy(e.target.value)} aria-label="Financial year" className="sh-pill" style={fy === "all" ? { background: "#12352D", color: "#FFFFFF", borderColor: "#12352D" } : undefined}>
+                  <option value="all">All years</option>
+                  {fys.map(y => <option key={y} value={y}>FY {y}</option>)}
+                </select>
+                <div role="radiogroup" aria-label="File type" className="sh-seg">
+                  {([["all", "All"], ["PDF", "PDF"], ["XLS", "Excel"], ["IMG", "Images"]] as const).map(([k, l]) => <button key={k} role="radio" aria-checked={ftype === k} onClick={() => setFtype(k)}>{l}</button>)}
+                </div>
+                <select id="sh-sort" value={sort} onChange={e => setSort(e.target.value as typeof sort)} aria-label="Sort files" className="sh-pill">
+                  <option value="new">Newest first</option><option value="old">Oldest first</option><option value="az">Name A–Z</option><option value="size">Largest first</option>
+                </select>
+                <div role="radiogroup" aria-label="View" className="sh-seg dark">
+                  {([["list", "☰"], ["grid", "▦"]] as const).map(([k, l]) => <button key={k} role="radio" aria-checked={view === k} aria-label={k === "list" ? "List view" : "Grid view"} onClick={() => setView(k)} style={{ width: 42, padding: 0 }}>{l}</button>)}
+                </div>
               </div>
             </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: items && shown.length && view === "list" ? 0 : "20px 24px" }}>
 
             {/* Kept mounted while you look at other racks, so a login or download in progress isn't lost; only hidden */}
             {india && bizId && <div hidden={rack !== "gst"}><GstPortalDownload bizId={bizId} onSaved={() => load(bizId)} /></div>}
@@ -304,24 +337,6 @@ export default function ShelfPage() {
               </section>
             )}
 
-            {/* Toolbar */}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              <select id="sh-fy" value={fy} onChange={e => setFy(e.target.value)} aria-label="Financial year" style={{ height: 34, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 10px", fontSize: 13, fontWeight: 700, color: C.ink, background: C.surface }}>
-                <option value="all">All years</option>
-                {fys.map(y => <option key={y} value={y}>FY {y}</option>)}
-              </select>
-              <div role="radiogroup" aria-label="File type" style={{ display: "inline-flex", border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden", background: C.surface }}>
-                {([["all", "All"], ["PDF", "PDF"], ["XLS", "Excel"], ["IMG", "Images"]] as const).map(([k, l]) => <button key={k} role="radio" aria-checked={ftype === k} onClick={() => setFtype(k)} style={{ height: 32, padding: "0 12px", border: "none", background: ftype === k ? C.soft : "transparent", color: ftype === k ? C.primary : C.muted, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>{l}</button>)}
-              </div>
-              <span style={{ marginLeft: "auto", fontSize: 12.5, color: C.muted }}>{items ? `${shown.length} file${shown.length === 1 ? "" : "s"}` : ""}</span>
-              <select id="sh-sort" value={sort} onChange={e => setSort(e.target.value as typeof sort)} aria-label="Sort files" style={{ height: 34, borderRadius: 10, border: `1px solid ${C.line}`, padding: "0 8px", fontSize: 13, fontWeight: 600, color: C.ink, background: C.surface }}>
-                <option value="new">Newest first</option><option value="old">Oldest first</option><option value="az">Name A–Z</option><option value="size">Largest first</option>
-              </select>
-              <div role="radiogroup" aria-label="View" style={{ display: "inline-flex", border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden", background: C.surface }}>
-                {([["list", "☰"], ["grid", "▦"]] as const).map(([k, l]) => <button key={k} role="radio" aria-checked={view === k} aria-label={k === "list" ? "List view" : "Grid view"} onClick={() => setView(k)} style={{ height: 32, width: 36, border: "none", background: view === k ? C.primary : "transparent", color: view === k ? "#FFFFFF" : C.muted, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>{l}</button>)}
-              </div>
-            </div>
-
             {/* Files */}
             {items === null ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{[0, 1, 2].map(k => <div key={k} className="sh-skel" style={{ height: 64, borderRadius: 14, background: C.surface, border: `1px solid ${C.line}` }} />)}</div>
@@ -332,24 +347,24 @@ export default function ShelfPage() {
                 <span style={{ maxWidth: 460, lineHeight: 1.55, fontSize: 13.5 }}>{q ? "Try another word, or clear the search." : "Drop files anywhere on this page, or click here to choose them. The AI reads each one and files it in the right rack and year."}</span>
               </button>
             ) : (
-              <section className={view === "grid" ? "sh-grid" : undefined} style={view === "grid" ? undefined : { background: C.surface, border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}>
+              <section className={view === "grid" ? "sh-grid" : undefined} style={view === "grid" ? undefined : { overflow: "hidden" }}>
                 {shown.map((it, idx) => {
                   const overdue = it.reply_due && it.status === "open" && it.reply_due < today();
                   const k = kind(it);
                   const sel: React.CSSProperties = { height: 30, border: `1px solid ${C.line}`, borderRadius: 8, fontSize: 12, color: C.muted, background: C.surface, padding: "0 4px" };
                   return (
-                    <article key={it.id} className="sh-row" style={{ display: "flex", gap: 14, alignItems: "center", padding: "12px 16px", borderTop: view === "list" && idx ? `1px solid ${C.line}` : "none", background: view === "grid" ? C.surface : undefined, flexWrap: "wrap" }}>
-                      <span aria-hidden="true" style={{ width: 40, height: 46, borderRadius: 9, background: k.b, color: k.c, display: "grid", placeItems: "center", fontSize: 10.5, fontWeight: 900, letterSpacing: "0.04em", flexShrink: 0 }}>{k.t}</span>
+                    <article key={it.id} className="sh-row" style={{ display: "flex", gap: 14, alignItems: "center", padding: "22px 32px", borderTop: view === "list" && idx ? `1px solid ${C.line}` : "none", background: view === "grid" ? C.surface : undefined, flexWrap: "wrap" }}>
+                      <span aria-hidden="true" style={{ width: 52, height: 64, borderRadius: 10, background: k.b, color: k.c, display: "grid", placeItems: "end center", paddingBottom: 12, boxSizing: "border-box", fontSize: 12.5, fontWeight: 700, letterSpacing: "0.08em", flexShrink: 0, border: "1px solid rgba(0,0,0,0.04)" }}>{k.t}</span>
                       <div style={{ flex: 1, minWidth: 220, display: "flex", flexDirection: "column", gap: 3 }}>
                         {editing === it.id
                           ? <input autoFocus defaultValue={it.title} onBlur={e => { setEditing(null); if (e.target.value.trim() && e.target.value !== it.title) patch(it.id, { title: e.target.value.trim() }); }} onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} style={{ fontSize: 14.5, fontWeight: 700, border: `1px solid ${C.strong}`, borderRadius: 8, padding: "3px 8px" }} />
-                          : <button onClick={() => open(it)} style={{ all: "unset", cursor: "pointer", fontSize: 14.5, fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis" }}>{it.title}</button>}
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", fontSize: 12, color: C.muted }}>
+                          : <button onClick={() => open(it)} style={{ all: "unset", cursor: "pointer", fontSize: 21, color: C.ink, overflow: "hidden", textOverflow: "ellipsis" }}>{it.title}</button>}
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", fontSize: 14.5, color: C.muted, marginTop: 4 }}>
                           {rack === "all" && <span style={{ fontWeight: 700, color: TINT[it.rack]?.c }}>{RACKS.find(r => r.key === it.rack)?.label}</span>}
-                          {it.fy && <span style={{ padding: "1px 7px", borderRadius: 999, background: "#FBF4E2", color: "#7A5A12", fontWeight: 700 }}>FY {it.fy}</span>}
-                          {it.doc_type && <span>{it.doc_type}</span>}
+                          {it.fy && <span style={{ padding: "3px 10px", borderRadius: 8, background: "#FBF0D9", color: "#7A5A12" }}>FY {it.fy}</span>}
+                          {it.doc_type && <span style={{ padding: "3px 10px", borderRadius: 8, background: "#E6F1EC", color: "#245E48" }}>{it.doc_type}</span>}
                           {it.reference && <span>· Ref <b style={{ color: C.ink, fontWeight: 600 }}>{it.reference}</b></span>}
-                          <span>· {day(it.created_at)}{it.size_bytes ? ` · ${kb(it.size_bytes)}` : ""}</span>
+                          <span>{day(it.created_at)}{it.size_bytes ? ` · ${kb(it.size_bytes)}` : ""}</span>
                         </div>
                         {it.ai_summary && <div style={{ fontSize: 12.5, color: C.ink, opacity: 0.8, lineHeight: 1.45 }}>{it.ai_summary}</div>}
                         {it.rack === "notices" && (
@@ -364,26 +379,26 @@ export default function ShelfPage() {
                         )}
                       </div>
                       <div className="sh-acts" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                        <select value={it.fy ?? ""} onChange={e => patch(it.id, { fy: e.target.value || null })} aria-label="Financial year" title="Financial year" style={sel}>
+                        <select value={it.fy ?? ""} onChange={e => patch(it.id, { fy: e.target.value || null })} aria-label="Financial year" title="Financial year" className="sh-sm">
                           <option value="">No FY</option>
                           {Array.from({ length: 10 }, (_, n) => { const y = new Date().getFullYear() - n; return `${y}-${String(y + 1).slice(2)}`; }).map(v => <option key={v} value={v}>FY {v}</option>)}
                         </select>
-                        <select value={it.rack} onChange={e => patch(it.id, { rack: e.target.value as RackKey })} aria-label="Move to rack" title="Move to another rack" style={sel}>
+                        <select value={it.rack} onChange={e => patch(it.id, { rack: e.target.value as RackKey })} aria-label="Move to rack" title="Move to another rack" className="sh-sm">
                           {RACKS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
                         </select>
                         {isStatement(it) && (
                           <Link href={`/finance/banking/import?shelf=${it.id}`} title="Open Banking → Import with this statement loaded, to turn its rows into entries"
-                            style={{ ...btn, height: 32, padding: "0 14px", borderRadius: 999, background: "#C9A24A", color: "#10241F", border: "none", fontFamily: SERIF, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Book this statement →</Link>
+                            style={{ ...btn, height: 48, padding: "0 24px", borderRadius: 999, background: "linear-gradient(160deg,#DDBE78,#C9A24A)", color: "#10241F", border: "none", fontFamily: SERIF, fontSize: 17, fontWeight: 400, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8 }}>Book this statement <span aria-hidden>→</span></Link>
                         )}
                         {it.rack !== "bank" && /pdf|image|sheet|excel|csv/i.test(`${it.mime ?? ""} ${it.file_name ?? ""}`) && (
                           <button disabled={posting === it.id} title="Read this document in Smart Inbox and post its entries (you check them before anything posts)"
                             onClick={async () => { setPosting(it.id); try { const f = await shelfFile(bizId, it); setPendingFiles([f]); router.push("/finance/inbox?from=shelf"); } catch (e) { alert(e instanceof Error ? e.message : "Couldn't open the file."); setPosting(null); } }}
-                            style={{ ...btn, height: 32, padding: "0 14px", borderRadius: 999, background: "#C9A24A", color: "#10241F", border: "none", fontFamily: SERIF, fontWeight: 700 }}>{posting === it.id ? "Opening…" : "Post entries →"}</button>
+                            style={{ ...btn, height: 48, padding: "0 24px", borderRadius: 999, background: "linear-gradient(160deg,#DDBE78,#C9A24A)", color: "#10241F", border: "none", fontFamily: SERIF, fontSize: 17, fontWeight: 400 }}>{posting === it.id ? "Opening…" : "Post entries →"}</button>
                         )}
-                        <button onClick={() => open(it)} style={{ ...btn, height: 32, padding: "0 16px", borderRadius: 999, background: "#12352D", color: "#FFFFFF", border: "none", fontFamily: SERIF }}>Open</button>
-                        <button onClick={() => open(it, true)} style={{ ...btn, height: 30 }} aria-label="Download" title="Download">⬇</button>
-                        <button onClick={() => setEditing(it.id)} aria-label="Rename" title="Rename" style={{ ...btn, height: 30 }}>✎</button>
-                        <button onClick={() => remove(it)} aria-label="Remove" title="Remove" style={{ ...btn, height: 30, color: C.neg }}>×</button>
+                        <button onClick={() => open(it)} style={{ ...btn, height: 48, padding: "0 24px", borderRadius: 999, background: "#FFFFFF", color: "#10241F", border: "1px solid #D9C79A", fontFamily: SERIF, fontSize: 17, fontWeight: 400 }}>Open</button>
+                        <button onClick={() => open(it, true)} className="sh-ib" aria-label="Download" title="Download">⤓</button>
+                        <button onClick={() => setEditing(it.id)} className="sh-ib" aria-label="Rename" title="Rename">✎</button>
+                        <button onClick={() => remove(it)} className="sh-ib" aria-label="Remove" title="Remove" style={{ color: C.neg, background: "#FDF1EF", borderColor: "#F3D6D0" }}>🗑</button>
                       </div>
                     </article>
                   );
@@ -391,7 +406,8 @@ export default function ShelfPage() {
               </section>
             )}
 
-            <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, margin: 0 }}>🔒 Files are private and open through short-lived links. Drop files anywhere on this page to add them.</p>
+            </div>
+            <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.6, margin: 0, padding: "16px 32px", borderTop: `1px solid ${C.line}`, background: "#FBF7EE" }}>🔒 Files are private and open through short-lived links. Drop files anywhere on this page to add them.</p>
           </main>
         </div>
       </div>
