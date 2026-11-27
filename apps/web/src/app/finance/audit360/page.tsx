@@ -240,40 +240,79 @@ export default function Audit360() {
           <HeroAction onClick={downloadReport} disabled={!report}>↓ Excel</HeroAction>
           <HeroAction onClick={() => setTick(t => t + 1)} primary disabled={busy}>{busy ? "Running…" : "Run again"}</HeroAction>
         </span>}
-        tiles={report ? [
-          { label: "Audit score", value: `${report.score}/100`, tone: report.score >= 85 ? "good" : report.score >= 60 ? "warn" : "bad" },
-          { label: "Matched", value: String(c!.ok), tone: "good" },
-          { label: "To check", value: String(c!.warn), tone: c!.warn ? "warn" : "plain" },
-          { label: "Problems", value: String(c!.fail), tone: c!.fail ? "bad" : "plain" },
-        ] : undefined} />
+        overlap={report ? 90 : 0} />
 
-      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "28px 20px 60px", display: "flex", flexDirection: "column", gap: 22 }}>
+      <style>{`.a3-wrap{max-width:1240px;margin:0 auto;padding:0 clamp(14px,3vw,28px) 70px;display:flex;flex-direction:column;gap:26px}
+        .a3-score{display:grid;grid-template-columns:auto minmax(0,1fr);gap:32px;align-items:center;background:${HT.paper};border:1px solid ${HT.line};border-radius:26px;padding:28px 34px;box-shadow:0 24px 50px -30px rgba(16,36,31,.55)}
+        @media(max-width:760px){.a3-score{grid-template-columns:1fr}}
+        .a3-kp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+        .a3-k{border-radius:16px;padding:16px 20px;border:1px solid ${HT.line}}
+        .a3-nav{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+        .a3-nav a{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:999px;border:1px solid ${HT.line};background:#FFFFFF;color:${HT.ink};text-decoration:none;font-size:15.5px}
+        .a3-nav a:hover{border-color:${HT.gold}}
+        .a3-card{background:${HT.paper};border:1px solid ${HT.line};border-radius:24px;overflow:hidden}
+        .a3-head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;padding:28px 32px 22px;border-bottom:1px solid ${HT.line}}
+        .a3-head h2{margin:0;font-size:clamp(28px,3vw,36px);font-weight:400;font-style:italic}
+        .a3-src{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;padding:24px 28px 28px}
+        .a3-sc{border:1px solid ${HT.line};border-radius:18px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;background:#FFFFFF}
+        .a3-mo{display:inline-block;padding:4px 10px;border-radius:8px;background:#E6F1EC;color:#245E48;font-size:14px;margin:0 6px 6px 0}
+        .a3-b{height:44px;padding:0 20px;border-radius:999px;border:1px solid #D9C79A;background:#FFFFFF;cursor:pointer;font:inherit;font-size:16px;color:${HT.ink}}
+        .a3-b:hover{border-color:${HT.gold}}
+        .a3-row{display:grid;grid-template-columns:6px minmax(0,1fr) auto;gap:22px;align-items:start;width:100%;padding:24px 32px 24px 0;background:transparent;border:none;text-align:left;font:inherit;color:inherit}
+        .a3-row:hover{background:#FBF7EE}
+        .a3-fig{display:inline-flex;flex-direction:column;padding:10px 16px;border-radius:12px;background:#F6F1E6;min-width:130px}
+        .a3-fig small{font-size:13px;color:${HT.muted}}.a3-fig b{font-weight:400;font-size:18px}`}</style>
+      <div className="a3-wrap">
+        {report && c && (
+          <section className="a3-score" style={{ marginTop: -90 }} aria-label="Audit score">
+            <div style={{ position: "relative", width: 150, height: 150, justifySelf: "center" }}>
+              <svg width="150" height="150" viewBox="0 0 150 150" aria-hidden="true"><circle cx="75" cy="75" r="64" fill="none" stroke="#EFE8DA" strokeWidth="12" /><circle cx="75" cy="75" r="64" fill="none" stroke={report.score >= 85 ? "#2F7A57" : report.score >= 60 ? "#C9A24A" : "#B23A20"} strokeWidth="12" strokeLinecap="round" strokeDasharray={`${(report.score / 100) * 402} 402`} transform="rotate(-90 75 75)" /></svg>
+              <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", textAlign: "center" }}><span><span style={{ display: "block", fontSize: 44, lineHeight: 1 }}>{report.score}</span><span style={{ fontSize: 14, color: HT.muted }}>out of 100</span></span></div>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, letterSpacing: ".24em", textTransform: "uppercase", color: HT.goldInk }}>Audit score</div>
+              <div style={{ fontSize: "clamp(22px,2.4vw,30px)", margin: "6px 0 16px" }}>{c.fail ? <>Fix the <i style={{ color: "#B23A20" }}>{c.fail} problem{c.fail === 1 ? "" : "s"}</i> first, then check the rest.</> : c.warn ? <>No problems. <i style={{ color: HT.goldInk }}>{c.warn} thing{c.warn === 1 ? "" : "s"} to check.</i></> : <>Everything <i style={{ color: "#2F7A57" }}>matches.</i></>}</div>
+              <div className="a3-kp">
+                {[["Matched", c.ok, "#2F7A57", "#EEF6F1"], ["To check", c.warn, "#9A6B22", "#FBF3E2"], ["Problems", c.fail, "#B23A20", "#FBEDE8"]].map(([l, v, fg, bg]) => (
+                  <div key={String(l)} className="a3-k" style={{ background: Number(v) ? String(bg) : "#FFFFFF" }}><div style={{ fontSize: 15, color: HT.muted }}>{l}</div><div style={{ fontSize: 32, color: Number(v) ? String(fg) : HT.ink }}>{v}</div></div>
+                ))}
+              </div>
+              <nav className="a3-nav" aria-label="Jump to a section">
+                {SECTIONS.map(sec => { const l = report.checks.filter(x => x.section === sec.key); if (!l.length) return null; const bad = l.filter(x => x.status === "fail").length, w = l.filter(x => x.status === "warn").length;
+                  return <a key={sec.key} href={`#sec-${sec.key}`}><span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: "50%", background: bad ? "#B23A20" : w ? "#C9A24A" : "#2F7A57" }} />{sec.title}</a>; })}
+              </nav>
+            </div>
+          </section>
+        )}
         {fixMsg && <div role="status" style={{ ...card, padding: "12px 18px", color: fixMsg.ok ? "#0B5E42" : "#B4321F" }}>{fixMsg.text}</div>}
         {shelfMsg && <div role="status" style={{ ...card, padding: "12px 18px", color: shelfMsg.startsWith("✓") ? "#0B5E42" : "#5E6B66" }}>{shelfMsg}</div>}
         {err && <div role="alert" style={{ ...card, padding: "14px 18px", color: "#B4321F" }}>{err}</div>}
 
         {/* Portal files */}
-        <section style={card} aria-labelledby="src-h">
-          <div style={{ padding: "18px 22px 12px", borderBottom: `1px solid ${HT.line}` }}>
-            <h2 id="src-h" style={{ margin: 0, fontSize: 22, fontWeight: 400, fontStyle: "italic" }}>Portal files</h2>
-            <div style={{ fontSize: 13.5, color: HT.muted, marginTop: 2 }}>Download from the portal and add them here. They stay on this device for this year and are only used for the comparison.</div>
+        <section className="a3-card" aria-labelledby="src-h">
+          <div className="a3-head">
+            <div style={{ marginRight: "auto" }}>
+              <h2 id="src-h">Portal files</h2>
+              <div style={{ fontSize: 16.5, color: HT.muted, marginTop: 6 }}>Download from the portal and add them here. They stay on this device for this year and are only used for the comparison.</div>
+            </div>
+            <span style={{ fontSize: 15.5, color: HT.muted }}>{SOURCES.filter(x => loadedMonths(x.key)).length} of {SOURCES.length} added</span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))" }}>
+          <div className="a3-src">
             {SOURCES.map(s => {
               const loaded = loadedMonths(s.key);
               return (
-                <div key={s.key} style={{ padding: "16px 22px", borderTop: `1px solid ${HT.line}`, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: "50%", background: loaded ? "#12A06C" : "#C9C2B2" }} />
-                    <b style={{ fontSize: 16 }}>{s.title}</b>
+                <div key={s.key} className="a3-sc">
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 21, marginRight: "auto" }}>{s.title}</span>
+                    <span style={{ fontSize: 13.5, padding: "4px 12px", borderRadius: 999, background: loaded ? "#E6F1EC" : "#F1EADB", color: loaded ? "#245E48" : HT.muted }}>{loaded ? "Added" : "Not added"}</span>
                   </div>
-                  <div style={{ fontSize: 12.5, color: HT.muted, lineHeight: 1.45 }}>{s.how}</div>
-                  {loaded && <div style={{ fontSize: 13, color: "#0B7A55" }}>Loaded: {loaded}</div>}
-                  {srcMsg[s.key] && <div role="status" style={{ fontSize: 13, color: srcMsg[s.key] === "Reading…" ? HT.muted : "#B4321F" }}>{srcMsg[s.key]}</div>}
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <div style={{ fontSize: 14.5, color: HT.muted, lineHeight: 1.55 }}>{s.how}</div>
+                  {loaded && <div>{String(loaded).split(/,\s*/).map(m => <span key={m} className="a3-mo">{m}</span>)}</div>}
+                  {srcMsg[s.key] && <div role="status" style={{ fontSize: 14, color: srcMsg[s.key] === "Reading…" ? HT.muted : "#B4321F" }}>{srcMsg[s.key]}</div>}
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: "auto" }}>
                     <input ref={el => { inputs.current[s.key] = el; }} type="file" accept={s.accept} multiple={s.multi} style={{ display: "none" }} onChange={e => { void upload(s.key, e.target.files); e.target.value = ""; }} />
-                    <button type="button" style={btn} onClick={() => inputs.current[s.key]?.click()}>{loaded ? (s.multi ? "Add months" : "Replace") : "Upload"}</button>
-                    {loaded && <button type="button" style={{ ...btn, color: "#B4321F" }} onClick={() => clear(s.key)}>Clear</button>}
+                    <button type="button" className="a3-b" style={loaded ? undefined : { background: "linear-gradient(160deg,#DDBE78,#C9A24A)", border: "none" }} onClick={() => inputs.current[s.key]?.click()}>{loaded ? (s.multi ? "Add months" : "Replace") : "Upload"}</button>
+                    {loaded && <button type="button" className="a3-b" style={{ color: "#B4321F", borderColor: "#F0CFC5" }} onClick={() => clear(s.key)}>Clear</button>}
                   </div>
                 </div>
               );
@@ -287,43 +326,45 @@ export default function Audit360() {
           const list = report.checks.filter(x => x.section === s.key);
           if (!list.length) return null;
           return (
-            <section key={s.key} style={card} aria-labelledby={`sec-${s.key}`}>
-              <div style={{ padding: "18px 22px 12px", borderBottom: `1px solid ${HT.line}` }}>
-                <h2 id={`sec-${s.key}`} style={{ margin: 0, fontSize: 22, fontWeight: 400, fontStyle: "italic" }}>{s.title}</h2>
-                <div style={{ fontSize: 13.5, color: HT.muted, marginTop: 2 }}>{s.note}</div>
+            <section key={s.key} id={`sec-${s.key}`} className="a3-card" style={{ scrollMarginTop: 20 }} aria-labelledby={`sec-h-${s.key}`}>
+              <div className="a3-head">
+                <div style={{ marginRight: "auto" }}>
+                  <h2 id={`sec-h-${s.key}`}>{s.title}</h2>
+                  <div style={{ fontSize: 16.5, color: HT.muted, marginTop: 6 }}>{s.note}</div>
+                </div>
+                <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{(["fail", "warn", "ok"] as const).map(k => { const n = list.filter(x => x.status === k).length; return n ? <span key={k} style={{ fontSize: 14, padding: "5px 12px", borderRadius: 999, background: TONE[k].bg, color: TONE[k].fg }}>{n} {TONE[k].label.toLowerCase()}</span> : null; })}</span>
               </div>
               {list.map(x => {
                 const t = TONE[x.status], isOpen = open.has(x.id), more = x.items.length > 0, figs = x.portal != null;
                 return (
                   <div key={x.id} style={{ borderTop: `1px solid ${HT.line}` }}>
-                    <button type="button" onClick={() => more && flip(x.id)} aria-expanded={more ? isOpen : undefined}
-                      style={{ width: "100%", display: "grid", gridTemplateColumns: "auto minmax(0,1fr) auto", gap: 14, alignItems: "start", padding: "14px 22px", background: "transparent", border: "none", textAlign: "left", cursor: more ? "pointer" : "default", font: "inherit", color: "inherit" }}>
-                      <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: "50%", background: t.dot, marginTop: 7 }} />
-                      <span style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
-                        <span style={{ fontSize: 16, fontWeight: 700 }}>{x.title}</span>
-                        <span style={{ fontSize: 14, color: "#2E3B36" }}>{x.summary}</span>
+                    <button type="button" onClick={() => more && flip(x.id)} aria-expanded={more ? isOpen : undefined} className="a3-row" style={{ cursor: more ? "pointer" : "default" }}>
+                      <span aria-hidden="true" style={{ alignSelf: "stretch", borderRadius: "0 4px 4px 0", background: t.dot, minHeight: 40 }} />
+                      <span style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                        <span style={{ fontSize: 20 }}>{x.title}</span>
+                        <span style={{ fontSize: 16, color: "#3A4843", lineHeight: 1.55 }}>{x.summary}</span>
                         {figs && (
-                          <span style={{ display: "flex", gap: 18, flexWrap: "wrap", fontSize: 13, fontVariantNumeric: "tabular-nums", marginTop: 2 }}>
-                            <span><span style={{ color: HT.muted }}>Books </span><b>{inr(x.books ?? 0)}</b></span>
-                            <span><span style={{ color: HT.muted }}>Portal </span><b>{inr(x.portal ?? 0)}</b></span>
-                            <span><span style={{ color: HT.muted }}>Difference </span><b style={{ color: Math.abs(x.diff ?? 0) > 1 ? "#B4321F" : "#0B7A55" }}>{inr(x.diff ?? 0)}</b></span>
+                          <span style={{ display: "flex", gap: 12, flexWrap: "wrap", fontVariantNumeric: "tabular-nums", marginTop: 6 }}>
+                            <span className="a3-fig"><small>Books</small><b>{inr(x.books ?? 0)}</b></span>
+                            <span className="a3-fig"><small>Portal</small><b>{inr(x.portal ?? 0)}</b></span>
+                            <span className="a3-fig" style={{ background: Math.abs(x.diff ?? 0) > 1 ? "#FBEDE8" : "#EEF6F1" }}><small>Difference</small><b style={{ color: Math.abs(x.diff ?? 0) > 1 ? "#B23A20" : "#2F7A57" }}>{inr(x.diff ?? 0)}</b></span>
                           </span>
                         )}
-                        {x.law && <span style={{ fontSize: 12, color: HT.muted, fontStyle: "italic" }}>{x.law}</span>}
+                        {x.law && <span style={{ fontSize: 14, color: HT.muted, fontStyle: "italic" }}>{x.law}</span>}
                         {(() => { const f = fixFor(x); return f ? (
-                          <span style={{ marginTop: 6, padding: "8px 12px", borderRadius: 10, background: "#FBF7EE", border: "1px solid #EFE2C4", fontSize: 13, color: "#4A3A12", display: "block" }}>
+                          <span style={{ marginTop: 8, padding: "12px 16px", borderRadius: 14, background: "#F8EEDA", border: "1px solid #EBD9B0", fontSize: 15, color: "#4A3A12", display: "block", lineHeight: 1.55 }}>
                             <b style={{ color: "#8A6420" }}>Suggested correction · </b>{f.text}
                             {f.href && <> <a href={f.href} onClick={e => e.stopPropagation()} style={{ color: "#8A6420", fontWeight: 700 }}>{f.cta} →</a></>}
                           </span>) : null; })()}
                       </span>
                       <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 12, fontWeight: 800, padding: "4px 10px", borderRadius: 999, background: t.bg, color: t.fg, whiteSpace: "nowrap" }}>{t.label}</span>
-                        {more && <span aria-hidden="true" style={{ color: HT.muted, fontSize: 12 }}>{isOpen ? "▲" : `${x.items.length} ▼`}</span>}
+                        <span style={{ fontSize: 14, padding: "6px 14px", borderRadius: 999, background: t.bg, color: t.fg, whiteSpace: "nowrap" }}>{t.label}</span>
+                        {more && <span aria-hidden="true" style={{ color: HT.muted, fontSize: 14, whiteSpace: "nowrap" }}>{isOpen ? "Hide ▲" : `${x.items.length} ▼`}</span>}
                       </span>
                     </button>
                     {isOpen && (
-                      <div style={{ padding: "0 22px 16px 46px", overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, fontVariantNumeric: "tabular-nums" }}>
+                      <div style={{ padding: "0 32px 22px 28px", overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 15, fontVariantNumeric: "tabular-nums", background: "#FFFFFF", border: `1px solid ${HT.line}`, borderRadius: 14 }}>
                           <thead><tr style={{ color: HT.muted, textAlign: "left" }}><th style={{ padding: "6px 8px" }}>Entry</th><th style={{ padding: "6px 8px" }}>Date</th><th style={{ padding: "6px 8px" }}>What</th><th style={{ padding: "6px 8px", textAlign: "right" }}>Amount</th><th style={{ padding: "6px 8px" }}>Correct</th></tr></thead>
                           <tbody>
                             {x.items.map((it, i) => (
