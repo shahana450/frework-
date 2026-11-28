@@ -1,4 +1,5 @@
 "use client";
+import PageHero, { HeroAction } from "@/components/finance/PageHero";
 import { cur, activeMoney } from "@/lib/money";
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
@@ -61,45 +62,37 @@ export default function BankHistoryPage() {
   const totalOut = journals.filter(j => j.type === "payment").reduce((s, j) => s + Number(j.total_debit), 0);
   const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
-  const inp: React.CSSProperties = { background: "#FFFFFF", border: "1px solid #FFFFFF", color: "#141A3A", padding: "7px 10px", borderRadius: 7, fontSize: "0.82rem", outline: "none", fontFamily: "'DM Sans',system-ui,sans-serif" };
+  const inp: React.CSSProperties = { background: "#FFFFFF", border: "1px solid #FFFFFF", color: "#10241F", padding: "7px 10px", borderRadius: 7, fontSize: "0.82rem", outline: "none", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'DM Sans',system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
-        * { box-sizing: border-box; }
-        .bh-row:hover td { background: #FFFFFF; }
-        .bh-filter { background: #FFFFFF; border: 1px solid #FFFFFF; color: #6E88A8; border-radius: 7px; padding: 5px 12px; font-size: 0.76rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
-        .bh-filter.active { background: rgba(31,94,255,0.12); border-color: rgba(31,94,255,0.35); color: #1F5EFF; }
+                * { box-sizing: border-box; }
+        .bh-row:hover td { background: #FBF7EE; }
+        .bh-filter { background: #FFFFFF; border: 1px solid #E6DFD0; color: #10241F; border-radius: 999px; padding: 8px 16px; font-size: 0.92rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+        .bh-filter.active { background: #12352D; border-color: #12352D; color: #FFFFFF; }
         select option { background: #FFFFFF; }
         ::-webkit-scrollbar { width: 5px; height: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #FFFFFF; border-radius: 3px; }
       `}</style>
 
-      {/* Header */}
-      <div style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid #FFFFFF", padding: "0 2rem", height: 52, display: "flex", alignItems: "center", gap: "0.75rem", position: "sticky", top: 0, zIndex: 10 }}>
-        <Link href="/finance" style={{ color: "#5A6080", textDecoration: "none", fontSize: "0.82rem" }}>Finance</Link>
-        <span style={{ color: "#E1E4EE" }}>›</span>
-        <Link href="/finance/banking" style={{ color: "#5A6080", textDecoration: "none", fontSize: "0.82rem" }}>Banking</Link>
-        <span style={{ color: "#E1E4EE" }}>›</span>
-        <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Transaction History</span>
-        <Link href="/finance/banking/import" style={{ marginLeft: "auto", background: "#232A63", color: "#fff", padding: "6px 16px", borderRadius: 8, fontWeight: 700, fontSize: "0.8rem", textDecoration: "none" }}>
-          ⬆ Import New Statement
-        </Link>
-      </div>
+      <PageHero eyebrow="Banking · Transaction history" title="Every bank" accent="movement"
+        sub="Receipts and payments posted to your bank and cash ledgers — from statements, Tally and entries."
+        tabs={[{ label: "Bank dashboard", href: "/finance/banking" }, { label: "Import statement", href: "/finance/banking/import" }, { label: "History", href: "/finance/banking/history", active: true }]}
+        actions={<HeroAction href="/finance/banking/import" primary>↑ Import statement</HeroAction>} />
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "1.5rem" }}>
+      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "28px clamp(14px,3vw,28px) 60px" }}>
 
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1.25rem" }}>
           {[
-            { label: "Total Transactions", value: journals.length, color: "#141A3A", sub: "payment + receipt" },
+            { label: "Total Transactions", value: journals.length, color: "#10241F", sub: "payment + receipt" },
             { label: "Total Receipts (In)", value: `${cur()}${fmt(totalIn)}`, color: "#0B7A55", sub: `${journals.filter(j => j.type === "receipt").length} entries` },
-            { label: "Total Payments (Out)", value: `${cur()}${fmt(totalOut)}`, color: "#C2321F", sub: `${journals.filter(j => j.type === "payment").length} entries` },
+            { label: "Total Payments (Out)", value: `${cur()}${fmt(totalOut)}`, color: "#B4321F", sub: `${journals.filter(j => j.type === "payment").length} entries` },
           ].map(s => (
-            <div key={s.label} style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 12, padding: "1rem 1.25rem" }}>
-              <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#5A6080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.4rem" }}>{s.label}</div>
+            <div key={s.label} style={{ background: "#FFFDF8", border: "1px solid #E6DFD0", borderRadius: 20, padding: "22px 24px" }}>
+              <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "#6B7570", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.4rem" }}>{s.label}</div>
               <div style={{ fontSize: "1.2rem", fontWeight: 800, color: s.color, fontFamily: typeof s.value === "string" && s.value.startsWith("₹") ? "'IBM Plex Mono',monospace" : "inherit", letterSpacing: "-0.01em" }}>{s.value}</div>
-              <div style={{ fontSize: "0.68rem", color: "#E1E4EE", marginTop: "0.2rem" }}>{s.sub}</div>
+              <div style={{ fontSize: "0.68rem", color: "#E6DFD0", marginTop: "0.2rem" }}>{s.sub}</div>
             </div>
           ))}
         </div>
@@ -112,19 +105,19 @@ export default function BankHistoryPage() {
               {t === "all" ? "All" : t === "receipt" ? "💰 Receipts" : "💸 Payments"}
             </button>
           ))}
-          <span style={{ marginLeft: "auto", fontSize: "0.74rem", color: "#5A6080" }}>{filtered.length} entries</span>
+          <span style={{ marginLeft: "auto", fontSize: "0.74rem", color: "#6B7570" }}>{filtered.length} entries</span>
         </div>
 
         {/* Table */}
         <div style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 12, overflow: "hidden" }}>
           {loading ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "#5A6080" }}>Loading…</div>
+            <div style={{ padding: "3rem", textAlign: "center", color: "#6B7570" }}>Loading…</div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: "3rem", textAlign: "center" }}>
               <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>📭</div>
               <div style={{ fontWeight: 700, marginBottom: "0.3rem" }}>No bank transactions yet</div>
-              <div style={{ color: "#5A6080", fontSize: "0.84rem", marginBottom: "1rem" }}>Import a bank statement to get started.</div>
-              <Link href="/finance/banking/import" style={{ background: "#232A63", color: "#fff", padding: "10px 24px", borderRadius: 9, fontWeight: 700, fontSize: "0.88rem", textDecoration: "none" }}>
+              <div style={{ color: "#6B7570", fontSize: "0.84rem", marginBottom: "1rem" }}>Import a bank statement to get started.</div>
+              <Link href="/finance/banking/import" style={{ background: "#12352D", color: "#fff", padding: "10px 24px", borderRadius: 9, fontWeight: 700, fontSize: "0.88rem", textDecoration: "none" }}>
                 ⬆ Import Statement
               </Link>
             </div>
@@ -134,31 +127,31 @@ export default function BankHistoryPage() {
                 <thead>
                   <tr style={{ background: "#FFFFFF", borderBottom: "1px solid #FFFFFF" }}>
                     {["Entry No", "Date", "Narration", "Type", "Debit (" + cur() + ")", "Credit (" + cur() + ")", ""].map(h => (
-                      <th key={h} style={{ padding: "0.6rem 0.85rem", textAlign: h.includes(cur()) ? "right" : "left", color: "#E1E4EE", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>{h}</th>
+                      <th key={h} style={{ padding: "0.6rem 0.85rem", textAlign: h.includes(cur()) ? "right" : "left", color: "#E6DFD0", fontWeight: 700, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((j, i) => (
                     <tr key={j.id} className="bh-row" style={{ borderTop: i === 0 ? "none" : "1px solid #FFFFFF" }}>
-                      <td style={{ padding: "0.55rem 0.85rem", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.7rem", color: "#5A6080", whiteSpace: "nowrap" }}>{j.entry_no}</td>
-                      <td style={{ padding: "0.55rem 0.85rem", color: "#6E88A8", whiteSpace: "nowrap", fontFamily: "'IBM Plex Mono',monospace", fontSize: "0.72rem" }}>
+                      <td style={{ padding: "0.55rem 0.85rem", fontVariantNumeric: "tabular-nums", fontSize: "0.7rem", color: "#6B7570", whiteSpace: "nowrap" }}>{j.entry_no}</td>
+                      <td style={{ padding: "0.55rem 0.85rem", color: "#6B7570", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", fontSize: "0.72rem" }}>
                         {new Date(j.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
-                      <td style={{ padding: "0.55rem 0.85rem", color: "#141A3A", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={j.narration}>{j.narration}</td>
+                      <td style={{ padding: "0.55rem 0.85rem", color: "#10241F", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={j.narration}>{j.narration}</td>
                       <td style={{ padding: "0.55rem 0.85rem" }}>
-                        <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 8px", borderRadius: 12, background: j.type === "receipt" ? "rgba(11,122,85,0.12)" : "rgba(194,50,31,0.1)", color: j.type === "receipt" ? "#0B7A55" : "#C2321F" }}>
+                        <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 8px", borderRadius: 12, background: j.type === "receipt" ? "rgba(11,122,85,0.12)" : "rgba(194,50,31,0.1)", color: j.type === "receipt" ? "#0B7A55" : "#B4321F" }}>
                           {j.type === "receipt" ? "💰 Receipt" : "💸 Payment"}
                         </span>
                       </td>
-                      <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: j.total_debit ? "#C2321F" : "#E1E4EE", fontWeight: j.total_debit ? 600 : 400 }}>
+                      <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontVariantNumeric: "tabular-nums", color: j.total_debit ? "#B4321F" : "#E6DFD0", fontWeight: j.total_debit ? 600 : 400 }}>
                         {j.total_debit ? `${cur()}${fmt(Number(j.total_debit))}` : ""}
                       </td>
-                      <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontFamily: "'IBM Plex Mono',monospace", color: j.total_credit ? "#0B7A55" : "#E1E4EE", fontWeight: j.total_credit ? 600 : 400 }}>
+                      <td style={{ padding: "0.55rem 0.85rem", textAlign: "right", fontVariantNumeric: "tabular-nums", color: j.total_credit ? "#0B7A55" : "#E6DFD0", fontWeight: j.total_credit ? 600 : 400 }}>
                         {j.total_credit ? `${cur()}${fmt(Number(j.total_credit))}` : ""}
                       </td>
                       <td style={{ padding: "0.55rem 0.75rem" }}>
-                        <Link href={`/finance/journals/${j.id}/edit`} style={{ fontSize: "0.7rem", color: "#5A6080", textDecoration: "none", fontWeight: 600 }}>✏</Link>
+                        <Link href={`/finance/journals/${j.id}/edit`} style={{ fontSize: "0.7rem", color: "#6B7570", textDecoration: "none", fontWeight: 600 }}>✏</Link>
                       </td>
                     </tr>
                   ))}

@@ -1,4 +1,5 @@
 "use client";
+import PageHero from "@/components/finance/PageHero";
 import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -11,16 +12,21 @@ type Row = {
   detail: Record<string, unknown> | null; journal_id: string | null; fw_fin_journals: { entry_no: string; narration: string | null } | null;
 };
 
-const BG = "#F5F6FA", BORDER = "rgba(20,26,58,0.11)", TEXT = "#141A3A", MUTED = "rgba(20,26,58,0.75)";
-const GOLD = "#232A63", GREEN = "#0B7A55", RED = "#C2321F", BLUE = "#1F5EFF", AMBER = "#8A5A00";
+const BG = "#F4EFE4", BORDER = "#E6DFD0", TEXT = "#10241F", MUTED = "#6B7570";
+const GOLD = "#9A6B22", GREEN = "#0B7A55", RED = "#B4321F", BLUE = "#9A6B22", AMBER = "#8A5A00";
 const ACTIONS: Record<string, { label: string; color: string }> = {
   post: { label: "Posted", color: GREEN }, reverse: { label: "Reversed", color: RED }, lock_year: { label: "Locked year", color: AMBER },
   unlock_year: { label: "Unlocked year", color: AMBER }, tally_push: { label: "Pushed to Tally", color: BLUE },
+  shelf_upload: { label: "Filed on the Shelf", color: TEXT }, connector_connect: { label: "Connected an app", color: BLUE },
+  connector_disconnect: { label: "Disconnected an app", color: AMBER }, connector_file_import: { label: "Imported a file", color: BLUE },
 };
+// Anything not listed reads as words ("year_end_close" → "Year end close"), never a raw code
+const actionLabel = (a: string) => ACTIONS[a] ?? { label: a.replace(/_/g, " ").replace(/^./, c => c.toUpperCase()), color: TEXT };
 const SOURCES: Record<string, string> = {
   ai_copilot: "FreBook", statement: "Bank statement", ai_review: "Review queue", manual_journal: "Manual journal", sales_invoice: "Sales invoice",
   purchase_bill: "Purchase bill", expense: "Expense", payment_entry: "Payment", credit_note: "Credit note", debit_note: "Debit note",
   payroll: "Payroll", whatsapp: "WhatsApp", bank_import: "Bank import", reversal: "Reversal", correction: "Correction", settings: "Settings", integration: "Integration",
+  shelf: "Shelf", connectors: "Integrations",
 };
 
 function describe(r: Row): string {
@@ -29,6 +35,8 @@ function describe(r: Row): string {
   if (r.action === "reverse") return `${r.fw_fin_journals?.entry_no ?? "Entry"} reversed by ${d.reversal_entry ?? "a reversing entry"}`;
   if (r.action === "lock_year" || r.action === "unlock_year") return `FY ${d.fy ?? ""}`;
   if (r.action === "tally_push") return `${d.pushed ?? 0} pushed, ${d.failed ?? 0} failed${d.target ? ` → ${d.target}` : ""}`;
+  if (r.action === "shelf_upload") return [d.title ?? d.file_name ?? d.name, d.rack ? `rack: ${d.rack}` : "", d.fy ? `FY ${d.fy}` : ""].filter(Boolean).join(" · ");
+  if (r.action.startsWith("connector_")) return [d.provider, d.account, d.added != null ? `${d.added} added` : ""].filter(Boolean).join(" · ");
   return "";
 }
 
@@ -66,31 +74,24 @@ export default function AuditLogPage() {
   useEffect(() => { if (bizId) load(bizId); }, [bizId, load]);
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: `1px solid ${BORDER}`, padding: "0 1.5rem", display: "flex", alignItems: "center", gap: "0.8rem", height: 56 }}>
-        <Link href="/finance" style={{ color: GOLD, fontWeight: 700, textDecoration: "none" }}>FreWork</Link>
-        <span style={{ color: MUTED }}>›</span>
-        <span style={{ fontWeight: 700 }}>Audit Log</span>
-        <div style={{ flex: 1 }} />
-        <select value={action} onChange={e => setAction(e.target.value)} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "5px 10px", borderRadius: 7, fontSize: "0.8rem" }}>
-          <option value="">All activity</option>
-          {Object.entries(ACTIONS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
-      </nav>
+    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <PageHero eyebrow="Books · Audit log" title="Who did" accent="what, and when"
+        sub="Every posting, reversal, year lock and Tally push, with who did it and when. These records can't be edited or deleted from the app."
+        actions={<select value={action} onChange={e => setAction(e.target.value)} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, color: TEXT, padding: "5px 10px", borderRadius: 7, fontSize: "0.8rem" }}>
+          <option style={{ color: "#10241F" }} value="">All activity</option>
+          {Object.entries(ACTIONS).map(([k, v]) => <option style={{ color: "#10241F" }} key={k} value={k}>{v.label}</option>)}
+        </select>} />
       <div style={{ maxWidth: 1050, margin: "0 auto", padding: "1.5rem" }}>
-        <p style={{ margin: "0 0 1rem", color: MUTED, fontSize: "0.84rem", lineHeight: 1.6 }}>
-          Every posting, reversal, year lock and Tally push, with who did it and when. These records can't be edited or deleted from the app.
-        </p>
         {setupNeeded && <div style={{ padding: "0.8rem 1rem", border: `1px solid rgba(184,120,0,0.3)`, borderRadius: 8, color: AMBER, fontSize: "0.82rem", marginBottom: "1rem" }}>The audit log starts recording once the Phase 1 database update (2026-10-03_phase1_posting_engine.sql) has been run in Supabase.</div>}
         {error && <div style={{ padding: "0.8rem 1rem", border: `1px solid rgba(194,50,31,0.3)`, borderRadius: 8, color: RED, fontSize: "0.82rem", marginBottom: "1rem" }}>{error}</div>}
-        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflowX: "auto" }}>
+        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 20, overflowX: "auto", background: "#FFFDF8" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem", minWidth: 760 }}>
             <thead><tr style={{ background: "#FFFFFF" }}>
               {["When", "Who", "What", "Source", "Details", "Reason"].map(h => <th key={h} style={{ textAlign: "left", padding: "0.55rem 0.8rem", color: MUTED, fontSize: "0.64rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</th>)}
             </tr></thead>
             <tbody>
               {rows.map(r => {
-                const a = ACTIONS[r.action] ?? { label: r.action, color: TEXT };
+                const a = actionLabel(r.action);
                 return (
                   <tr key={r.id} style={{ borderTop: `1px solid ${BORDER}` }}>
                     <td style={{ padding: "0.5rem 0.8rem", whiteSpace: "nowrap", color: MUTED }}>{new Date(r.at).toLocaleString(activeMoney().locale, { day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>

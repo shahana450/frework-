@@ -1,4 +1,5 @@
 "use client";
+import PageHero, { HT } from "@/components/finance/PageHero";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -20,8 +21,8 @@ type Account = {
 
 const TYPE_ORDER = ["asset", "liability", "equity", "income", "expense"];
 const TYPE_LABEL: Record<string, { label: string; color: string }> = {
-  asset: { label: "Assets", color: "#1F5EFF" },
-  liability: { label: "Liabilities", color: "#C2321F" },
+  asset: { label: "Assets", color: "#9A6B22" },
+  liability: { label: "Liabilities", color: "#B4321F" },
   equity: { label: "Capital & Equity", color: "#5B4BC4" },
   income: { label: "Income", color: "#0B7A55" },
   expense: { label: "Expenses", color: "#8A5A00" },
@@ -90,16 +91,10 @@ export default function ChartOfAccountsPage() {
   }, {});
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
-        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Chart of Accounts</span>
-        <div style={{ flex: 1 }} />
-        <button onClick={() => setShowAdd(true)} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "6px 16px", borderRadius: 6, fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}>
-          + New Account
-        </button>
-      </nav>
+    <div style={{ minHeight: "100vh", background: HT.cream, color: HT.ink, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <PageHero eyebrow="Books · Chart of accounts" title="Chart of" accent="accounts"
+        sub="Every ledger in your books, grouped by assets, liabilities, capital, income and expenses."
+        actions={<button onClick={() => setShowAdd(true)} style={{ height: 48, padding: "0 22px", borderRadius: 999, border: "none", background: "linear-gradient(160deg,#E3C47E,#C9A24A)", color: "#10241F", fontFamily: "inherit", fontSize: 15.5, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>+ New account</button>} />
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
         <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
@@ -109,8 +104,8 @@ export default function ChartOfAccountsPage() {
             return (
               <button key={t} onClick={() => setActiveType(t)} style={{
                 background: activeType === t ? `${info.color}18` : "#FFFFFF",
-                border: `1px solid ${activeType === t ? info.color : "rgba(20,26,58,0.14)"}`,
-                color: activeType === t ? info.color : "rgba(20,26,58,0.75)",
+                border: `1px solid ${activeType === t ? info.color : "rgba(16,36,31,0.14)"}`,
+                color: activeType === t ? info.color : "rgba(16,36,31,0.75)",
                 padding: "6px 16px", borderRadius: 20, cursor: "pointer", fontSize: "0.82rem", fontWeight: 600,
               }}>
                 {info.label} <span style={{ opacity: 0.6 }}>({typeCounts[t]})</span>
@@ -120,19 +115,19 @@ export default function ChartOfAccountsPage() {
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search accounts…"
-            style={{ marginLeft: "auto", background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "6px 14px", borderRadius: 20, fontSize: "0.82rem", width: 220, outline: "none" }}
+            style={{ marginLeft: "auto", background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.17)", color: "#10241F", padding: "6px 14px", borderRadius: 20, fontSize: "0.82rem", width: 220, outline: "none" }}
           />
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "4rem", color: "rgba(20,26,58,0.55)" }}>Loading…</div>
+          <div style={{ textAlign: "center", padding: "4rem", color: "rgba(16,36,31,0.55)" }}>Loading…</div>
         ) : (
-          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.11)", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ background: "#FFFFFF", border: "1px solid rgba(16,36,31,0.11)", borderRadius: 12, overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#FFFFFF" }}>
                   {["Code", "Account Name", "Sub Type", "System", ""].map(h => (
-                    <th key={h} style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(20,26,58,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
+                    <th key={h} style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.7rem", color: "rgba(16,36,31,0.65)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -140,30 +135,30 @@ export default function ChartOfAccountsPage() {
                 {Object.entries(grouped).map(([subType, accs]) => (
                   <>
                     <tr key={`h-${subType}`} style={{ background: "#FFFFFF" }}>
-                      <td colSpan={5} style={{ padding: "0.5rem 1rem", fontSize: "0.72rem", color: "rgba(20,26,58,0.60)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                      <td colSpan={5} style={{ padding: "0.5rem 1rem", fontSize: "0.72rem", color: "rgba(16,36,31,0.60)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
                         {SUB_TYPE_LABELS[subType] ?? subType}
                       </td>
                     </tr>
                     {accs.map(acc => (
-                      <tr key={acc.id} style={{ borderTop: "1px solid rgba(20,26,58,0.08)" }}>
-                        <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", color: "rgba(20,26,58,0.75)", fontVariantNumeric: "tabular-nums", fontFamily: "monospace" }}>{acc.code}</td>
-                        <td style={{ padding: "0.65rem 1rem", fontSize: "0.85rem", fontWeight: acc.is_group ? 700 : 400, color: acc.is_group ? "#232A63" : "#141A3A" }}>
+                      <tr key={acc.id} style={{ borderTop: "1px solid rgba(16,36,31,0.08)" }}>
+                        <td style={{ padding: "0.65rem 1rem", fontSize: "0.8rem", color: "rgba(16,36,31,0.75)", fontVariantNumeric: "tabular-nums", fontFamily: "monospace" }}>{acc.code}</td>
+                        <td style={{ padding: "0.65rem 1rem", fontSize: "0.85rem", fontWeight: acc.is_group ? 700 : 400, color: acc.is_group ? "#12352D" : "#10241F" }}>
                           {acc.is_group && <span style={{ marginRight: "0.4rem", fontSize: "0.7rem", opacity: 0.7 }}>▾</span>}
                           {acc.name}
                         </td>
                         <td style={{ padding: "0.65rem 1rem" }}>
                           {acc.sub_type && (
-                            <span style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", background: "rgba(20,26,58,0.08)", padding: "2px 8px", borderRadius: 4 }}>
+                            <span style={{ fontSize: "0.72rem", color: "rgba(16,36,31,0.65)", background: "rgba(16,36,31,0.08)", padding: "2px 8px", borderRadius: 4 }}>
                               {SUB_TYPE_LABELS[acc.sub_type] ?? acc.sub_type}
                             </span>
                           )}
                         </td>
                         <td style={{ padding: "0.65rem 1rem" }}>
-                          {acc.is_system && <span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.6)", background: "rgba(35,42,99,0.08)", padding: "2px 6px", borderRadius: 3 }}>System</span>}
+                          {acc.is_system && <span style={{ fontSize: "0.68rem", color: "rgba(16,36,31,0.6)", background: "rgba(18,53,45,0.08)", padding: "2px 6px", borderRadius: 3 }}>System</span>}
                         </td>
                         <td style={{ padding: "0.65rem 1rem", textAlign: "right" }}>
                           {!acc.is_system && (
-                            <button style={{ background: "none", border: "none", color: "rgba(20,26,58,0.55)", cursor: "pointer", fontSize: "0.78rem" }}>Edit</button>
+                            <button style={{ background: "none", border: "none", color: "rgba(16,36,31,0.55)", cursor: "pointer", fontSize: "0.78rem" }}>Edit</button>
                           )}
                         </td>
                       </tr>
@@ -171,7 +166,7 @@ export default function ChartOfAccountsPage() {
                   </>
                 ))}
                 {Object.keys(grouped).length === 0 && (
-                  <tr><td colSpan={5} style={{ padding: "3rem", textAlign: "center", color: "rgba(20,26,58,0.55)", fontSize: "0.85rem" }}>No accounts found.</td></tr>
+                  <tr><td colSpan={5} style={{ padding: "3rem", textAlign: "center", color: "rgba(16,36,31,0.55)", fontSize: "0.85rem" }}>No accounts found.</td></tr>
                 )}
               </tbody>
             </table>
@@ -180,40 +175,40 @@ export default function ChartOfAccountsPage() {
 
         {/* Add Account Modal */}
         {showAdd && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(20,26,58,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
-            <div style={{ background: "#FFFFFF", border: "1px solid rgba(35,42,99,0.3)", borderRadius: 14, padding: "1.75rem", width: 440, maxWidth: "95vw" }}>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(16,36,31,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+            <div style={{ background: "#FFFFFF", border: "1px solid rgba(18,53,45,0.3)", borderRadius: 14, padding: "1.75rem", width: 440, maxWidth: "95vw" }}>
               <h3 style={{ margin: "0 0 1.25rem", fontSize: "1rem", fontWeight: 700 }}>New Account</h3>
               {[
                 { label: "Account Code *", key: "code", placeholder: "e.g. 5112" },
                 { label: "Account Name *", key: "name", placeholder: "e.g. Repair & Maintenance" },
               ].map(f => (
                 <div key={f.key} style={{ marginBottom: "1rem" }}>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>{f.label}</label>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.3rem" }}>{f.label}</label>
                   <input value={newAcc[f.key as "code" | "name"]} onChange={e => setNewAcc(p => ({ ...p, [f.key]: e.target.value }))}
                     placeholder={f.placeholder}
-                    style={{ width: "100%", background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.21)", color: "#141A3A", padding: "9px 12px", borderRadius: 7, fontSize: "0.88rem", boxSizing: "border-box" }} />
+                    style={{ width: "100%", background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.21)", color: "#10241F", padding: "9px 12px", borderRadius: 7, fontSize: "0.88rem", boxSizing: "border-box" }} />
                 </div>
               ))}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", marginBottom: "0.3rem" }}>Type</label>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase", marginBottom: "0.3rem" }}>Type</label>
                   <select value={newAcc.type} onChange={e => setNewAcc(p => ({ ...p, type: e.target.value }))}
-                    style={{ width: "100%", background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.21)", color: "#141A3A", padding: "9px 12px", borderRadius: 7, fontSize: "0.88rem" }}>
+                    style={{ width: "100%", background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.21)", color: "#10241F", padding: "9px 12px", borderRadius: 7, fontSize: "0.88rem" }}>
                     {TYPE_ORDER.map(t => <option key={t} value={t}>{TYPE_LABEL[t].label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase", marginBottom: "0.3rem" }}>Sub Type</label>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "rgba(16,36,31,0.65)", textTransform: "uppercase", marginBottom: "0.3rem" }}>Sub Type</label>
                   <select value={newAcc.sub_type} onChange={e => setNewAcc(p => ({ ...p, sub_type: e.target.value }))}
-                    style={{ width: "100%", background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.21)", color: "#141A3A", padding: "9px 12px", borderRadius: 7, fontSize: "0.88rem" }}>
+                    style={{ width: "100%", background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.21)", color: "#10241F", padding: "9px 12px", borderRadius: 7, fontSize: "0.88rem" }}>
                     {Object.entries(SUB_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </div>
               </div>
-              {error && <div style={{ color: "#C2321F", fontSize: "0.82rem", marginBottom: "1rem" }}>{error}</div>}
+              {error && <div style={{ color: "#B4321F", fontSize: "0.82rem", marginBottom: "1rem" }}>{error}</div>}
               <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-                <button onClick={() => { setShowAdd(false); setError(""); }} style={{ background: "rgba(20,26,58,0.08)", border: "none", color: "#141A3A", padding: "8px 18px", borderRadius: 7, cursor: "pointer", fontSize: "0.88rem" }}>Cancel</button>
-                <button onClick={addAccount} disabled={saving} style={{ background: "#232A63", border: "none", color: "#F5F6FA", padding: "8px 20px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
+                <button onClick={() => { setShowAdd(false); setError(""); }} style={{ background: "rgba(16,36,31,0.08)", border: "none", color: "#10241F", padding: "8px 18px", borderRadius: 7, cursor: "pointer", fontSize: "0.88rem" }}>Cancel</button>
+                <button onClick={addAccount} disabled={saving} style={{ background: "#12352D", border: "none", color: "#F5F6FA", padding: "8px 20px", borderRadius: 7, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
                   {saving ? "Saving…" : "Add Account"}
                 </button>
               </div>

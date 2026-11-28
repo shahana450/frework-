@@ -1,4 +1,5 @@
 "use client";
+import PageHero from "@/components/finance/PageHero";
 import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -190,51 +191,42 @@ export default function PayrollPage() {
   }, [bizId, userId, lines, runMonth, employees, history]);
 
   const S = {
-    page: { minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "Inter,system-ui,sans-serif" },
-    nav: { borderBottom: "1px solid #E1E4EE", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 52 },
-    main: { maxWidth: 960, margin: "0 auto", padding: "2rem 1rem" },
-    card: { background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 12, padding: "1.5rem" },
-    btn: { padding: "0.5rem 1.1rem", borderRadius: 8, border: "1px solid #5A6080", background: "#E1E4EE", color: "#141A3A", cursor: "pointer", fontSize: "0.84rem", fontFamily: "inherit" },
-    btnPrimary: { padding: "0.55rem 1.2rem", borderRadius: 8, border: "none", background: "#232A63", color: "#F5F6FA", fontWeight: 700, cursor: "pointer", fontSize: "0.84rem", fontFamily: "inherit" },
-    label: { fontSize: "0.75rem", color: "#6B7280", marginBottom: "0.3rem", display: "block" },
-    input: { width: "100%", background: "#F5F6FA", border: "1px solid #5A6080", color: "#141A3A", padding: "0.5rem 0.75rem", borderRadius: 8, fontSize: "0.85rem", fontFamily: "inherit", boxSizing: "border-box" as const },
+    page: { minHeight: "100vh", background: "#F4EFE4", color: "#10241F", fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" },
+    nav: { borderBottom: "1px solid #E6DFD0", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 52 },
+    main: { maxWidth: 1180, margin: "0 auto", padding: "28px clamp(14px,3vw,28px) 60px" },
+    card: { background: "#FFFDF8", border: "1px solid #E6DFD0", borderRadius: 22, padding: "26px 28px" },
+    btn: { padding: "0 20px", height: 44, borderRadius: 999, border: "1px solid #D9C79A", background: "#FFFFFF", color: "#10241F", cursor: "pointer", fontSize: "0.84rem", fontFamily: "inherit" },
+    btnPrimary: { padding: "0 24px", height: 46, borderRadius: 999, border: "none", background: "#12352D", color: "#FFFFFF", fontWeight: 700, cursor: "pointer", fontSize: "0.84rem", fontFamily: "inherit" },
+    label: { fontSize: "0.72rem", color: "#8A6A2A", textTransform: "uppercase" as const, letterSpacing: "0.14em", marginBottom: "0.45rem", display: "block" },
+    input: { width: "100%", background: "#FBF7EE", border: "1px solid #E6DFD0", color: "#10241F", padding: "0 14px", height: 44, borderRadius: 12, fontSize: "0.85rem", fontFamily: "inherit", boxSizing: "border-box" as const },
     tab: (active: boolean) => ({
-      padding: "0.45rem 1rem", borderRadius: 6, border: "none", cursor: "pointer", fontSize: "0.84rem", fontFamily: "inherit",
-      background: active ? "#232A63" : "transparent", color: active ? "#F5F6FA" : "#9CA3AF", fontWeight: active ? 700 : 400,
+      height: 40, padding: "0 18px", borderRadius: 999, border: active ? "none" : "1px solid rgba(255,255,255,0.28)", cursor: "pointer", fontSize: "0.92rem", fontFamily: "inherit",
+      background: active ? "#F4EFE4" : "transparent", color: active ? "#10241F" : "#FFFFFF", fontWeight: active ? 700 : 400,
     }),
   };
 
   return (
     <div style={S.page}>
-      <nav style={S.nav}>
-        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "#5A6080" }}>›</span>
-        <span style={{ color: "#9CA3AF", fontSize: "0.85rem" }}>Payroll</span>
-      </nav>
+      <PageHero eyebrow="Payroll · Salaries" title="Pay" accent="your team"
+        sub="Salary calculation with PF, ESI, professional tax and TDS — then post the salary entries."
+        actions={<span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap" }}>
+          <button style={S.tab(tab === "employees")} onClick={() => setTab("employees")}>Employees</button>
+          <button style={S.tab(tab === "run")} onClick={() => setTab("run")}>Run payroll</button>
+          <button style={S.tab(tab === "history")} onClick={() => setTab("history")}>History</button>
+        </span>} />
 
       <div style={S.main}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-          <div>
-            <h1 style={{ fontSize: "1.4rem", fontWeight: 700, margin: 0 }}>Payroll</h1>
-            <p style={{ color: "#6B7280", fontSize: "0.84rem", margin: "0.3rem 0 0" }}>Salary calculation with PF, ESI, PT & TDS</p>
-          </div>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button style={S.tab(tab === "employees")} onClick={() => setTab("employees")}>Employees</button>
-            <button style={S.tab(tab === "run")} onClick={() => setTab("run")}>Run Payroll</button>
-            <button style={S.tab(tab === "history")} onClick={() => setTab("history")}>History</button>
-          </div>
-        </div>
 
         {/* ── EMPLOYEES TAB ── */}
         {tab === "employees" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: "#6B7280", fontSize: "0.84rem" }}>{employees.length} employees</span>
+              <span style={{ color: "#6B7570", fontSize: "0.84rem" }}>{employees.length} employees</span>
               <button style={S.btnPrimary} onClick={openAdd}>+ Add Employee</button>
             </div>
 
             {employees.length === 0 ? (
-              <div style={{ ...S.card, textAlign: "center", padding: "3rem", color: "#6B7280" }}>
+              <div style={{ ...S.card, textAlign: "center", padding: "3rem", color: "#6B7570" }}>
                 <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>👤</div>
                 <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>No employees yet</div>
                 <div style={{ fontSize: "0.84rem" }}>Add employees to start running payroll</div>
@@ -243,40 +235,40 @@ export default function PayrollPage() {
               <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.84rem" }}>
                   <thead>
-                    <tr style={{ background: "#F5F6FA", borderBottom: "1px solid #E1E4EE" }}>
+                    <tr style={{ background: "#F5F6FA", borderBottom: "1px solid #E6DFD0" }}>
                       {["Name", "Designation", "CTC/Month", "PF", "ESI", "PT", "Actions"].map(h => (
-                        <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", color: "#6B7280", fontWeight: 600, fontSize: "0.72rem", textTransform: "uppercase" }}>{h}</th>
+                        <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", color: "#6B7570", fontWeight: 600, fontSize: "0.72rem", textTransform: "uppercase" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {employees.map(e => (
-                      <tr key={e.id} style={{ borderBottom: "1px solid #E1E4EE" }}>
+                      <tr key={e.id} style={{ borderBottom: "1px solid #E6DFD0" }}>
                         <td style={{ padding: "0.75rem 1rem" }}>
                           <div style={{ fontWeight: 600 }}>{e.name}</div>
-                          {e.pan && <div style={{ fontSize: "0.72rem", color: "#6B7280", fontFamily: "monospace" }}>{e.pan}</div>}
+                          {e.pan && <div style={{ fontSize: "0.72rem", color: "#6B7570", fontFamily: "monospace" }}>{e.pan}</div>}
                         </td>
-                        <td style={{ padding: "0.75rem 1rem", color: "#9CA3AF" }}>{e.designation}</td>
-                        <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#232A63", fontVariantNumeric: "tabular-nums" }}>{fmt(e.monthly_ctc)}</td>
+                        <td style={{ padding: "0.75rem 1rem", color: "#8A938F" }}>{e.designation}</td>
+                        <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#12352D", fontVariantNumeric: "tabular-nums" }}>{fmt(e.monthly_ctc)}</td>
                         <td style={{ padding: "0.75rem 1rem" }}>
-                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 4, background: e.pf_eligible ? "rgba(11,122,85,0.1)" : "#FFFFFF", color: e.pf_eligible ? "#0B7A55" : "#6B7280" }}>
+                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 4, background: e.pf_eligible ? "rgba(11,122,85,0.1)" : "#FFFFFF", color: e.pf_eligible ? "#0B7A55" : "#6B7570" }}>
                             {e.pf_eligible ? "Yes" : "No"}
                           </span>
                         </td>
                         <td style={{ padding: "0.75rem 1rem" }}>
-                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 4, background: e.esi_eligible ? "rgba(31,94,255,0.1)" : "#FFFFFF", color: e.esi_eligible ? "#1F5EFF" : "#6B7280" }}>
+                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 4, background: e.esi_eligible ? "rgba(201,162,74,0.1)" : "#FFFFFF", color: e.esi_eligible ? "#9A6B22" : "#6B7570" }}>
                             {e.esi_eligible ? "Yes" : "No"}
                           </span>
                         </td>
                         <td style={{ padding: "0.75rem 1rem" }}>
-                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 4, background: e.pt_applicable ? "rgba(91,75,196,0.1)" : "#FFFFFF", color: e.pt_applicable ? "#5B4BC4" : "#6B7280" }}>
+                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 4, background: e.pt_applicable ? "rgba(91,75,196,0.1)" : "#FFFFFF", color: e.pt_applicable ? "#5B4BC4" : "#6B7570" }}>
                             {e.pt_applicable ? "₹200" : "No"}
                           </span>
                         </td>
                         <td style={{ padding: "0.75rem 1rem" }}>
                           <div style={{ display: "flex", gap: "0.4rem" }}>
                             <button style={{ ...S.btn, padding: "4px 10px", fontSize: "0.75rem" }} onClick={() => openEdit(e)}>Edit</button>
-                            <button style={{ ...S.btn, padding: "4px 10px", fontSize: "0.75rem", color: "#C2321F", borderColor: "rgba(194,50,31,0.2)" }} onClick={() => removeEmp(e.id)}>Remove</button>
+                            <button style={{ ...S.btn, padding: "4px 10px", fontSize: "0.75rem", color: "#B4321F", borderColor: "rgba(194,50,31,0.2)" }} onClick={() => removeEmp(e.id)}>Remove</button>
                           </div>
                         </td>
                       </tr>
@@ -300,14 +292,14 @@ export default function PayrollPage() {
               <div style={{ flex: 1 }} />
               {lines.length > 0 && (
                 <div style={{ display: "flex", gap: "2rem", fontSize: "0.84rem" }}>
-                  <div><span style={{ color: "#6B7280" }}>Total Gross </span><strong style={{ color: "#232A63" }}>{fmt(lines.reduce((s, l) => s + l.gross, 0))}</strong></div>
-                  <div><span style={{ color: "#6B7280" }}>Net Payable </span><strong style={{ color: "#0B7A55" }}>{fmt(lines.reduce((s, l) => s + l.net_pay, 0))}</strong></div>
+                  <div><span style={{ color: "#6B7570" }}>Total Gross </span><strong style={{ color: "#12352D" }}>{fmt(lines.reduce((s, l) => s + l.gross, 0))}</strong></div>
+                  <div><span style={{ color: "#6B7570" }}>Net Payable </span><strong style={{ color: "#0B7A55" }}>{fmt(lines.reduce((s, l) => s + l.net_pay, 0))}</strong></div>
                 </div>
               )}
             </div>
 
             {employees.length === 0 ? (
-              <div style={{ ...S.card, textAlign: "center", padding: "2rem", color: "#6B7280" }}>
+              <div style={{ ...S.card, textAlign: "center", padding: "2rem", color: "#6B7570" }}>
                 Add employees first to run payroll.
               </div>
             ) : (
@@ -315,22 +307,22 @@ export default function PayrollPage() {
                 <div style={{ ...S.card, padding: 0, overflow: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", minWidth: 760 }}>
                     <thead>
-                      <tr style={{ background: "#F5F6FA", borderBottom: "1px solid #E1E4EE" }}>
+                      <tr style={{ background: "#F5F6FA", borderBottom: "1px solid #E6DFD0" }}>
                         {["Employee", "Basic", "HRA", "Other Allow.", "Gross", "PF(E)", "ESI(E)", "PT", "TDS", "Net Pay", ""].map(h => (
-                          <th key={h} style={{ padding: "0.65rem 0.75rem", textAlign: h === "Employee" || h === "" ? "left" : "right", color: "#6B7280", fontWeight: 600, fontSize: "0.68rem", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
+                          <th key={h} style={{ padding: "0.65rem 0.75rem", textAlign: h === "Employee" || h === "" ? "left" : "right", color: "#6B7570", fontWeight: 600, fontSize: "0.68rem", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {lines.map(l => (
-                        <tr key={l.employee.id} style={{ borderBottom: "1px solid #E1E4EE" }}>
+                        <tr key={l.employee.id} style={{ borderBottom: "1px solid #E6DFD0" }}>
                           <td style={{ padding: "0.65rem 0.75rem" }}>
                             <div style={{ fontWeight: 600 }}>{l.employee.name}</div>
-                            <div style={{ fontSize: "0.68rem", color: "#6B7280" }}>{l.employee.designation}</div>
+                            <div style={{ fontSize: "0.68rem", color: "#6B7570" }}>{l.employee.designation}</div>
                           </td>
                           {[l.basic, l.hra, l.other_allowance, l.gross, l.pf_emp, l.esi_emp, l.pt, l.tds].map((v, i) => (
-                            <td key={i} style={{ padding: "0.65rem 0.75rem", textAlign: "right", fontVariantNumeric: "tabular-nums", color: i === 3 ? "#232A63" : "#141A3A" }}>
-                              {v > 0 ? fmt(v) : <span style={{ color: "#5A6080" }}>—</span>}
+                            <td key={i} style={{ padding: "0.65rem 0.75rem", textAlign: "right", fontVariantNumeric: "tabular-nums", color: i === 3 ? "#12352D" : "#10241F" }}>
+                              {v > 0 ? fmt(v) : <span style={{ color: "#6B7570" }}>—</span>}
                             </td>
                           ))}
                           <td style={{ padding: "0.65rem 0.75rem", textAlign: "right", fontWeight: 700, color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>{fmt(l.net_pay)}</td>
@@ -341,7 +333,7 @@ export default function PayrollPage() {
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr style={{ background: "rgba(35,42,99,0.06)", borderTop: "1px solid #5A6080" }}>
+                      <tr style={{ background: "rgba(18,53,45,0.06)", borderTop: "1px solid #6B7570" }}>
                         <td style={{ padding: "0.65rem 0.75rem", fontWeight: 700, fontSize: "0.78rem" }}>TOTAL ({employees.length} employees)</td>
                         {[
                           lines.reduce((s, l) => s + l.basic, 0),
@@ -353,7 +345,7 @@ export default function PayrollPage() {
                           lines.reduce((s, l) => s + l.pt, 0),
                           lines.reduce((s, l) => s + l.tds, 0),
                         ].map((v, i) => (
-                          <td key={i} style={{ padding: "0.65rem 0.75rem", textAlign: "right", fontWeight: 700, color: i === 3 ? "#232A63" : "#141A3A", fontVariantNumeric: "tabular-nums" }}>{fmt(v)}</td>
+                          <td key={i} style={{ padding: "0.65rem 0.75rem", textAlign: "right", fontWeight: 700, color: i === 3 ? "#12352D" : "#10241F", fontVariantNumeric: "tabular-nums" }}>{fmt(v)}</td>
                         ))}
                         <td style={{ padding: "0.65rem 0.75rem", textAlign: "right", fontWeight: 700, color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>{fmt(lines.reduce((s, l) => s + l.net_pay, 0))}</td>
                         <td />
@@ -366,11 +358,11 @@ export default function PayrollPage() {
                   <button style={S.btnPrimary} onClick={postPayroll} disabled={posting}>
                     {posting ? "Posting…" : "Post Payroll Journal →"}
                   </button>
-                  {postMsg && <span style={{ fontSize: "0.85rem", color: postMsg.startsWith("✅") ? "#0B7A55" : "#C2321F" }}>{postMsg}</span>}
+                  {postMsg && <span style={{ fontSize: "0.85rem", color: postMsg.startsWith("✅") ? "#0B7A55" : "#B4321F" }}>{postMsg}</span>}
                 </div>
 
                 {/* Employer contributions note */}
-                <div style={{ ...S.card, background: "rgba(91,75,196,0.04)", borderColor: "rgba(91,75,196,0.15)", fontSize: "0.78rem", color: "#9CA3AF" }}>
+                <div style={{ ...S.card, background: "rgba(91,75,196,0.04)", borderColor: "rgba(91,75,196,0.15)", fontSize: "0.78rem", color: "#8A938F" }}>
                   <strong style={{ color: "#5B4BC4" }}>Employer contributions (also posted):</strong>
                   {" "}PF Employer: {fmt(lines.reduce((s, l) => s + l.pf_er, 0))} |
                   {" "}ESI Employer: {fmt(lines.reduce((s, l) => s + l.esi_er, 0))} |
@@ -385,23 +377,23 @@ export default function PayrollPage() {
         {tab === "history" && (
           <div style={S.card}>
             {history.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "2rem", color: "#6B7280" }}>No payroll runs yet.</div>
+              <div style={{ textAlign: "center", padding: "2rem", color: "#6B7570" }}>No payroll runs yet.</div>
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.84rem" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid #E1E4EE" }}>
+                  <tr style={{ borderBottom: "1px solid #E6DFD0" }}>
                     {["Month", "Net Payable", "Entry No.", "Posted On"].map(h => (
-                      <th key={h} style={{ padding: "0.65rem 0", textAlign: "left", color: "#6B7280", fontWeight: 600, fontSize: "0.72rem", textTransform: "uppercase" }}>{h}</th>
+                      <th key={h} style={{ padding: "0.65rem 0", textAlign: "left", color: "#6B7570", fontWeight: 600, fontSize: "0.72rem", textTransform: "uppercase" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {history.map((h, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid #E1E4EE" }}>
+                    <tr key={i} style={{ borderBottom: "1px solid #E6DFD0" }}>
                       <td style={{ padding: "0.65rem 0", fontWeight: 600 }}>{h.month}</td>
                       <td style={{ padding: "0.65rem 0", color: "#0B7A55", fontVariantNumeric: "tabular-nums" }}>{fmt(h.total_net)}</td>
-                      <td style={{ padding: "0.65rem 0", fontFamily: "monospace", color: "#232A63", fontSize: "0.8rem" }}>{h.entry_no}</td>
-                      <td style={{ padding: "0.65rem 0", color: "#6B7280", fontSize: "0.8rem" }}>{new Date(h.created_at).toLocaleDateString("en-IN")}</td>
+                      <td style={{ padding: "0.65rem 0", fontFamily: "monospace", color: "#12352D", fontSize: "0.8rem" }}>{h.entry_no}</td>
+                      <td style={{ padding: "0.65rem 0", color: "#6B7570", fontSize: "0.8rem" }}>{new Date(h.created_at).toLocaleDateString("en-IN")}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -413,8 +405,8 @@ export default function PayrollPage() {
 
       {/* ── ADD/EDIT EMPLOYEE MODAL ── */}
       {showForm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(20,26,58,0.35)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
-          <div style={{ background: "#FFFFFF", border: "1px solid #E1E4EE", borderRadius: 16, padding: "2rem", width: "100%", maxWidth: 480 }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(16,36,31,0.35)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+          <div style={{ background: "#FFFFFF", border: "1px solid #E6DFD0", borderRadius: 16, padding: "2rem", width: "100%", maxWidth: 480 }}>
             <h2 style={{ margin: "0 0 1.5rem", fontSize: "1.1rem" }}>{editing ? "Edit Employee" : "Add Employee"}</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
@@ -464,7 +456,7 @@ export default function PayrollPage() {
 
       {/* ── SALARY SLIP MODAL ── */}
       {slipEmp && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(20,26,58,0.40)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }} onClick={() => setSlipEmp(null)}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(16,36,31,0.40)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }} onClick={() => setSlipEmp(null)}>
           <div style={{ background: "#fff", color: "#111", borderRadius: 12, padding: "2rem", width: "100%", maxWidth: 440, fontFamily: "Georgia,serif" }} onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: "center", borderBottom: "2px solid #111", paddingBottom: "1rem", marginBottom: "1rem" }}>
               <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>SALARY SLIP</div>

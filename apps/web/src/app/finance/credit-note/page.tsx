@@ -1,4 +1,5 @@
 "use client";
+import PageHero, { HT } from "@/components/finance/PageHero";
 import { cur, activeMoney } from "@/lib/money";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -107,27 +108,22 @@ export default function CreditNotePage() {
     setRecent(rec ?? []);
   }
 
-  const inputStyle = { background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.17)", color: "#141A3A", padding: "7px 10px", borderRadius: 6, fontSize: "0.82rem", outline: "none", width: "100%", boxSizing: "border-box" as const };
-  const labelStyle = { display: "block", fontSize: "0.68rem", color: "rgba(20,26,58,0.65)", textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: "0.3rem" };
+  const inputStyle = { background: "#FBF7EE", border: "1px solid #E6DFD0", color: "#10241F", padding: "0 14px", height: 46, borderRadius: 12, fontSize: "1rem", fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" as const };
+  const labelStyle = { display: "block", fontSize: "0.72rem", color: "#8A6A2A", textTransform: "uppercase" as const, letterSpacing: "0.16em", marginBottom: "0.45rem" };
   const fmt = (n: number) => n.toLocaleString(activeMoney().locale, { minimumFractionDigits: 2 });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F5F6FA", color: "#141A3A", fontFamily: "'Manrope',system-ui,sans-serif" }}>
-      <nav style={{ borderBottom: "1px solid rgba(35,42,99,0.2)", padding: "0 2rem", display: "flex", alignItems: "center", gap: "1rem", height: 56 }}>
-        <Link href="/finance" style={{ color: "#232A63", fontWeight: 700, textDecoration: "none" }}>FreWork Finance</Link>
-        <span style={{ color: "rgba(20,26,58,0.55)" }}>›</span>
-        <span style={{ color: "rgba(20,26,58,0.85)", fontSize: "0.85rem" }}>Credit Note</span>
-      </nav>
+    <div style={{ minHeight: "100vh", background: HT.cream, color: HT.ink, fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif" }}>
+      <style>{`.fw-2col{grid-template-columns:minmax(0,1fr) 320px}@media(max-width:860px){.fw-2col{grid-template-columns:minmax(0,1fr)!important}}`}</style>
+      <PageHero eyebrow="Sales · Credit note" title="Credit" accent="note" sub="Issue a credit note to a customer — reduces their outstanding (AR) balance." />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem", maxWidth: 1000, margin: "0 auto", padding: "2rem" }}>
+      <div style={{ display: "grid", gap: "1.5rem", maxWidth: 1180, margin: "0 auto", padding: "28px clamp(14px,3vw,28px) 60px" }} className="fw-2col">
         <div>
-          <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 800 }}>Credit Note</h1>
-          <p style={{ margin: "0 0 1.5rem", color: "rgba(20,26,58,0.65)", fontSize: "0.82rem" }}>Issue a credit note to a customer — reduces their outstanding (AR) balance</p>
 
-          {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#C2321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
+          {error && <div style={{ background: "rgba(194,50,31,0.1)", border: "1px solid rgba(194,50,31,0.3)", color: "#B4321F", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>{error}</div>}
           {success && <div style={{ background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.25)", color: "#0B7A55", padding: "10px 14px", borderRadius: 8, marginBottom: "1rem", fontSize: "0.85rem" }}>✓ {success}</div>}
 
-          <div style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.10)", borderRadius: 12, padding: "1.25rem" }}>
+          <div style={{ background: "#FFFDF8", border: "1px solid #E6DFD0", borderRadius: 22, padding: "26px 28px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div><label style={labelStyle}>Date</label><input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} /></div>
               <div>
@@ -171,20 +167,20 @@ export default function CreditNotePage() {
               </div>
               <div>
                 <label style={labelStyle}>GST Type</label>
-                <input value={isInterState ? "IGST (Inter-state)" : "CGST + SGST (Intra-state)"} readOnly style={{ ...inputStyle, color: "rgba(20,26,58,0.75)", background: "rgba(20,26,58,0.08)" }} />
+                <input value={isInterState ? "IGST (Inter-state)" : "CGST + SGST (Intra-state)"} readOnly style={{ ...inputStyle, color: "rgba(16,36,31,0.75)", background: "rgba(16,36,31,0.08)" }} />
               </div>
             </div>
 
             {/* Amount breakdown */}
             {amt > 0 && (
-              <div style={{ background: "rgba(20,26,58,0.08)", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8rem" }}>
+              <div style={{ background: "rgba(16,36,31,0.08)", border: "1px solid rgba(16,36,31,0.08)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>Base Amount</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(amt)}</span></div>
                 {!isInterState && cgst > 0 && <>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>CGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(cgst)}</span></div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>SGST @ {parseFloat(gstRate) / 2}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(sgst)}</span></div>
                 </>}
                 {isInterState && igst > 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span>IGST @ {gstRate}%</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(igst)}</span></div>}
-                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, borderTop: "1px solid rgba(20,26,58,0.11)", paddingTop: 6, marginTop: 6, color: "#C2321F" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, borderTop: "1px solid rgba(16,36,31,0.11)", paddingTop: 6, marginTop: 6, color: "#B4321F" }}>
                   <span>Total Credit Note Value</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{cur()}{fmt(totalAmt)}</span>
                 </div>
               </div>
@@ -192,10 +188,10 @@ export default function CreditNotePage() {
 
             <div style={{ marginBottom: "1rem" }}>
               <label style={labelStyle}>Narration</label>
-              <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder="e.g. Sales return against INV-0001 — damaged goods" rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+              <textarea value={narration} onChange={e => setNarration(e.target.value)} placeholder="e.g. Sales return against INV-0001 — damaged goods" rows={2} style={{ ...inputStyle, resize: "vertical", height: "auto", padding: "12px 14px" }} />
             </div>
 
-            <button onClick={handlePost} disabled={saving || !amt} style={{ background: "#C2321F", border: "none", color: "#F5F6FA", padding: "10px 24px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.9rem", opacity: (!amt || saving) ? 0.5 : 1 }}>
+            <button onClick={handlePost} disabled={saving || !amt} style={{ background: "#12352D", border: "none", color: "#FFFFFF", padding: "0 30px", height: 52, borderRadius: 999, cursor: "pointer", fontWeight: 700, fontSize: "1rem", fontFamily: "inherit", opacity: (!amt || saving) ? 0.5 : 1 }}>
               {saving ? "Posting…" : "Post Credit Note"}
             </button>
           </div>
@@ -203,19 +199,19 @@ export default function CreditNotePage() {
 
         {/* Recent */}
         <div>
-          <div style={{ fontSize: "0.72rem", color: "rgba(20,26,58,0.60)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem", marginTop: "3.8rem" }}>Recent Credit Notes</div>
+          <div style={{ fontSize: "0.72rem", textTransform: "uppercase", marginBottom: "0.75rem", marginTop: 0, color: "#8A6A2A", letterSpacing: "0.18em" }}>Recent Credit Notes</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {recent.map(r => (
-              <div key={r.id} style={{ background: "#FFFFFF", border: "1px solid rgba(20,26,58,0.08)", borderRadius: 8, padding: "0.7rem 0.85rem" }}>
+              <div key={r.id} style={{ background: "#FFFDF8", border: "1px solid #E6DFD0", borderRadius: 16, padding: "14px 16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.2rem" }}>
                   <span style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "rgba(194,50,31,0.6)" }}>{r.entry_no}</span>
-                  <span style={{ fontSize: "0.68rem", color: "rgba(20,26,58,0.55)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                  <span style={{ fontSize: "0.68rem", color: "rgba(16,36,31,0.55)" }}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                 </div>
                 <div style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.narration}</div>
-                <div style={{ textAlign: "right", marginTop: "0.25rem", fontSize: "0.82rem", fontWeight: 700, color: "#C2321F" }}>{cur()}{fmt(r.total_debit)}</div>
+                <div style={{ textAlign: "right", marginTop: "0.25rem", fontSize: "0.82rem", fontWeight: 700, color: "#B4321F" }}>{cur()}{fmt(r.total_debit)}</div>
               </div>
             ))}
-            {recent.length === 0 && <div style={{ color: "rgba(20,26,58,0.35)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No credit notes yet</div>}
+            {recent.length === 0 && <div style={{ color: "rgba(16,36,31,0.35)", fontSize: "0.8rem", textAlign: "center", padding: "1rem" }}>No credit notes yet</div>}
           </div>
           <Link href="/finance/debit-note" style={{ display: "block", marginTop: "1rem", background: "rgba(11,122,85,0.08)", border: "1px solid rgba(11,122,85,0.2)", color: "#0B7A55", padding: "8px 14px", borderRadius: 8, textDecoration: "none", fontSize: "0.8rem", textAlign: "center", fontWeight: 600 }}>
             → Debit Note (from vendor)
