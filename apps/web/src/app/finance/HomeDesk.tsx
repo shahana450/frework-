@@ -109,6 +109,28 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         .hd-hero::after { content: ""; position: absolute; right: -40px; top: -20px; width: 62%; height: 120%; pointer-events: none; background-image: radial-gradient(rgba(233,194,122,0.55) 1.2px, transparent 1.6px); background-size: 14px 14px; -webkit-mask-image: radial-gradient(ellipse 60% 45% at 65% 55%, #000 10%, transparent 70%); mask-image: radial-gradient(ellipse 60% 45% at 65% 55%, #000 10%, transparent 70%); transform: skewY(-8deg); opacity: .85; }
         .hd-hero > * { position: relative; z-index: 1; }
         @media (max-width: 640px) { .hd-hero::after { display: none; } }
+        .hd-dshort, .hd-s { display: none; }
+        @media (max-width: 640px) {
+          .hd-hero { padding: 22px 18px 18px !important; border-radius: 24px !important; }
+          .hd-dlong, .hd-tag, .hd-l { display: none; } .hd-dshort, .hd-s { display: inline; }
+          .hd-date { font-size: 11px !important; letter-spacing: .2em !important; }
+          .hd-h1 { font-size: 30px !important; line-height: 1.1 !important; }
+          .hd-bizline { flex-direction: column; align-items: flex-start !important; gap: 6px !important; }
+          .hd-biz { font-size: 13.5px; letter-spacing: .02em; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .hd-tallyco { display: none; }
+          .hd-controls { margin-left: 0 !important; width: 100%; display: grid !important; grid-template-columns: auto minmax(0,1fr); gap: 8px !important; margin-top: 6px; }
+          .hd-controls > * { min-width: 0; }
+          .hd-fylab { display: none; }
+          .hd-controls > label { padding: 0 5px !important; }
+          .hd-controls > select { width: 100%; height: 40px !important; border-radius: 999px !important; padding: 0 14px !important; }
+          .hd-controls > [role=group] { grid-column: 1 / -1; display: flex !important; width: 100%; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg,#000 85%,transparent); mask-image: linear-gradient(90deg,#000 85%,transparent); }
+          .hd-controls > [role=group]::-webkit-scrollbar { display: none; }
+          .hd-controls > [role=group] > * { flex-shrink: 0; }
+          .hd-entry { margin-top: 16px !important; padding: 12px 14px 14px !important; border-radius: 20px !important; }
+          .hd-acts { display: grid !important; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px !important; }
+          .hd-acts > .chip { justify-content: center; padding: 0 8px !important; height: 40px !important; font-size: 13.5px !important; }
+          .hd-go { grid-column: 1 / -1; margin-left: 0 !important; width: 100%; justify-content: space-between; height: 52px !important; font-size: 16px !important; }
+        }
         .hd a.lift, .hd button.lift { transition: transform .15s, box-shadow .15s, border-color .15s; }
         .hd a.lift:hover, .hd button.lift:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -16px rgba(18,53,45,0.45); }
         .hd .chip:hover { border-color: ${C.green}; color: ${C.green}; }
@@ -121,16 +143,19 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
       <section aria-label="Record or ask" className="hd-hero" style={{ position: "relative", overflow: "hidden", background: C.green, borderRadius: 26, padding: "clamp(20px,3vw,34px)", color: "#F4EFE4", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}>
         <span aria-hidden="true" style={{ position: "absolute", right: -10, top: -40, fontFamily: SERIF, fontSize: 300, lineHeight: 1, color: "rgba(255,255,255,0.05)", pointerEvents: "none" }}>{cur().trim() || "₹"}</span>
         <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 10 }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11.5, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D9B56F" }}>
-            <span aria-hidden="true" style={{ width: 28, height: 1.5, background: "#D9B56F" }} />{today.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}<span style={{ letterSpacing: "0.04em", textTransform: "none", fontStyle: "italic", fontWeight: 600, color: "#C9D3CE", marginLeft: 6 }}>· Chat in. Books out.</span>
+          <span className="hd-date" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11.5, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D9B56F", whiteSpace: "nowrap" }}>
+            <span aria-hidden="true" style={{ width: 28, height: 1.5, background: "#D9B56F" }} />
+            <span className="hd-dlong">{today.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+            <span className="hd-dshort">{today.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
+            <span className="hd-tag" style={{ letterSpacing: "0.04em", textTransform: "none", fontStyle: "italic", fontWeight: 600, color: "#C9D3CE", marginLeft: 6 }}>· Chat in. Books out.</span>
           </span>
           <h1 className="hd-h1" style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(30px, 4vw, 54px)", lineHeight: 1.08, textWrap: "balance", color: "#FFFDF8" }}>
             {greeting}.<br />What happened in the business <span style={{ fontStyle: "italic", color: "#D9B56F" }}>today</span>?
           </h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 14, color: "#C9D3CE" }}>
-            <Link href="/finance/select-business" title="Switch business" style={{ color: "#F4EFE4", textDecoration: "none", fontWeight: 600 }}>{bizName}</Link>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700 }}>
-              <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: tally.status === "connected" ? "#5BD39B" : "#A9B1AD" }} />{tallyLabel(tally)}
+          <div className="hd-bizline" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 14, color: "#C9D3CE" }}>
+            <Link href="/finance/select-business" title="Switch business" className="hd-biz" style={{ color: "#F4EFE4", textDecoration: "none", fontWeight: 600 }}>{bizName}<span className="hd-swap" aria-hidden="true" style={{ color: "#D9B56F", marginLeft: 6 }}>⇄</span></Link>
+            <span className="hd-tally" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700 }}>
+              <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: tally.status === "connected" ? "#5BD39B" : "#A9B1AD" }} />{tallyLabel(tally).split(" · ")[0]}<span className="hd-tallyco">{tallyLabel(tally).split(" · ").slice(1).length ? ` · ${tallyLabel(tally).split(" · ").slice(1).join(" · ")}` : ""}</span>
             </span>
             <div className="hd-controls" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginLeft: "auto" }}>{controls}</div>
           </div>
@@ -151,24 +176,24 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); go(text); } }}
             placeholder={mode === "record" ? (india ? "e.g. Paid office rent ₹25,000 from the bank for October" : `e.g. Paid office rent ${cur()}2,500 from the bank for October`) : "e.g. Who owes me for more than 60 days?"}
             style={{ width: "100%", minHeight: 70, resize: "vertical", boxSizing: "border-box", border: "none", outline: "none", background: "transparent", padding: "12px 2px", fontSize: 20, lineHeight: 1.5, color: C.ink, fontFamily: SERIF }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", borderTop: `1px solid ${C.line}`, paddingTop: 12 }}>
+          <div className="hd-acts" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", borderTop: `1px solid ${C.line}`, paddingTop: 12 }}>
             {!fromWa && <label title="Attach a bill, invoice, bank or loan statement, GSTR-2B or an Excel template — FreBook AI reads it" className="chip" style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${C.ink}`, background: C.ink, color: "#FFFFFF", display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E9C27A" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 11.5l-8.6 8.6a5 5 0 01-7.1-7.1l8.6-8.6a3.3 3.3 0 014.7 4.7l-8.6 8.6a1.7 1.7 0 01-2.4-2.4l7.9-7.9" /></svg>
-              Attach file
+              <span className="hd-l">Attach file</span><span className="hd-s">Attach</span>
               <input type="file" multiple accept="image/*,.pdf,.xlsx,.xls,.csv,.json,.doc,.docx,.txt" style={{ display: "none" }} onChange={e => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; if (!fs.length) return; setPendingFiles(fs); router.push("/finance/chat-book?attach=1"); }} />
             </label>}
             {!fromWa && <Link href="/finance/chat-book?templates=1" title="Many entries at once: download the Excel template, fill it, attach it" className="chip" style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${C.goldLine}`, background: "#FFF6E3", display: "inline-flex", alignItems: "center", gap: 7, color: C.ink, textDecoration: "none", fontSize: 13, fontWeight: 700 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 4h16v16H4zM4 10h16M10 4v16" /></svg>
-              Bulk entries · Excel template
+              <span className="hd-l">Bulk entries · Excel template</span><span className="hd-s">Excel</span>
             </Link>}
             {!fromWa && <Link href="/finance/chat-book?snap=1" aria-label="Snap a bill" title="Take a photo of a bill" className="chip" style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px solid ${C.line}`, background: "#FFFFFF", display: "inline-flex", alignItems: "center", gap: 7, color: C.ink, textDecoration: "none", fontSize: 13, fontWeight: 600 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-              Snap a bill
+              <span className="hd-l">Snap a bill</span><span className="hd-s">Snap</span>
             </Link>}
             {(mode === "record" ? (india ? ["Received ₹1.2L from a customer", "Paid salaries for last month", "Bought stationery ₹1,800 in cash"] : [`Received ${cur()}12,000 from a customer`, "Paid salaries for last month", `Bought stationery ${cur()}180 in cash`]) : ["Who owes me for more than 60 days?", "Profit this month vs last month", "GST collected last month"]).map(c => (
               <button key={c} className="chip hd-sugg" onClick={() => mode === "ask" ? go(c) : setText(c)} style={{ height: 34, padding: "0 14px", borderRadius: 999, border: `1px dashed ${C.goldLine}`, background: "transparent", color: C.muted, fontSize: 12.5, cursor: "pointer" }}>{c}</button>
             ))}
-            <button onClick={() => go(text)} disabled={!text.trim()} style={{ marginLeft: "auto", height: 48, flexShrink: 0, padding: "0 8px 0 22px", borderRadius: 999, border: "none", background: C.green, color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: text.trim() ? "pointer" : "default", opacity: text.trim() ? 1 : 0.75, display: "inline-flex", alignItems: "center", gap: 12 }}>
+            <button className="hd-go" onClick={() => go(text)} disabled={!text.trim()} style={{ marginLeft: "auto", height: 48, flexShrink: 0, padding: "0 8px 0 22px", borderRadius: 999, border: "none", background: C.green, color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: text.trim() ? "pointer" : "default", opacity: text.trim() ? 1 : 0.75, display: "inline-flex", alignItems: "center", gap: 12 }}>
               {mode === "record" ? "Draft entry" : "Ask"}
               <span aria-hidden="true" style={{ width: 32, height: 32, borderRadius: 999, background: "#D9B56F", color: C.green, display: "grid", placeItems: "center", fontSize: 16 }}>→</span>
             </button>

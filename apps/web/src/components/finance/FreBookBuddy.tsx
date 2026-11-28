@@ -60,7 +60,7 @@ export default function FreBookBuddy() {
 
   if (hidden || path.startsWith("/finance/chat-book")) return null;
   return (
-    <div className="fbb" style={pos ? { right: pos.x, bottom: pos.y } : undefined} onMouseEnter={() => !drag.current && setSay("Hi! I'm FreBook AI, your AI accountant. Tap to chat, or drag me anywhere.")} onMouseLeave={() => setSay(null)}>
+    <div className="fbb" data-home={path === "/finance" ? "1" : undefined} style={pos ? { right: pos.x, bottom: pos.y } : undefined} onMouseEnter={() => !drag.current && setSay("Hi! I'm FreBook AI, your AI accountant. Tap to chat, or drag me anywhere.")} onMouseLeave={() => setSay(null)}>
       <style>{`
         .fbb{position:fixed;right:22px;bottom:22px;z-index:150;display:flex;align-items:flex-end;gap:10px;pointer-events:none}
         .fbb>*{pointer-events:auto}
@@ -77,7 +77,8 @@ export default function FreBookBuddy() {
         @keyframes fbbTilt{0%,80%,100%{transform:rotate(0)}85%{transform:rotate(-7deg)}90%{transform:rotate(6deg)}95%{transform:rotate(-3deg)}}
         @keyframes fbbGlow{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
         @keyframes fbbPop{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
-        @media (max-width:760px){.fbb:not([style]){bottom:96px;right:14px}.fbb-btn{width:56px;height:56px}.fbb-say{max-width:190px;margin-bottom:28px}}
+        @media (max-width:760px){.fbb:not([style]){bottom:96px;right:14px}.fbb-btn{width:56px;height:56px}.fbb-say{max-width:190px;margin-bottom:28px}
+          .fbb[data-home]{display:none}.fbb-x{opacity:1}}
         @media (prefers-reduced-motion:reduce){.fbb-btn,.fbb-btn img,.fbb-btn::before,.fbb-say{animation:none}}
         @media print{.fbb{display:none}}
       `}</style>

@@ -761,9 +761,9 @@ export default function FreBookPage() {
       <nav className="fb-top" style={{ borderBottom: "1px solid rgba(217,181,111,0.18)", padding: "0 1rem", display: "flex", alignItems: "center", gap: "0.6rem", height: 60, background: "#0F2B25", flexShrink: 0, zIndex: 20, overflowX: "auto", paddingTop: "env(safe-area-inset-top)" }}>
         <button onClick={() => setSidebarOpen(o => !o)} aria-label="Previous chats" style={{ background: "none", border: "none", color: "#C9D3CE", cursor: "pointer", fontSize: "1.1rem", padding: "4px 8px" }}>☰</button>
         <Link href="/finance" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}><img src="/frebook-face.jpg" alt="" aria-hidden="true" width={30} height={30} style={{ width: 30, height: 30, borderRadius: "50%", objectFit: "cover", boxShadow: "0 0 0 2px #5DCAA5" }} /><span style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontWeight: 700, fontSize: "1.45rem", color: "#FFFFFF" }}>FreBook</span><span className="fb-tag" style={{ fontFamily: "'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif", fontStyle: "italic", fontSize: "0.85rem", color: "#D9B56F" }}>Chat in. Books out.</span></Link>
-                <Link href="/finance/select-business" title="Switch business" style={{ marginLeft: 10, fontSize: "0.78rem", fontWeight: 700, color: "#E7ECE9", border: "1px solid rgba(217,181,111,0.3)", background: "rgba(255,255,255,0.04)", padding: "6px 12px", borderRadius: 999, whiteSpace: "nowrap", textDecoration: "none" }}>{bizName} <span aria-hidden="true" style={{ color: "#D9B56F" }}>⇄</span></Link>
+                <Link href="/finance/select-business" title="Switch business" className="fb-bizpill" style={{ marginLeft: 10, fontSize: "0.78rem", fontWeight: 700, color: "#E7ECE9", border: "1px solid rgba(217,181,111,0.3)", background: "rgba(255,255,255,0.04)", padding: "6px 12px", borderRadius: 999, whiteSpace: "nowrap", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}><span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{bizName}</span> <span aria-hidden="true" style={{ color: "#D9B56F", flexShrink: 0 }}>⇄</span></Link>
         {/* Tally status + auto-push */}
-        <div style={{ marginLeft: 6, display: "flex", alignItems: "center", gap: 0, border: "1px solid rgba(217,181,111,0.3)", background: "rgba(255,255,255,0.04)", borderRadius: 999, height: 32, flexShrink: 0, overflow: "hidden" }}>
+        <div className="fb-tallybox" style={{ marginLeft: 6, display: "flex", alignItems: "center", gap: 0, border: "1px solid rgba(217,181,111,0.3)", background: "rgba(255,255,255,0.04)", borderRadius: 999, height: 32, flexShrink: 0, overflow: "hidden" }}>
           <Link href="/finance/tally?redirect=/finance/chat-book" title={tally.status === "connected" ? (tally.company ? `Connected to Tally company "${tally.company}"` : tally.companies.length ? "Tally is open — choose which company to push into" : tally.message || "Tally is running but no company is open — open your company in Tally") : "Connect Tally"}
             style={{ display: "flex", alignItems: "center", gap: 7, padding: "0 12px", height: "100%", textDecoration: "none", fontSize: "0.78rem", fontWeight: 700, color: "#E7ECE9", whiteSpace: "nowrap" }}>
             <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: tally.status === "connected" ? "#3DDC97" : tally.status === "connecting" ? "#D9B56F" : "#8A968F", boxShadow: tally.status === "connected" ? "0 0 0 3px rgba(61,220,151,0.18)" : "none" }} />
@@ -837,8 +837,11 @@ export default function FreBookPage() {
             <section className="fb-night" style={{ background: "#0B1F1A", color: "#F6F1E7", padding: "clamp(28px, 5vw, 60px) clamp(16px, 4vw, 48px) clamp(32px, 5vw, 64px)" }}>
               <div style={{ maxWidth: 1180, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 14, textAlign: "center" }}>
                 <img src="/frebook-avatar.jpg" alt="FreBook, your virtual accountant" width={112} height={112} className="fb-hero-av" style={{ width: 112, height: 112, borderRadius: "50%", objectFit: "cover", objectPosition: "50% 22%", boxShadow: "0 0 0 3px #0B1F1A, 0 0 0 5px #5DCAA5, 0 0 40px 6px rgba(93,202,165,0.35)" }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: "#D9B56F" }}>
-                  <span aria-hidden="true" style={{ width: 40, height: 1, background: "#D9B56F" }} />{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).replace(",", " ·")}<span aria-hidden="true" style={{ width: 40, height: 1, background: "#D9B56F" }} />
+                <div className="fb-date" style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: "#D9B56F", whiteSpace: "nowrap" }}>
+                  <span aria-hidden="true" className="fb-dline" style={{ width: 40, height: 1, background: "#D9B56F" }} />
+                  <span className="fb-dlong">{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).replace(",", " ·")}</span>
+                  <span className="fb-dshort">{new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }).replace(",", " ·")}</span>
+                  <span aria-hidden="true" className="fb-dline" style={{ width: 40, height: 1, background: "#D9B56F" }} />
                 </div>
                 <h1 className="fb-h1" style={{ margin: 0, fontFamily: SERIF_F, fontWeight: 400, lineHeight: 1.05, color: "#F6F1E7", fontSize: "clamp(2.4rem, 5.6vw, 4.4rem)", textWrap: "balance" }}>
                   {(() => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; })()}.<br />
@@ -1462,6 +1465,15 @@ export default function FreBookPage() {
         @media (prefers-reduced-motion: reduce) { .fb-tile, .fb-tile:hover { transition: none; transform: none; } }
         @media (max-width: 900px) { .fb-glance { grid-template-columns: 1fr 1fr !important; } .fb-glance > :first-child { grid-column: 1 / -1; } } .fb-nchip:hover { border-color: #D9B56F !important; } .fb-many summary::-webkit-details-marker { display: none; }
         @media (max-width: 760px) { .fb-bizname { display: none !important; } }
+        .fb-dshort { display: none; }
+        @media (max-width: 640px) {
+          .fb-dlong { display: none; } .fb-dshort { display: inline; }
+          .fb-date { letter-spacing: 0.22em !important; font-size: 11.5px !important; gap: 10px !important; } .fb-dline { width: 22px !important; }
+          .fb-tallybox { display: none !important; }
+          .fb-bizpill { max-width: 46vw; margin-left: auto !important; font-size: 0.74rem !important; padding: 6px 10px !important; }
+          .fb-top { overflow: hidden !important; padding: 0 0.6rem !important; }
+          .fb-night { padding-top: 22px !important; }
+        }
         @media (max-width: 640px) { .fb-glance { grid-template-columns: 1fr !important; } .fb-desk-groups { grid-template-columns: 1fr !important; } .fb-desk { justify-content: flex-start !important; } }
         ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:#FFFFFF;border-radius:2px}
       `}</style>

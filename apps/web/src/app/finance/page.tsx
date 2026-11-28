@@ -614,7 +614,7 @@ export default function FinanceDashboard() {
               <HomeDesk dash={dash} bizName={activeBiz.name} greeting={greeting} dashErr={dashErr} onRetry={() => setDashTick(t => t + 1)}
                 controls={<>
                   <label style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 6px 0 14px", borderRadius: 999, background: "linear-gradient(135deg,#F3D9A2,#E9C27A)", color: "#10241F", fontSize: 12, fontWeight: 800, letterSpacing: "0.08em" }}>
-                  FINANCIAL YEAR
+                  <span className="hd-fylab">FINANCIAL YEAR</span>
                   <select value={fyId ?? ""} onChange={e => switchFy(e.target.value)} aria-label="Financial year"
                     style={{ height: 30, background: "#FFFDF8", border: "none", borderRadius: 999, padding: "0 10px", fontSize: 14, fontWeight: 800, color: "#10241F", cursor: "pointer", fontFamily: "inherit", letterSpacing: 0 }}>
                     {financialYears.map(f => <option key={f.id} value={f.id}>FY {f.label.replace(/^FY\s*/i, "")}</option>)}
