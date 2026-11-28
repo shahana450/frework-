@@ -331,8 +331,24 @@ export default function FinanceDashboard() {
     loadStats(activeBiz.id, user.id, data.id);
   }
 
+  // Add the year before the earliest or after the latest one (e.g. to enter last year's books, or open next year early)
+  const fyYears = financialYears.map(f => parseInt(String(f.label).replace(/\D/g, "").slice(0, 4), 10)).filter(Number.isFinite);
+  const prevFyStart = fyYears.length ? Math.min(...fyYears) - 1 : null, nextFyStart = fyYears.length ? Math.max(...fyYears) + 1 : null;
+  async function addFy(y: number) {
+    if (!activeBiz || !user) return;
+    const label = `${y}-${String(y + 1).slice(2)}`;
+    if (!window.confirm(`Add financial year ${label} (1 Apr ${y} – 31 Mar ${y + 1})?`)) return;
+    const { data, error } = await supabase.from("fw_fin_financial_years").insert({ business_id: activeBiz.id, label, start_date: `${y}-04-01`, end_date: `${y + 1}-03-31`, is_current: false, is_locked: false }).select("id").single();
+    if (error || !data) { window.alert(/duplicate|unique|overlap/i.test(error?.message ?? "") ? `FY ${label} already exists or overlaps another year.` : `Couldn't add the year: ${error?.message ?? "unknown error"}`); return; }
+    setFyId(data.id); writeSelectedFy(activeBiz.id, data.id);
+    loadStats(activeBiz.id, user.id, data.id);
+  }
+
   function switchFy(selectedId: string) {
     if (selectedId === "__create") { createCurrentFy(); return; }
+    if (selectedId === "__prev" && prevFyStart) { void addFy(prevFyStart); return; }
+    if (selectedId === "__next" && nextFyStart) { void addFy(nextFyStart); return; }
+    if (selectedId === "__manage") { window.location.assign("/finance/fy"); return; }
     setFyId(selectedId);
     if (activeBiz) writeSelectedFy(activeBiz.id, selectedId);
     if (activeBiz && user) loadStats(activeBiz.id, user.id, selectedId);
@@ -620,6 +636,9 @@ export default function FinanceDashboard() {
                     {financialYears.map(f => <option key={f.id} value={f.id}>FY {f.label.replace(/^FY\s*/i, "")}</option>)}
                     {financialYears.length === 0 && <option value="">FY {fyLabel}</option>}
                     {missingFy && <option value="__create">＋ FY {missingFy.label} — create</option>}
+                    {nextFyStart && !(missingFy && missingFy.label.startsWith(String(nextFyStart))) && <option value="__next">＋ Add FY {nextFyStart}-{String(nextFyStart + 1).slice(2)}</option>}
+                    {prevFyStart && <option value="__prev">＋ Add FY {prevFyStart}-{String(prevFyStart + 1).slice(2)} (earlier year)</option>}
+                    <option value="__manage">Manage financial years…</option>
                   </select>
                   </label>
                   <select value={periodKey} onChange={e => setPeriodKey(e.target.value)} title="Period"

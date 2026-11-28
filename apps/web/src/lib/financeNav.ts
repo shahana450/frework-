@@ -24,6 +24,9 @@ export const FINANCE_NAV: NavGroup[] = [
     { icon: "🟢", label: "Debit Note", href: "/finance/debit-note", accountant: true },
     { icon: "👥", label: "Customers & Suppliers", href: "/finance/contacts" },
   ] },
+  { label: "Stock", items: [
+    { icon: "📦", label: "Inventory", href: "/finance/inventory" },
+  ] },
   { label: "Money", items: [
     { icon: "💸", label: "Expenses", href: "/finance/expenses" },
     { icon: "💳", label: "Payments", href: "/finance/payment" },

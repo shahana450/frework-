@@ -10,6 +10,7 @@ import { useTallyAutoSync, AUTOSYNC_EVENT } from "@/lib/tallyAutoSync";
 import InstallApp from "@/components/finance/InstallApp";
 import FreBookBuddy from "@/components/finance/FreBookBuddy";
 import BizSwitcher from "@/components/finance/BizSwitcher";
+import SideNav from "@/components/finance/SideNav";
 import NavProgress from "@/components/finance/NavProgress";
 import { useBrand, BRAND_CSS } from "@/lib/brand";
 import { usePathname, useRouter } from "next/navigation";
@@ -400,7 +401,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   if (embedded || pathname.endsWith("/receipt")) return <ActiveBusinessProvider>{children}{!pathname.endsWith("/receipt") && <FreBookBuddy />}</ActiveBusinessProvider>;   // FreBookBuddy hides itself inside a window   // a window, or a thermal receipt: the page alone
   if (!subChecked) return <div style={{ minHeight: "100vh", background: "#F5F6FA" }} />;
 
-  const sidebarW = collapsed ? 96 : 240;
+  const sidebarW = collapsed ? 96 : 300;
 
   return (
     <div data-brand={brand.key} data-page={pathname === "/finance" ? "home" : undefined} style={{ display: "flex", minHeight: "100vh", background: "#F6F1E7", color: "#10241F", fontFamily: "'Manrope',system-ui,sans-serif" }}>
@@ -417,11 +418,20 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         onMouseEnter={() => { if (collapsed && !pathname?.startsWith("/finance/chat-book") && window.matchMedia("(hover: hover) and (min-width: 760px)").matches) { clearTimeout(peekTimer.current); peekTimer.current = setTimeout(() => setPeek(true), 600); } }}
         onMouseLeave={() => { clearTimeout(peekTimer.current); setPeek(false); }}
         style={{
-        width: slim ? 96 : 240, boxShadow: peek ? "18px 0 40px -20px rgba(0,0,0,0.55)" : "none", flexShrink: 0, background: "#0F2B25",
+        width: slim ? 96 : 300, boxShadow: peek ? "18px 0 40px -20px rgba(0,0,0,0.55)" : "none", flexShrink: 0,
+        background: slim ? "#0F2B25" : "radial-gradient(420px 360px at 0% 55%, rgba(201,162,74,0.20), transparent 70%), radial-gradient(380px 300px at 100% 0%, rgba(93,202,165,0.16), transparent 70%), linear-gradient(175deg, #15463A 0%, #0F3329 45%, #0B2A22 100%)",
         borderRight: "1px solid rgba(217,181,111,0.12)", display: "flex", flexDirection: "column",
         position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 40, transition: "width 0.2s",
         overflowY: "auto", overflowX: "hidden",
       }}>
+        {!slim ? (
+          <SideNav pathname={pathname} search={search} accountant={accountant} onToggleMode={toggleMode} india={india} bizName={bizName ?? ""} reviewCount={reviewCount}
+            hide={i => !!(viewOnly && (i.href === "/finance" || WRITE_PAGES.some(w => i.href.startsWith(w))))}
+            tally={{ connected: tallyConnected, word: tallyCompany ? tallyStatusWord(tallyState) : "not connected", company: tallyCompany ?? null, error: tallyState.status === "error" }}
+            onCollapse={() => { setPeek(false); setCollapsed(true); }}
+            onPrefetch={h => { try { router.prefetch(h.split("?")[0]); } catch { /* speed-up only */ } }}
+            logo={brand.logo ? { src: brand.logo, name: brand.name, tagline: brand.tagline } : null} />
+        ) : (<>
         {/* Logo + collapse */}
         <div style={{ padding: "0 12px", height: 76, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
           {!slim && (
@@ -578,6 +588,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
             {!slim && <span>← Main Dashboard</span>}
           </Link>
         </div>
+        </>)}
       </aside>
 
       {/* Main content */}
