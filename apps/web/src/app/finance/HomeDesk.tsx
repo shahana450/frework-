@@ -10,6 +10,8 @@ import { useBrand } from "@/lib/brand";
 import { useRouter } from "next/navigation";
 import { gstReturnLink } from "@/lib/gstIntent";
 import { setPendingFiles } from "@/lib/pendingFile";
+import NewsTicker from "@/components/finance/NewsTicker";
+import TypeLine from "@/components/finance/TypeLine";
 import type { Dashboard } from "@/lib/dashboard";
 
 const LIGHT = {
@@ -139,6 +141,9 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
         @media (prefers-reduced-motion: reduce) { .hd .lift { transition: none !important } }
       `}</style>
 
+      {/* Tax & finance news, running along the top */}
+      <NewsTicker />
+
       {/* Hero: greeting and the Record / Ask box on a deep panel */}
       <section aria-label="Record or ask" className="hd-hero" style={{ position: "relative", overflow: "hidden", background: C.green, borderRadius: 26, padding: "clamp(20px,3vw,34px)", color: "#F4EFE4", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}>
         <span aria-hidden="true" style={{ position: "absolute", right: -10, top: -40, fontFamily: SERIF, fontSize: 300, lineHeight: 1, color: "rgba(255,255,255,0.05)", pointerEvents: "none" }}>{cur().trim() || "₹"}</span>
@@ -152,6 +157,10 @@ export default function HomeDesk({ dash, bizName, greeting, controls, dashErr, o
           <h1 className="hd-h1" style={{ margin: 0, fontFamily: SERIF, fontWeight: 400, fontSize: "clamp(30px, 4vw, 54px)", lineHeight: 1.08, textWrap: "balance", color: "#FFFDF8" }}>
             {greeting}.<br />What happened in the business <span style={{ fontStyle: "italic", color: "#D9B56F" }}>today</span>?
           </h1>
+          <TypeLine className="hd-type" lead={`${brand} can`} style={{ fontFamily: SERIF, fontSize: "clamp(17px, 1.7vw, 22px)", color: "#DCE6E2", minHeight: "1.5em" }}
+            phrases={india
+              ? ["record a sale from one sentence", "read your bank statement line by line", "draft GSTR-1 and GSTR-3B", "match purchases with GSTR-2B", "chase payments on WhatsApp", "value your closing stock", "check TDS against Form 26AS", "push entries to Tally"]
+              : ["record a sale from one sentence", "read your bank statement line by line", "chase payments on WhatsApp", "value your closing stock", "spot duplicate entries", "prepare your P&L and balance sheet"]} />
           <div className="hd-bizline" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 14, color: "#C9D3CE" }}>
             <Link href="/finance/select-business" title="Switch business" className="hd-biz" style={{ color: "#F4EFE4", textDecoration: "none", fontWeight: 600 }}>{bizName}<span className="hd-swap" aria-hidden="true" style={{ color: "#D9B56F", marginLeft: 6 }}>⇄</span></Link>
             <span className="hd-tally" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700 }}>
